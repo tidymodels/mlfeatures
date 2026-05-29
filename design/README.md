@@ -39,6 +39,7 @@ Key invariants the framework guarantees:
 
 | File                                   | Covers                                               |
 | -------------------------------------- | ---------------------------------------------------- |
+| [motivation.md](motivation.md)         | Worked example: why not just a sklearn Pipeline      |
 | [lifecycle.md](lifecycle.md)           | The fit/transform API and lifecycle guarantees       |
 | [roles.md](roles.md)                   | Role system and role management API                  |
 | [selectors.md](selectors.md)           | Selector DSL — by name, role, type, and set ops      |
