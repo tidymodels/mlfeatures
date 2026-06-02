@@ -145,3 +145,7 @@ exclude = [
     "build/",
     "dist/",
 ]
+
+[[tool.mypy.overrides]]
+module = ["pandas", "polars"]
+ignore_missing_imports = true
