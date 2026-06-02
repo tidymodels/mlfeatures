@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 
 [project]
-name = "pyrecipes"
+name = "shoez"
 dynamic = ["version"]
 description = "A framework for declaring, estimating, and applying feature-engineering pipelines"
 readme = "README.md"
@@ -46,16 +46,19 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/posit-dev/pyrecipes"
-Repository = "https://github.com/posit-dev/pyrecipes"
-"Bug Tracker" = "https://github.com/posit-dev/pyrecipes/issues"
+Homepage = "https://github.com/tidymodels/shoez"
+Repository = "https://github.com/tidymodels/shoez"
+"Bug Tracker" = "https://github.com/tidymodels/shoez/issues"
 
-[project.entry-points."pyrecipes.steps"]
+[project.entry-points."shoez.steps"]
 # Third-party step plugins register here
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pyrecipes*"]
+include = ["shoez*"]
+
+[tool.setuptools.package-data]
+shoez = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -68,7 +71,7 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = ["pyrecipes"]
+source = ["shoez"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -115,7 +118,7 @@ line-ending = "auto"
 [tool.pyright]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
-include = ["pyrecipes"]
+include = ["shoez"]
 exclude = [
     "**/__pycache__",
     "**/.venv",
