@@ -48,7 +48,12 @@ jobs:
     name: "Publish Docs"
     runs-on: ubuntu-latest
     needs: "build-docs"
-    if: github.ref == 'refs/heads/main'
+    # Skipped until Pages is available for this repo. The repo is currently
+    # private, and GitHub Pages publishing requires the repo to be public
+    # (or the org to be on a paid plan). Enable by setting the repository
+    # variable ENABLE_PAGES=true (Settings -> Secrets and variables ->
+    # Actions -> Variables) once Pages is turned on.
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
     permissions:
       pages: write
       id-token: write
