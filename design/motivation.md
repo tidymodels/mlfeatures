@@ -10,6 +10,48 @@
 Where pipelines get awkward: **mixed predictor types needing different handling, plus
 a later step operating on columns an earlier step produced.**
 
+## Original Conception
+
+There are a few motivations for recipes that were proposed in September of 2016:
+
+- Enable the option to include all preprocessing steps (even deterministic ones) in one object. This object can be reused and extended. 
+- Enable dynamic determinations of which columns in each preprocessing step. 
+
+The first motivator is meant to enhance reproducibility and traceability rather than efficiency. We've experienced cases where different operations are performed on data in different places, leading to potential deployment issues. 
+
+Different models have different preprocessing requirements. For this reason, we can add more steps to an existing recipe to reuse existing work. 
+
+If reproducibility is an important feature, recipes should include steps for most of the operations people would perform on the predictor data before modeling. 
+
+The second motivator is much more important as it enables proper methodology and fault tolerance. 
+
+Suppose we have categorical predictor `A` and six other numeric predictors `B` through `G`. We envision a pipeline of steps:
+
+1. Generate binary indicators for column `A`
+2. Pool infrequently occurring indicators from `A` into a new "other" indicator.
+3. Create interaction terms for all `A`-specific indicators and predictor `B`.
+4. Remove any predictors with a single unique value.
+5. Center and scale all numeric predictors.
+6. Feature extract predictors `C` through `G` to three PCA components. 
+
+Potential problems:
+
+ - How do we know the names of the indicators in step 3 to make interactions?
+ - How do we know which predictors pass the filters in steps 2 and 4?
+
+The answer is that we don't unless we've 1) already run the preprocess and 2) have the same data. 
+
+We might execute this preprocessing with different data, perhaps during cross-validation. If we've hard-coded specific column names, the preprocessor could fail after steps 2 and 4 since there could be variation in which predictors are retained (or, in other steps, created). We could write these steps more generally as: 
+
+1. Generate binary indicators for _all categorical predictors_.
+2. Pool infrequently occurring _all predictors starting with `A`_ into a new "other" indicator.
+3. Create interaction terms for all _any predictors starting with `A_` _ and predictor `B`.
+4. Remove _all predictors_ with a single unique value.
+5. Center and scale _any numeric predictors_.
+6. Feature extract _any predictors with names `C` through `G`_ to three PCA components. 
+
+The system is dynamic in the sense that it can avoid hardcoding which variables are affected or created by specific processing steps. This was intended to emulate the "garden of forking paths," where, depending on certain decisions or the current data, the processing can look very different downstream.
+
 ## The scenario
 
 A housing dataset with mixed column types:
