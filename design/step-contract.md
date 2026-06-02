@@ -35,16 +35,19 @@ class Step(ABC):
     def schema_out(self) -> ColSchema: ...
 
     @abstractmethod
-    def accepts_dtypes(self) -> set[str]: ...
+    def accepts_dtypes(self) -> AcceptedDtypes: ...
 
     @property
+    @abstractmethod
     def produces_sparse(self) -> bool: ...
 
     def required_pkgs(self) -> list[str]: return []
 
 
 class RowOp(Step):
-    """Row-altering steps. transform() is a no-op — these steps only run during fit()."""
+    """Row-altering steps. transform() is a no-op on new data — these steps only
+    take effect during fit(). The no-op is enforced structurally by the framework's
+    type-based dispatch, not by RowOp overriding transform()."""
 ```
 
 There is no `skip` flag. Whether a step runs at transform time is determined entirely by its type: `Step` subclasses always run; `RowOp` subclasses never run on new data. This makes the behaviour structural and impossible to accidentally omit — the primary failure mode in R `recipes`, where `skip=TRUE` was a convention routinely missed by step authors [tidymodels/recipes#934, #1254].
@@ -78,17 +81,19 @@ Each step declares the set of column dtypes it is valid to apply to. The framewo
 
 This check does not run at `transform()` time. By then, the ptype snapshot already guarantees that incoming column dtypes match what was seen during `fit()` — a second dtype check would be redundant. See [lifecycle.md](lifecycle.md).
 
+The return type is `AcceptedDtypes`, an alias for `set[str] | _AnyDtype` — either an explicit set of dtype names, or the `ANY_DTYPE` sentinel. (A plain `set[str]` annotation would be inconsistent, since `ANY_DTYPE` is not a set.)
+
 ```python
 # e.g. step_normalize only makes sense on numeric columns
-def accepts_dtypes(self) -> set[str]:
+def accepts_dtypes(self) -> AcceptedDtypes:
     return {"float", "int"}
 
 # e.g. step_dummy only makes sense on categorical columns
-def accepts_dtypes(self) -> set[str]:
+def accepts_dtypes(self) -> AcceptedDtypes:
     return {"categorical"}
 
 # e.g. step_zv works on anything — use the ANY sentinel
-def accepts_dtypes(self) -> set[str]:
+def accepts_dtypes(self) -> AcceptedDtypes:
     return ANY_DTYPE
 ```
 
