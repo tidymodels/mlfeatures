@@ -41,6 +41,7 @@ Key invariants the framework guarantees:
 | -------------------------------------- | ---------------------------------------------------- |
 | [motivation.md](motivation.md)         | Worked example: why not just a sklearn Pipeline      |
 | [lifecycle.md](lifecycle.md)           | The fit/transform API and lifecycle guarantees       |
+| [interfaces.md](interfaces.md)         | Construction syntax — step objects and the `>>` pipe |
 | [roles.md](roles.md)                   | Role system and role management API                  |
 | [selectors.md](selectors.md)           | Selector DSL — by name, role, type, and set ops      |
 | [steps-catalog.md](steps-catalog.md)   | Full step catalog, tiered by priority                |
