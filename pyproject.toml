@@ -53,6 +53,11 @@ Repository = "https://github.com/tidymodels/shoez"
 [project.entry-points."shoez.steps"]
 # Third-party step plugins register here
 
+[dependency-groups]
+docs = [
+    "great-docs>=0.12 ; python_full_version >= '3.11'",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["shoez*"]

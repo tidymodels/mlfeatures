@@ -29,6 +29,18 @@ pytest --cov          # tests + coverage
 
 Install the pre-commit hooks with `pre-commit install`.
 
+## Documentation
+
+The docs site is built with [great-docs](https://github.com/posit-dev/great-docs):
+
+```bash
+uv sync --group docs       # requires Python >= 3.11
+uv run great-docs build    # build into great-docs/
+uv run great-docs preview  # serve at localhost:3000
+```
+
+It is published to GitHub Pages on every push to `main`.
+
 ## License
 
 MIT
