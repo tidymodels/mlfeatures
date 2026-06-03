@@ -15,8 +15,9 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 from __future__ import annotations
 
 from shoez import _frame
+from shoez._formula import parse_formula
 from shoez.step import RowOp, Step
-from shoez.types import DataFrame, SchemaInfo
+from shoez.types import DataFrame, Roles, SchemaInfo
 
 __all__ = ["Recipe", "FittedRecipe"]
 
@@ -33,14 +34,86 @@ class Recipe:
     call (preserving the purity guarantee in ``design/lifecycle.md``)::
 
         Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
+
+    A prototype ``data`` frame may be supplied to capture the column names used
+    when assigning roles. Roles are declared either explicitly with
+    :meth:`set_roles` or via the minimal ``formula`` sugar (``"y ~ ."``,
+    ``"y ~ x1 + x2"``); the formula is just shorthand for an outcome/predictor
+    split, never a richer mechanism.
     """
 
-    def __init__(self, steps: list[Step] | None = None):
+    def __init__(
+        self,
+        steps: list[Step] | None = None,
+        *,
+        data: DataFrame | None = None,
+        formula: str | None = None,
+    ):
         self.steps: list[Step] = list(steps) if steps is not None else []
+        self._prototype_columns: list[str] | None = None
+        if data is not None:
+            info = SchemaInfo.from_frame(_frame.from_native(data))
+            self._prototype_columns = info.columns
+        self.roles = Roles()
+        if formula is not None:
+            if self._prototype_columns is None:
+                raise ValueError("formula requires a prototype `data=` frame")
+            self.roles = parse_formula(formula, self._prototype_columns)
+
+    def _clone(self) -> "Recipe":
+        """A shallow copy that preserves steps, prototype, and roles."""
+        new = Recipe(steps=self.steps)
+        new._prototype_columns = (
+            list(self._prototype_columns)
+            if self._prototype_columns is not None
+            else None
+        )
+        new.roles = self.roles.copy()
+        return new
 
     def add(self, *steps: Step) -> "Recipe":
         """Return a new recipe with ``steps`` appended (steps are pure)."""
-        return Recipe(steps=[*self.steps, *steps])
+        new = self._clone()
+        new.steps = [*self.steps, *steps]
+        return new
+
+    def set_roles(
+        self,
+        *,
+        outcome: str | list[str] | None = None,
+        predictor: str | list[str] | None = None,
+        case_weights: str | list[str] | None = None,
+        **custom: str | list[str],
+    ) -> "Recipe":
+        """Return a new recipe with the given role assignments added.
+
+        Standard roles have dedicated keyword arguments; arbitrary custom roles
+        may be passed as additional keywords. Each value is a column name or a
+        list of names. Incompatible combinations (e.g. outcome + predictor on
+        one column) are rejected.
+        """
+        new = self._clone()
+        assignments: dict[str, str | list[str] | None] = {
+            "outcome": outcome,
+            "predictor": predictor,
+            "case_weights": case_weights,
+            **custom,
+        }
+        for role, cols in assignments.items():
+            if cols is None:
+                continue
+            for column in [cols] if isinstance(cols, str) else cols:
+                self._check_column_exists(column)
+                new.roles.add(column, role)
+        return new
+
+    def _check_column_exists(self, column: str) -> None:
+        """Validate ``column`` against the prototype, if one was supplied."""
+        if (
+            self._prototype_columns is not None
+            and column not in self._prototype_columns
+        ):
+            raise ValueError(f"column {column!r} is not in the prototype data")
 
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Fit each step in order on the training data.
@@ -59,14 +132,15 @@ class Recipe:
             if not isinstance(step, RowOp):
                 current = fitted.transform(current)
             fitted_steps.append(fitted)
-        return FittedRecipe(steps=fitted_steps)
+        return FittedRecipe(steps=fitted_steps, roles=self.roles.copy())
 
 
 class FittedRecipe:
     """A fitted pipeline: applies stored statistics to new data."""
 
-    def __init__(self, steps: list[Step]):
+    def __init__(self, steps: list[Step], roles: Roles | None = None):
         self.steps = steps
+        self.roles = roles if roles is not None else Roles()
 
     def transform(self, data: DataFrame) -> DataFrame:
         """Apply each fitted step in order, skipping ``RowOp`` steps.
