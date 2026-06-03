@@ -17,16 +17,10 @@ only at the sklearn boundary (the output of ``Recipe.transform``).
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, TypeAlias
 
 import narwhals.stable.v1 as nw
 
-from shoez.types import DataFrame
-
-#: The internal frame type that flows between steps. A backend-agnostic narwhals
-#: ``DataFrame`` wrapping the user's native (pandas/polars/...) frame.
-Frame: TypeAlias = nw.DataFrame[Any]
-
+from shoez.types import DataFrame, Frame
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 

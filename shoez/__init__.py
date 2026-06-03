@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from shoez.step import RowOp, Step
-from shoez.types import ANY_DTYPE, ColSchema, DataFrame, Mode, SchemaInfo
+from shoez.types import ANY_DTYPE, ColSchema, DataFrame, Frame, Mode, SchemaInfo
 
 try:
     __version__ = version("shoez")
@@ -19,4 +19,5 @@ __all__ = [
     "ColSchema",
     "SchemaInfo",
     "DataFrame",
+    "Frame",
 ]
