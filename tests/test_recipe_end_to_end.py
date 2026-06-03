@@ -1,0 +1,97 @@
+"""End-to-end lifecycle tests: Recipe -> fit -> transform.
+
+Exercises the full vertical slice (Recipe driver + StepCorr + narwhals frame
+boundary) on both pandas and polars to confirm the pipeline is backend-agnostic.
+"""
+
+from __future__ import annotations
+
+import pandas as pd
+import polars as pl
+import pytest
+
+from shoez import Recipe
+
+
+def _data() -> dict[str, list[float]]:
+    # ``b`` is a perfect linear function of ``a`` (r == 1.0); ``c`` is unrelated.
+    return {
+        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+        "b": [2.0, 4.0, 6.0, 8.0, 10.0],
+        "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+    }
+
+
+class TestEndToEnd:
+    def test_pandas_drops_correlated_column(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe().step_corr(["a", "b", "c"], threshold=0.9).fit(df)
+        out = fitted.transform(df)
+
+        assert isinstance(out, pd.DataFrame)
+        # Exactly one of the perfectly-correlated pair is removed; c survives.
+        assert "c" in out.columns
+        assert len(out.columns) == 2
+        assert ("a" in out.columns) ^ ("b" in out.columns)
+
+    def test_polars_drops_correlated_column(self) -> None:
+        df = pl.DataFrame(_data())
+        fitted = Recipe().step_corr(["a", "b", "c"], threshold=0.9).fit(df)
+        out = fitted.transform(df)
+
+        assert isinstance(out, pl.DataFrame)
+        assert "c" in out.columns
+        assert len(out.columns) == 2
+        assert ("a" in out.columns) ^ ("b" in out.columns)
+
+    def test_no_drop_when_threshold_above_all_pairs(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe().step_corr(["a", "c"], threshold=0.99).fit(df)
+        out = fitted.transform(df)
+        # a/c are weakly correlated, so nothing is dropped; b passes through.
+        assert list(out.columns) == ["a", "b", "c"]
+
+    def test_step_methods_are_pure(self) -> None:
+        base = Recipe()
+        extended = base.step_corr(["a", "b"])
+        assert base.steps == []
+        assert len(extended.steps) == 1
+        assert base is not extended
+
+    def test_transform_is_idempotent(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe().step_corr(["a", "b", "c"]).fit(df)
+        first = fitted.transform(df)
+        second = fitted.transform(df)
+        pd.testing.assert_frame_equal(first, second)
+
+    def test_fit_is_idempotent(self) -> None:
+        df = pd.DataFrame(_data())
+        recipe = Recipe().step_corr(["a", "b", "c"])
+        out1 = recipe.fit(df).transform(df)
+        out2 = recipe.fit(df).transform(df)
+        pd.testing.assert_frame_equal(out1, out2)
+
+    def test_extra_columns_outside_selection_are_preserved(self) -> None:
+        df = pd.DataFrame(_data())
+        # Only consider a/b; c is not part of the step but must pass through.
+        fitted = Recipe().step_corr(["a", "b"], threshold=0.9).fit(df)
+        out = fitted.transform(df)
+        assert "c" in out.columns
+        assert len(out.columns) == 2
+
+    def test_trained_flag_set_by_recipe(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe().step_corr(["a", "b"]).fit(df)
+        assert all(step.trained for step in fitted.steps)
+
+
+class TestStepCorrGuards:
+    def test_transform_before_fit_raises(self) -> None:
+        from shoez import StepCorr
+
+        step = StepCorr(["a", "b"])
+        with pytest.raises(RuntimeError):
+            import narwhals as nw
+
+            step.transform(nw.from_native(pd.DataFrame(_data())))

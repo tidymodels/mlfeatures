@@ -32,19 +32,53 @@ Frame: TypeAlias = nw.DataFrame[Any]
 
 
 class ColSchema:
-    """Column schema: names, dtypes, roles, source, and sparsity for a column set.
+    """Column schema: names and dtypes for a column set.
 
-    Placeholder for the type defined by the schema subsystem
-    (``design/schema.md``). Concrete fields land with that issue.
+    Minimal stand-in for the full type defined by the schema subsystem
+    (``design/schema.md``) — it carries only the column names and their dtype
+    names, enough for a step to describe what it consumed (``schema_in``) and
+    produced (``schema_out``). Roles, source, and sparsity land with the real
+    schema subsystem.
     """
+
+    def __init__(
+        self,
+        columns: list[str] | None = None,
+        dtypes: dict[str, str] | None = None,
+    ):
+        self.columns = list(columns) if columns is not None else []
+        self.dtypes = dict(dtypes) if dtypes is not None else {}
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"ColSchema(columns={self.columns!r})"
 
 
 class SchemaInfo:
     """Schema-derived context handed to :meth:`Step.fit`.
 
-    Placeholder for the type defined by the schema subsystem
-    (``design/schema.md``).
+    Minimal stand-in for the full type defined by the schema subsystem
+    (``design/schema.md``). For now it carries the current column names and
+    dtype names; roles and the lineage DAG land with the real schema subsystem.
     """
+
+    def __init__(
+        self,
+        columns: list[str] | None = None,
+        dtypes: dict[str, str] | None = None,
+    ):
+        self.columns = list(columns) if columns is not None else []
+        self.dtypes = dict(dtypes) if dtypes is not None else {}
+
+    @classmethod
+    def from_frame(cls, frame: "Frame") -> "SchemaInfo":
+        """Build a :class:`SchemaInfo` snapshot from an internal :data:`Frame`."""
+        from shoez import _frame
+
+        dtypes = {name: str(dtype) for name, dtype in _frame.dtypes(frame).items()}
+        return cls(columns=_frame.columns(frame), dtypes=dtypes)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"SchemaInfo(columns={self.columns!r})"
 
 
 class _AnyDtype:
