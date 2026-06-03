@@ -11,13 +11,13 @@
 
 The primary design constraint is **scikit-learn compatibility**: the output of `transform()` must be consumable by any sklearn estimator. That means returning a 2D numeric array or a type sklearn accepts at its boundary (pandas DataFrame, numpy array).
 
-Beyond that boundary, users may pass in whatever dataframe type they have. Rather than writing separate code paths for polars, pandas, and future libraries, we should evaluate **[narwhals](https://github.com/narwhals-dev/narwhals)** as the internal abstraction layer. Narwhals provides a dataframe-agnostic API that works across polars, pandas, cuDF, Modin, and others, allowing steps to be written once against a stable interface.
+Beyond that boundary, users may pass in whatever dataframe type they have. Rather than writing separate code paths for polars, pandas, and future libraries, we use **[narwhals](https://github.com/narwhals-dev/narwhals)** as the internal abstraction layer. Narwhals provides a dataframe-agnostic API that works across polars, pandas, cuDF, Modin, and others, allowing steps to be written once against a stable interface.
 
-The decision between narwhals as full internal representation vs. a thin at-boundary adapter is an **open question** to resolve before v0.1. Key considerations:
+**Decision (v0.1): narwhals is the full internal representation.** Steps are written once against the narwhals API; narwhals dispatches to the user's native backend (pandas in → pandas out, polars in → polars out). We do **not** commit to polars internally, and steps do **not** carry per-backend code paths. Consequences:
 
-- If narwhals covers enough of what steps need (column selection, type-aware operations, categorical handling), it removes the need to commit to polars internally.
-- If narwhals proves too thin, steps may still need a concrete internal frame type — polars is the natural candidate given its performance and type richness.
-- Either way, the sklearn boundary contract is fixed: `transform()` returns something sklearn can consume.
+- A step that needs an operation narwhals does not expose may drop to the native frame via `nw.to_native(...)`, but every such escape is treated as a defect to upstream into narwhals, not a license to branch on backend. The prototype step set [#18] is the conformance workload that validates narwhals is thick enough — categoricals (`step_unknown`), row ops (`step_filter`), and sparse output (`step_dummy`) are the riskiest probes.
+- The sklearn boundary contract is fixed regardless: `transform()` returns something sklearn can consume (numpy array or pandas DataFrame), converting out of the native type at that one boundary.
+- If narwhals proves too thin during #18, the fallback is polars as a concrete internal frame type — but that reopens this decision explicitly rather than being assumed.
 
 Additional requirements:
 
