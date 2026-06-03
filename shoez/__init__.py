@@ -7,6 +7,7 @@ from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
+from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
 from shoez.types import (
     ANY_DTYPE,
@@ -15,6 +16,7 @@ from shoez.types import (
     DataFrame,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
 )
 
@@ -31,11 +33,13 @@ __all__ = [
     "StepDummy",
     "StepOneHot",
     "StepDropZeroVariance",
+    "StepNormalize",
     "Step",
     "RowOp",
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
     "Mode",
+    "Roles",
     "ColSchema",
     "SchemaInfo",
     "DataFrame",
