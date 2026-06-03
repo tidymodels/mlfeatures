@@ -83,7 +83,7 @@ reference:
     contents:
       - Recipe
       - FittedRecipe
-      - StepCorr
+      - StepDropCorr
       - ColSchema
       - RowOp
       - SchemaInfo

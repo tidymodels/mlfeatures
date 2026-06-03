@@ -110,7 +110,7 @@ ANY_DTYPE = _AnyDtype()
 AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
 
 #: The narwhals numeric dtypes — a convenience set for steps that only accept
-#: numeric columns (e.g. :class:`~shoez.step_corr.StepCorr`, ``step_normalize``).
+#: numeric columns (e.g. :class:`~shoez.step_drop_corr.StepDropCorr`, ``step_normalize``).
 NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.Int8,
     nw.Int16,

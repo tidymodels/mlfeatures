@@ -1,6 +1,6 @@
-"""Fitting logic for the correlation-filter step.
+"""Fitting logic for the correlation-drop step.
 
-``fit_filter_corr`` identifies which numeric columns should be dropped because
+``fit_drop_corr`` identifies which numeric columns should be dropped because
 their pairwise absolute correlation exceeds a threshold.  It is based on the
 ``corr_filter`` function from the R ``recipes`` package, with one deviation:
 zero-variance (all-NaN correlation) columns are dropped rather than silently
@@ -29,10 +29,10 @@ from shoez.types import (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-__all__ = ["fit_filter_corr", "StepCorr"]
+__all__ = ["fit_drop_corr", "StepDropCorr"]
 
 
-def fit_filter_corr(
+def fit_drop_corr(
     features: nw.DataFrame[Any],
     threshold: float = 0.9,
     method: Literal["pearson", "spearman"] = "pearson",
@@ -154,12 +154,12 @@ def fit_filter_corr(
     return list(dict.fromkeys(na_drop + corr_drop_names))
 
 
-class StepCorr(Step):
+class StepDropCorr(Step):
     """Remove numeric columns whose pairwise absolute correlation is too high.
 
     A ``REMOVING`` step: the selected columns that exceed ``threshold`` are
     dropped, and no new columns are produced. The statistical decision is made by
-    :func:`fit_filter_corr`; this class wraps it in the :class:`~shoez.step.Step`
+    :func:`fit_drop_corr`; this class wraps it in the :class:`~shoez.step.Step`
     lifecycle so a :class:`~shoez.recipe.Recipe` can fit and apply it.
 
     Selectors are not yet implemented, so the columns to consider are passed
@@ -189,7 +189,7 @@ class StepCorr(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
         features = _frame.select(training_data, self.columns)
-        self._to_drop = fit_filter_corr(features, self.threshold, self.method)
+        self._to_drop = fit_drop_corr(features, self.threshold, self.method)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
         return self
@@ -197,19 +197,19 @@ class StepCorr(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Drop the columns chosen at fit time. Never re-estimates."""
         if self._to_drop is None:
-            raise RuntimeError("StepCorr.transform() called before fit().")
+            raise RuntimeError("StepDropCorr.transform() called before fit().")
         return _frame.drop(new_data, self._to_drop)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepCorr.schema_in() called before fit().")
+            raise RuntimeError("StepDropCorr.schema_in() called before fit().")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the columns this step produced — none; it only removes."""
         if self._to_drop is None:
-            raise RuntimeError("StepCorr.schema_out() called before fit().")
+            raise RuntimeError("StepDropCorr.schema_out() called before fit().")
         return ColSchema(columns=[])
 
     def accepts_dtypes(self) -> AcceptedDtypes:
@@ -218,5 +218,5 @@ class StepCorr(Step):
 
     @property
     def produces_sparse(self) -> bool:
-        """``step_corr`` never produces sparse output."""
+        """``step_drop_corr`` never produces sparse output."""
         return False

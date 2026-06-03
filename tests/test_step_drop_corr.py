@@ -1,4 +1,4 @@
-"""Tests for fit_filter_corr."""
+"""Tests for fit_drop_corr."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import narwhals as nw
 import pandas as pd
 import pytest
 
-from shoez.step_corr import fit_filter_corr
+from shoez.step_drop_corr import fit_drop_corr
 
 
 def _df(*cols: tuple[str, list[float | None]]) -> nw.DataFrame:
@@ -23,12 +23,12 @@ def _df(*cols: tuple[str, list[float | None]]) -> nw.DataFrame:
 class TestReturnType:
     def test_empty_result_is_list(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [4.0, 5.0, 6.0]))
-        result = fit_filter_corr(df, threshold=0.9)
+        result = fit_drop_corr(df, threshold=0.9)
         assert isinstance(result, list)
 
     def test_nonempty_result_is_list_of_str(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
-        result = fit_filter_corr(df, threshold=0.5)
+        result = fit_drop_corr(df, threshold=0.5)
         assert isinstance(result, list)
         assert all(isinstance(s, str) for s in result)
 
@@ -42,17 +42,17 @@ class TestInputValidation:
     def test_threshold_above_1_raises(self) -> None:
         df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
         with pytest.raises(ValueError, match="threshold"):
-            fit_filter_corr(df, threshold=1.1)
+            fit_drop_corr(df, threshold=1.1)
 
     def test_threshold_below_0_raises(self) -> None:
         df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
         with pytest.raises(ValueError, match="threshold"):
-            fit_filter_corr(df, threshold=-0.1)
+            fit_drop_corr(df, threshold=-0.1)
 
     def test_invalid_method_raises(self) -> None:
         df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
         with pytest.raises(ValueError, match="method"):
-            fit_filter_corr(df, method="kendall")  # type: ignore[arg-type]
+            fit_drop_corr(df, method="kendall")  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -63,20 +63,20 @@ class TestInputValidation:
 class TestGuards:
     def test_single_column_returns_empty(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]))
-        assert len(fit_filter_corr(df)) == 0
+        assert len(fit_drop_corr(df)) == 0
 
     def test_zero_row_returns_empty(self) -> None:
         df = _df(("a", []), ("b", []))
-        assert len(fit_filter_corr(df)) == 0
+        assert len(fit_drop_corr(df)) == 0
 
     def test_no_pair_above_threshold_returns_empty(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [3.0, 1.0, 2.0]))
-        assert len(fit_filter_corr(df, threshold=0.9)) == 0
+        assert len(fit_drop_corr(df, threshold=0.9)) == 0
 
     def test_threshold_exactly_equal_not_dropped(self) -> None:
         # threshold is strict (>), so r == threshold should not trigger removal
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
-        assert len(fit_filter_corr(df, threshold=1.0)) == 0
+        assert len(fit_drop_corr(df, threshold=1.0)) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -87,14 +87,14 @@ class TestGuards:
 class TestCoreAlgorithm:
     def test_perfectly_correlated_pair_drops_one(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
-        result = fit_filter_corr(df, threshold=0.9)
+        result = fit_drop_corr(df, threshold=0.9)
         assert len(result) == 1
         assert result[0] in ("a", "b")
 
     def test_negatively_correlated_pair_dropped(self) -> None:
         # abs(r) is what matters — strong negative correlation should also trigger
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [-1.0, -2.0, -3.0]))
-        result = fit_filter_corr(df, threshold=0.9)
+        result = fit_drop_corr(df, threshold=0.9)
         assert len(result) == 1
 
     def test_drops_column_with_higher_mean_abs_corr(self) -> None:
@@ -107,7 +107,7 @@ class TestCoreAlgorithm:
         b = rng.standard_normal(200)
         c = a + b
         df = _df(("a", a.tolist()), ("b", b.tolist()), ("c", c.tolist()))
-        result = fit_filter_corr(df, threshold=0.5)
+        result = fit_drop_corr(df, threshold=0.5)
         assert "c" in result
 
     def test_exact_removals_fixed_seed(self) -> None:
@@ -120,7 +120,7 @@ class TestCoreAlgorithm:
         data["duplicate"] = data["V1"]
         data["V6"] = [-v + rng.uniform(0, 0.2) for v in data["V2"]]
         df = nw.from_native(pd.DataFrame(data))
-        result = fit_filter_corr(df, threshold=0.5)
+        result = fit_drop_corr(df, threshold=0.5)
         # One of V1/duplicate (r=1 pair) and one of V2/V6 (r≈-1 pair) must be dropped
         assert "V1" in result or "duplicate" in result
         assert "V2" in result or "V6" in result
@@ -140,7 +140,7 @@ class TestNaNHandling:
         )
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            result = fit_filter_corr(df, threshold=0.9)
+            result = fit_drop_corr(df, threshold=0.9)
         assert "const" in result
 
     def test_zero_variance_column_warns(self) -> None:
@@ -151,7 +151,7 @@ class TestNaNHandling:
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            fit_filter_corr(df, threshold=0.9)
+            fit_drop_corr(df, threshold=0.9)
         assert any("removed" in str(warning.message).lower() for warning in w)
 
     def test_too_many_na_columns_warns_and_returns_na_drops(self) -> None:
@@ -163,7 +163,7 @@ class TestNaNHandling:
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = fit_filter_corr(df, threshold=0.9)
+            result = fit_drop_corr(df, threshold=0.9)
         assert any("skipping" in str(warning.message).lower() for warning in w)
         # b and c should still be returned as drops
         assert "b" in result
@@ -177,7 +177,7 @@ class TestNaNHandling:
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = fit_filter_corr(df, threshold=0.9)
+            result = fit_drop_corr(df, threshold=0.9)
         assert isinstance(result, list)
         _ = w  # warning may or may not fire depending on backend
 
@@ -190,5 +190,5 @@ class TestNaNHandling:
 class TestMethod:
     def test_spearman_does_not_raise(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
-        result = fit_filter_corr(df, threshold=0.5, method="spearman")
+        result = fit_drop_corr(df, threshold=0.5, method="spearman")
         assert isinstance(result, list)

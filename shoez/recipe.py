@@ -27,12 +27,12 @@ class Recipe:
     Steps are first-class :class:`~shoez.step.Step` objects (Option A in
     ``design/interfaces.md``). Assemble a recipe by passing them at construction::
 
-        Recipe(steps=[StepCorr(["a", "b", "c"], threshold=0.9)])
+        Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
 
     or with the immutable :meth:`add` builder, which returns a new recipe each
     call (preserving the purity guarantee in ``design/lifecycle.md``)::
 
-        Recipe().add(StepCorr(["a", "b", "c"], threshold=0.9))
+        Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
     """
 
     def __init__(self, steps: list[Step] | None = None):

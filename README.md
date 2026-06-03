@@ -23,7 +23,7 @@ pipelines — a Python port of the R
 
 ``` python
 import pandas as pd
-from shoez import Recipe, StepCorr
+from shoez import Recipe, StepDropCorr
 
 df = pd.DataFrame(
     {
@@ -34,7 +34,7 @@ df = pd.DataFrame(
 )
 
 # specify -> fit -> transform
-recipe = Recipe(steps=[StepCorr(["a", "b", "c"], threshold=0.9)])
+recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
 fitted = recipe.fit(df)
 fitted.transform(df)  # drops one of the correlated pair, keeps `c`
 ```
