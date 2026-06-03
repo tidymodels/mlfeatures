@@ -1,6 +1,6 @@
-"""Fitting logic for the correlation-filter step.
+"""Fitting logic for the correlation-drop step.
 
-``fit_filter_corr`` identifies which numeric columns should be dropped because
+``fit_drop_corr`` identifies which numeric columns should be dropped because
 their pairwise absolute correlation exceeds a threshold.  It is based on the
 ``corr_filter`` function from the R ``recipes`` package, with one deviation:
 zero-variance (all-NaN correlation) columns are dropped rather than silently
@@ -15,10 +15,10 @@ from typing import Any, Literal
 import narwhals as nw
 import numpy as np
 
-__all__ = ["fit_filter_corr"]
+__all__ = ["fit_drop_corr"]
 
 
-def fit_filter_corr(
+def fit_drop_corr(
     features: nw.DataFrame[Any],
     threshold: float = 0.9,
     method: Literal["pearson", "spearman"] = "pearson",
