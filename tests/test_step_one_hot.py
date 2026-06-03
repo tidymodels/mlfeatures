@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pickle
+import warnings
 from typing import Any
 
 import narwhals.stable.v2 as nw
@@ -90,8 +91,9 @@ class TestFitOneHot:
 
 
 # ---------------------------------------------------------------------------
-# StepOneHot — correctness (apply_dummy edge cases not re-tested here;
-# they are covered by TestApplyDummy in test_step_dummy.py)
+# StepOneHot — correctness. Null/unseen-level handling is re-tested here
+# because StepOneHot drives apply_dummy via the all_known=None path, which
+# differs from the explicit all_known set that StepDummy passes.
 # ---------------------------------------------------------------------------
 
 
@@ -175,6 +177,57 @@ class TestStepOneHotCorrectness:
         assert "x_b" in native.columns
         assert "x_c" in native.columns
 
+    def test_null_rows_produce_null_indicators(self) -> None:
+        # Exercises the all_known=None path through StepOneHot (where retained
+        # == all known levels): null source rows must be null in every indicator.
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"])
+        step.fit(df, _schema())
+        new = _pd(("x", ["a", None, "b"]))
+        result = nw.to_native(step.transform(new))
+        # row 1 (None) is null in all indicator columns
+        assert pd.isna(result["x_a"].iloc[1])
+        assert pd.isna(result["x_b"].iloc[1])
+        assert pd.isna(result["x_c"].iloc[1])
+        # known rows are 0/1
+        assert result["x_a"].iloc[0] == 1
+        assert result["x_b"].iloc[2] == 1
+
+    def test_unseen_level_produces_null_and_warns(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"])
+        step.fit(df, _schema())
+        new = _pd(("x", ["a", "b", "UNSEEN"]))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = nw.to_native(step.transform(new))
+        assert any("not seen" in str(warning.message).lower() for warning in w)
+        # row 2 (UNSEEN) is null in all indicators
+        assert pd.isna(result["x_a"].iloc[2])
+        assert pd.isna(result["x_b"].iloc[2])
+        assert pd.isna(result["x_c"].iloc[2])
+
+    def test_unseen_and_null_combined(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"])
+        step.fit(df, _schema())
+        new = _pd(("x", ["a", None, "NOVEL"]))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = nw.to_native(step.transform(new))
+        assert any("not seen" in str(warning.message).lower() for warning in w)
+        assert pd.isna(result["x_a"].iloc[1])  # null row
+        assert pd.isna(result["x_a"].iloc[2])  # unseen row
+
+    def test_no_warning_when_all_levels_known(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"])
+        step.fit(df, _schema())
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            step.transform(_pd(("x", ["a", "b", "c"])))
+        assert not any("not seen" in str(warning.message).lower() for warning in w)
+
 
 # ---------------------------------------------------------------------------
 # StepOneHot — guards
@@ -187,6 +240,15 @@ class TestStepOneHotGuards:
         df = _pd(("x", ["a"]))
         with pytest.raises(RuntimeError, match="before fit"):
             step.transform(df)
+
+    def test_schema_in_after_fit(self) -> None:
+        df = _pd(("a", ["x", "y"]), ("b", ["p", "q"]))
+        step = StepOneHot(columns=["a", "b"])
+        step.fit(df, _schema())
+        si = step.schema_in()
+        # records the consumed source columns and their input dtypes
+        assert si.columns == ["a", "b"]
+        assert set(si.dtypes) == {"a", "b"}
 
     def test_schema_in_before_fit_raises(self) -> None:
         step = StepOneHot(columns=["x"])
