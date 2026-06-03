@@ -5,7 +5,6 @@ from __future__ import annotations
 import warnings
 
 import narwhals as nw
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -21,16 +20,17 @@ def _df(*cols: tuple[str, list[float | None]]) -> nw.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-class TestReturnDtype:
-    def test_empty_result_is_unicode(self) -> None:
+class TestReturnType:
+    def test_empty_result_is_list(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [4.0, 5.0, 6.0]))
         result = fit_filter_corr(df, threshold=0.9)
-        assert result.dtype.kind == "U"
+        assert isinstance(result, list)
 
-    def test_nonempty_result_is_unicode(self) -> None:
+    def test_nonempty_result_is_list_of_str(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
         result = fit_filter_corr(df, threshold=0.5)
-        assert result.dtype.kind == "U"
+        assert isinstance(result, list)
+        assert all(isinstance(s, str) for s in result)
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +100,8 @@ class TestCoreAlgorithm:
     def test_drops_column_with_higher_mean_abs_corr(self) -> None:
         # c is correlated with both a and b; a and b are roughly uncorrelated.
         # c should have the highest average |corr| and be removed.
+        import numpy as np
+
         rng = np.random.default_rng(42)
         a = rng.standard_normal(200)
         b = rng.standard_normal(200)
@@ -111,6 +113,8 @@ class TestCoreAlgorithm:
     def test_exact_removals_fixed_seed(self) -> None:
         # Mirrors R's "high filter" test: duplicate column and a near-negative
         # duplicate should both be flagged at a low threshold.
+        import numpy as np
+
         rng = np.random.default_rng(424)
         data = {f"V{i}": rng.standard_normal(100).tolist() for i in range(1, 6)}
         data["duplicate"] = data["V1"]
@@ -174,7 +178,7 @@ class TestNaNHandling:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             result = fit_filter_corr(df, threshold=0.9)
-        assert isinstance(result, np.ndarray)
+        assert isinstance(result, list)
         _ = w  # warning may or may not fire depending on backend
 
 
@@ -187,4 +191,4 @@ class TestMethod:
     def test_spearman_does_not_raise(self) -> None:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
         result = fit_filter_corr(df, threshold=0.5, method="spearman")
-        assert isinstance(result, np.ndarray)
+        assert isinstance(result, list)

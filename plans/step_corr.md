@@ -47,33 +47,32 @@ def fit_filter_corr(
     features: nw.DataFrame,
     threshold: float = 0.9,
     method: Literal["pearson", "spearman"] = "pearson",
-) -> npt.NDArray[np.str_]:
+) -> list[str]:
 ```
 
 - `features` — narwhals DataFrame of numeric columns, passed in after selector resolution.
 - `threshold` — pairs with |r| **strictly above** this value trigger removal (default 0.9).
 - `method` — `"pearson"` or `"spearman"`. Kendall is not supported by `nw.corr()`.
-- Returns a numpy array of dtype `np.str_` of column names to drop (empty if nothing to drop).
+- Returns a `list[str]` of column names to drop (empty list if nothing to drop).
 
 ### Imports
 
 ```python
 from __future__ import annotations
 import warnings
-from typing import Literal
+from typing import Any, Literal
 import narwhals as nw
 import numpy as np
-import numpy.typing as npt
 ```
 
-No scipy, no pandas.
+No scipy, no pandas, no `numpy.typing` (return type is now `list[str]`).
 
 ### Algorithm (based on R's `corr_filter`; deviates on zero-variance columns)
 
 1. **Input validation** — raise `ValueError` if `threshold` is not in `[0, 1]` or
    if `method` is not `"pearson"` or `"spearman"`.
 
-2. **Guard** — if `features` has fewer than 2 columns, return an empty array immediately.
+2. **Guard** — if `features` has fewer than 2 columns or zero rows, return an empty list immediately.
 
 3. **Correlation matrix** — loop over all column pairs `(i, j)` where `i < j` and
    call `features.select(nw.corr(col_i, col_j, method=method)).item()` for each pair.
@@ -119,11 +118,9 @@ No scipy, no pandas.
     where equal ranks cause the row variable to be discarded). Collect unique indices.
 
 11. **Return** — combine all-NA drops from step 4 with correlation-based drops from
-    step 10, deduplicate, and return as a sorted array:
+    step 10, deduplicate, preserving original column order, and return as a `list[str]`:
     ```python
-    # np.asarray on an empty list gives a float64 array by default; force
-    # the dtype to unicode-string so the result type is stable.
-    return np.asarray(result, dtype=np.str_)
+    return list(dict.fromkeys(na_drop + corr_drop_names))
     ```
 
 ---
@@ -136,17 +133,17 @@ No scipy, no pandas.
 | Negatively correlated pair (r≈-1.0) | Column dropped — filter operates on `abs(corr)` |
 | Exact removals on a fixed-seed dataset | Assert specific column names, not just count (mirrors R's `high filter` test) |
 | Multiple columns — drop the one with highest mean-\|r\| | Correct column dropped |
-| No pair above threshold | Empty array |
-| Single-column input | Empty array |
-| Zero-row input | Empty array, no crash |
+| No pair above threshold | Empty list |
+| Single-column input | Empty list |
+| Zero-row input | Empty list, no crash |
 | Threshold exactly equal (not strictly greater) | Nothing dropped |
 | `threshold > 1` or `threshold < 0` | Raises `ValueError` |
 | Invalid `method` string | Raises `ValueError` |
 | Zero-variance / all-NaN column | Warning emitted, column is dropped (deviation from R) |
 | Too many NaN columns (fewer than 2 non-NA columns remain) | "skipping" warning, returns any all-NA columns already identified |
 | Sporadic NaN values | Warning emitted, no crash |
-| Return dtype when empty | `dtype.kind == "U"` (unicode string) |
-| Return dtype when non-empty | `dtype.kind == "U"` (unicode string) |
+| Return type when empty | `list[str]` |
+| Return type when non-empty | `list[str]` |
 | `method="spearman"` | Does not raise |
 
 ---

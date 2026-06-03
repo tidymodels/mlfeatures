@@ -14,7 +14,6 @@ from typing import Any, Literal
 
 import narwhals as nw
 import numpy as np
-import numpy.typing as npt
 
 __all__ = ["fit_filter_corr"]
 
@@ -23,7 +22,7 @@ def fit_filter_corr(
     features: nw.DataFrame[Any],
     threshold: float = 0.9,
     method: Literal["pearson", "spearman"] = "pearson",
-) -> npt.NDArray[np.str_]:
+) -> list[str]:
     """Identify columns to remove due to high pairwise correlation.
 
     Parameters
@@ -39,8 +38,7 @@ def fit_filter_corr(
 
     Returns
     -------
-    numpy.ndarray of dtype ``numpy.str_`` — column names to drop.  Empty array
-    if nothing exceeds the threshold.
+    list[str] — column names to drop.  Empty list if nothing exceeds the threshold.
 
     Notes
     -----
@@ -63,10 +61,8 @@ def fit_filter_corr(
     col_names = features.columns
     n = len(col_names)
 
-    # np.asarray on an empty list gives a float64 array by default; force
-    # the dtype to unicode-string so the result type is stable.
     if n < 2 or features.shape[0] == 0:
-        return np.asarray([], dtype=np.str_)
+        return []
 
     # Build symmetric correlation matrix via pairwise nw.corr() calls.
     # nw.corr() uses pairwise-complete observations through the backend.
@@ -104,7 +100,7 @@ def fit_filter_corr(
             "Too many correlations are NA; skipping correlation filter.",
             stacklevel=2,
         )
-        return np.asarray(na_drop, dtype=np.str_)
+        return na_drop
 
     # Zero out sporadic NaN (pairs where one column had partial nulls).
     if np.any(np.isnan(corr)):
@@ -141,9 +137,4 @@ def fit_filter_corr(
 
     # Combine zero-variance drops and correlation-based drops, preserving
     # original column order and deduplicating.
-    all_drop = dict.fromkeys(na_drop + corr_drop_names)
-    result = list(all_drop.keys())
-
-    # np.asarray on an empty list gives a float64 array by default; force
-    # the dtype to unicode-string so the result type is stable.
-    return np.asarray(result, dtype=np.str_)
+    return list(dict.fromkeys(na_drop + corr_drop_names))
