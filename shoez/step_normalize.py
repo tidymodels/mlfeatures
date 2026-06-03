@@ -1,32 +1,45 @@
-"""Fitting and transform logic for the normalization (center-and-scale) step.
+"""Center-and-scale normalization: fit per-column mean/std, then standardize.
 
-``fit_normalize`` estimates the per-column mean and standard deviation used to
-standardize numeric columns to zero mean and unit variance, and
-``apply_normalize`` applies those stored statistics as ``(x - mean) / std``.
+The *fit* half lives in :func:`fit_normalize` and the *apply* half in
+:func:`apply_normalize`, both plain functions so the data-ops core can be
+exercised on its own. :class:`StepNormalize` wraps them in the
+:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+and apply it.
+
 They are the pure ``prep`` / ``bake`` counterparts of R ``recipes``'
 ``step_normalize``: the statistics are estimated once at fit time and reused
-unchanged at transform time.
+unchanged at transform time as ``(x - mean) / std``.
 """
 
 from __future__ import annotations
 
 import warnings
-from typing import Any
+from typing import TYPE_CHECKING
 
-import narwhals as nw
+import narwhals.stable.v2 as nw
 import numpy as np
 import numpy.typing as npt
 
-__all__ = ["fit_normalize", "apply_normalize"]
+from shoez import _frame
+from shoez._frame import as_float
+from shoez.step import Step
+from shoez.types import (
+    NUMERIC_DTYPES,
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+)
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
-def _as_float(value: Any) -> float:
-    """Coerce a narwhals scalar to ``float``, mapping a missing value to NaN."""
-    return float("nan") if value is None else float(value)
+__all__ = ["fit_normalize", "apply_normalize", "StepNormalize"]
 
 
 def fit_normalize(
-    features: nw.DataFrame[Any],
+    features: Frame,
 ) -> tuple[list[str], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """Estimate per-column mean and standard deviation for normalization.
 
@@ -68,12 +81,12 @@ def fit_normalize(
     for col in features.columns:
         # ddof=1 (sample std) explicitly: scaling by it makes the sample std of
         # the normalized column exactly 1, matching R's sd().
-        std = _as_float(features[col].std(ddof=1))
+        std = as_float(features[col].std(ddof=1))
         if std == 0.0:
             constant.append(col)
             continue
         columns.append(col)
-        means_list.append(_as_float(features[col].mean()))
+        means_list.append(as_float(features[col].mean()))
         stds_list.append(std)
 
     if constant:
@@ -89,11 +102,11 @@ def fit_normalize(
 
 
 def apply_normalize(
-    features: nw.DataFrame[Any],
+    features: Frame,
     columns: list[str],
     means: npt.NDArray[np.float64],
     stds: npt.NDArray[np.float64],
-) -> nw.DataFrame[Any]:
+) -> Frame:
     """Standardize ``features`` as ``(x - mean) / std`` using stored statistics.
 
     Parameters
@@ -133,3 +146,80 @@ def apply_normalize(
         for i, col in enumerate(columns)
     ]
     return features.with_columns(*exprs)
+
+
+class StepNormalize(Step):
+    """Center and scale numeric columns to zero mean and unit variance.
+
+    A ``ONE_TO_ONE`` step: each selected numeric column ``x`` is replaced in
+    place by ``(x - mean) / std``, with the mean and standard deviation
+    estimated at fit time. The statistical work is done by :func:`fit_normalize`
+    and :func:`apply_normalize`; this class wraps them in the
+    :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can
+    fit and apply it.
+
+    Constant (zero-variance) columns among the selection cannot be scaled to
+    unit variance; :func:`fit_normalize` drops them from the normalization (with
+    a warning), and they pass through ``transform`` untouched.
+
+    Selectors are not yet implemented, so the columns to consider are passed
+    explicitly as a list of names.
+    """
+
+    mode = Mode.ONE_TO_ONE
+
+    def __init__(
+        self,
+        columns: list[str],
+        id: str | None = None,
+    ):
+        self.columns = list(columns)
+        self.id = id if id is not None else "normalize"
+        self.trained = False
+        self.keep_original_cols = False
+        self.output_role = None
+        # Populated by ``fit()``: the normalizable columns and their statistics.
+        self._columns: list[str] | None = None
+        self._means: npt.NDArray[np.float64] | None = None
+        self._stds: npt.NDArray[np.float64] | None = None
+        self._schema_in: ColSchema | None = None
+
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
+        """Estimate per-column mean and std over the selected columns."""
+        features = _frame.select(training_data, self.columns)
+        self._columns, self._means, self._stds = fit_normalize(features)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
+        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        return self
+
+    def transform(self, new_data: Frame) -> Frame:
+        """Apply the stored mean and std: ``(x - mean) / std``. Never re-estimates."""
+        if self._columns is None or self._means is None or self._stds is None:
+            raise RuntimeError("StepNormalize.transform() called before fit().")
+        return apply_normalize(new_data, self._columns, self._means, self._stds)
+
+    def schema_in(self) -> ColSchema:
+        """Schema of the columns this step consumed. Known after ``fit()``."""
+        if self._schema_in is None:
+            raise RuntimeError("StepNormalize.schema_in() called before fit().")
+        return self._schema_in
+
+    def schema_out(self) -> ColSchema:
+        """Schema of the produced columns: same names, normalized ones now float."""
+        if self._schema_in is None or self._columns is None:
+            raise RuntimeError("StepNormalize.schema_out() called before fit().")
+        normalized = set(self._columns)
+        dtypes = {
+            col: ("Float64" if col in normalized else self._schema_in.dtypes[col])
+            for col in self.columns
+        }
+        return ColSchema(columns=list(self.columns), dtypes=dtypes)
+
+    def accepts_dtypes(self) -> AcceptedDtypes:
+        """Normalization is only meaningful on numeric columns."""
+        return set(NUMERIC_DTYPES)
+
+    @property
+    def produces_sparse(self) -> bool:
+        """Centering shifts zeros off zero, but output stays dense."""
+        return False
