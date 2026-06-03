@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from shoez.types import AcceptedDtypes, ColSchema, DataFrame, SchemaInfo
+from shoez.types import AcceptedDtypes, ColSchema, Frame, SchemaInfo
 
 
 class Step(ABC):
@@ -36,7 +36,7 @@ class Step(ABC):
     output_role: str | None
 
     @abstractmethod
-    def fit(self, training_data: DataFrame, info: SchemaInfo) -> "Step":
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Step":
         """Resolve selectors, estimate and store statistics, return the fitted step.
 
         Must be idempotent given the same training data.
@@ -44,7 +44,7 @@ class Step(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def transform(self, new_data: DataFrame) -> DataFrame:
+    def transform(self, new_data: Frame) -> Frame:
         """Apply stored statistics to ``new_data``. Never re-estimates."""
         raise NotImplementedError
 
