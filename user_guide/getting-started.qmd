@@ -25,13 +25,20 @@ df = pd.DataFrame(
 df
 ```
 
-**Specify** the pipeline. Building a recipe never touches data — each
-`.step_*()` call returns a new `Recipe` with the step appended:
+**Specify** the pipeline. Steps are first-class objects passed to the recipe;
+building one never touches data. Either pass the steps at construction:
 
 ```{python}
-from shoez import Recipe
+from shoez import Recipe, StepCorr
 
-recipe = Recipe().step_corr(["a", "b", "c"], threshold=0.9)
+recipe = Recipe(steps=[StepCorr(["a", "b", "c"], threshold=0.9)])
+```
+
+or assemble it with the immutable `.add()` builder, which returns a new recipe
+each call:
+
+```{python}
+recipe = Recipe().add(StepCorr(["a", "b", "c"], threshold=0.9))
 ```
 
 **Fit** it on the training data. This is where statistics are estimated — here,
@@ -67,5 +74,5 @@ pl_df = pl.DataFrame(
         "c": [5.0, 1.0, 4.0, 1.0, 9.0],
     }
 )
-Recipe().step_corr(["a", "b", "c"], threshold=0.9).fit(pl_df).transform(pl_df)
+Recipe(steps=[StepCorr(["a", "b", "c"], threshold=0.9)]).fit(pl_df).transform(pl_df)
 ```

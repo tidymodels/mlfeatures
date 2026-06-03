@@ -14,37 +14,33 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 
 from __future__ import annotations
 
-from typing import Literal
-
 from shoez import _frame
 from shoez.step import RowOp, Step
-from shoez.step_corr import StepCorr
 from shoez.types import DataFrame, SchemaInfo
 
 __all__ = ["Recipe", "FittedRecipe"]
 
 
 class Recipe:
-    """A declarative, unfitted pipeline of feature-engineering steps."""
+    """A declarative, unfitted pipeline of feature-engineering steps.
+
+    Steps are first-class :class:`~shoez.step.Step` objects (Option A in
+    ``design/interfaces.md``). Assemble a recipe by passing them at construction::
+
+        Recipe(steps=[StepCorr(["a", "b", "c"], threshold=0.9)])
+
+    or with the immutable :meth:`add` builder, which returns a new recipe each
+    call (preserving the purity guarantee in ``design/lifecycle.md``)::
+
+        Recipe().add(StepCorr(["a", "b", "c"], threshold=0.9))
+    """
 
     def __init__(self, steps: list[Step] | None = None):
         self.steps: list[Step] = list(steps) if steps is not None else []
 
-    def _append(self, step: Step) -> "Recipe":
-        """Return a new recipe with ``step`` appended (steps are pure)."""
-        return Recipe(steps=[*self.steps, step])
-
-    def step_corr(
-        self,
-        columns: list[str],
-        threshold: float = 0.9,
-        method: Literal["pearson", "spearman"] = "pearson",
-        id: str | None = None,
-    ) -> "Recipe":
-        """Append a :class:`~shoez.step_corr.StepCorr` and return a new recipe."""
-        return self._append(
-            StepCorr(columns, threshold=threshold, method=method, id=id)
-        )
+    def add(self, *steps: Step) -> "Recipe":
+        """Return a new recipe with ``steps`` appended (steps are pure)."""
+        return Recipe(steps=[*self.steps, *steps])
 
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Fit each step in order on the training data.
