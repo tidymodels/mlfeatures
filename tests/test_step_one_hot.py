@@ -12,7 +12,6 @@ import pytest
 from shoez.step_one_hot import StepOneHot, fit_one_hot
 from shoez.types import SchemaInfo
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

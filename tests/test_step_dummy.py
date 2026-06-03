@@ -13,7 +13,6 @@ import pytest
 from shoez.step_dummy import StepDummy, apply_dummy, fit_dummy
 from shoez.types import SchemaInfo
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
