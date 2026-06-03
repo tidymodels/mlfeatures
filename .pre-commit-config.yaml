@@ -25,3 +25,12 @@ repos:
           - pandas>=2.0
           - numpy>=1.24
           - scikit-learn>=1.3
+
+  - repo: local
+    hooks:
+      - id: render-readme
+        name: render README.qmd
+        entry: uv run --group docs quarto render README.qmd
+        language: system
+        files: ^README\.qmd$
+        pass_filenames: false

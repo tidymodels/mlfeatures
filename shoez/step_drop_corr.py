@@ -10,12 +10,26 @@ excluded.
 from __future__ import annotations
 
 import warnings
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import narwhals as nw
 import numpy as np
 
-__all__ = ["fit_drop_corr"]
+from shoez import _frame
+from shoez.step import Step
+from shoez.types import (
+    NUMERIC_DTYPES,
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+)
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+__all__ = ["fit_drop_corr", "StepDropCorr"]
 
 
 def fit_drop_corr(
@@ -138,3 +152,71 @@ def fit_drop_corr(
     # Combine zero-variance drops and correlation-based drops, preserving
     # original column order and deduplicating.
     return list(dict.fromkeys(na_drop + corr_drop_names))
+
+
+class StepDropCorr(Step):
+    """Remove numeric columns whose pairwise absolute correlation is too high.
+
+    A ``REMOVING`` step: the selected columns that exceed ``threshold`` are
+    dropped, and no new columns are produced. The statistical decision is made by
+    :func:`fit_drop_corr`; this class wraps it in the :class:`~shoez.step.Step`
+    lifecycle so a :class:`~shoez.recipe.Recipe` can fit and apply it.
+
+    Selectors are not yet implemented, so the columns to consider are passed
+    explicitly as a list of names.
+    """
+
+    mode = Mode.REMOVING
+
+    def __init__(
+        self,
+        columns: list[str],
+        threshold: float = 0.9,
+        method: Literal["pearson", "spearman"] = "pearson",
+        id: str | None = None,
+    ):
+        self.columns = list(columns)
+        self.threshold = threshold
+        self.method: Literal["pearson", "spearman"] = method
+        self.id = id if id is not None else "corr"
+        self.trained = False
+        self.keep_original_cols = False
+        self.output_role = None
+        # Populated by ``fit()``.
+        self._to_drop: list[str] | None = None
+        self._schema_in: ColSchema | None = None
+
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
+        """Estimate which selected columns to drop and store the decision."""
+        features = _frame.select(training_data, self.columns)
+        self._to_drop = fit_drop_corr(features, self.threshold, self.method)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
+        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        return self
+
+    def transform(self, new_data: Frame) -> Frame:
+        """Drop the columns chosen at fit time. Never re-estimates."""
+        if self._to_drop is None:
+            raise RuntimeError("StepDropCorr.transform() called before fit().")
+        return _frame.drop(new_data, self._to_drop)
+
+    def schema_in(self) -> ColSchema:
+        """Schema of the columns this step consumed. Known after ``fit()``."""
+        if self._schema_in is None:
+            raise RuntimeError("StepDropCorr.schema_in() called before fit().")
+        return self._schema_in
+
+    def schema_out(self) -> ColSchema:
+        """Schema of the columns this step produced — none; it only removes."""
+        if self._to_drop is None:
+            raise RuntimeError("StepDropCorr.schema_out() called before fit().")
+        return ColSchema(columns=[])
+
+    def accepts_dtypes(self) -> AcceptedDtypes:
+        """Correlation is only meaningful on numeric columns."""
+        return set(NUMERIC_DTYPES)
+
+    @property
+    def produces_sparse(self) -> bool:
+        """``step_drop_corr`` never produces sparse output."""
+        return False
