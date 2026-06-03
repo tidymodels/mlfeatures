@@ -13,6 +13,7 @@ from shoez.types import (
     DataFrame,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
 )
 
@@ -32,6 +33,7 @@ __all__ = [
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
     "Mode",
+    "Roles",
     "ColSchema",
     "SchemaInfo",
     "DataFrame",

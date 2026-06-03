@@ -87,6 +87,7 @@ reference:
       - StepDropZeroVariance
       - ColSchema
       - RowOp
+      - Roles
       - SchemaInfo
 
   - title: Abstract Classes
