@@ -71,6 +71,29 @@ def test_drop(construct: Constructor) -> None:
     assert f.columns(f.drop(frame, "a")) == ["b"]
 
 
+# --- apply_drop (tolerant drop) -----------------------------------------
+
+
+def test_apply_drop_drops_named_columns(construct: Constructor) -> None:
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4], "c": [5, 6]}))
+    assert f.columns(f.apply_drop(frame, ["a", "c"])) == ["b"]
+
+
+def test_apply_drop_empty_list_is_noop(construct: Constructor) -> None:
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4]}))
+    assert f.columns(f.apply_drop(frame, [])) == ["a", "b"]
+
+
+def test_apply_drop_silently_skips_unknown_columns(construct: Constructor) -> None:
+    """Names not in the frame are ignored, not raised on.
+
+    Required for train/serve parity: if an earlier step already removed
+    one of the columns, the drop must keep working.
+    """
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4]}))
+    assert f.columns(f.apply_drop(frame, ["a", "nonexistent"])) == ["b"]
+
+
 # --- Type-aware ops --------------------------------------------------------
 
 

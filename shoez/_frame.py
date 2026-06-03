@@ -58,6 +58,24 @@ def drop(frame: Frame, names: str | Sequence[str]) -> Frame:
     return frame.drop(cols)
 
 
+def apply_drop(frame: Frame, drop_cols: list[str]) -> Frame:
+    """Return ``frame`` with ``drop_cols`` removed, silently skipping absent names.
+
+    The column-dropping half of every REMOVING-mode step (``step_drop_zv``,
+    ``step_drop_corr``, ...). Each fitter inspects training data and returns
+    *which* columns to remove; this helper performs the removal. Splitting the
+    work means the same names can be applied to both the training frame and
+    any held-out frame, guaranteeing train/serve parity (the same columns
+    disappear at fit and at transform time).
+
+    Names not present in ``frame`` are skipped rather than raising, which
+    matches the framework's policy of tolerating schema drift at transform
+    time (see ``design/lifecycle.md``).
+    """
+    present = [c for c in drop_cols if c in frame.columns]
+    return drop(frame, present)
+
+
 # --- Type-aware ops --------------------------------------------------------
 
 
