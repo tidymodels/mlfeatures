@@ -6,9 +6,12 @@ import warnings
 
 import narwhals as nw
 import pandas as pd
+import polars as pl
+import polars.selectors as cs
 import pytest
 
-from shoez.step_drop_corr import fit_drop_corr
+from shoez import SchemaInfo
+from shoez.step_drop_corr import StepDropCorr, fit_drop_corr
 
 
 def _df(*cols: tuple[str, list[float | None]]) -> nw.DataFrame:
@@ -192,3 +195,97 @@ class TestMethod:
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
         result = fit_drop_corr(df, threshold=0.5, method="spearman")
         assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# Column selection via a narwhals selector
+# ---------------------------------------------------------------------------
+
+
+class TestSelectorColumns:
+    """``StepDropCorr.columns`` may be a narwhals selector, resolved at fit time."""
+
+    def _mixed_df(self) -> nw.DataFrame:
+        # a/b are a perfectly-correlated numeric pair; c is uncorrelated numeric;
+        # label is non-numeric and must be excluded by ``selectors.numeric()``.
+        return nw.from_native(
+            pd.DataFrame(
+                {
+                    "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+                    "b": [2.0, 4.0, 6.0, 8.0, 10.0],
+                    "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+                    "label": ["p", "q", "r", "s", "t"],
+                }
+            )
+        )
+
+    def test_numeric_selector_resolves_to_numeric_columns(self) -> None:
+        step = StepDropCorr(nw.selectors.numeric()).fit(self._mixed_df(), SchemaInfo())
+        # Only the numeric columns are considered; the selector drops ``label``.
+        assert step.schema_in().columns == ["a", "b", "c"]
+
+    def test_numeric_selector_drops_one_of_correlated_pair(self) -> None:
+        step = StepDropCorr(nw.selectors.numeric(), threshold=0.9).fit(
+            self._mixed_df(), SchemaInfo()
+        )
+        out = nw.from_native(step.transform(self._mixed_df()))
+        # One of the correlated pair (a/b) is dropped; c and the non-numeric
+        # label both pass through untouched.
+        assert "c" in out.columns
+        assert "label" in out.columns
+        assert ("a" in out.columns) ^ ("b" in out.columns)
+        assert len(out.columns) == 3
+
+    def test_string_name_selector_selects_single_column(self) -> None:
+        # A bare column-name string is also a valid selection and is preserved.
+        step = StepDropCorr("a").fit(self._mixed_df(), SchemaInfo())
+        assert step.schema_in().columns == ["a"]
+
+
+class TestPolarsSelectorColumns:
+    """``columns`` may be a polars selector when the frame is polars-backed."""
+
+    def _mixed_pl(self) -> nw.DataFrame:
+        # Same shape as the narwhals case, but polars-backed so a polars selector
+        # can be resolved against the native frame.
+        return nw.from_native(
+            pl.DataFrame(
+                {
+                    "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+                    "b": [2.0, 4.0, 6.0, 8.0, 10.0],
+                    "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+                    "label": ["p", "q", "r", "s", "t"],
+                }
+            )
+        )
+
+    def test_polars_selector_resolves_to_selected_columns(self) -> None:
+        step = StepDropCorr(cs.numeric()).fit(self._mixed_pl(), SchemaInfo())
+        # The polars selector resolves to the numeric columns, dropping label.
+        assert step.schema_in().columns == ["a", "b", "c"]
+
+    def test_polars_selector_drops_one_of_correlated_pair(self) -> None:
+        step = StepDropCorr(cs.numeric(), threshold=0.9).fit(
+            self._mixed_pl(), SchemaInfo()
+        )
+        out = nw.from_native(step.transform(self._mixed_pl()))
+        assert "c" in out.columns
+        assert "label" in out.columns
+        assert ("a" in out.columns) ^ ("b" in out.columns)
+        assert len(out.columns) == 3
+
+    def test_polars_selector_resolves_against_pandas_frame(self) -> None:
+        # Resolution is pure schema name-resolution (Schema.to_polars), so a
+        # polars selector works against a pandas-backed frame too.
+        df = nw.from_native(
+            pd.DataFrame(
+                {
+                    "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+                    "b": [2.0, 4.0, 6.0, 8.0, 10.0],
+                    "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+                    "label": ["p", "q", "r", "s", "t"],
+                }
+            )
+        )
+        step = StepDropCorr(cs.numeric()).fit(df, SchemaInfo())
+        assert step.schema_in().columns == ["a", "b", "c"]
