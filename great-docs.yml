@@ -44,18 +44,18 @@ dynamic: false
 authors:
   - name: Emil Hvitfeldt
     role: Author
-    # affiliation: 
+    # affiliation:
     email: emil.hvitfeldt@posit.co
-    # github: 
-    # orcid: 
-    # homepage: 
+    # github:
+    # orcid:
+    # homepage:
   - name: Max Kuhn
     role: Author
-    # affiliation: 
+    # affiliation:
     email: max@posit.co
-    # github: 
-    # orcid: 
-    # homepage: 
+    # github:
+    # orcid:
+    # homepage:
 
 # Funding / Copyright Holder
 # --------------------------
@@ -85,6 +85,7 @@ reference:
       - FittedRecipe
       - StepDropCorr
       - StepDropZeroVariance
+      - StepIntercept
       - StepNormalize
       - ColSchema
       - RowOp
