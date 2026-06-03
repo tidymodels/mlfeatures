@@ -1,0 +1,78 @@
+---
+title: "Getting started"
+toc: true
+---
+
+`shoez` separates feature engineering into three phases — **specify**, **fit**,
+and **transform**. This guide walks through all three on a single, end-to-end
+example: removing highly correlated predictors with `step_drop_corr`.
+
+## A complete example
+
+We start with a small dataset where two columns, `a` and `b`, are perfectly
+correlated (`b` is just `2 * a`), while `c` is unrelated.
+
+```{python}
+import pandas as pd
+
+df = pd.DataFrame(
+    {
+        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+        "b": [2.0, 4.0, 6.0, 8.0, 10.0],  # perfectly correlated with `a`
+        "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+    }
+)
+df
+```
+
+**Specify** the pipeline. Steps are first-class objects passed to the recipe;
+building one never touches data. Either pass the steps at construction:
+
+```{python}
+from shoez import Recipe, StepDropCorr
+
+recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+```
+
+or assemble it with the immutable `.add()` builder, which returns a new recipe
+each call:
+
+```{python}
+recipe = Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
+```
+
+**Fit** it on the training data. This is where statistics are estimated — here,
+`step_drop_corr` computes the pairwise correlations and decides which columns to drop:
+
+```{python}
+fitted = recipe.fit(df)
+```
+
+**Transform** any data with the fitted recipe. The same learned decision is
+applied identically to training, test, or new data — nothing is re-estimated:
+
+```{python}
+fitted.transform(df)
+```
+
+One of the perfectly correlated pair has been dropped, while the uncorrelated
+column `c` is kept.
+
+## Backend-agnostic
+
+`shoez` works against [narwhals](https://narwhals-dev.github.io/narwhals/), so
+the same recipe runs on a polars frame and returns a polars frame — pandas in,
+pandas out; polars in, polars out:
+
+```{python}
+import polars as pl
+
+pl_df = pl.DataFrame(
+    {
+        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+        "b": [2.0, 4.0, 6.0, 8.0, 10.0],
+        "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+    }
+)
+Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)]).fit(pl_df).transform(pl_df)
+```

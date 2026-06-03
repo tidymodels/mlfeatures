@@ -1,39 +1,90 @@
 # shoez
 
-A framework for declaring, estimating, and applying feature-engineering pipelines — a Python port of the R [recipes](https://recipes.tidymodels.org/) package.
 
-> **Status:** Pre-alpha. The package is under active design; see [`design/`](design/) for the specification.
+<!-- README.md is generated from README.qmd. Edit that file, then run:
+     uv run --group docs quarto render README.qmd -->
+
+A framework for declaring, estimating, and applying feature-engineering
+pipelines — a Python port of the R
+[recipes](https://recipes.tidymodels.org/) package.
+
+> **Status:** Pre-alpha. The package is under active design; see
+> [`design/`](design/) for the specification.
 
 ## Lifecycle
 
 `shoez` separates feature engineering into three phases:
 
-1. **Specify** — declare a sequence of steps against a schema of variables. No data is touched.
-2. **Fit** — estimate any required statistics from a training dataset.
-3. **Transform** — apply the fitted recipe identically to train, test, or new data.
+1.  **Specify** — declare a sequence of steps against a schema of
+    variables. No data is touched.
+2.  **Fit** — estimate any required statistics from a training dataset.
+3.  **Transform** — apply the fitted recipe identically to train, test,
+    or new data.
+
+``` python
+import pandas as pd
+from shoez import Recipe, StepDropCorr
+
+df = pd.DataFrame(
+    {
+        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+        "b": [2.0, 4.0, 6.0, 8.0, 10.0],  # perfectly correlated with `a`
+        "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+    }
+)
+
+# specify -> fit -> transform
+recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+fitted = recipe.fit(df)
+fitted.transform(df)  # drops one of the correlated pair, keeps `c`
+```
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+&#10;    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+&#10;    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+
+|     | b    | c   |
+|-----|------|-----|
+| 0   | 2.0  | 5.0 |
+| 1   | 4.0  | 1.0 |
+| 2   | 6.0  | 4.0 |
+| 3   | 8.0  | 1.0 |
+| 4   | 10.0 | 9.0 |
+
+</div>
 
 See [`design/README.md`](design/README.md) for the full design.
 
 ## Development
 
-```bash
-uv venv
-uv pip install -e ".[dev]"
+``` bash
+uv sync --extra dev   # install the package + dev tooling
 
-ruff check .          # lint
-ruff format --check . # formatting
-mypy shoez            # type check (strict)
-pyright               # type check (strict)
-pytest --cov          # tests + coverage
+uv run ruff check .          # lint
+uv run ruff format --check . # formatting
+uv run mypy shoez            # type check (strict)
+uv run pyright               # type check (strict)
+uv run pytest --cov          # tests + coverage
 ```
 
-Install the pre-commit hooks with `pre-commit install`.
+Install the pre-commit hooks with `uv run pre-commit install`, or run
+them all at once with `uv run pre-commit run --all-files`.
 
 ## Documentation
 
-The docs site is built with [great-docs](https://github.com/posit-dev/great-docs):
+The docs site is built with
+[great-docs](https://github.com/posit-dev/great-docs):
 
-```bash
+``` bash
 uv sync --group docs       # requires Python >= 3.11
 uv run great-docs build    # build into great-docs/
 uv run great-docs preview  # serve at localhost:3000

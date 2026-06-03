@@ -6,10 +6,11 @@ class. The full per-step conformance suite is a separate issue (#17).
 
 from abc import ABC
 
+import narwhals.stable.v2 as nw
 import pytest
 
 from shoez import ANY_DTYPE, ColSchema, Mode, RowOp, SchemaInfo, Step
-from shoez.types import _AnyDtype
+from shoez.types import AcceptedDtypes, _AnyDtype
 
 
 class _ConcreteStep(Step):
@@ -28,7 +29,7 @@ class _ConcreteStep(Step):
     def schema_out(self) -> ColSchema:
         return ColSchema()
 
-    def accepts_dtypes(self) -> "set[str] | _AnyDtype":
+    def accepts_dtypes(self) -> AcceptedDtypes:
         return ANY_DTYPE
 
     @property
@@ -49,8 +50,8 @@ class _ConcreteRowOp(RowOp):
     def schema_out(self) -> ColSchema:
         return ColSchema()
 
-    def accepts_dtypes(self) -> "set[str] | _AnyDtype":
-        return {"int"}
+    def accepts_dtypes(self) -> AcceptedDtypes:
+        return {nw.Int64}
 
     @property
     def produces_sparse(self) -> bool:
@@ -86,7 +87,7 @@ def test_concrete_step_can_be_instantiated() -> None:
 def test_concrete_rowop_can_be_instantiated() -> None:
     op = _ConcreteRowOp()
     assert isinstance(op, Step)
-    assert op.accepts_dtypes() == {"int"}
+    assert op.accepts_dtypes() == {nw.Int64}
 
 
 def test_required_pkgs_defaults_to_empty() -> None:
@@ -94,8 +95,8 @@ def test_required_pkgs_defaults_to_empty() -> None:
 
 
 def test_any_dtype_contains_everything() -> None:
-    assert "float" in ANY_DTYPE
-    assert "anything-at-all" in ANY_DTYPE
+    assert nw.Float64 in ANY_DTYPE
+    assert nw.Categorical in ANY_DTYPE
 
 
 def test_any_dtype_is_singleton() -> None:

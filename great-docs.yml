@@ -81,6 +81,10 @@ reference:
   - title: Classes
     desc: Main classes provided by the package
     contents:
+      - Recipe
+      - FittedRecipe
+      - StepDropCorr
+      - StepDropZeroVariance
       - ColSchema
       - RowOp
       - SchemaInfo

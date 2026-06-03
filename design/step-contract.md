@@ -118,7 +118,7 @@ The mode labels below are a shorthand for the *shape* of the input/output relati
 | `ONE_TO_ONE` | Each input column produces exactly one output column | `step_normalize`, `step_impute_mean` |
 | `ONE_TO_MANY` | Each input column produces one or more output columns | `step_dummy`, `step_poly` |
 | `MANY_TO_MANY` | A set of input columns produces a new set of output columns | `step_pca`, `step_ica` |
-| `REMOVING` | Input columns are dropped; no new columns created | `step_zv`, `step_corr` |
+| `REMOVING` | Input columns are dropped; no new columns created | `step_zv`, `step_drop_corr` |
 | `ADDING` | New columns added with no corresponding input | `step_intercept` |
 | `ROW_OP` | No column schema change | `step_filter`, `step_shuffle` |
 | `UNCONSTRAINED` | Relationship cannot be declared in advance | `step_mutate` |
