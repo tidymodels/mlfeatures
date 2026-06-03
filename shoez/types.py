@@ -10,17 +10,25 @@ changing the names the rest of the team codes against.
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, TypeAlias, Union
+
+import narwhals.stable.v2 as nw
 
 if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
 
-    #: A tabular data structure flowing through a step. Concretely a pandas or
-    #: polars ``DataFrame``; widened here until the data-interchange layer lands.
+    #: A native tabular structure at the package boundary — concretely a pandas or
+    #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
+    #: :data:`Frame` on entry to the recipe and back at the sklearn boundary.
     DataFrame = Union["pd.DataFrame", "pl.DataFrame"]
 else:
     DataFrame = Any
+
+#: The internal frame type that flows between steps. A backend-agnostic narwhals
+#: ``DataFrame`` wrapping the user's native frame; steps write their data ops
+#: against this via :mod:`shoez._frame`. See ``design/ecosystem.md``.
+Frame: TypeAlias = nw.DataFrame[Any]
 
 
 class ColSchema:

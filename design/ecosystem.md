@@ -1,6 +1,6 @@
 # Ecosystem Fit
 
-→ See also: [serialization.md](serialization.md), [schema.md](schema.md)
+→ See also: [serialization.md](serialization.md), [schema.md](schema.md), [frame-notes.md](frame-notes.md)
 
 ---
 
