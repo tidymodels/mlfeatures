@@ -81,6 +81,58 @@ class SchemaInfo:
         return f"SchemaInfo(columns={self.columns!r})"
 
 
+class Roles:
+    """Column → set of role labels. See ``design/roles.md``.
+
+    Every column carries **zero or more** roles stored as a ``set[str]``. The
+    standard roles are ``"outcome"``, ``"predictor"``, and ``"case_weights"``;
+    users may register arbitrary custom roles. A column may hold several roles
+    at once, but nonsensical combinations are rejected at assignment time.
+    """
+
+    #: Role pairs that may not co-occur on a single column.
+    _INCOMPATIBLE: tuple[frozenset[str], ...] = (frozenset({"outcome", "predictor"}),)
+
+    def __init__(self, mapping: dict[str, set[str]] | None = None):
+        self._roles: dict[str, set[str]] = {}
+        if mapping is not None:
+            for column, roles in mapping.items():
+                for role in roles:
+                    self.add(column, role)
+
+    def add(self, column: str, role: str) -> None:
+        """Assign ``role`` to ``column``, rejecting incompatible combinations."""
+        current = self._roles.setdefault(column, set())
+        candidate = current | {role}
+        for pair in self._INCOMPATIBLE:
+            if pair <= candidate:
+                conflicting = ", ".join(sorted(pair))
+                raise ValueError(
+                    f"column {column!r} cannot hold incompatible roles: {conflicting}"
+                )
+        current.add(role)
+
+    def of(self, column: str) -> set[str]:
+        """Roles assigned to ``column`` (empty set if none)."""
+        return set(self._roles.get(column, set()))
+
+    def columns_with_role(self, role: str) -> list[str]:
+        """Columns carrying ``role``, in insertion order."""
+        return [col for col, roles in self._roles.items() if role in roles]
+
+    def copy(self) -> "Roles":
+        """A deep copy safe to mutate independently."""
+        return Roles({col: set(roles) for col, roles in self._roles.items()})
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Roles):
+            return NotImplemented
+        return self._roles == other._roles
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"Roles({self._roles!r})"
+
+
 class _AnyDtype:
     """Sentinel type for :data:`ANY_DTYPE` (a singleton)."""
 
