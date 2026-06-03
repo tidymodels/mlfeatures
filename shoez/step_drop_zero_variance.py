@@ -11,13 +11,10 @@ shared with every REMOVING-mode step (``step_drop_zv``, ``step_drop_corr``, ...)
 
 from __future__ import annotations
 
-import numpy as np
-import numpy.typing as npt
-
 from shoez.types import Frame
 
 
-def fit_drop_zero_variance(features: Frame) -> npt.NDArray[np.str_]:
+def fit_drop_zero_variance(features: Frame) -> list[str]:
     """Find columns with a single unique non-null value.
 
     A column is "zero-variance" if every observed (non-null) value is the
@@ -34,13 +31,9 @@ def fit_drop_zero_variance(features: Frame) -> npt.NDArray[np.str_]:
 
     Returns
     -------
-    numpy.ndarray
-        1-D string-dtype array of column names to drop — the Python
-        analogue of an R character vector. Pair with
+    list[str]
+        Column names to drop, in their input order. Pair with
         :func:`shoez._frame.apply_drop` to remove the offending columns
         from any frame with the same schema.
     """
-    drop = [c for c in features.columns if features[c].drop_nulls().n_unique() <= 1]
-    # Forcing ``dtype=np.str_`` keeps the empty-result case string-typed;
-    # otherwise ``np.asarray([])`` would default to float64.
-    return np.asarray(drop, dtype=np.str_)
+    return [c for c in features.columns if features[c].drop_nulls().n_unique() <= 1]

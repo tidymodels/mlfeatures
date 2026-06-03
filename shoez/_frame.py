@@ -16,7 +16,7 @@ only at the sklearn boundary (the output of ``Recipe.transform``).
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 
 import narwhals.stable.v2 as nw
 
@@ -58,7 +58,7 @@ def drop(frame: Frame, names: str | Sequence[str]) -> Frame:
     return frame.drop(cols)
 
 
-def apply_drop(frame: Frame, drop_cols: Iterable[str]) -> Frame:
+def apply_drop(frame: Frame, drop_cols: list[str]) -> Frame:
     """Return ``frame`` with ``drop_cols`` removed, silently skipping absent names.
 
     The column-dropping half of every REMOVING-mode step (``step_drop_zv``,
