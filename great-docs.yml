@@ -86,6 +86,7 @@ reference:
       - StepDropCorr
       - StepDropZeroVariance
       - StepIntercept
+      - StepNormalize
       - ColSchema
       - RowOp
       - Roles
