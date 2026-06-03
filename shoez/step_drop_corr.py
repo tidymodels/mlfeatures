@@ -24,6 +24,7 @@ from shoez.types import (
     Frame,
     Mode,
     SchemaInfo,
+    Selector,
 )
 
 if TYPE_CHECKING:
@@ -162,20 +163,26 @@ class StepDropCorr(Step):
     :func:`fit_drop_corr`; this class wraps it in the :class:`~shoez.step.Step`
     lifecycle so a :class:`~shoez.recipe.Recipe` can fit and apply it.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    The columns to consider may be given as a single name, an explicit list of
+    names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a
+    polars selector (``polars.selectors``). Any selector is resolved against the
+    frame's schema at fit time, regardless of backend. See
+    ``design/selectors.md``.
     """
 
     mode = Mode.REMOVING
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         threshold: float = 0.9,
         method: Literal["pearson", "spearman"] = "pearson",
         id: str | None = None,
     ):
-        self.columns = list(columns)
+        # Held verbatim. Interpreting a column spec (name, list, or selector) is
+        # selection logic that belongs to the frame boundary, not the step:
+        # ``fit()`` hands it to ``_frame.select``, which resolves it at fit time.
+        self.columns = columns
         self.threshold = threshold
         self.method: Literal["pearson", "spearman"] = method
         self.id = id if id is not None else "corr"
@@ -191,7 +198,8 @@ class StepDropCorr(Step):
         features = _frame.select(training_data, self.columns)
         self._to_drop = fit_drop_corr(features, self.threshold, self.method)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        # Record the resolved column names (a selector is concrete only now).
+        self._schema_in = ColSchema(columns=list(features.columns), dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

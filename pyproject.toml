@@ -104,6 +104,9 @@ exclude_lines = [
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+# Vendored verbatim from https://github.com/machow/databackend (MIT) — kept
+# byte-identical to upstream, so it is not linted/formatted or type-checked here.
+extend-exclude = ["shoez/_databackend.py"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I"]
@@ -132,6 +135,8 @@ exclude = [
     "**/build",
     "**/dist",
     "tests",
+    # Vendored verbatim from machow/databackend (MIT); not type-checked here.
+    "shoez/_databackend.py",
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false
@@ -156,3 +161,9 @@ exclude = [
 [[tool.mypy.overrides]]
 module = ["pandas", "polars", "narwhals", "narwhals.*"]
 ignore_missing_imports = true
+
+# Vendored verbatim from machow/databackend (MIT); its dynamic ABCMeta pattern is
+# not worth diverging from upstream to satisfy strict mode, so skip its errors.
+[[tool.mypy.overrides]]
+module = ["shoez._databackend"]
+ignore_errors = true

@@ -9,14 +9,19 @@ changing the names the rest of the team codes against.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeAlias, Union
 
 import narwhals.stable.v2 as nw
+from narwhals.selectors import Selector as NwSelector
+
+from ._databackend import AbstractBackend
 
 if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
+    from polars.selectors import Selector as PlSelector
 
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
@@ -25,10 +30,41 @@ if TYPE_CHECKING:
 else:
     DataFrame = Any
 
+    class PlSelector(AbstractBackend):
+        # ``isinstance(x, PlSelector)`` is True for a ``polars.selectors.Selector``
+        # without importing polars unless it is already loaded (see _databackend).
+        _backends = [("polars.selectors", "Selector")]
+
+
 #: The internal frame type that flows between steps. A backend-agnostic narwhals
 #: ``DataFrame`` wrapping the user's native frame; steps write their data ops
 #: against this via :mod:`shoez._frame`. See ``design/ecosystem.md``.
 Frame: TypeAlias = nw.DataFrame[Any]
+
+#: How a step names the columns it operates on: a single column name, an explicit
+#: list of names, a narwhals selector (:data:`NwSelector`, e.g.
+#: ``narwhals.selectors.numeric()``), or a polars selector (:data:`PlSelector`,
+#: ``polars.selectors``). Any selector is resolved against the frame's schema at
+#: fit time, for any backend. See ``design/selectors.md``.
+Selector: TypeAlias = Union[str, Sequence[str], NwSelector, "PlSelector"]
+
+# Listed so the selector aliases (``NwSelector`` is a renamed import; ``PlSelector``
+# is a conditional import under TYPE_CHECKING) count as explicit re-exports for
+# strict type-checkers; the other names are module-level definitions and
+# re-exportable regardless.
+__all__ = [
+    "ANY_DTYPE",
+    "NUMERIC_DTYPES",
+    "AcceptedDtypes",
+    "ColSchema",
+    "DataFrame",
+    "Frame",
+    "Mode",
+    "NwSelector",
+    "PlSelector",
+    "SchemaInfo",
+    "Selector",
+]
 
 
 class ColSchema:
