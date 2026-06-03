@@ -101,6 +101,14 @@ class TestFormula:
         assert set(rec.roles.columns_with_role("predictor")) == {"x1", "x2"}
         assert rec.roles.of("y") == {"outcome"}
 
+    def test_unlisted_column_gets_no_role(self) -> None:
+        # x3 is in the data but absent from the formula: it stays roleless,
+        # retained in the schema but not selected as a predictor or outcome.
+        df = _df().assign(x3=[10.0, 11.0, 12.0])
+        rec = Recipe(data=df, formula="y ~ x1 + x2")
+        assert rec.roles.of("x3") == set()
+        assert "x3" not in rec.roles.columns_with_role("predictor")
+
     def test_polars_prototype(self) -> None:
         rec = Recipe(data=pl.DataFrame(_df()), formula="y ~ .")
         assert set(rec.roles.columns_with_role("predictor")) == {"x1", "x2"}
