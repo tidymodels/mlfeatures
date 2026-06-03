@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError, version
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
+from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_one_hot import StepOneHot
 from shoez.types import (
@@ -29,6 +30,7 @@ __all__ = [
     "StepDropCorr",
     "StepDummy",
     "StepOneHot",
+    "StepDropZeroVariance",
     "Step",
     "RowOp",
     "ANY_DTYPE",
