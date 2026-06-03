@@ -106,12 +106,6 @@ reference:
     contents:
       - Mode
 
-  - title: Functions
-    desc: Top-level helper functions
-    contents:
-      - fit_zero_variance
-      - apply_filter
-
 # Site URL
 # --------
 # Canonical address of the deployed documentation site.

@@ -14,6 +14,7 @@ import math
 from typing import Any, Callable
 
 import narwhals.stable.v2 as nw
+import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
@@ -69,6 +70,38 @@ def test_select_sequence_preserves_order(construct: Constructor) -> None:
 def test_drop(construct: Constructor) -> None:
     frame = f.from_native(construct({"a": [1], "b": [2]}))
     assert f.columns(f.drop(frame, "a")) == ["b"]
+
+
+# --- apply_drop (tolerant drop) -----------------------------------------
+
+
+def test_apply_drop_drops_named_columns(construct: Constructor) -> None:
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4], "c": [5, 6]}))
+    assert f.columns(f.apply_drop(frame, ["a", "c"])) == ["b"]
+
+
+def test_apply_drop_accepts_list_tuple_and_ndarray(construct: Constructor) -> None:
+    """``Iterable[str]`` covers list, tuple, and numpy string array."""
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4]}))
+    assert f.columns(f.apply_drop(frame, ["a"])) == ["b"]
+    assert f.columns(f.apply_drop(frame, ("a",))) == ["b"]
+    assert f.columns(f.apply_drop(frame, np.array(["a"], dtype=np.str_))) == ["b"]
+
+
+def test_apply_drop_empty_is_noop(construct: Constructor) -> None:
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4]}))
+    assert f.columns(f.apply_drop(frame, [])) == ["a", "b"]
+    assert f.columns(f.apply_drop(frame, np.array([], dtype=np.str_))) == ["a", "b"]
+
+
+def test_apply_drop_silently_skips_unknown_columns(construct: Constructor) -> None:
+    """Names not in the frame are ignored, not raised on.
+
+    Required for train/serve parity: if an earlier step already removed
+    one of the columns, the filter must keep working.
+    """
+    frame = f.from_native(construct({"a": [1, 2], "b": [3, 4]}))
+    assert f.columns(f.apply_drop(frame, ["a", "nonexistent"])) == ["b"]
 
 
 # --- Type-aware ops --------------------------------------------------------
