@@ -11,7 +11,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Recipe, StepCorr
+from shoez import Recipe, SchemaInfo, StepCorr
 
 
 def _data() -> dict[str, list[float]]:
@@ -96,3 +96,15 @@ class TestStepCorrGuards:
         step = StepCorr(["a", "b"])
         with pytest.raises(RuntimeError):
             step.transform(nw.from_native(pd.DataFrame(_data())))
+
+    def test_accepts_narwhals_numeric_dtypes(self) -> None:
+        accepted = StepCorr(["a", "b"]).accepts_dtypes()
+        assert nw.Float64 in accepted
+        assert nw.Int64 in accepted
+        # A non-numeric narwhals dtype is rejected.
+        assert nw.String not in accepted
+
+    def test_fit_returns_self(self) -> None:
+        step = StepCorr(["a", "b"])
+        fitted = step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
+        assert fitted is step

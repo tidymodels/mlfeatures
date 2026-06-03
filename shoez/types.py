@@ -103,9 +103,29 @@ class _AnyDtype:
 #: The correct choice for type-agnostic steps such as ``step_zv`` or ``step_rm``.
 ANY_DTYPE = _AnyDtype()
 
-#: Return type of ``Step.accepts_dtypes()``: an explicit set of dtype names, or
-#: the :data:`ANY_DTYPE` sentinel.
-AcceptedDtypes = Union[set[str], _AnyDtype]
+#: Return type of ``Step.accepts_dtypes()``: an explicit set of narwhals dtype
+#: classes, or the :data:`ANY_DTYPE` sentinel. Using narwhals' own dtype types
+#: rather than a custom string taxonomy keeps the framework aligned with the one
+#: backend-agnostic type system it already depends on (see ``design/schema.md``).
+AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
+
+#: The narwhals numeric dtypes — a convenience set for steps that only accept
+#: numeric columns (e.g. :class:`~shoez.step_corr.StepCorr`, ``step_normalize``).
+NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
+    nw.Int8,
+    nw.Int16,
+    nw.Int32,
+    nw.Int64,
+    nw.Int128,
+    nw.UInt8,
+    nw.UInt16,
+    nw.UInt32,
+    nw.UInt64,
+    nw.UInt128,
+    nw.Float32,
+    nw.Float64,
+    nw.Decimal,
+}
 
 
 class Mode(Enum):

@@ -10,14 +10,24 @@ excluded.
 from __future__ import annotations
 
 import warnings
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import narwhals as nw
 import numpy as np
 
 from shoez import _frame
 from shoez.step import Step
-from shoez.types import ColSchema, Frame, Mode, SchemaInfo
+from shoez.types import (
+    NUMERIC_DTYPES,
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+)
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 __all__ = ["fit_filter_corr", "StepCorr"]
 
@@ -176,7 +186,7 @@ class StepCorr(Step):
         self._to_drop: list[str] | None = None
         self._schema_in: ColSchema | None = None
 
-    def fit(self, training_data: Frame, info: SchemaInfo) -> "StepCorr":
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
         features = _frame.select(training_data, self.columns)
         self._to_drop = fit_filter_corr(features, self.threshold, self.method)
@@ -202,9 +212,9 @@ class StepCorr(Step):
             raise RuntimeError("StepCorr.schema_out() called before fit().")
         return ColSchema(columns=[])
 
-    def accepts_dtypes(self) -> set[str]:
+    def accepts_dtypes(self) -> AcceptedDtypes:
         """Correlation is only meaningful on numeric columns."""
-        return {"float", "int"}
+        return set(NUMERIC_DTYPES)
 
     @property
     def produces_sparse(self) -> bool:

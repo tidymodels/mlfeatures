@@ -10,8 +10,12 @@ and the conformance test suite are implemented in later issues (#17, #18, #21).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from shoez.types import AcceptedDtypes, ColSchema, Frame, SchemaInfo
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 class Step(ABC):
@@ -36,7 +40,7 @@ class Step(ABC):
     output_role: str | None
 
     @abstractmethod
-    def fit(self, training_data: Frame, info: SchemaInfo) -> "Step":
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve selectors, estimate and store statistics, return the fitted step.
 
         Must be idempotent given the same training data.
