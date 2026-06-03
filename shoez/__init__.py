@@ -6,6 +6,7 @@ from shoez.recipe import FittedRecipe, Recipe
 from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
+from shoez.step_normalize import StepNormalize
 from shoez.types import (
     ANY_DTYPE,
     NUMERIC_DTYPES,
@@ -28,6 +29,7 @@ __all__ = [
     "FittedRecipe",
     "StepDropCorr",
     "StepDropZeroVariance",
+    "StepNormalize",
     "Step",
     "RowOp",
     "ANY_DTYPE",

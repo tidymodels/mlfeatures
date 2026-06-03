@@ -17,6 +17,7 @@ only at the sklearn boundary (the output of ``Recipe.transform``).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
 import narwhals.stable.v2 as nw
 
@@ -133,3 +134,16 @@ def null_counts(frame: Frame) -> dict[str, int]:
 def has_nulls(frame: Frame, column: str) -> bool:
     """Whether ``column`` contains any null values."""
     return frame[column].null_count() > 0
+
+
+# --- Scalar extraction -----------------------------------------------------
+
+
+def as_float(value: Any) -> float:
+    """Coerce a narwhals scalar to ``float``, mapping a missing value to NaN.
+
+    Aggregations such as ``Series.mean`` / ``Series.std`` return ``None`` when
+    they are undefined (e.g. an empty column); callers storing the result as a
+    numeric statistic want ``NaN`` to propagate rather than a ``None``.
+    """
+    return float("nan") if value is None else float(value)
