@@ -6,6 +6,13 @@ column a predictor; ``"y ~ x1 + x2"`` names predictors explicitly. There are no
 interactions, transformations, or arithmetic — anything beyond plain column
 selection must be expressed as a step. This keeps the parser well clear of
 Patsy-style complexity.
+
+Because terms are split on ``+`` and the grammar reserves a handful of operator
+characters, column names containing those characters (``a+b``, ``a-b``) cannot
+be referenced through a formula — there is no backtick-quoting escape. Names
+with spaces are fine (``my col``), since only ``+`` separates terms. For
+arbitrary column names, assign roles explicitly with ``Recipe.set_roles`` rather
+than via a formula.
 """
 
 from __future__ import annotations

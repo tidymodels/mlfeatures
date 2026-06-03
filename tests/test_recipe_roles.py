@@ -79,6 +79,19 @@ class TestSetRoles:
         rec = Recipe().set_roles(outcome="anything")
         assert rec.roles.of("anything") == {"outcome"}
 
+    def test_arbitrary_column_names(self) -> None:
+        # set_roles passes names through as plain strings: spaces, operator
+        # characters, and unicode are all fine (unlike the formula grammar).
+        df = pd.DataFrame({"y": [1.0], "my col": [2.0], "a+b": [3.0], "café": [4.0]})
+        rec = Recipe(data=df).set_roles(
+            outcome="y", predictor=["my col", "a+b", "café"]
+        )
+        assert set(rec.roles.columns_with_role("predictor")) == {
+            "my col",
+            "a+b",
+            "café",
+        }
+
     def test_roles_survive_add(self) -> None:
         rec = Recipe(data=_df()).set_roles(outcome="y").add(StepDropCorr(["x1", "x2"]))
         assert rec.roles.of("y") == {"outcome"}
@@ -117,6 +130,20 @@ class TestFormula:
         rec = Recipe(data=_df(), formula=formula)
         assert rec.roles.of("y") == {"outcome"}
         assert set(rec.roles.columns_with_role("predictor")) == {"x1", "x2"}
+
+    def test_name_with_space_is_one_term(self) -> None:
+        # A space inside a term is not a separator; the whole "my col" is one
+        # predictor name (only '+' splits terms).
+        df = _df().rename(columns={"x1": "my col"})
+        rec = Recipe(data=df, formula="y ~ my col")
+        assert rec.roles.columns_with_role("predictor") == ["my col"]
+
+    def test_operator_char_in_name_not_referencable(self) -> None:
+        # A column literally named "a+b" cannot be referenced via a formula —
+        # use set_roles for such names. Here it splits into unknown 'a'/'b'.
+        df = pd.DataFrame({"y": [1.0], "a+b": [2.0]})
+        with pytest.raises(ValueError, match="unknown column"):
+            Recipe(data=df, formula="y ~ a+b")
 
     def test_polars_prototype(self) -> None:
         rec = Recipe(data=pl.DataFrame(_df()), formula="y ~ .")
