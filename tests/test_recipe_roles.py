@@ -109,6 +109,15 @@ class TestFormula:
         assert rec.roles.of("x3") == set()
         assert "x3" not in rec.roles.columns_with_role("predictor")
 
+    @pytest.mark.parametrize(
+        "formula",
+        ["y ~ x1 + x2", "y~x1+x2", "  y  ~   x1 +x2 ", "y~ x1+ x2"],
+    )
+    def test_spacing_is_ignored(self, formula: str) -> None:
+        rec = Recipe(data=_df(), formula=formula)
+        assert rec.roles.of("y") == {"outcome"}
+        assert set(rec.roles.columns_with_role("predictor")) == {"x1", "x2"}
+
     def test_polars_prototype(self) -> None:
         rec = Recipe(data=pl.DataFrame(_df()), formula="y ~ .")
         assert set(rec.roles.columns_with_role("predictor")) == {"x1", "x2"}
