@@ -118,9 +118,9 @@ class TestStepOneHotCorrectness:
 
     def test_one_more_column_than_dummy(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
-        dummy_step = __import__(
-            "shoez.step_dummy", fromlist=["StepDummy"]
-        ).StepDummy(columns=["x"])
+        dummy_step = __import__("shoez.step_dummy", fromlist=["StepDummy"]).StepDummy(
+            columns=["x"]
+        )
         ohe_step = StepOneHot(columns=["x"])
         dummy_step.fit(df, _schema())
         ohe_step.fit(df, _schema())
