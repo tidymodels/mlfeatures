@@ -12,7 +12,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeAlias, Union
 
-import narwhals.stable.v1 as nw
+import narwhals.stable.v2 as nw
 
 if TYPE_CHECKING:
     import pandas as pd

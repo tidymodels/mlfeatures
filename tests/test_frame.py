@@ -13,7 +13,7 @@ from __future__ import annotations
 import math
 from typing import Any, Callable
 
-import narwhals.stable.v1 as nw
+import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest

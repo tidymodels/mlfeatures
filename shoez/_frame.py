@@ -5,7 +5,7 @@ v0.1: a step is written once against this surface and narwhals dispatches to the
 user's native backend (pandas in → pandas out, polars in → polars out). There are
 no per-backend code paths.
 
-This module wraps :mod:`narwhals.stable.v1` rather than re-exporting it, so the
+This module wraps :mod:`narwhals.stable.v2` rather than re-exporting it, so the
 escape-hatch discipline lives in one place: any operation that forces a drop to
 the native frame via :func:`to_native` outside the fixed sklearn boundary is a
 defect to upstream into narwhals, not a license to branch on backend.
@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-import narwhals.stable.v1 as nw
+import narwhals.stable.v2 as nw
 
 from shoez.types import DataFrame, Frame
 
