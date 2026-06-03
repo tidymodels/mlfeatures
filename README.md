@@ -17,17 +17,16 @@ See [`design/README.md`](design/README.md) for the full design.
 ## Development
 
 ```bash
-uv venv
-uv pip install -e ".[dev]"
+uv sync --extra dev   # install the package + dev tooling
 
-ruff check .          # lint
-ruff format --check . # formatting
-mypy shoez            # type check (strict)
-pyright               # type check (strict)
-pytest --cov          # tests + coverage
+uv run ruff check .          # lint
+uv run ruff format --check . # formatting
+uv run mypy shoez            # type check (strict)
+uv run pyright               # type check (strict)
+uv run pytest --cov          # tests + coverage
 ```
 
-Install the pre-commit hooks with `pre-commit install`.
+Install the pre-commit hooks with `uv run pre-commit install`, or run them all at once with `uv run pre-commit run --all-files`.
 
 ## Documentation
 
