@@ -12,6 +12,24 @@ A framework for declaring, estimating, and applying feature-engineering pipeline
 2. **Fit** — estimate any required statistics from a training dataset.
 3. **Transform** — apply the fitted recipe identically to train, test, or new data.
 
+```python
+import pandas as pd
+from shoez import Recipe
+
+df = pd.DataFrame(
+    {
+        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+        "b": [2.0, 4.0, 6.0, 8.0, 10.0],  # perfectly correlated with `a`
+        "c": [5.0, 1.0, 4.0, 1.0, 9.0],
+    }
+)
+
+# specify -> fit -> transform
+recipe = Recipe().step_corr(["a", "b", "c"], threshold=0.9)
+fitted = recipe.fit(df)
+fitted.transform(df)  # drops one of the correlated pair, keeps `c`
+```
+
 See [`design/README.md`](design/README.md) for the full design.
 
 ## Development
