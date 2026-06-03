@@ -84,6 +84,7 @@ reference:
       - Recipe
       - FittedRecipe
       - StepDropCorr
+      - StepDropZeroVariance
       - ColSchema
       - RowOp
       - SchemaInfo
