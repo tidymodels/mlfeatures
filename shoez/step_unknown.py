@@ -97,12 +97,12 @@ def apply_unknown(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``columns`` cast to
-    ``String`` and its nulls filled with ``new_level``. Column names, order, and
-    structure are unchanged.
+    narwhals.DataFrame — the input frame with each column in ``columns`` having
+    its nulls filled with ``new_level`` and cast to ``String``. Column names,
+    order, and structure are unchanged.
     """
     exprs = [
-        nw.col(col).cast(nw.String).fill_null(new_level).alias(col) for col in columns
+        nw.col(col).fill_null(new_level).cast(nw.String).alias(col) for col in columns
     ]
     return features.with_columns(*exprs)
 
