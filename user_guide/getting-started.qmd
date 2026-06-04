@@ -5,7 +5,7 @@ toc: true
 
 `shoez` separates feature engineering into three phases — **specify**, **fit**,
 and **transform**. This guide walks through all three on a single, end-to-end
-example: removing highly correlated predictors with `step_drop_corr`.
+example: removing highly correlated predictors with `StepDropCorr`.
 
 ## A complete example
 
@@ -80,7 +80,7 @@ Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)]).fit(pl_df).transfor
 ## Column selectors
 
 Many steps allow the use of polars (or narwhals) selectors to specify which columns to operate on.
-This is shown below with StepDropCorr.
+This is shown below with `StepDropCorr`.
 
 ```{python}
 import polars.selectors as cs
@@ -89,7 +89,8 @@ from shoez import Recipe, StepDropCorr
 df = pl.DataFrame(
     {
         "x1": [1.0, 2.0, 3.0, 4.0, 5.0],
-        "x2": [2.0, 4.0, 6.0, 8.0, 10.0],  # perfectly correlated with `a`
+        "x2": [2.0, 4.0, 6.0, 8.0, 10.0],  # perfectly correlated with `x1`
+        "z": [2.0, 4.0, 6.0, 8.0, 10.0],  # also perfectly correlated with `x1`
         "y": [5.0, 1.0, 4.0, 1.0, 9.0],
     }
 )
@@ -97,4 +98,125 @@ df = pl.DataFrame(
 # only select columns starting with "x" for StepDropCorr
 step = StepDropCorr(cs.starts_with("x"), threshold=0.9)
 recipe = Recipe().add(step)
+fitted = recipe.fit(df)
+# drops one of the two correlated `x1` and `x2`, but keeps the correlated `z`
+fitted.transform(df)
 ```
+
+## Available steps
+
+`StepDropCorr` is one of several built-in steps. Each does one job, and they
+fall into a few families by how they reshape the data:
+
+| Step | What it does | Input |
+|------|--------------|-------|
+| `StepNormalize` | center & scale each column to mean 0, sd 1 | numeric |
+| `StepDummy` | expand into *k−1* indicator columns (treatment coding) | categorical |
+| `StepOneHot` | expand into *k* indicator columns (full coding) | categorical |
+| `StepUnknown` | recode missing values to an explicit `"unknown"` level | categorical |
+| `StepDropZeroVariance` | drop constant or all-missing columns | any |
+| `StepDropCorr` | drop highly correlated columns (shown above) | numeric |
+| `StepIntercept` | add a constant column | — |
+
+To see a few in action, here is a small frame with both numeric and categorical
+columns:
+
+```{python}
+from shoez import (
+    Recipe,
+    StepNormalize,
+    StepDummy,
+    StepOneHot,
+    StepIntercept,
+)
+
+df = pd.DataFrame(
+    {
+        "height": [40.0, 42.0, 44.0, 39.0, 41.0],
+        "width": [10.0, 11.0, 12.0, 10.0, 11.0],
+        "color": ["red", "blue", "red", "green", "blue"],
+    }
+)
+```
+
+`StepNormalize` standardizes the numeric columns in place — same names, rescaled
+values:
+
+```{python}
+Recipe(steps=[StepNormalize(["height", "width"])]).fit(df).transform(df)
+```
+
+`StepDummy` expands a categorical column into indicator columns named
+`{column}_{level}`. With three colors it produces *k−1 = 2* columns; the first
+level in sort order (`blue`) is the dropped reference and shows up as all-zero:
+
+```{python}
+Recipe(steps=[StepDummy(["color"])]).fit(df).transform(df)
+```
+
+`StepOneHot` is the same idea but keeps all *k* levels, including `blue`:
+
+```{python}
+Recipe(steps=[StepOneHot(["color"])]).fit(df).transform(df)
+```
+
+`StepUnknown` turns missing categorical values into a level a model can learn
+from, recoding nulls to an explicit `"unknown"` rather than leaving a gap:
+
+```{python}
+from shoez import StepUnknown
+
+missing = pd.DataFrame({"color": ["red", None, "blue", None, "green"]})
+Recipe(steps=[StepUnknown(["color"])]).fit(missing).transform(missing)
+```
+
+Steps compose in order — the output of one feeds the next. Here `StepDummy`
+encodes `color`, then `StepIntercept` appends a column of ones (handy as a
+regression intercept):
+
+```{python}
+Recipe().add(StepDummy(["color"])).add(StepIntercept()).fit(df).transform(df)
+```
+
+`StepDropZeroVariance` rounds out the set, dropping columns that carry no signal
+(a single unique value, or all missing).
+
+## Use in a scikit-learn pipeline
+
+A recipe handles feature engineering; the model that consumes those features
+lives downstream in [scikit-learn](https://scikit-learn.org/). `RecipeTransformer`
+bridges the two — it wraps a recipe so it behaves like any scikit-learn
+transformer and drops straight into a `Pipeline`.
+
+One wrinkle: scikit-learn keeps the features `X` and target `y` apart, while
+`shoez` identifies the outcome by its **role**. So assign an outcome role on the
+recipe; the adapter re-joins `y` under that name at fit time and strips it back
+out, leaving `transform` to return the feature matrix only.
+
+```{python}
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+from shoez import RecipeTransformer
+
+X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+features = list(X.columns)
+
+recipe = Recipe(data=X.assign(target=y), outcome="target", predictors=features).add(
+    StepNormalize(features)
+)
+
+pipe = Pipeline(
+    [
+        ("recipe", RecipeTransformer(recipe)),
+        ("model", LogisticRegression(max_iter=1000)),
+    ]
+)
+pipe.fit(X, y)
+pipe.score(X, y)
+```
+
+That is the whole bridge. See
+[Using recipes in scikit-learn pipelines](sklearn-pipelines.qmd) for
+cross-validation and tuning, feature names, and the `set_output` API.
