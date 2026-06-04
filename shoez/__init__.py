@@ -12,6 +12,7 @@ from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
 from shoez.step_polynomial import apply_polynomial, fit_polynomial
+from shoez.step_unknown import StepUnknown
 from shoez.types import (
     ANY_DTYPE,
     NUMERIC_DTYPES,
@@ -39,6 +40,7 @@ __all__ = [
     "StepDropZeroVariance",
     "StepIntercept",
     "StepNormalize",
+    "StepUnknown",
     "Step",
     "RowOp",
     "fit_polynomial",
