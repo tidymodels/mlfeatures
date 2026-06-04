@@ -1,10 +1,8 @@
 """Fitting logic for the correlation-drop step.
 
 ``fit_drop_corr`` identifies which numeric columns should be dropped because
-their pairwise absolute correlation exceeds a threshold.  It is based on the
-``corr_filter`` function from the R ``recipes`` package, with one deviation:
-zero-variance (all-NaN correlation) columns are dropped rather than silently
-excluded.
+their pairwise absolute correlation exceeds a threshold.  Zero-variance
+(all-NaN correlation) columns are dropped rather than silently excluded.
 """
 
 from __future__ import annotations
@@ -57,16 +55,13 @@ def fit_drop_corr(
 
     Notes
     -----
-    Based on ``corr_filter`` from the R ``recipes`` package.  Uses
-    pairwise-complete observations via ``nw.corr()``, which delegates NaN
-    handling to the underlying backend (equivalent to R's
-    ``use = "pairwise.complete.obs"``).  When two columns in a correlated pair
+    Uses pairwise-complete observations via ``nw.corr()``, which delegates NaN
+    handling to the underlying backend.  When two columns in a correlated pair
     must be chosen for removal, the one with the higher mean absolute
-    correlation across all columns is dropped; ties go to the row variable
-    (matching R's behaviour).
+    correlation across all columns is dropped; ties go to the row variable.
 
-    Deviation from R: zero-variance / all-NaN columns are added to the drop
-    list rather than excluded from the filter but kept.
+    Zero-variance / all-NaN columns are added to the drop list rather than
+    excluded from the filter but kept.
     """
     if not 0.0 <= threshold <= 1.0:
         raise ValueError(f"`threshold` must be between 0 and 1, got {threshold!r}.")
@@ -96,7 +91,7 @@ def fit_drop_corr(
     off_diag = ~np.eye(n, dtype=bool)
     all_na = np.all(np.isnan(corr) | ~off_diag, axis=0)
 
-    # Deviation from R: drop all-NA columns rather than keeping them.
+    # Drop all-NA columns rather than keeping them.
     na_drop: list[str] = [col_names[i] for i in range(n) if all_na[i]]
     if na_drop:
         warnings.warn(
@@ -131,7 +126,7 @@ def fit_drop_corr(
     # one with the broadest correlation to others is removed first.
     avg_corr = np.mean(np.abs(corr), axis=0)
 
-    # Dense rank (matches R's as.numeric(as.factor(averageCorr))).
+    # Dense rank.
     _, inv = np.unique(avg_corr, return_inverse=True)
     ranks = inv + 1  # 1-based
 

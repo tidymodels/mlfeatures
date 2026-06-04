@@ -85,6 +85,8 @@ reference:
       - FittedRecipe
       - StepDropCorr
       - StepDropZeroVariance
+      - StepDummy
+      - StepOneHot
       - StepIntercept
       - StepNormalize
       - ColSchema
