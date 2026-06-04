@@ -119,6 +119,57 @@ class TestEndToEnd:
         )
         assert all(step.trained for step in fitted.steps)
 
+    def test_basis_is_pinned_at_fit_not_recomputed_at_transform(self) -> None:
+        # The orthogonal basis (centering mean + QR transform matrix) must be
+        # learned at fit time on the training data and reused unchanged at
+        # transform time. Concretely: if we transform the same rows twice —
+        # once embedded in their original training context, once together with
+        # held-out rows that would shift the recomputed mean — the matching
+        # rows must produce identical polynomial values.
+        train = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        fitted = Recipe(steps=[StepPolynomial(["a"], degree=3)]).fit(train)
+        train_out = fitted.transform(train)
+        # Adding far-away points would shift the mean if the basis were
+        # re-estimated; with a pinned basis, the first five rows must match
+        # train_out exactly.
+        mixed = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0, 100.0, 200.0]})
+        mixed_out = fitted.transform(mixed)
+        for col in ("a_1", "a_2", "a_3"):
+            np.testing.assert_allclose(
+                mixed_out[col].to_numpy()[:5],
+                train_out[col].to_numpy(),
+                atol=1e-12,
+                err_msg=f"basis drifted between transforms on column {col}",
+            )
+
+    def test_fit_stores_training_mean_on_step(self) -> None:
+        # Whitebox check: the StepPolynomial actually carries the training
+        # mean on its fitted result, so we know the centering can't drift.
+        train = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        step = StepPolynomial(["a"], degree=2)
+        Recipe(steps=[step]).fit(train)
+        # ``_fit_result`` is private but exists post-fit; using it for the
+        # invariant check is the most direct way to assert pinning.
+        fit_result = step._fit_result
+        assert fit_result is not None
+        assert fit_result["a"].mean == pytest.approx(3.0)
+
+    def test_non_default_pandas_index_does_not_introduce_nan(self) -> None:
+        # Regression: when a pandas frame has a shuffled / non-default index
+        # (e.g. coming out of sklearn.train_test_split), an earlier version
+        # used `nw.concat(how="horizontal")` to assemble the output, which
+        # is index-aligned on pandas — producing all-NaN rows wherever the
+        # source index didn't match the polynomial frame's RangeIndex.
+        df = pd.DataFrame(
+            {"a": [1.0, 2.0, 3.0, 4.0, 5.0], "b": [10.0, 20.0, 30.0, 40.0, 50.0]},
+            index=[500, 100, 800, 200, 700],
+        )
+        out = Recipe(steps=[StepPolynomial(["a"], degree=3)]).fit(df).transform(df)
+        # All-finite expansions, original index preserved, pass-through intact.
+        assert out.isna().sum().sum() == 0
+        assert list(out.index) == [500, 100, 800, 200, 700]
+        assert out["b"].tolist() == [10.0, 20.0, 30.0, 40.0, 50.0]
+
 
 # ---------------------------------------------------------------------------
 # StepPolynomial — unit-level invariants

@@ -123,6 +123,31 @@ class TestEndToEnd:
         )
         assert all(step.trained for step in fitted.steps)
 
+    def test_non_default_pandas_index_does_not_introduce_nan(self) -> None:
+        # Regression: an earlier version used `nw.concat(how="horizontal")` to
+        # append the distance columns onto ``data``. Pandas horizontal concat
+        # aligns by *index*, so a frame with a shuffled / non-default index
+        # (e.g. after sklearn.train_test_split) ended up with all-NaN rows
+        # wherever the source index didn't match the distance frame's
+        # RangeIndex. Fixed by switching to `with_columns`, which is positional.
+        df = pd.DataFrame(
+            {
+                "x": [0.0, 2.0, 10.0, 12.0, 1.0, 3.0],
+                "y": [0.0, 4.0, 10.0, 14.0, 1.0, 3.0],
+                "label": ["a", "a", "b", "b", "a", "b"],
+            },
+            index=[100, 200, 300, 400, 500, 600],
+        )
+        recipe = Recipe(
+            steps=[StepClassDistance(["x", "y"], outcome="label", log_distance=False)]
+        )
+        out = recipe.fit(df).transform(df)
+        # Original rows preserved (no NaN introduced) and indices kept.
+        assert out["x"].notna().all()
+        assert out["distance_a"].notna().all()
+        assert out["distance_b"].notna().all()
+        assert list(out.index) == [100, 200, 300, 400, 500, 600]
+
 
 # ---------------------------------------------------------------------------
 # StepClassDistance — unit-level invariants

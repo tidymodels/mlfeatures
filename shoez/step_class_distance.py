@@ -262,26 +262,21 @@ def apply_class_distance(
     if fit_result.log_distance:
         distances = np.log(distances + fit_result.eps)
 
-    # Build narwhals literal columns from the distance matrix. Using ``nw.lit``
-    # with ``.alias`` works but loses the row-by-row values; we want one
-    # *column* per class, each with ``n`` values. The simplest backend-agnostic
-    # way is to build a narwhals frame from the numpy block and concat it
-    # horizontally onto ``data``.
-    new_columns = [f"{prefix}_{cls}" for cls in fit_result.classes]
-    # ``from_numpy`` needs to know which backend to materialize on. We read
-    # that off the input frame via narwhals' implementation tag so the recipe's
-    # "pandas in → pandas out" / "polars in → polars out" guarantee holds.
-    new_frame = nw.from_numpy(
-        distances,
-        schema=new_columns,
-        backend=data.implementation,
-    )
-    # Append horizontally — preserves original column order, then the new ones.
-    # ``how="horizontal"`` requires the row counts to match, which they do
-    # because ``distances`` has the same number of rows as ``data``.
-    # The cast silences narwhals' generic FrameT return type (same pattern as
-    # in step_polynomial.apply_polynomial).
-    return nw.concat([data, new_frame], how="horizontal")  # type: ignore[return-value]
+    # Attach the new distance columns via ``with_columns`` rather than
+    # ``nw.concat(how="horizontal")``: on pandas, horizontal concat aligns by
+    # *index*, which silently produces NaN when ``data`` has a non-default
+    # index (e.g. after ``sklearn.train_test_split``). ``with_columns`` on a
+    # series built with the same backend is positional, preserving the input
+    # frame's index.
+    new_series = [
+        nw.new_series(
+            name=f"{prefix}_{cls}",
+            values=distances[:, j],
+            backend=data.implementation,
+        )
+        for j, cls in enumerate(fit_result.classes)
+    ]
+    return data.with_columns(*new_series)
 
 
 # --- Private helpers --------------------------------------------------------
