@@ -154,6 +154,19 @@ def apply_dummy(
                 stacklevel=3,
             )
 
+        # Indicator dtype. The ``when/then/otherwise`` chain below would otherwise
+        # produce an ``Object`` column on the pandas backend (the ``lit(None)``
+        # branch makes narwhals unify the branch types to object even when no row
+        # is null), which is not numeric and so breaks downstream numeric steps
+        # such as StepNormalize. Cast explicitly to fix this:
+        #   * clean columns -> ``Int8`` (true binary indicators);
+        #   * columns with null-source or unseen-level rows -> ``Float64``,
+        #     because pandas' numpy ``Int8`` cannot hold the resulting NaN
+        #     (``Float64`` is the only numeric dtype that preserves missing
+        #     values across both pandas and polars).
+        produces_missing = bool(unseen) or _frame.has_nulls(frame, col)
+        indicator_dtype = nw.Float64 if produces_missing else nw.Int8
+
         # Build one indicator expression per retained level.
         # Null-source rows → null indicator.
         # Unseen-level rows → null indicator (treated the same as unknown).
@@ -170,7 +183,9 @@ def apply_dummy(
                 when_chain = when_chain.when(nw.col(col).is_in(unseen)).then(
                     nw.lit(None)
                 )
-            exprs.append(when_chain.otherwise(nw.lit(0)).alias(out_name))
+            exprs.append(
+                when_chain.otherwise(nw.lit(0)).cast(indicator_dtype).alias(out_name)
+            )
         frame = frame.with_columns(exprs)
 
     if not keep_original_cols:
@@ -183,10 +198,13 @@ class StepDummy(Step):
     """Expand discrete columns into *k−1* binary indicator columns.
 
     A ``ONE_TO_MANY`` step: each selected column is replaced by *k−1* indicator
-    columns (``nw.Int8``, 0/1/null) where *k* is the number of unique non-null
-    levels seen during ``fit()``. The first level in ascending sort order is the
-    reference level and is dropped. Statistical logic lives in
-    :func:`fit_dummy`; transform logic is shared via :func:`apply_dummy`.
+    columns where *k* is the number of unique non-null levels seen during
+    ``fit()``. Indicators are ``nw.Int8`` (0/1); a column that contains
+    null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
+    since pandas' ``Int8`` cannot hold the missing values. The first level in
+    ascending sort order is the reference level and is dropped. Statistical
+    logic lives in :func:`fit_dummy`; transform logic is shared via
+    :func:`apply_dummy`.
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
