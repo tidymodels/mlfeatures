@@ -6,6 +6,7 @@
 # Set this if your importable module name differs from the project name.
 # Example: project 'py-yaml12' with module name 'yaml12'
 # module: yaml12
+cat shoez/__init__.py
 
 # Docstring Parser
 # ----------------
@@ -44,18 +45,18 @@ dynamic: false
 authors:
   - name: Emil Hvitfeldt
     role: Author
-    # affiliation: 
+    # affiliation:
     email: emil.hvitfeldt@posit.co
-    # github: 
-    # orcid: 
-    # homepage: 
+    # github:
+    # orcid:
+    # homepage:
   - name: Max Kuhn
     role: Author
-    # affiliation: 
+    # affiliation:
     email: max@posit.co
-    # github: 
-    # orcid: 
-    # homepage: 
+    # github:
+    # orcid:
+    # homepage:
 
 # Funding / Copyright Holder
 # --------------------------
@@ -83,13 +84,18 @@ reference:
     contents:
       - Recipe
       - FittedRecipe
+      - RecipeTransformer
       - StepDropCorr
       - StepDropZeroVariance
+      - StepDummy
       - StepImputationMean
+      - StepIntercept
       - StepNormalize
+      - StepOneHot
       - StepUnknown
       - ColSchema
       - RowOp
+      - Roles
       - SchemaInfo
 
   - title: Abstract Classes

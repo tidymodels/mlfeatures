@@ -9,14 +9,19 @@ changing the names the rest of the team codes against.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeAlias, Union
 
 import narwhals.stable.v2 as nw
+from narwhals.selectors import Selector as NwSelector
+
+from ._databackend import AbstractBackend
 
 if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
+    from polars.selectors import Selector as PlSelector
 
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
@@ -25,10 +30,41 @@ if TYPE_CHECKING:
 else:
     DataFrame = Any
 
+    class PlSelector(AbstractBackend):
+        # ``isinstance(x, PlSelector)`` is True for a ``polars.selectors.Selector``
+        # without importing polars unless it is already loaded (see _databackend).
+        _backends = [("polars.selectors", "Selector")]
+
+
 #: The internal frame type that flows between steps. A backend-agnostic narwhals
 #: ``DataFrame`` wrapping the user's native frame; steps write their data ops
 #: against this via :mod:`shoez._frame`. See ``design/ecosystem.md``.
 Frame: TypeAlias = nw.DataFrame[Any]
+
+#: How a step names the columns it operates on: a single column name, an explicit
+#: list of names, a narwhals selector (:data:`NwSelector`, e.g.
+#: ``narwhals.selectors.numeric()``), or a polars selector (:data:`PlSelector`,
+#: ``polars.selectors``). Any selector is resolved against the frame's schema at
+#: fit time, for any backend. See ``design/selectors.md``.
+Selector: TypeAlias = Union[str, Sequence[str], NwSelector, "PlSelector"]
+
+# Listed so the selector aliases (``NwSelector`` is a renamed import; ``PlSelector``
+# is a conditional import under TYPE_CHECKING) count as explicit re-exports for
+# strict type-checkers; the other names are module-level definitions and
+# re-exportable regardless.
+__all__ = [
+    "ANY_DTYPE",
+    "NUMERIC_DTYPES",
+    "AcceptedDtypes",
+    "ColSchema",
+    "DataFrame",
+    "Frame",
+    "Mode",
+    "NwSelector",
+    "PlSelector",
+    "SchemaInfo",
+    "Selector",
+]
 
 
 class ColSchema:
@@ -79,6 +115,58 @@ class SchemaInfo:
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"SchemaInfo(columns={self.columns!r})"
+
+
+class Roles:
+    """Column → set of role labels. See ``design/roles.md``.
+
+    Every column carries **zero or more** roles stored as a ``set[str]``. The
+    standard roles are ``"outcome"``, ``"predictor"``, and ``"case_weights"``;
+    users may register arbitrary custom roles. A column may hold several roles
+    at once, but nonsensical combinations are rejected at assignment time.
+    """
+
+    #: Role pairs that may not co-occur on a single column.
+    _INCOMPATIBLE: tuple[frozenset[str], ...] = (frozenset({"outcome", "predictor"}),)
+
+    def __init__(self, mapping: dict[str, set[str]] | None = None):
+        self._roles: dict[str, set[str]] = {}
+        if mapping is not None:
+            for column, roles in mapping.items():
+                for role in roles:
+                    self.add(column, role)
+
+    def add(self, column: str, role: str) -> None:
+        """Assign ``role`` to ``column``, rejecting incompatible combinations."""
+        current = self._roles.setdefault(column, set())
+        candidate = current | {role}
+        for pair in self._INCOMPATIBLE:
+            if pair <= candidate:
+                conflicting = ", ".join(sorted(pair))
+                raise ValueError(
+                    f"column {column!r} cannot hold incompatible roles: {conflicting}"
+                )
+        current.add(role)
+
+    def of(self, column: str) -> set[str]:
+        """Roles assigned to ``column`` (empty set if none)."""
+        return set(self._roles.get(column, set()))
+
+    def columns_with_role(self, role: str) -> list[str]:
+        """Columns carrying ``role``, in insertion order."""
+        return [col for col, roles in self._roles.items() if role in roles]
+
+    def copy(self) -> "Roles":
+        """A deep copy safe to mutate independently."""
+        return Roles({col: set(roles) for col, roles in self._roles.items()})
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Roles):
+            return NotImplemented
+        return self._roles == other._roles
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"Roles({self._roles!r})"
 
 
 class _AnyDtype:

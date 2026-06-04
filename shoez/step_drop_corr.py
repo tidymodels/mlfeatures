@@ -1,10 +1,8 @@
 """Fitting logic for the correlation-drop step.
 
 ``fit_drop_corr`` identifies which numeric columns should be dropped because
-their pairwise absolute correlation exceeds a threshold.  It is based on the
-``corr_filter`` function from the R ``recipes`` package, with one deviation:
-zero-variance (all-NaN correlation) columns are dropped rather than silently
-excluded.
+their pairwise absolute correlation exceeds a threshold.  Zero-variance
+(all-NaN correlation) columns are dropped rather than silently excluded.
 """
 
 from __future__ import annotations
@@ -24,6 +22,7 @@ from shoez.types import (
     Frame,
     Mode,
     SchemaInfo,
+    Selector,
 )
 
 if TYPE_CHECKING:
@@ -56,16 +55,13 @@ def fit_drop_corr(
 
     Notes
     -----
-    Based on ``corr_filter`` from the R ``recipes`` package.  Uses
-    pairwise-complete observations via ``nw.corr()``, which delegates NaN
-    handling to the underlying backend (equivalent to R's
-    ``use = "pairwise.complete.obs"``).  When two columns in a correlated pair
+    Uses pairwise-complete observations via ``nw.corr()``, which delegates NaN
+    handling to the underlying backend.  When two columns in a correlated pair
     must be chosen for removal, the one with the higher mean absolute
-    correlation across all columns is dropped; ties go to the row variable
-    (matching R's behaviour).
+    correlation across all columns is dropped; ties go to the row variable.
 
-    Deviation from R: zero-variance / all-NaN columns are added to the drop
-    list rather than excluded from the filter but kept.
+    Zero-variance / all-NaN columns are added to the drop list rather than
+    excluded from the filter but kept.
     """
     if not 0.0 <= threshold <= 1.0:
         raise ValueError(f"`threshold` must be between 0 and 1, got {threshold!r}.")
@@ -95,7 +91,7 @@ def fit_drop_corr(
     off_diag = ~np.eye(n, dtype=bool)
     all_na = np.all(np.isnan(corr) | ~off_diag, axis=0)
 
-    # Deviation from R: drop all-NA columns rather than keeping them.
+    # Drop all-NA columns rather than keeping them.
     na_drop: list[str] = [col_names[i] for i in range(n) if all_na[i]]
     if na_drop:
         warnings.warn(
@@ -130,7 +126,7 @@ def fit_drop_corr(
     # one with the broadest correlation to others is removed first.
     avg_corr = np.mean(np.abs(corr), axis=0)
 
-    # Dense rank (matches R's as.numeric(as.factor(averageCorr))).
+    # Dense rank.
     _, inv = np.unique(avg_corr, return_inverse=True)
     ranks = inv + 1  # 1-based
 
@@ -162,20 +158,26 @@ class StepDropCorr(Step):
     :func:`fit_drop_corr`; this class wraps it in the :class:`~shoez.step.Step`
     lifecycle so a :class:`~shoez.recipe.Recipe` can fit and apply it.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    The columns to consider may be given as a single name, an explicit list of
+    names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a
+    polars selector (``polars.selectors``). Any selector is resolved against the
+    frame's schema at fit time, regardless of backend. See
+    ``design/selectors.md``.
     """
 
     mode = Mode.REMOVING
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         threshold: float = 0.9,
         method: Literal["pearson", "spearman"] = "pearson",
         id: str | None = None,
     ):
-        self.columns = list(columns)
+        # Held verbatim. Interpreting a column spec (name, list, or selector) is
+        # selection logic that belongs to the frame boundary, not the step:
+        # ``fit()`` hands it to ``_frame.select``, which resolves it at fit time.
+        self.columns = columns
         self.threshold = threshold
         self.method: Literal["pearson", "spearman"] = method
         self.id = id if id is not None else "corr"
@@ -191,7 +193,8 @@ class StepDropCorr(Step):
         features = _frame.select(training_data, self.columns)
         self._to_drop = fit_drop_corr(features, self.threshold, self.method)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        # Record the resolved column names (a selector is concrete only now).
+        self._schema_in = ColSchema(columns=list(features.columns), dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
