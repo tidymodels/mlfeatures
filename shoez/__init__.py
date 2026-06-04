@@ -6,6 +6,7 @@ from shoez.recipe import FittedRecipe, Recipe
 from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
+from shoez.step_imputation_mean import StepImputationMean
 from shoez.step_normalize import StepNormalize
 from shoez.step_unknown import StepUnknown
 from shoez.types import (
@@ -29,6 +30,7 @@ __all__ = [
     "FittedRecipe",
     "StepDropCorr",
     "StepDropZeroVariance",
+    "StepImputationMean",
     "StepNormalize",
     "StepUnknown",
     "Step",

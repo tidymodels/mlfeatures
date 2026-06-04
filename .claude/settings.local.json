@@ -2,7 +2,8 @@
   "autoMemoryEnabled": false,
   "permissions": {
     "allow": [
-      "Bash(uv run *)"
+      "Bash(uv run *)",
+      "Bash(git checkout *)"
     ]
   }
 }

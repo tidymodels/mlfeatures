@@ -85,6 +85,7 @@ reference:
       - FittedRecipe
       - StepDropCorr
       - StepDropZeroVariance
+      - StepImputationMean
       - StepNormalize
       - StepUnknown
       - ColSchema
