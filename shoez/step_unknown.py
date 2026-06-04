@@ -101,8 +101,16 @@ def apply_unknown(
     ``String`` and its nulls filled with ``new_level``. Column names, order, and
     structure are unchanged.
     """
+    # Recode nulls with an explicit ``is_null`` mask rather than casting first
+    # and relying on ``fill_null``: older polars (resolved on Python 3.10) casts
+    # null to the literal string ``"None"`` instead of preserving it as null,
+    # which would leave nothing for ``fill_null`` to replace.
     exprs = [
-        nw.col(col).cast(nw.String).fill_null(new_level).alias(col) for col in columns
+        nw.when(~nw.col(col).is_null())
+        .then(nw.col(col).cast(nw.String))
+        .otherwise(nw.lit(new_level))
+        .alias(col)
+        for col in columns
     ]
     return features.with_columns(*exprs)
 
