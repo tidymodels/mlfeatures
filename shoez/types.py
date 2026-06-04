@@ -154,6 +154,13 @@ class Roles:
                 )
         current.add(role)
 
+    def remove(self, column: str, role: str) -> None:
+        """Remove ``role`` from ``column``. No-op if the column or role is absent."""
+        if column in self._roles:
+            self._roles[column].discard(role)
+            if not self._roles[column]:
+                del self._roles[column]
+
     def of(self, column: str) -> set[str]:
         """Roles assigned to ``column`` (empty set if none)."""
         return set(self._roles.get(column, set()))

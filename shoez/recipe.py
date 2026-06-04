@@ -116,16 +116,18 @@ class Recipe:
         affect training data and so never run during ``transform()`` either.
         """
         current = _frame.from_native(data)
+        live_roles = self.roles.copy()
         fitted_steps: list[Step] = []
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
-            info.roles = self.roles
+            info.roles = live_roles
             fitted = step.fit(current, info)
             fitted.trained = True  # set by the recipe, not the step (per contract)
             if not isinstance(step, RowOp):
                 current = fitted.transform(current)
+            fitted.update_roles(live_roles)
             fitted_steps.append(fitted)
-        return FittedRecipe(steps=fitted_steps, roles=self.roles.copy())
+        return FittedRecipe(steps=fitted_steps, roles=live_roles)
 
 
 class FittedRecipe:

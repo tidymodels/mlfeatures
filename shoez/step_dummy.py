@@ -21,6 +21,7 @@ from shoez.types import (
     ColSchema,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
     Selector,
 )
@@ -260,6 +261,18 @@ class StepDummy(Step):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Accepts discrete columns; rejects float and decimal."""
         return set(DISCRETE_DTYPES)
+
+    def update_roles(self, roles: Roles) -> None:
+        if self._levels is None:
+            return
+        for source_col, levels in self._levels.items():
+            source_roles = roles.of(source_col)
+            for role in source_roles:
+                for lvl in levels:
+                    roles.add(self._col_name(source_col, str(lvl)), role)
+            if not self.keep_original_cols:
+                for role in list(source_roles):
+                    roles.remove(source_col, role)
 
     @property
     def produces_sparse(self) -> bool:

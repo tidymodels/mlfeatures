@@ -21,6 +21,7 @@ from shoez.types import (
     ColSchema,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
     Selector,
 )
@@ -114,6 +115,12 @@ class StepDropZeroVariance(Step):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Zero variance is meaningful for any dtype, not just numerics."""
         return ANY_DTYPE
+
+    def update_roles(self, roles: Roles) -> None:
+        if self._to_drop:
+            for col in self._to_drop:
+                for role in list(roles.of(col)):
+                    roles.remove(col, role)
 
     @property
     def produces_sparse(self) -> bool:
