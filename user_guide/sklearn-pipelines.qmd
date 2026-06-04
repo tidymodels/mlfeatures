@@ -1,0 +1,88 @@
+---
+title: "Using recipes in scikit-learn pipelines"
+toc: true
+---
+
+A `shoez` recipe handles feature engineering; the model that consumes those
+features lives downstream in [scikit-learn](https://scikit-learn.org/). The
+`RecipeTransformer` adapter bridges the two: it wraps a recipe so it behaves
+like any other scikit-learn transformer and drops straight into a
+`sklearn.pipeline.Pipeline`.
+
+## The adapter
+
+`RecipeTransformer` wraps an *unfitted* recipe. It exposes the familiar
+scikit-learn `fit` / `transform` / `fit_transform` methods, so the recipe's
+`specify → fit → transform` lifecycle is driven by the pipeline rather than by
+hand.
+
+```{python}
+from sklearn.datasets import load_breast_cancer
+
+X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+X.iloc[:5, :3]
+```
+
+scikit-learn keeps the features `X` and the target `y` apart, while `shoez`
+identifies the outcome by its **role**. Build the recipe with the outcome role
+assigned; the adapter re-joins `y` onto `X` under that name at fit time and
+strips it back out of the transformed output, so `transform` returns the feature
+matrix only.
+
+```{python}
+from shoez import Recipe, StepNormalize
+
+features = list(X.columns)
+
+recipe = (
+    Recipe(data=X.assign(target=y))
+    .set_roles(outcome="target", predictor=features)
+    .add(StepNormalize(features))
+)
+```
+
+## Inside a `Pipeline`
+
+Wrap the recipe in `RecipeTransformer` and place it ahead of an estimator. The
+pipeline's `fit` flows `X`/`y` through the recipe, then fits the model on the
+engineered features:
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+from shoez import RecipeTransformer
+
+pipe = Pipeline(
+    [
+        ("recipe", RecipeTransformer(recipe)),
+        ("model", LogisticRegression(max_iter=1000)),
+    ]
+)
+pipe.fit(X, y)
+pipe.score(X, y)
+```
+
+## Cross-validation and tuning
+
+Because the adapter stores the recipe verbatim, it clones cleanly — so it works
+inside `GridSearchCV` and any other tool that re-fits across folds:
+
+```{python}
+from sklearn.model_selection import GridSearchCV
+
+search = GridSearchCV(pipe, {"model__C": [0.1, 1.0]}, cv=3)
+search.fit(X, y)
+search.best_params_
+```
+
+## Feature names and `set_output`
+
+`RecipeTransformer` implements `get_feature_names_out`, so it composes inside a
+`ColumnTransformer` and supports the `set_output` API for choosing the container
+type returned by `transform`:
+
+```{python}
+rt = RecipeTransformer(recipe).set_output(transform="pandas")
+rt.fit(X, y).transform(X).iloc[:5, :3]
+```
