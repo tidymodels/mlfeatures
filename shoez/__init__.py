@@ -2,6 +2,7 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
+from shoez.compat import RecipeTransformer
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
@@ -31,6 +32,7 @@ __all__ = [
     "__version__",
     "Recipe",
     "FittedRecipe",
+    "RecipeTransformer",
     "StepDropCorr",
     "StepDummy",
     "StepOneHot",
