@@ -83,16 +83,26 @@ reference:
     contents:
       - Recipe
       - FittedRecipe
+      - StepClassDistance
       - StepDropCorr
       - StepDropZeroVariance
       - StepDummy
       - StepOneHot
       - StepIntercept
       - StepNormalize
+      - ClassDistanceFit
       - ColSchema
       - RowOp
       - Roles
       - SchemaInfo
+
+  - title: Functions
+    desc: Plain fit/apply helpers used by the step classes
+    contents:
+      - fit_class_distance
+      - apply_class_distance
+      - fit_polynomial
+      - apply_polynomial
 
   - title: Abstract Classes
     desc: Abstract base classes
