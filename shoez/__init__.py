@@ -15,6 +15,7 @@ from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_imputation_mean import StepImputationMean
+from shoez.step_imputation_mode import StepImputationMode
 from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
@@ -48,6 +49,7 @@ __all__ = [
     "StepOneHot",
     "StepDropZeroVariance",
     "StepImputationMean",
+    "StepImputationMode",
     "StepIntercept",
     "StepNormalize",
     "StepUnknown",

@@ -90,6 +90,7 @@ reference:
       - StepDropZeroVariance
       - StepDummy
       - StepImputationMean
+      - StepImputationMode
       - StepIntercept
       - StepNormalize
       - StepOneHot
