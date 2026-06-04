@@ -92,7 +92,6 @@ reference:
       - StepIntercept
       - StepNormalize
       - StepOneHot
-      - StepUnknown
       - ColSchema
       - RowOp
       - Roles
