@@ -2,6 +2,7 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
+from shoez.compat import RecipeTransformer
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.step import RowOp, Step
 from shoez.step_class_distance import (
@@ -39,6 +40,7 @@ __all__ = [
     "FittedRecipe",
     "ClassDistanceFit",
     "StepClassDistance",
+    "RecipeTransformer",
     "StepDropCorr",
     "StepDummy",
     "StepOneHot",

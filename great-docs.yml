@@ -84,6 +84,7 @@ reference:
       - Recipe
       - FittedRecipe
       - StepClassDistance
+      - RecipeTransformer
       - StepDropCorr
       - StepDropZeroVariance
       - StepDummy
