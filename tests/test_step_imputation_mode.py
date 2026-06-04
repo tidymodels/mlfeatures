@@ -89,6 +89,13 @@ class TestApplyImputationMode:
         out = apply_imputation_mode(df, *fit_imputation_mode(df))
         assert out["g"].dtype == nw.String
 
+    def test_null_most_frequent_still_imputed_with_real_level(self) -> None:
+        # null is the most common value (2 nulls vs 1 "x"); imputation must still
+        # fill with the real mode "x", never leave (or fill with) null.
+        df = _df(("g", [None, None, "x"]))
+        out = apply_imputation_mode(df, *fit_imputation_mode(df))
+        assert out["g"].to_list() == ["x", "x", "x"]
+
     def test_no_nulls_unchanged(self) -> None:
         df = _df(("g", ["a", "b", "c"]))
         out = apply_imputation_mode(df, *fit_imputation_mode(df))
