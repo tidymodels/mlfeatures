@@ -21,6 +21,7 @@ from typing import Any
 
 import narwhals.stable.v2 as nw
 
+from shoez.selectors import ShoezSelector
 from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
@@ -57,8 +58,6 @@ def select(frame: Frame, names: Selector, roles: Roles | None = None) -> Frame:
     regardless of the frame's backend. A ``ShoezSelector`` additionally uses
     ``roles`` to filter by role.
     """
-    from shoez.selectors import ShoezSelector
-
     if isinstance(names, ShoezSelector):
         return frame.select(names.resolve(frame, roles or Roles()))
     if isinstance(names, str):

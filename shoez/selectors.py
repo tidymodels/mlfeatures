@@ -11,7 +11,9 @@ the recipe roles are available.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
+
+import narwhals.stable.v2 as nw
 
 if TYPE_CHECKING:
     from shoez.types import Frame, Roles
@@ -28,18 +30,7 @@ class _RoleTypeSelector(ShoezSelector):
     def __init__(
         self,
         role: str | None,
-        dtype: Literal[
-            "numeric",
-            "categorical",
-            "nominal",
-            "string",
-            "integer",
-            "double",
-            "date",
-            "datetime",
-            "boolean",
-        ]
-        | None,
+        dtype: type | tuple[type, ...] | None,
     ) -> None:
         self._role = role
         self._dtype = dtype
@@ -54,25 +45,9 @@ class _RoleTypeSelector(ShoezSelector):
         else:
             candidates = _frame.columns(frame)
 
-        if self._dtype == "numeric":
-            return [c for c in candidates if _frame.is_numeric(frame, c)]
-        if self._dtype == "categorical":
-            return [c for c in candidates if _frame.is_categorical(frame, c)]
-        if self._dtype == "nominal":
-            return [c for c in candidates if _frame.is_nominal(frame, c)]
-        if self._dtype == "string":
-            return [c for c in candidates if _frame.is_string(frame, c)]
-        if self._dtype == "integer":
-            return [c for c in candidates if _frame.is_integer(frame, c)]
-        if self._dtype == "double":
-            return [c for c in candidates if _frame.is_double(frame, c)]
-        if self._dtype == "date":
-            return [c for c in candidates if _frame.is_date(frame, c)]
-        if self._dtype == "datetime":
-            return [c for c in candidates if _frame.is_datetime(frame, c)]
-        if self._dtype == "boolean":
-            return [c for c in candidates if _frame.is_boolean(frame, c)]
-        return candidates
+        if self._dtype is None:
+            return candidates
+        return [c for c in candidates if issubclass(type(frame.schema[c]), self._dtype)]
 
 
 class Selectors:
@@ -81,12 +56,12 @@ class Selectors:
     @classmethod
     def predictors_numeric(cls) -> ShoezSelector:
         """All predictor columns that are numeric."""
-        return _RoleTypeSelector(role="predictor", dtype="numeric")
+        return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.NumericType)
 
     @classmethod
     def predictors_categorical(cls) -> ShoezSelector:
         """All predictor columns that are categorical."""
-        return _RoleTypeSelector(role="predictor", dtype="categorical")
+        return _RoleTypeSelector(role="predictor", dtype=(nw.Categorical, nw.Enum))
 
     @classmethod
     def predictors(cls) -> ShoezSelector:
@@ -96,37 +71,39 @@ class Selectors:
     @classmethod
     def predictors_nominal(cls) -> ShoezSelector:
         """All predictor columns that are nominal (categorical, enum, or string)."""
-        return _RoleTypeSelector(role="predictor", dtype="nominal")
+        return _RoleTypeSelector(
+            role="predictor", dtype=(nw.String, nw.Categorical, nw.Enum)
+        )
 
     @classmethod
     def predictors_string(cls) -> ShoezSelector:
         """All predictor columns that are string-typed."""
-        return _RoleTypeSelector(role="predictor", dtype="string")
+        return _RoleTypeSelector(role="predictor", dtype=nw.String)
 
     @classmethod
     def predictors_integer(cls) -> ShoezSelector:
         """All predictor columns that are integer-typed."""
-        return _RoleTypeSelector(role="predictor", dtype="integer")
+        return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.IntegerType)
 
     @classmethod
     def predictors_double(cls) -> ShoezSelector:
         """All predictor columns that are floating-point typed."""
-        return _RoleTypeSelector(role="predictor", dtype="double")
+        return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.FloatType)
 
     @classmethod
     def predictors_date(cls) -> ShoezSelector:
         """All predictor columns that are Date-typed."""
-        return _RoleTypeSelector(role="predictor", dtype="date")
+        return _RoleTypeSelector(role="predictor", dtype=nw.Date)
 
     @classmethod
     def predictors_datetime(cls) -> ShoezSelector:
         """All predictor columns that are Datetime-typed."""
-        return _RoleTypeSelector(role="predictor", dtype="datetime")
+        return _RoleTypeSelector(role="predictor", dtype=nw.Datetime)
 
     @classmethod
     def predictors_boolean(cls) -> ShoezSelector:
         """All predictor columns that are boolean-typed."""
-        return _RoleTypeSelector(role="predictor", dtype="boolean")
+        return _RoleTypeSelector(role="predictor", dtype=nw.Boolean)
 
     @classmethod
     def outcomes(cls) -> ShoezSelector:
