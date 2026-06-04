@@ -26,8 +26,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-import polars as pl
-
+from shoez._dependencies import import_optional
 from shoez.recipe import Recipe
 from shoez.step import Step
 from shoez.step_drop_corr import StepDropCorr
@@ -41,7 +40,15 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
+    import polars as pl
+
     from shoez.types import Selector
+else:
+    # Runtime: this opt-in module is the one sanctioned place that imports polars
+    # at runtime (``design/ecosystem.md`` boundary rule #5). Route it through
+    # import_optional so a missing polars surfaces as a friendly, greppable
+    # MissingDependencyError at ``import shoez.polars`` rather than a bare error.
+    pl = import_optional("polars", purpose="for the `df.shz` accessor")
 
 __all__ = ["ShzNamespace"]
 
