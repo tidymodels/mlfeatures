@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     import polars as pl
     from polars.selectors import Selector as PlSelector
 
+    from shoez.selectors import ShoezSelector
+
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
     #: :data:`Frame` on entry to the recipe and back at the sklearn boundary.
@@ -46,7 +48,9 @@ Frame: TypeAlias = nw.DataFrame[Any]
 #: ``narwhals.selectors.numeric()``), or a polars selector (:data:`PlSelector`,
 #: ``polars.selectors``). Any selector is resolved against the frame's schema at
 #: fit time, for any backend. See ``design/selectors.md``.
-Selector: TypeAlias = Union[str, Sequence[str], NwSelector, "PlSelector"]
+Selector: TypeAlias = Union[
+    str, Sequence[str], NwSelector, "PlSelector", "ShoezSelector"
+]
 
 # Listed so the selector aliases (``NwSelector`` is a renamed import; ``PlSelector``
 # is a conditional import under TYPE_CHECKING) count as explicit re-exports for
@@ -101,9 +105,11 @@ class SchemaInfo:
         self,
         columns: list[str] | None = None,
         dtypes: dict[str, str] | None = None,
+        roles: Roles | None = None,
     ):
         self.columns = list(columns) if columns is not None else []
         self.dtypes = dict(dtypes) if dtypes is not None else {}
+        self.roles: Roles = roles if roles is not None else Roles()
 
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":

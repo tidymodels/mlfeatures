@@ -16,11 +16,11 @@ from __future__ import annotations
 
 from shoez import _frame
 from shoez.step import RowOp, Step
-from shoez.types import (  # pyright: ignore[reportPrivateUsage]
+from shoez.types import (
     DataFrame,
     Roles,
     SchemaInfo,
-    _apply_role_assignments,
+    _apply_role_assignments,  # pyright: ignore[reportPrivateUsage]
 )
 
 __all__ = ["Recipe", "FittedRecipe"]
@@ -119,6 +119,7 @@ class Recipe:
         fitted_steps: list[Step] = []
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
+            info.roles = self.roles
             fitted = step.fit(current, info)
             fitted.trained = True  # set by the recipe, not the step (per contract)
             if not isinstance(step, RowOp):

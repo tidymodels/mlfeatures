@@ -22,6 +22,7 @@ from shoez.types import (
     Frame,
     Mode,
     SchemaInfo,
+    Selector,
 )
 
 if TYPE_CHECKING:
@@ -72,10 +73,10 @@ class StepDropZeroVariance(Step):
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         id: str | None = None,
     ):
-        self.columns = list(columns)
+        self.columns = columns
         self.id = id if id is not None else "zv"
         self.trained = False
         self.keep_original_cols = False
@@ -86,10 +87,10 @@ class StepDropZeroVariance(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._to_drop = fit_drop_zero_variance(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

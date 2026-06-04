@@ -21,7 +21,7 @@ from typing import Any
 
 import narwhals.stable.v2 as nw
 
-from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Selector
+from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 
@@ -47,14 +47,20 @@ def columns(frame: Frame) -> list[str]:
     return frame.columns
 
 
-def select(frame: Frame, names: Selector) -> Frame:
+def select(frame: Frame, names: Selector, roles: Roles | None = None) -> Frame:
     """Return a frame with only the selected columns.
 
     ``names`` may be a single column name, a sequence of names (kept in the
     given order), a narwhals selector (e.g. ``narwhals.selectors.numeric()``),
-    or a polars selector (``polars.selectors``). A polars selector is resolved
-    against the frame's schema, so it works regardless of the frame's backend.
+    a polars selector (``polars.selectors``), or a :class:`~shoez.selectors.ShoezSelector`.
+    A polars selector is resolved against the frame's schema, so it works
+    regardless of the frame's backend. A ``ShoezSelector`` additionally uses
+    ``roles`` to filter by role.
     """
+    from shoez.selectors import ShoezSelector
+
+    if isinstance(names, ShoezSelector):
+        return frame.select(names.resolve(frame, roles or Roles()))
     if isinstance(names, str):
         return frame.select([names])
     if isinstance(names, NwSelector):

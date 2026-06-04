@@ -190,7 +190,7 @@ class StepDropCorr(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._to_drop = fit_drop_corr(features, self.threshold, self.method)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         # Record the resolved column names (a selector is concrete only now).

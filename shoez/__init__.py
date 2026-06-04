@@ -3,6 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from shoez.recipe import FittedRecipe, Recipe
+from shoez.selectors import Selectors
 from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
@@ -49,4 +50,5 @@ __all__ = [
     "SchemaInfo",
     "DataFrame",
     "Frame",
+    "Selectors",
 ]
