@@ -35,8 +35,7 @@ from shoez import Recipe, StepNormalize
 features = list(X.columns)
 
 recipe = (
-    Recipe(data=X.assign(target=y))
-    .set_roles(outcome="target", predictor=features)
+    Recipe(data=X.assign(target=y), outcome="target", predictors=features)
     .add(StepNormalize(features))
 )
 ```
