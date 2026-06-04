@@ -6,8 +6,12 @@ from shoez.recipe import FittedRecipe, Recipe
 from shoez.step import RowOp, Step
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
+from shoez.step_dummy import StepDummy
+from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_unknown import StepUnknown
+from shoez.step_one_hot import StepOneHot
+from shoez.step_polynomial import apply_polynomial, fit_polynomial
 from shoez.types import (
     ANY_DTYPE,
     NUMERIC_DTYPES,
@@ -15,6 +19,7 @@ from shoez.types import (
     DataFrame,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
 )
 
@@ -28,14 +33,20 @@ __all__ = [
     "Recipe",
     "FittedRecipe",
     "StepDropCorr",
+    "StepDummy",
+    "StepOneHot",
     "StepDropZeroVariance",
+    "StepIntercept",
     "StepNormalize",
     "StepUnknown",
     "Step",
     "RowOp",
+    "fit_polynomial",
+    "apply_polynomial",
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
     "Mode",
+    "Roles",
     "ColSchema",
     "SchemaInfo",
     "DataFrame",
