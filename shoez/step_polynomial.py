@@ -328,8 +328,8 @@ class StepPolynomial(Step):
     its positional slot by up to ``degree`` orthogonal polynomial columns
     ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``. The orthogonal basis (centering
     mean + QR transform matrix) is **learned at fit time on the training data
-    and reused unchanged at transform time** — no re-estimation on new data. 
-    The math lives in :func:`fit_polynomial` and :func:`apply_polynomial`; 
+    and reused unchanged at transform time** — no re-estimation on new data.
+    The math lives in :func:`fit_polynomial` and :func:`apply_polynomial`;
     this class wraps the in the :class:`~shoez.step.Step` lifecycle so a
     :class:`~shoez.recipe.Recipe` can fit and apply it.
 
