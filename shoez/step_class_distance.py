@@ -126,7 +126,7 @@ def fit_class_distance(
         Manhattan both use the arithmetic mean as their natural centroid).
     log_distance
         If ``True`` (the default), :func:`apply_class_distance` returns
-        ``log(distance + eps)``. The log compresses the long tail of raw 
+        ``log(distance + eps)``. The log compresses the long tail of raw
         distances, which is usually what downstream models want.
     eps
         Small positive offset added before taking the log. The default
@@ -325,7 +325,7 @@ def _compute_distances(
     own way: square + sum + sqrt for Euclidean, abs + sum for Manhattan.
     """
     # Compute the (n, p, c) difference tensor once and reuse it. For very large
-    # n × p × c this is wasteful; with the small frames it's the clearest 
+    # n × p × c this is wasteful; with the small frames it's the clearest
     # expression of the math.
     diff = x[:, :, None] - centroids[None, :, :]
 

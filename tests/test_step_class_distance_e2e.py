@@ -106,7 +106,7 @@ class TestEndToEnd:
         assert out["distance_a"].iloc[0] == pytest.approx(math.sqrt(5.0))
 
     def test_log_transform_default(self) -> None:
-        # Default is log_distance=True 
+        # Default is log_distance=True
         df = pd.DataFrame(_data())
         recipe = Recipe(
             steps=[StepClassDistance(["x", "y"], outcome="label")],
