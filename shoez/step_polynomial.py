@@ -4,21 +4,35 @@ The *fit* half (:func:`fit_polynomial`) inspects training data to pick a
 polynomial degree per column, capped by how many unique values that column
 actually has. The *apply* half (:func:`apply_polynomial`) replaces each
 selected column with a set of orthogonal polynomial basis expansion whose math
-matches R's :func:`stats::poly`.
+matches R's :func:`stats::poly`. :class:`StepPolynomial` wraps both into the
+:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+and apply them.
 """
 
 from __future__ import annotations
 
 import warnings
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import narwhals.stable.v2 as nw
 import numpy as np
 from numpy.polynomial.polynomial import polyvander
 
-from shoez.types import Frame
+from shoez import _frame
+from shoez.step import Step
+from shoez.types import (
+    NUMERIC_DTYPES,
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+)
 
-__all__ = ["fit_polynomial", "apply_polynomial"]
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+__all__ = ["fit_polynomial", "apply_polynomial", "StepPolynomial"]
 
 
 def fit_polynomial(features: Frame, degree: int) -> dict[str, int]:
@@ -242,3 +256,113 @@ def _ortho_poly(series: nw.Series[Any], degree: int) -> Frame:
     # Building the new frame with the same backend keeps the recipe's
     # "pandas in, pandas out" / "polars in, polars out" guarantee.
     return nw.from_numpy(z, schema=columns, backend=series.implementation)
+
+
+class StepPolynomial(Step):
+    """Replace numeric columns with their orthogonal polynomial expansion.
+
+    A ``ONE_TO_MANY`` step: each selected numeric column ``x`` is replaced in
+    its positional slot by up to ``degree`` orthogonal polynomial columns
+    ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``, with the basis fitted on the
+    training data. The math (R-style :func:`stats::poly` parity) lives in
+    :func:`fit_polynomial` and :func:`apply_polynomial`; this class wraps them
+    in the :class:`~shoez.step.Step` lifecycle so a
+    :class:`~shoez.recipe.Recipe` can fit and apply it.
+
+    The effective degree per column is capped at ``n_unique_non_null - 1`` — a
+    column with ``k`` unique values can support at most ``k - 1`` orthogonal
+    polynomial terms. Constant (or all-null) columns get an effective degree
+    of ``0``; :meth:`transform` leaves those columns untouched and emits a
+    :class:`UserWarning`. The caller can chain a zero-variance drop step to
+    clean them up.
+
+    Selectors are not yet implemented, so the columns to consider are passed
+    explicitly as a list of names.
+
+    Parameters
+    ----------
+    columns
+        Names of the columns to expand.
+    degree
+        Maximum polynomial degree. Must be a positive integer. Each column's
+        effective degree is the smaller of ``degree`` and
+        ``n_unique_non_null - 1``.
+    role
+        Role assigned to the new polynomial columns. Default ``"predictor"``.
+    id
+        Stable step identifier. Default ``"polynomial"``.
+    """
+
+    mode = Mode.ONE_TO_MANY
+
+    def __init__(
+        self,
+        columns: list[str],
+        *,
+        degree: int = 2,
+        role: str | None = "predictor",
+        id: str | None = None,
+    ) -> None:
+        self.columns = list(columns)
+        self.degree = degree
+        self.id = id if id is not None else "polynomial"
+        self.trained = False
+        # ONE_TO_MANY replaces source columns with their expansion. There is
+        # no apply-level toggle to keep the originals, so this stays False.
+        self.keep_original_cols = False
+        self.output_role = role
+        # Populated by ``fit()``: the per-column effective degrees and schemas.
+        self._fit_result: dict[str, int] | None = None
+        self._schema_in: ColSchema | None = None
+        self._schema_out: ColSchema | None = None
+
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
+        """Choose an effective polynomial degree for each selected column."""
+        features = _frame.select(training_data, self.columns)
+        self._fit_result = fit_polynomial(features, self.degree)
+        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
+        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes_in)
+        # Degree-0 columns stay put with their original dtype; the rest become
+        # ``degree`` Float64 columns named {col}_1..{col}_d (same layout as
+        # ``apply_polynomial`` produces).
+        out_cols: list[str] = []
+        out_dtypes: dict[str, str] = {}
+        for col in self.columns:
+            d = self._fit_result.get(col, 0)
+            if d <= 0:
+                out_cols.append(col)
+                out_dtypes[col] = dtypes_in[col]
+                continue
+            for i in range(1, d + 1):
+                name = f"{col}_{i}"
+                out_cols.append(name)
+                out_dtypes[name] = "Float64"
+        self._schema_out = ColSchema(columns=out_cols, dtypes=out_dtypes)
+        return self
+
+    def transform(self, new_data: Frame) -> Frame:
+        """Replace each selected column with its polynomial expansion."""
+        if self._fit_result is None:
+            raise RuntimeError("StepPolynomial.transform() called before fit().")
+        return apply_polynomial(new_data, self._fit_result)
+
+    def schema_in(self) -> ColSchema:
+        """Schema of the columns this step consumed. Known after ``fit()``."""
+        if self._schema_in is None:
+            raise RuntimeError("StepPolynomial.schema_in() called before fit().")
+        return self._schema_in
+
+    def schema_out(self) -> ColSchema:
+        """Schema of the polynomial columns this step produced."""
+        if self._schema_out is None:
+            raise RuntimeError("StepPolynomial.schema_out() called before fit().")
+        return self._schema_out
+
+    def accepts_dtypes(self) -> AcceptedDtypes:
+        """Orthogonal polynomial expansion is only meaningful on numeric columns."""
+        return set(NUMERIC_DTYPES)
+
+    @property
+    def produces_sparse(self) -> bool:
+        """Orthogonal polynomial bases are dense by construction."""
+        return False
