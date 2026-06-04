@@ -117,6 +117,15 @@ class Recipe:
         """
         current = _frame.from_native(data)
         live_roles = self.roles.copy()
+        if not live_roles.columns_with_role("predictor"):
+            reserved = {
+                col
+                for col in _frame.columns(current)
+                if "outcome" in live_roles.of(col) or "case_weights" in live_roles.of(col)
+            }
+            for col in _frame.columns(current):
+                if col not in reserved:
+                    live_roles.add(col, "predictor")
         fitted_steps: list[Step] = []
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
