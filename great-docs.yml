@@ -79,49 +79,64 @@ authors:
 # - Add 'desc:' to sections for descriptions
 
 reference:
-  - title: Classes
-    desc: Main classes provided by the package
+  - title: Recipes
+    desc: >-
+      Build a recipe, then fit and apply it. The Recipe class and its methods
+      are flattened into this section so each method appears on the reference
+      index.
+    # Recipe is `members: false` (class docstring only on its own page); its
+    # methods are listed explicitly below so they render as their own rows in
+    # this section's index table. great-docs has no section-level `flatten`
+    # option, so the methods must be enumerated by hand.
     contents:
-      - Recipe
-      - FittedRecipe
-      - StepClassDistance
-      - RecipeTransformer
-      - StepDropCorr
-      - StepDropZeroVariance
-      - StepDummy
-      - StepImputationMedian
-      - StepOneHot
-      - StepImputationMean
-      - StepIntercept
-      - StepNormalize
-      - StepOneHot
-      - StepPolynomial
-      - StepUnknown
-      - ColSchema
-      - RowOp
-      - Roles
-      - SchemaInfo
+      - name: Recipe
+        members: false
+      - Recipe.add
+      - Recipe.fit
+      - Recipe.set_roles
 
-  - title: Abstract Classes
-    desc: Abstract base classes
+  - title: Steps
+    desc: >-
+      Feature-engineering operations. Each step's page documents the class
+      itself.
+    # `members: false` keeps each step page to the class docstring only (no
+    # method docs). great-docs forwards this per-item as `members: []` to
+    # quartodoc; a section-level `options:` is NOT forwarded, so it must be
+    # set on each entry.
+    contents:
+      - name: StepClassDistance
+        members: false
+      - name: StepDropCorr
+        members: false
+      - name: StepDropZeroVariance
+        members: false
+      - name: StepDummy
+        members: false
+      - name: StepIntercept
+        members: false
+      - name: StepNormalize
+        members: false
+      - name: StepOneHot
+        members: false
+      - name: StepUnknown
+        members: false
+
+  - title: Developing
+    desc: >-
+      The abstract Step base class and its lifecycle methods, for authoring new
+      steps. Flattened so each method appears on the reference index.
+    # Same pattern as Recipes: Step is `members: false` (class docstring only on
+    # its own page) and its methods are enumerated by hand so they render as
+    # their own rows in this section's index table.
     contents:
       - name: Step
-        members: false  # 6 methods listed below
-
-  - title: Step Methods
-    desc: Methods for the Step class
-    contents:
+        members: false
       - Step.fit
       - Step.transform
       - Step.schema_in
       - Step.schema_out
       - Step.accepts_dtypes
       - Step.required_pkgs
-
-  - title: Enumerations
-    desc: Enumeration types
-    contents:
-      - Mode
 
 # Site URL
 # --------
