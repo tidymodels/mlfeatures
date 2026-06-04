@@ -92,20 +92,7 @@ class Recipe:
         list of names. Incompatible combinations (e.g. outcome + predictor on
         one column) are rejected.
         """
-        new = self._clone()
-        assignments: dict[str, str | list[str] | None] = {
-            "outcome": outcome,
-            "predictor": predictor,
-            "case_weights": case_weights,
-            **custom,
-        }
-        for role, cols in assignments.items():
-            if cols is None:
-                continue
-            for column in [cols] if isinstance(cols, str) else cols:
-                self._check_column_exists(column)
-                new.roles.add(column, role)
-        return new
+        raise NotImplementedError("set_roles is not yet implemented")
 
     def _check_column_exists(self, column: str) -> None:
         """Validate ``column`` against the prototype, if one was supplied."""

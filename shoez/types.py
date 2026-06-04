@@ -9,7 +9,7 @@ changing the names the rest of the team codes against.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeAlias, Union
 
@@ -167,6 +167,22 @@ class Roles:
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"Roles({self._roles!r})"
+
+
+def _apply_role_assignments(  # pyright: ignore[reportUnusedFunction]
+    roles: Roles,
+    assignments: dict[str, str | list[str] | None],
+    *,
+    check_col: Callable[[str], None] | None = None,
+) -> None:
+    """Apply a role→columns mapping to *roles*, with optional column validation."""
+    for role, cols in assignments.items():
+        if cols is None:
+            continue
+        for column in ([cols] if isinstance(cols, str) else cols):
+            if check_col is not None:
+                check_col(column)
+            roles.add(column, role)
 
 
 class _AnyDtype:

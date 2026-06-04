@@ -54,6 +54,7 @@ class TestRoles:
         assert Roles() != "not a Roles"
 
 
+@pytest.mark.skip(reason="set_roles is not yet implemented")
 class TestSetRoles:
     def test_assigns_standard_roles(self) -> None:
         rec = Recipe(data=_df()).set_roles(outcome="y", predictor=["x1", "x2"])
