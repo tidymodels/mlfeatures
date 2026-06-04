@@ -86,6 +86,7 @@ reference:
       - StepDropCorr
       - StepDropZeroVariance
       - StepNormalize
+      - StepUnknown
       - ColSchema
       - RowOp
       - SchemaInfo
