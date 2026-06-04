@@ -8,8 +8,10 @@ from typing import Any
 
 import narwhals.stable.v2 as nw
 import pandas as pd
+import polars as pl
 import pytest
 
+from shoez import Recipe, StepNormalize
 from shoez.step_dummy import StepDummy, apply_dummy, fit_dummy
 from shoez.types import SchemaInfo
 
@@ -404,3 +406,81 @@ class TestStepDummyInfrastructure:
 
     def test_output_role_is_predictor(self) -> None:
         assert StepDummy(columns=["x"]).output_role == "predictor"
+
+
+# ---------------------------------------------------------------------------
+# Regression: indicator dtype must be numeric (issue: pandas emitted Object)
+# ---------------------------------------------------------------------------
+
+
+class TestIndicatorDtype:
+    """Indicator columns must be numeric so downstream numeric steps accept them.
+
+    Before the fix, the ``when/then/otherwise`` chain (with its ``lit(None)``
+    branch) produced ``Object``-dtype columns on the pandas backend even when no
+    row was null — making the dummies non-numeric and incompatible with
+    StepNormalize.
+    """
+
+    def test_clean_dummies_are_int8_numeric_pandas(self) -> None:
+        df = _pd(("cat", ["a", "b", "c", "a", "b", "c"]))
+        out = nw.from_native(
+            StepDummy(columns=["cat"]).fit(df, _schema()).transform(df)
+        )
+        for col in out.columns:
+            assert out.schema[col] == nw.Int8
+            assert out.schema[col].is_numeric()
+
+    def test_clean_dummies_are_int8_numeric_polars(self) -> None:
+        df = nw.from_native(
+            pl.DataFrame({"cat": ["a", "b", "c", "a", "b", "c"]}), eager_only=True
+        )
+        out = StepDummy(columns=["cat"]).fit(df, _schema()).transform(df)
+        for col in out.columns:
+            assert out.schema[col] == nw.Int8
+            assert out.schema[col].is_numeric()
+
+    def test_null_source_rows_force_float64_numeric(self) -> None:
+        # A null source row introduces missing indicators; pandas Int8 can't hold
+        # NaN, so the column must be Float64 (still numeric, nulls preserved).
+        df = _pd(("cat", ["a", "b", None]))
+        out = nw.from_native(
+            StepDummy(columns=["cat"]).fit(df, _schema()).transform(df)
+        )
+        for col in out.columns:
+            assert out.schema[col] == nw.Float64
+            assert out.schema[col].is_numeric()
+        # null row stays null in every indicator
+        assert (
+            nw.from_native(StepDummy(columns=["cat"]).fit(df, _schema()).transform(df))[
+                "cat_b"
+            ]
+            .is_null()
+            .to_list()[2]
+        )
+
+    def test_unseen_level_forces_float64_numeric(self) -> None:
+        step = StepDummy(columns=["cat"]).fit(_pd(("cat", ["a", "b"])), _schema())
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            out = nw.from_native(step.transform(_pd(("cat", ["a", "b", "UNSEEN"]))))
+        assert out.schema["cat_b"] == nw.Float64
+        assert out.schema["cat_b"].is_numeric()
+
+    def test_dummies_feed_into_normalize(self) -> None:
+        # The end-to-end scenario that surfaced the bug: dummy output must be
+        # numeric enough for StepNormalize to consume it.
+        df = pd.DataFrame({"cat": ["a", "b", "c", "a", "b", "c"]})
+        recipe = Recipe(steps=[StepDummy(["cat"])])
+        dummied = recipe.fit(df).transform(df)
+        dummy_cols = list(dummied.columns)
+        out = (
+            Recipe(steps=[StepDummy(["cat"]), StepNormalize(dummy_cols)])
+            .fit(df)
+            .transform(df)
+        )
+        normalized = nw.from_native(out)
+        for col in dummy_cols:
+            # normalized indicators come out as proper floats, not Object
+            assert normalized.schema[col] == nw.Float64
+            assert normalized[col].mean() == pytest.approx(0.0, abs=1e-9)
