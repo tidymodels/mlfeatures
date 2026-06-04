@@ -153,7 +153,7 @@ def fit(self, data):
         # for non-RowOp steps: transform current data to feed the next step
         if not isinstance(step, RowOp):
             current_data = fitted_step.transform(current_data)
-        
+
         fitted_steps.append(fitted_step)
 
     return FittedRecipe(steps=fitted_steps, schema=self._schema, ptype=self._ptype)

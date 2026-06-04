@@ -121,7 +121,8 @@ class Recipe:
             reserved = {
                 col
                 for col in _frame.columns(current)
-                if "outcome" in live_roles.of(col) or "case_weights" in live_roles.of(col)
+                if "outcome" in live_roles.of(col)
+                or "case_weights" in live_roles.of(col)
             }
             for col in _frame.columns(current):
                 if col not in reserved:

@@ -79,7 +79,7 @@ Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)]).fit(pl_df).transfor
 
 ## Column selectors
 
-Many steps allow the use of polars (or narwhals) selectors to specify which columns to operate on. 
+Many steps allow the use of polars (or narwhals) selectors to specify which columns to operate on.
 This is shown below with StepDropCorr.
 
 ```{python}
