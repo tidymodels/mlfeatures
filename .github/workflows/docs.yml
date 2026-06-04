@@ -113,3 +113,30 @@ jobs:
           env: ${{ env.RELEASE_NAME }}
           ref: ${{ github.head_ref }}
           logs: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Netlify docs preview
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        run: |
+          npm install -g netlify-cli
+          # push main branch to production, others to preview --
+          netlify link --name="shoez-preview"
+          if [ "${ALIAS}" == "main" ]; then
+            netlify deploy --dir=great-docs/_site --alias="main"
+          else
+            netlify deploy --dir=great-docs/_site --alias="${ALIAS}"
+          fi
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          ALIAS: ${{ steps.deployment.outputs.env }}
+
+      - name: Update Github Deployment
+        uses: bobheadxi/deployments@v1
+        if: ${{ !github.event.pull_request.head.repo.fork && always() }}
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment.outputs.env }}
+          env_url: "https://${{ steps.deployment.outputs.env }}--shoez-preview.netlify.app"
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
