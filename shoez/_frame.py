@@ -148,6 +148,42 @@ def categorical_columns(frame: Frame) -> list[str]:
     ]
 
 
+def is_string(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a string dtype."""
+    return frame.schema[column] == nw.String
+
+
+def is_integer(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has an integer dtype (signed or unsigned)."""
+    return frame.schema[column].is_integer()
+
+
+def is_double(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a floating-point dtype."""
+    return frame.schema[column].is_float()
+
+
+def is_date(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Date dtype."""
+    return frame.schema[column] == nw.Date
+
+
+def is_datetime(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Datetime dtype."""
+    return isinstance(frame.schema[column], nw.Datetime)
+
+
+def is_boolean(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Boolean dtype."""
+    return frame.schema[column] == nw.Boolean
+
+
+def is_nominal(frame: Frame, column: str) -> bool:
+    """Whether ``column`` is nominal: categorical, enum, or string."""
+    dtype = frame.schema[column]
+    return dtype == nw.String or dtype == nw.Categorical or dtype == nw.Enum
+
+
 # --- Missing-value awareness -----------------------------------------------
 
 
