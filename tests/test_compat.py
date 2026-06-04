@@ -86,3 +86,44 @@ class TestSklearnContract:
         cloned = clone(rt)
         assert isinstance(cloned, RecipeTransformer)
         assert not hasattr(cloned, "fitted_")
+
+
+class TestFeatureNamesOut:
+    def test_matches_transform_columns(self) -> None:
+        X, y = _X_y()
+        rt = RecipeTransformer(_supervised_recipe()).fit(X, y)
+        assert list(rt.get_feature_names_out()) == list(rt.transform(X).columns)
+        assert list(rt.get_feature_names_out()) == ["x1", "x2"]
+
+    def test_ignores_input_features_argument(self) -> None:
+        X, y = _X_y()
+        rt = RecipeTransformer(_supervised_recipe()).fit(X, y)
+        assert list(rt.get_feature_names_out(["ignored"])) == ["x1", "x2"]
+
+    def test_raises_before_fit(self) -> None:
+        from sklearn.exceptions import NotFittedError
+
+        with pytest.raises(NotFittedError):
+            RecipeTransformer(_supervised_recipe()).get_feature_names_out()
+
+
+class TestSetOutput:
+    def test_set_output_pandas(self) -> None:
+        X, y = _X_y()
+        rt = RecipeTransformer(_supervised_recipe()).set_output(transform="pandas")
+        out = rt.fit(X, y).transform(X)
+        assert isinstance(out, pd.DataFrame)
+        assert list(out.columns) == ["x1", "x2"]
+
+
+class TestColumnTransformer:
+    def test_composes_in_column_transformer(self) -> None:
+        from sklearn.compose import ColumnTransformer
+
+        X, y = _X_y()
+        ct = ColumnTransformer(
+            [("rec", RecipeTransformer(_supervised_recipe()), ["x1", "x2"])]
+        )
+        out = ct.fit_transform(X, y)
+        assert out.shape == (3, 2)
+        assert list(ct.get_feature_names_out()) == ["rec__x1", "rec__x2"]

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 
@@ -43,6 +44,10 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     The recipe is stored verbatim so that :func:`sklearn.base.clone` (and therefore
     cross-validation / grid search) round-trips correctly; :class:`Recipe` is immutable, so
     this is safe.
+
+    It implements :meth:`get_feature_names_out` and therefore composes inside a
+    :class:`sklearn.compose.ColumnTransformer` and supports
+    ``set_output(transform="pandas" | "polars")``.
     """
 
     def __init__(self, recipe: Recipe):
@@ -55,6 +60,12 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         data = self._assemble(X, y)
         self.fitted_: FittedRecipe = self.recipe.fit(data)
         self.feature_names_in_ = list(_frame.columns(_frame.from_native(X)))
+        # Output column names are fixed at fit time (the transform is deterministic),
+        # so cache them for get_feature_names_out / set_output. Compute via the fitted
+        # recipe directly rather than self.transform, whose set_output wrapper would
+        # call get_feature_names_out before the cache exists.
+        out = self._drop_outcomes(self.fitted_.transform(X))
+        self.feature_names_out_ = list(_frame.columns(_frame.from_native(out)))
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
@@ -65,6 +76,21 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
             )
         out = self.fitted_.transform(X)
         return self._drop_outcomes(out)
+
+    def get_feature_names_out(
+        self, input_features: Any = None
+    ) -> "np.ndarray[Any, Any]":
+        """Names of the columns produced by :meth:`transform`.
+
+        ``input_features`` is accepted for sklearn-API compatibility but ignored: the
+        output names are determined by the recipe, not the caller. Enables
+        :class:`~sklearn.compose.ColumnTransformer` composition and ``set_output``.
+        """
+        if not hasattr(self, "feature_names_out_"):
+            raise NotFittedError(
+                "This RecipeTransformer is not fitted yet; call `fit` first."
+            )
+        return np.asarray(self.feature_names_out_, dtype=object)
 
     # -- internal helpers ---------------------------------------------------
 
