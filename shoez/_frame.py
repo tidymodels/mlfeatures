@@ -89,6 +89,18 @@ def drop(frame: Frame, names: str | Sequence[str]) -> Frame:
     return frame.drop(cols)
 
 
+def with_column(frame: Frame, name: str, values: Any) -> Frame:
+    """Return a frame with ``values`` attached as a column named ``name``.
+
+    Used at the sklearn boundary to re-join a target ``y`` (a numpy array, list, or
+    Series) onto the feature frame under its outcome-role name. ``values`` is wrapped as a
+    narwhals :class:`Series` on the frame's backend so the result stays native (pandas in →
+    pandas out).
+    """
+    series = nw.new_series(name=name, values=values, backend=frame.implementation)
+    return frame.with_columns(series.alias(name))
+
+
 def apply_drop(frame: Frame, drop_cols: list[str]) -> Frame:
     """Return ``frame`` with ``drop_cols`` removed, silently skipping absent names.
 

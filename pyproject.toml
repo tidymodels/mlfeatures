@@ -162,6 +162,16 @@ exclude = [
 module = ["pandas", "polars", "narwhals", "narwhals.*"]
 ignore_missing_imports = true
 
+# scikit-learn's base classes resolve to Any under strict mode; allow the sklearn
+# adapter in shoez.compat to subclass them without tripping disallow_subclassing_any.
+[[tool.mypy.overrides]]
+module = ["sklearn.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["shoez.compat"]
+disallow_subclassing_any = false
+
 # Vendored verbatim from machow/databackend (MIT); its dynamic ABCMeta pattern is
 # not worth diverging from upstream to satisfy strict mode, so skip its errors.
 [[tool.mypy.overrides]]
