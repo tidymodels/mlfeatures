@@ -8,6 +8,7 @@ from typing import Any
 import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytest
 
 from shoez.step_imputation_mean import apply_imputation_mean, fit_imputation_mean
@@ -35,6 +36,13 @@ class TestFitImputationMean:
         assert columns == ["b", "a"]
         assert means[0] == pytest.approx(3.0)
         assert means[1] == pytest.approx(10.0)
+
+    def test_integer_column_mean(self) -> None:
+        # Mean of an all-integer column: [1, 2, 3, 4, 5] -> 3.0.
+        columns, means = fit_imputation_mean(_df(("a", [1, 2, 3, 4, 5])))
+        assert columns == ["a"]
+        assert means.dtype == np.float64
+        assert means[0] == pytest.approx(3.0)
 
     def test_no_columns_returns_empties(self) -> None:
         columns, means = fit_imputation_mean(
@@ -98,6 +106,15 @@ class TestApplyImputationMean:
         )
         assert out["a"].to_list() == [1.0, 2.0, 3.0]
         assert out["empty"].is_null().to_list() == [True, True, True]
+
+    def test_integer_column_with_null_imputed_and_promoted_to_float(self) -> None:
+        # Polars keeps an integer column with a null as Int64; the mean (2.0)
+        # fills the gap and the column is promoted to Float64 (int in -> float out).
+        df = nw.from_native(pl.DataFrame({"a": [1, None, 3]}), eager_only=True)
+        assert df["a"].dtype == nw.Int64
+        out = apply_imputation_mean(df, *fit_imputation_mean(df))
+        assert out["a"].dtype == nw.Float64
+        assert out["a"].to_list() == [1.0, 2.0, 3.0]
 
     def test_mismatched_means_length_raises(self) -> None:
         df = _df(("a", [1.0]), ("b", [2.0]))
