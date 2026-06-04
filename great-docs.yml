@@ -87,6 +87,7 @@ reference:
       - StepDropCorr
       - StepDropZeroVariance
       - StepDummy
+      - StepImputationMedian
       - StepOneHot
       - StepIntercept
       - StepNormalize
