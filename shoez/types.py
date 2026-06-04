@@ -179,7 +179,7 @@ def _apply_role_assignments(  # pyright: ignore[reportUnusedFunction]
     for role, cols in assignments.items():
         if cols is None:
             continue
-        for column in ([cols] if isinstance(cols, str) else cols):
+        for column in [cols] if isinstance(cols, str) else cols:
             if check_col is not None:
                 check_col(column)
             roles.add(column, role)
