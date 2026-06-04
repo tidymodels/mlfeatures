@@ -14,10 +14,8 @@ from shoez.compat import RecipeTransformer
 def _supervised_recipe() -> Recipe:
     """A recipe that normalizes the predictors and knows which column is the outcome."""
     data = pd.DataFrame({"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "y": [0, 1, 0]})
-    return (
-        Recipe(data=data)
-        .set_roles(outcome="y", predictor=["x1", "x2"])
-        .add(StepNormalize(["x1", "x2"]))
+    return Recipe(data=data, outcome="y", predictors=["x1", "x2"]).add(
+        StepNormalize(["x1", "x2"])
     )
 
 
@@ -160,10 +158,8 @@ def _cancer_recipe() -> tuple[Recipe, pd.DataFrame, pd.Series]:
     X, y = load_breast_cancer(return_X_y=True, as_frame=True)
     features = list(X.columns)
     full = X.assign(target=y)
-    rec = (
-        Recipe(data=full)
-        .set_roles(outcome="target", predictor=features)
-        .add(StepNormalize(features))
+    rec = Recipe(data=full, outcome="target", predictors=features).add(
+        StepNormalize(features)
     )
     return rec, X, y
 
