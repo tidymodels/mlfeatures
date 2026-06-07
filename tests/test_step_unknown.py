@@ -77,6 +77,23 @@ class TestApplyUnknown:
         assert out["g"].dtype == nw.String
         assert out["g"].to_list() == ["a", "unknown", "a"]
 
+    def test_string_input_recoded_to_string(self) -> None:
+        # unknown accepts String as well as Categorical/Enum; a string column's
+        # nulls are recoded and the output stays String.
+        df = _df(("g", ["a", "b", None]))
+        out = apply_unknown(df, ["g"])
+        assert out["g"].dtype == nw.String
+        assert out["g"].to_list() == ["a", "b", "unknown"]
+
+    def test_enum_input_recoded_to_string(self) -> None:
+        # ...and Enum, exercised through polars where the dtype is native.
+        pl = pytest.importorskip("polars")
+        series = pl.Series(["a", None, "a"], dtype=pl.Enum(["a", "b"]))
+        df = nw.from_native(pl.DataFrame({"g": series}), eager_only=True)
+        out = apply_unknown(df, ["g"])
+        assert out["g"].dtype == nw.String
+        assert out["g"].to_list() == ["a", "unknown", "a"]
+
     def test_columns_not_listed_pass_through(self) -> None:
         df = _df(("g", ["a", None]), ("other", ["p", None]))
         out = apply_unknown(df, ["g"])

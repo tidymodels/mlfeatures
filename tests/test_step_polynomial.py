@@ -446,6 +446,16 @@ class TestApplyReturnType:
         out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
         assert isinstance(out, nw.DataFrame)
 
+    def test_integer_input_yields_float_output(self) -> None:
+        # polynomial accepts integer columns, but the orthogonal basis is always
+        # real-valued — output columns must be float even when the input is int
+        # and the values could coincidentally be whole numbers.
+        frame = _df({"x": [1, 2, 3, 4]})
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
+        assert out.columns == ["x_1", "x_2"]
+        for col in out.columns:
+            assert out[col].dtype in (nw.Float32, nw.Float64)
+
 
 # ---------------------------------------------------------------------------
 # apply_polynomial — missing-value behavior (per-row pass-through)

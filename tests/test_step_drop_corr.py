@@ -94,6 +94,14 @@ class TestCoreAlgorithm:
         assert len(result) == 1
         assert result[0] in ("a", "b")
 
+    def test_integer_columns_drop_one_of_correlated_pair(self) -> None:
+        # drop_corr accepts every numeric dtype, not just float — a perfectly
+        # correlated *integer* pair must behave the same as a float pair.
+        df = _df(("a", [1, 2, 3, 4]), ("b", [2, 4, 6, 8]))
+        result = fit_drop_corr(df, threshold=0.9)
+        assert len(result) == 1
+        assert result[0] in ("a", "b")
+
     def test_negatively_correlated_pair_dropped(self) -> None:
         # abs(r) is what matters — strong negative correlation should also trigger
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [-1.0, -2.0, -3.0]))
