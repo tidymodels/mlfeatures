@@ -12,6 +12,11 @@ import pandas as pd
 from shoez import Recipe, StepImputeMedian
 
 
+def _fitted() -> tuple[Recipe, pd.DataFrame]:
+    train = pd.DataFrame({"a": [1.0, None, 3.0], "b": [2.0, 4.0, None]})
+    return Recipe(steps=[StepImputeMedian(["a", "b"])]).fit(train), train
+
+
 class TestEmptySelection:
     """An empty column selection is a no-op: the frame passes through unchanged."""
 
@@ -20,3 +25,21 @@ class TestEmptySelection:
         out = Recipe(steps=[StepImputeMedian([])]).fit(df).transform(df)
         assert list(out.columns) == ["a", "b"]
         pd.testing.assert_frame_equal(out, df)
+
+
+class TestRowCountEdges:
+    """transform() on 0-row and 1-row frames yields schema-correct output."""
+
+    def test_zero_row_transform(self) -> None:
+        fitted, train = _fitted()
+        expected = list(fitted.transform(train).columns)
+        out = fitted.transform(train.head(0))
+        assert list(out.columns) == expected
+        assert out.shape[0] == 0
+
+    def test_one_row_transform(self) -> None:
+        fitted, train = _fitted()
+        expected = list(fitted.transform(train).columns)
+        out = fitted.transform(train.head(1))
+        assert list(out.columns) == expected
+        assert out.shape[0] == 1
