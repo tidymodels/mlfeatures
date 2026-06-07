@@ -89,6 +89,21 @@ class TestApplyImputeMode:
         out = apply_impute_mode(df, *fit_impute_mode(df))
         assert out["g"].dtype == nw.String
 
+    def test_categorical_input_imputed_with_mode(self) -> None:
+        # impute_mode accepts Categorical as well as String — a pandas
+        # categorical column must have its nulls filled with the mode.
+        df = _df(("g", pd.Categorical(["a", "a", "b", None])))
+        out = apply_impute_mode(df, *fit_impute_mode(df))
+        assert out["g"].to_list() == ["a", "a", "b", "a"]
+
+    def test_enum_input_imputed_with_mode(self) -> None:
+        # ...and Enum, exercised through polars where the dtype is native.
+        pl = pytest.importorskip("polars")
+        series = pl.Series(["a", "a", "b", None], dtype=pl.Enum(["a", "b"]))
+        df = nw.from_native(pl.DataFrame({"g": series}), eager_only=True)
+        out = apply_impute_mode(df, *fit_impute_mode(df))
+        assert out["g"].to_list() == ["a", "a", "b", "a"]
+
     def test_null_most_frequent_still_imputed_with_real_level(self) -> None:
         # null is the most common value (2 nulls vs 1 "x"); imputation must still
         # fill with the real mode "x", never leave (or fill with) null.
