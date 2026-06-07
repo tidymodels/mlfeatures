@@ -1,8 +1,8 @@
 """Impute missing values with the column mode (most frequent value).
 
-The *fit* half lives in :func:`fit_imputation_mode` and the *apply* half in
-:func:`apply_imputation_mode`, both plain functions so the data-ops core can be
-exercised on its own. :class:`StepImputationMode` wraps them in the
+The *fit* half lives in :func:`fit_impute_mode` and the *apply* half in
+:func:`apply_impute_mode`, both plain functions so the data-ops core can be
+exercised on its own. :class:`StepImputeMode` wraps them in the
 :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
 and apply it.
 
@@ -31,13 +31,13 @@ from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-__all__ = ["fit_imputation_mode", "apply_imputation_mode", "StepImputationMode"]
+__all__ = ["fit_impute_mode", "apply_impute_mode", "StepImputeMode"]
 
-#: Dtypes ``step_imputation_mode`` is valid on — categorical-like columns.
+#: Dtypes ``step_impute_mode`` is valid on — categorical-like columns.
 _CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
 
 
-def fit_imputation_mode(features: Frame) -> tuple[list[str], list[Any]]:
+def fit_impute_mode(features: Frame) -> tuple[list[str], list[Any]]:
     """Estimate the per-column mode used to impute missing values.
 
     Parameters
@@ -57,7 +57,7 @@ def fit_imputation_mode(features: Frame) -> tuple[list[str], list[Any]]:
 
     A column whose values are *all* null has no mode and so cannot be imputed.
     It is **not** dropped: its entry in ``modes`` is ``None``,
-    :func:`apply_imputation_mode` leaves it unchanged, and a :class:`UserWarning`
+    :func:`apply_impute_mode` leaves it unchanged, and a :class:`UserWarning`
     is emitted naming such columns.
     """
     columns = list(features.columns)
@@ -88,7 +88,7 @@ def fit_imputation_mode(features: Frame) -> tuple[list[str], list[Any]]:
     return columns, modes
 
 
-def apply_imputation_mode(
+def apply_impute_mode(
     features: Frame,
     columns: list[str],
     modes: list[Any],
@@ -101,10 +101,10 @@ def apply_imputation_mode(
         A narwhals DataFrame to impute.
     columns:
         The column names to impute — the ``columns`` returned by
-        :func:`fit_imputation_mode`. Any column of ``features`` not in this list
+        :func:`fit_impute_mode`. Any column of ``features`` not in this list
         is passed through untouched.
     modes:
-        Per-column modes from :func:`fit_imputation_mode`, parallel to
+        Per-column modes from :func:`fit_impute_mode`, parallel to
         ``columns``. A ``None`` mode marks a column that had no mode (entirely
         null at fit time); such columns are left unchanged.
 
@@ -134,12 +134,12 @@ def apply_imputation_mode(
     return features.with_columns(*exprs)
 
 
-class StepImputationMode(Step):
+class StepImputeMode(Step):
     """Impute missing values with the column mode (most frequent value).
 
     A ``ONE_TO_ONE`` step: each selected column has its nulls filled in place
     with that column's mode, estimated at fit time. The work is done by
-    :func:`fit_imputation_mode` and :func:`apply_imputation_mode`; this class
+    :func:`fit_impute_mode` and :func:`apply_impute_mode`; this class
     wraps them in the :class:`~shoez.step.Step` lifecycle so a
     :class:`~shoez.recipe.Recipe` can fit and apply it.
 
@@ -162,7 +162,7 @@ class StepImputationMode(Step):
         id: str | None = None,
     ):
         self.columns = list(columns)
-        self.id = id if id is not None else "imputation_mode"
+        self.id = id if id is not None else "impute_mode"
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None
@@ -174,7 +174,7 @@ class StepImputationMode(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mode over the selected columns."""
         features = _frame.select(training_data, self.columns)
-        self._columns, self._modes = fit_imputation_mode(features)
+        self._columns, self._modes = fit_impute_mode(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
         return self
@@ -182,19 +182,19 @@ class StepImputationMode(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored modes. Never re-estimates."""
         if self._columns is None or self._modes is None:
-            raise RuntimeError("StepImputationMode.transform() called before fit().")
-        return apply_imputation_mode(new_data, self._columns, self._modes)
+            raise RuntimeError("StepImputeMode.transform() called before fit().")
+        return apply_impute_mode(new_data, self._columns, self._modes)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputationMode.schema_in() called before fit().")
+            raise RuntimeError("StepImputeMode.schema_in() called before fit().")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns — unchanged: mode imputation preserves dtype."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputationMode.schema_out() called before fit().")
+            raise RuntimeError("StepImputeMode.schema_out() called before fit().")
         return ColSchema(
             columns=list(self.columns), dtypes=dict(self._schema_in.dtypes)
         )
@@ -205,5 +205,5 @@ class StepImputationMode(Step):
 
     @property
     def produces_sparse(self) -> bool:
-        """``step_imputation_mode`` never produces sparse output."""
+        """``step_impute_mode`` never produces sparse output."""
         return False
