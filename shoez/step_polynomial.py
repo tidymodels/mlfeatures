@@ -29,6 +29,7 @@ from shoez.types import (
     Frame,
     Mode,
     SchemaInfo,
+    Selector,
 )
 
 if TYPE_CHECKING:
@@ -361,13 +362,13 @@ class StepPolynomial(Step):
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         *,
         degree: int = 2,
         role: str | None = "predictor",
         id: str | None = None,
     ) -> None:
-        self.columns = list(columns)
+        self.columns = columns
         self.degree = degree
         self.id = id if id is not None else "polynomial"
         self.trained = False
@@ -382,16 +383,16 @@ class StepPolynomial(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the polynomial basis for each selected column on training data."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._fit_result = fit_polynomial(features, self.degree)
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes_in)
+        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
         # Degree-0 columns stay put with their original dtype; the rest become
         # ``degree`` Float64 columns named {col}_1..{col}_d (same layout as
         # ``apply_polynomial`` produces).
         out_cols: list[str] = []
         out_dtypes: dict[str, str] = {}
-        for col in self.columns:
+        for col in self._schema_in.columns:
             fit = self._fit_result.get(col)
             d = fit.degree if fit is not None else 0
             if d <= 0:

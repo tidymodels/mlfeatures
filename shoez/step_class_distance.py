@@ -29,6 +29,7 @@ from shoez.types import (
     Frame,
     Mode,
     SchemaInfo,
+    Selector,
 )
 
 if TYPE_CHECKING:
@@ -395,7 +396,7 @@ class StepClassDistance(Step):
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         outcome: str,
         *,
         metric: Metric = "euclidean",
@@ -405,7 +406,7 @@ class StepClassDistance(Step):
         role: str | None = "predictor",
         id: str | None = None,
     ):
-        self.columns = list(columns)
+        self.columns = columns
         self.outcome = outcome
         # Pin the attribute type to ``Metric`` so type-checkers don't widen the
         # stored value back to ``str`` and complain when we hand it to
@@ -426,7 +427,7 @@ class StepClassDistance(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-class centroids from the predictor + outcome columns."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         # ``training_data[col]`` returns a narwhals Series — the same shape
         # ``_ortho_poly`` consumes in step_polynomial.
         outcome_series = training_data[self.outcome]
@@ -440,7 +441,7 @@ class StepClassDistance(Step):
         # ``schema_in`` records only the predictor columns; the outcome is
         # consumed at fit time but isn't an input feature the step transforms.
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes_in)
+        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
         # ``schema_out`` lists the new distance columns; all are Float64.
         out_names = [f"{self.prefix}_{cls}" for cls in self._fit.classes]
         self._schema_out = ColSchema(
