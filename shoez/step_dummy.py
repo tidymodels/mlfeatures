@@ -71,6 +71,11 @@ def fit_dummy(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
         If the frame has zero rows, or if any column has fewer than two unique
         non-null levels.
     """
+    # Empty selection (no columns) is a no-op — there is nothing to encode.
+    # Check this before the zero-row guard: a 0-column frame collapses to
+    # shape (0, 0) in pandas, which would otherwise look like a zero-row frame.
+    if len(features.columns) == 0:
+        return {}
     if features.shape[0] == 0:
         raise ValueError(
             "Cannot fit dummy encoding on a zero-row frame — no levels can be learned."
