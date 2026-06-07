@@ -7,6 +7,8 @@ must satisfy, not step-specific behavior.
 
 from __future__ import annotations
 
+import pickle
+
 import pandas as pd
 
 from shoez import Recipe, StepDummy
@@ -43,3 +45,13 @@ class TestRowCountEdges:
         out = fitted.transform(train.head(1))
         assert list(out.columns) == expected
         assert out.shape[0] == 1
+
+
+class TestPickleRoundTrip:
+    """A pickled fitted step reproduces the same transform() output."""
+
+    def test_pickle_preserves_transform_output(self) -> None:
+        fitted, train = _fitted()
+        before = fitted.transform(train)
+        restored = pickle.loads(pickle.dumps(fitted))
+        pd.testing.assert_frame_equal(restored.transform(train), before)
