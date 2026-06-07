@@ -1,8 +1,8 @@
 """Impute missing numeric values with the column mean.
 
-The *fit* half lives in :func:`fit_imputation_mean` and the *apply* half in
-:func:`apply_imputation_mean`, both plain functions so the data-ops core can be
-exercised on its own. :class:`StepImputationMean` wraps them in the
+The *fit* half lives in :func:`fit_impute_mean` and the *apply* half in
+:func:`apply_impute_mean`, both plain functions so the data-ops core can be
+exercised on its own. :class:`StepImputeMean` wraps them in the
 :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
 and apply it.
 
@@ -39,10 +39,10 @@ from shoez.types import (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-__all__ = ["fit_imputation_mean", "apply_imputation_mean", "StepImputationMean"]
+__all__ = ["fit_impute_mean", "apply_impute_mean", "StepImputeMean"]
 
 
-def fit_imputation_mean(
+def fit_impute_mean(
     features: Frame,
 ) -> tuple[list[str], npt.NDArray[np.float64]]:
     """Estimate the per-column mean used to impute missing values.
@@ -61,7 +61,7 @@ def fit_imputation_mean(
 
     A column whose values are *all* null has an undefined (``NaN``) mean and so
     cannot be imputed. It is **not** dropped: it stays in ``columns`` with a
-    ``NaN`` mean, :func:`apply_imputation_mean` leaves it unchanged, and a
+    ``NaN`` mean, :func:`apply_impute_mean` leaves it unchanged, and a
     :class:`UserWarning` is emitted naming such columns.
     """
     columns = list(features.columns)
@@ -79,7 +79,7 @@ def fit_imputation_mean(
     return columns, means
 
 
-def apply_imputation_mean(
+def apply_impute_mean(
     features: Frame,
     columns: list[str],
     means: npt.NDArray[np.float64],
@@ -92,10 +92,10 @@ def apply_imputation_mean(
         A narwhals DataFrame to impute.
     columns:
         The column names to impute — the ``columns`` returned by
-        :func:`fit_imputation_mean`. Any column of ``features`` not in this list
+        :func:`fit_impute_mean`. Any column of ``features`` not in this list
         is passed through untouched.
     means:
-        Per-column means from :func:`fit_imputation_mean`, parallel to
+        Per-column means from :func:`fit_impute_mean`, parallel to
         ``columns``. A ``NaN`` mean marks a column that could not be estimated
         (entirely null at fit time); such columns are left unchanged.
 
@@ -125,12 +125,12 @@ def apply_imputation_mean(
     return features.with_columns(*exprs)
 
 
-class StepImputationMean(Step):
+class StepImputeMean(Step):
     """Impute missing numeric values with the column mean.
 
     A ``ONE_TO_ONE`` step: each selected numeric column has its nulls filled in
     place with that column's mean, estimated at fit time. The work is done by
-    :func:`fit_imputation_mean` and :func:`apply_imputation_mean`; this class
+    :func:`fit_impute_mean` and :func:`apply_impute_mean`; this class
     wraps them in the :class:`~shoez.step.Step` lifecycle so a
     :class:`~shoez.recipe.Recipe` can fit and apply it.
 
@@ -150,7 +150,7 @@ class StepImputationMean(Step):
         id: str | None = None,
     ):
         self.columns = list(columns)
-        self.id = id if id is not None else "imputation_mean"
+        self.id = id if id is not None else "impute_mean"
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None
@@ -162,7 +162,7 @@ class StepImputationMean(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mean over the selected columns."""
         features = _frame.select(training_data, self.columns)
-        self._columns, self._means = fit_imputation_mean(features)
+        self._columns, self._means = fit_impute_mean(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
         return self
@@ -170,19 +170,19 @@ class StepImputationMean(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored means. Never re-estimates."""
         if self._columns is None or self._means is None:
-            raise RuntimeError("StepImputationMean.transform() called before fit().")
-        return apply_imputation_mean(new_data, self._columns, self._means)
+            raise RuntimeError("StepImputeMean.transform() called before fit().")
+        return apply_impute_mean(new_data, self._columns, self._means)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputationMean.schema_in() called before fit().")
+            raise RuntimeError("StepImputeMean.schema_in() called before fit().")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, imputed ones now float."""
         if self._schema_in is None or self._columns is None or self._means is None:
-            raise RuntimeError("StepImputationMean.schema_out() called before fit().")
+            raise RuntimeError("StepImputeMean.schema_out() called before fit().")
         # Only columns that were actually imputed (non-NaN mean) become float;
         # an entirely-null column is left unchanged and keeps its input dtype.
         imputed = {
@@ -200,5 +200,5 @@ class StepImputationMean(Step):
 
     @property
     def produces_sparse(self) -> bool:
-        """``step_imputation_mean`` never produces sparse output."""
+        """``step_impute_mean`` never produces sparse output."""
         return False

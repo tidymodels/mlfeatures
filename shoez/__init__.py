@@ -6,21 +6,17 @@ from shoez.compat import RecipeTransformer
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.selectors import Selectors
 from shoez.step import RowOp, Step
-from shoez.step_class_distance import (
-    ClassDistanceFit,
-    StepClassDistance,
-    apply_class_distance,
-    fit_class_distance,
-)
+from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
-from shoez.step_imputation_mean import StepImputationMean
-from shoez.step_imputation_median import StepImputationMedian
+from shoez.step_impute_mean import StepImputeMean
+from shoez.step_impute_median import StepImputeMedian
+from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
-from shoez.step_polynomial import apply_polynomial, fit_polynomial
+from shoez.step_polynomial import StepPolynomial
 from shoez.step_unknown import StepUnknown
 from shoez.types import (
     ANY_DTYPE,
@@ -42,24 +38,21 @@ __all__ = [
     "__version__",
     "Recipe",
     "FittedRecipe",
-    "ClassDistanceFit",
     "StepClassDistance",
     "RecipeTransformer",
     "StepDropCorr",
     "StepDummy",
     "StepOneHot",
     "StepDropZeroVariance",
-    "StepImputationMedian",
-    "StepImputationMean",
+    "StepImputeMedian",
+    "StepImputeMean",
+    "StepImputeMode",
     "StepIntercept",
     "StepNormalize",
+    "StepPolynomial",
     "StepUnknown",
     "Step",
     "RowOp",
-    "fit_class_distance",
-    "apply_class_distance",
-    "fit_polynomial",
-    "apply_polynomial",
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
     "Mode",

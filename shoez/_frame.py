@@ -23,6 +23,7 @@ import narwhals.stable.v2 as nw
 
 from shoez.selectors import ShoezSelector
 from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
+from shoez._dependencies import import_optional
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 
@@ -77,7 +78,11 @@ def _expand_polars_selector(frame: Frame, selector: PlSelector) -> list[str]:
     :meth:`narwhals.Schema.to_polars`. This is pure name resolution that touches
     no data and works for any backend (the schema is normalized by narwhals).
     """
-    import polars.selectors as cs
+    # Reached only when ``names`` is already a PlSelector instance, which the
+    # databackend hook matches only if polars is loaded — so polars is guaranteed
+    # importable here and this never raises. Routed through import_optional anyway
+    # so the package's sanctioned runtime-backend imports are uniform/greppable.
+    cs = import_optional("polars.selectors", purpose="to resolve a polars selector")
 
     return list(cs.expand_selector(frame.schema.to_polars(), selector))
 

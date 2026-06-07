@@ -1,8 +1,8 @@
 """Impute missing numeric values with the column median.
 
-The *fit* half lives in :func:`fit_imputation_median` and the *apply* half in
-:func:`apply_imputation_median`, both plain functions so the data-ops core can
-be exercised on its own. :class:`StepImputationMedian` wraps them in the
+The *fit* half lives in :func:`fit_impute_median` and the *apply* half in
+:func:`apply_impute_median`, both plain functions so the data-ops core can
+be exercised on its own. :class:`StepImputeMedian` wraps them in the
 :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
 and apply it.
 
@@ -42,13 +42,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 __all__ = [
-    "fit_imputation_median",
-    "apply_imputation_median",
-    "StepImputationMedian",
+    "fit_impute_median",
+    "apply_impute_median",
+    "StepImputeMedian",
 ]
 
 
-def fit_imputation_median(
+def fit_impute_median(
     features: Frame,
 ) -> tuple[list[str], npt.NDArray[np.float64]]:
     """Estimate the per-column median used to impute missing values.
@@ -68,7 +68,7 @@ def fit_imputation_median(
 
     A column whose values are *all* null has an undefined (``NaN``) median and
     so cannot be imputed. It is **not** dropped: it stays in ``columns`` with a
-    ``NaN`` median, :func:`apply_imputation_median` leaves it unchanged, and a
+    ``NaN`` median, :func:`apply_impute_median` leaves it unchanged, and a
     :class:`UserWarning` is emitted naming such columns.
     """
     columns = list(features.columns)
@@ -85,7 +85,7 @@ def fit_imputation_median(
     return columns, np.asarray(medians, dtype=np.float64)
 
 
-def apply_imputation_median(
+def apply_impute_median(
     features: Frame,
     columns: list[str],
     medians: npt.NDArray[np.float64],
@@ -98,10 +98,10 @@ def apply_imputation_median(
         A narwhals DataFrame to impute.
     columns:
         The column names to impute — the ``columns`` returned by
-        :func:`fit_imputation_median`. Any column of ``features`` not in this
+        :func:`fit_impute_median`. Any column of ``features`` not in this
         list is passed through untouched.
     medians:
-        Per-column medians from :func:`fit_imputation_median`, parallel to
+        Per-column medians from :func:`fit_impute_median`, parallel to
         ``columns``. A ``NaN`` median marks a column that could not be estimated
         (entirely null at fit time); such columns are left unchanged.
 
@@ -131,12 +131,12 @@ def apply_imputation_median(
     return features.with_columns(*exprs)
 
 
-class StepImputationMedian(Step):
+class StepImputeMedian(Step):
     """Impute missing numeric values with the column median.
 
     A ``ONE_TO_ONE`` step: each selected numeric column has its nulls filled in
     place with that column's median, estimated at fit time. The work is done by
-    :func:`fit_imputation_median` and :func:`apply_imputation_median`; this class
+    :func:`fit_impute_median` and :func:`apply_impute_median`; this class
     wraps them in the :class:`~shoez.step.Step` lifecycle so a
     :class:`~shoez.recipe.Recipe` can fit and apply it.
 
@@ -156,7 +156,7 @@ class StepImputationMedian(Step):
         id: str | None = None,
     ):
         self.columns = list(columns)
-        self.id = id if id is not None else "imputation_median"
+        self.id = id if id is not None else "impute_median"
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None
@@ -168,7 +168,7 @@ class StepImputationMedian(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column median over the selected columns."""
         features = _frame.select(training_data, self.columns)
-        self._columns, self._medians = fit_imputation_median(features)
+        self._columns, self._medians = fit_impute_median(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
         return self
@@ -176,19 +176,19 @@ class StepImputationMedian(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored medians. Never re-estimates."""
         if self._columns is None or self._medians is None:
-            raise RuntimeError("StepImputationMedian.transform() called before fit().")
-        return apply_imputation_median(new_data, self._columns, self._medians)
+            raise RuntimeError("StepImputeMedian.transform() called before fit().")
+        return apply_impute_median(new_data, self._columns, self._medians)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputationMedian.schema_in() called before fit().")
+            raise RuntimeError("StepImputeMedian.schema_in() called before fit().")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, imputed ones now float."""
         if self._schema_in is None or self._columns is None or self._medians is None:
-            raise RuntimeError("StepImputationMedian.schema_out() called before fit().")
+            raise RuntimeError("StepImputeMedian.schema_out() called before fit().")
         # Only columns that were actually imputed (non-NaN median) become float;
         # an entirely-null column is left unchanged and keeps its input dtype.
         imputed = {
@@ -206,5 +206,5 @@ class StepImputationMedian(Step):
 
     @property
     def produces_sparse(self) -> bool:
-        """``step_imputation_median`` never produces sparse output."""
+        """``step_impute_median`` never produces sparse output."""
         return False

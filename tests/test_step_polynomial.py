@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from shoez.step_polynomial import apply_polynomial, fit_polynomial
+from shoez.step_polynomial import PolynomialFit, apply_polynomial, fit_polynomial
 
 
 def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
@@ -40,16 +40,16 @@ def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
 
 
 class TestFitReturnShape:
-    """`fit_polynomial` returns an ordered ``dict[str, int]``."""
+    """`fit_polynomial` returns an ordered ``dict[str, PolynomialFit]``."""
 
     def test_returns_dict(self) -> None:
         result = fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=2)
         assert isinstance(result, dict)
 
-    def test_keys_are_strings_values_are_ints(self) -> None:
+    def test_keys_are_strings_values_are_polynomial_fits(self) -> None:
         result = fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=2)
         assert all(isinstance(k, str) for k in result.keys())
-        assert all(isinstance(v, int) for v in result.values())
+        assert all(isinstance(v, PolynomialFit) for v in result.values())
 
     def test_one_entry_per_input_column(self) -> None:
         """Every column in the input frame appears in the result."""
@@ -65,6 +65,17 @@ class TestFitReturnShape:
         # gives the actual iteration order of the result.
         assert list(result.keys()) == ["c", "a", "b"]
 
+    def test_fit_stores_training_mean(self) -> None:
+        """The training-set mean is recorded on the fit for centering at apply time."""
+        frame = _df({"x": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        result = fit_polynomial(frame, degree=2)
+        assert result["x"].mean == pytest.approx(3.0)
+
+    def test_fit_transform_matrix_has_expected_shape(self) -> None:
+        """Transform matrix is ``(degree + 1, degree + 1)``."""
+        result = fit_polynomial(_df({"x": [1.0, 2.0, 3.0, 4.0, 5.0]}), degree=3)
+        assert result["x"].transform.shape == (4, 4)
+
 
 # ---------------------------------------------------------------------------
 # fit_polynomial — degree computation (the "min" cap)
@@ -77,27 +88,27 @@ class TestFitDegreeComputation:
     def test_varied_column_gets_full_requested_degree(self) -> None:
         # 5 unique values, degree=3 -> min(3, 5-1) = 3
         frame = _df({"x": [1.0, 2.0, 3.0, 4.0, 5.0]})
-        assert fit_polynomial(frame, degree=3) == {"x": 3}
+        assert fit_polynomial(frame, degree=3)["x"].degree == 3
 
     def test_degree_capped_by_unique_value_count(self) -> None:
         # 3 unique values, degree=5 -> min(5, 3-1) = 2
         frame = _df({"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0]})
-        assert fit_polynomial(frame, degree=5) == {"x": 2}
+        assert fit_polynomial(frame, degree=5)["x"].degree == 2
 
     def test_constant_column_gives_degree_zero(self) -> None:
         # 1 unique value, degree=4 -> min(4, 1-1) = 0
         frame = _df({"x": [7.0, 7.0, 7.0]})
-        assert fit_polynomial(frame, degree=4) == {"x": 0}
+        assert fit_polynomial(frame, degree=4)["x"].degree == 0
 
     def test_all_null_column_gives_degree_zero(self) -> None:
         # 0 unique non-null values, degree=4 -> max(0, min(4, -1)) = 0
         frame = _df({"x": [None, None, None]})
-        assert fit_polynomial(frame, degree=4) == {"x": 0}
+        assert fit_polynomial(frame, degree=4)["x"].degree == 0
 
     def test_nulls_are_excluded_from_unique_count(self) -> None:
         # 2 unique non-null values plus one null -> min(5, 2-1) = 1
         frame = _df({"x": [1.0, 2.0, None]})
-        assert fit_polynomial(frame, degree=5) == {"x": 1}
+        assert fit_polynomial(frame, degree=5)["x"].degree == 1
 
     def test_repeated_nulls_do_not_count_as_a_unique_level(self) -> None:
         """Multiple nulls collapse to "no observation" — they don't add a level.
@@ -107,12 +118,12 @@ class TestFitDegreeComputation:
         """
         # 3 unique non-null values plus several nulls -> min(5, 3-1) = 2
         frame = _df({"x": [1.0, 2.0, 3.0, None, None, None]})
-        assert fit_polynomial(frame, degree=5) == {"x": 2}
+        assert fit_polynomial(frame, degree=5)["x"].degree == 2
 
     def test_only_nulls_among_otherwise_constant_values(self) -> None:
         # 1 unique non-null value + nulls -> min(3, 1-1) = 0
         frame = _df({"x": [5.0, None, 5.0, None, 5.0]})
-        assert fit_polynomial(frame, degree=3) == {"x": 0}
+        assert fit_polynomial(frame, degree=3)["x"].degree == 0
 
     def test_mixed_columns_some_with_nulls(self) -> None:
         """Each column's null-handling is independent of the others."""
@@ -123,11 +134,10 @@ class TestFitDegreeComputation:
                 "all_nulls": [None, None, None, None, None],  # 0 unique non-null
             }
         )
-        assert fit_polynomial(frame, degree=3) == {
-            "no_nulls": 3,  # min(3, 5-1) = 3
-            "some_nulls": 2,  # min(3, 3-1) = 2
-            "all_nulls": 0,  # max(0, min(3, -1)) = 0
-        }
+        result = fit_polynomial(frame, degree=3)
+        assert result["no_nulls"].degree == 3  # min(3, 5-1) = 3
+        assert result["some_nulls"].degree == 2  # min(3, 3-1) = 2
+        assert result["all_nulls"].degree == 0  # max(0, min(3, -1)) = 0
 
     def test_mixed_columns_each_capped_independently(self) -> None:
         frame = _df(
@@ -137,10 +147,13 @@ class TestFitDegreeComputation:
                 "constant": [9.0, 9.0, 9.0, 9.0, 9.0],
             }
         )
+        result = fit_polynomial(frame, degree=3)
         # many: min(3, 5-1) = 3
         # few:  min(3, 2-1) = 1
         # constant: min(3, 1-1) = 0
-        assert fit_polynomial(frame, degree=3) == {"many": 3, "few": 1, "constant": 0}
+        assert result["many"].degree == 3
+        assert result["few"].degree == 1
+        assert result["constant"].degree == 0
 
 
 # ---------------------------------------------------------------------------
@@ -312,13 +325,13 @@ class TestApplyMatchesRPoly:
 
     def test_case_1_degree_2(self) -> None:
         frame = _df({"x": R_POLY_CASE_1_INPUT})
-        out = apply_polynomial(frame, {"x": 2})
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
         actual = out.to_numpy()
         np.testing.assert_allclose(actual, R_POLY_CASE_1_EXPECTED, atol=1e-9)
 
     def test_case_2_degree_7(self) -> None:
         frame = _df({"x": R_POLY_CASE_2_INPUT})
-        out = apply_polynomial(frame, {"x": 7})
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=7))
         actual = out.to_numpy()
         np.testing.assert_allclose(actual, R_POLY_CASE_2_EXPECTED, atol=1e-9)
 
@@ -333,7 +346,7 @@ class TestApplyColumnLayout:
 
     def test_polynomial_columns_use_one_indexed_suffix(self) -> None:
         frame = _df({"x": [1.0, 2.0, 3.0, 4.0]})
-        out = apply_polynomial(frame, {"x": 3})
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=3))
         assert out.columns == ["x_1", "x_2", "x_3"]
 
     def test_expanded_column_keeps_positional_slot(self) -> None:
@@ -345,13 +358,16 @@ class TestApplyColumnLayout:
                 "c": [100.0, 200.0, 300.0, 400.0],
             }
         )
-        out = apply_polynomial(frame, {"b": 2})
+        # Only "b" is fitted; "a" and "c" pass through.
+        fit = fit_polynomial(frame.select(["b"]), degree=2)
+        out = apply_polynomial(frame, fit)
         assert out.columns == ["a", "b_1", "b_2", "c"]
 
     def test_columns_not_in_fit_result_pass_through_unchanged(self) -> None:
         """Untouched columns retain their values exactly."""
         frame = _df({"a": [10.0, 20.0, 30.0], "b": [1.0, 2.0, 3.0]})
-        out = apply_polynomial(frame, {"b": 2})
+        fit = fit_polynomial(frame.select(["b"]), degree=2)
+        out = apply_polynomial(frame, fit)
         # Column `a` should appear unchanged.
         np.testing.assert_array_equal(out["a"].to_numpy(), np.array([10.0, 20.0, 30.0]))
 
@@ -362,14 +378,20 @@ class TestApplyColumnLayout:
                 "b": [5.0, 6.0, 7.0, 8.0],
             }
         )
-        out = apply_polynomial(frame, {"a": 2, "b": 1})
+        # Different per-column degrees by composing two separate fits.
+        fit_a = fit_polynomial(frame.select(["a"]), degree=2)
+        fit_b = fit_polynomial(frame.select(["b"]), degree=1)
+        out = apply_polynomial(frame, {**fit_a, **fit_b})
         assert out.columns == ["a_1", "a_2", "b_1"]
 
     def test_fit_result_referring_to_missing_column_is_ignored(self) -> None:
         """Schema drift at apply time is tolerated (matches `_frame.apply_drop`)."""
+        # Fit "a" on the real frame; conjure a stale fit for "b" that won't be
+        # present in the data we apply to.
         frame = _df({"a": [1.0, 2.0, 3.0]})
-        # "b" was in fit_result but isn't in the data — skipped silently.
-        out = apply_polynomial(frame, {"a": 2, "b": 3})
+        fit_a = fit_polynomial(frame, degree=2)
+        fit_b_stale = fit_polynomial(_df({"b": [1.0, 2.0, 3.0, 4.0]}), degree=3)
+        out = apply_polynomial(frame, {**fit_a, **fit_b_stale})
         assert out.columns == ["a_1", "a_2"]
 
 
@@ -384,7 +406,7 @@ class TestApplyDegreeZero:
     def test_constant_column_kept_unchanged(self) -> None:
         frame = _df({"x": [7.0, 7.0, 7.0]})
         with pytest.warns(UserWarning, match="x"):
-            out = apply_polynomial(frame, {"x": 0})
+            out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
         # Column name is preserved, values are unchanged.
         assert out.columns == ["x"]
         np.testing.assert_array_equal(out["x"].to_numpy(), np.array([7.0, 7.0, 7.0]))
@@ -392,15 +414,24 @@ class TestApplyDegreeZero:
     def test_warning_names_offending_column(self) -> None:
         frame = _df({"weird_name": [1.0, 1.0, 1.0]})
         with pytest.warns(UserWarning, match="weird_name"):
-            apply_polynomial(frame, {"weird_name": 0})
+            apply_polynomial(frame, fit_polynomial(frame, degree=2))
 
     def test_round_trip_fit_then_apply_on_constant_column(self) -> None:
         """fit_polynomial on a constant column gives degree 0; apply warns."""
         frame = _df({"x": [5.0, 5.0, 5.0]})
         result = fit_polynomial(frame, degree=3)
-        assert result == {"x": 0}
+        assert result["x"].degree == 0
         with pytest.warns(UserWarning, match="x"):
             out = apply_polynomial(frame, result)
+        assert out.columns == ["x"]
+
+    def test_explicit_degree_zero_fit_is_accepted(self) -> None:
+        """Callers can also build a PolynomialFit by hand for the degree-0 path."""
+        frame = _df({"x": [1.0, 2.0, 3.0]})
+        with pytest.warns(UserWarning, match="x"):
+            out = apply_polynomial(
+                frame, {"x": PolynomialFit(degree=0, mean=float("nan"))}
+            )
         assert out.columns == ["x"]
 
 
@@ -412,7 +443,7 @@ class TestApplyDegreeZero:
 class TestApplyReturnType:
     def test_returns_narwhals_dataframe(self) -> None:
         frame = _df({"x": [1.0, 2.0, 3.0]})
-        out = apply_polynomial(frame, {"x": 2})
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
         assert isinstance(out, nw.DataFrame)
 
 
@@ -424,21 +455,22 @@ class TestApplyReturnType:
 class TestApplyMissingValues:
     """Nulls in the input become NaN in *that row only* of the output.
 
-    `_ortho_poly` fits the polynomial basis on the complete (non-null) rows,
-    then re-embeds the result into a full-length, NaN-prefilled array. This
-    way a single missing value no longer poisons the global mean / QR.
+    ``fit_polynomial`` learns the orthogonal basis on the complete (non-null)
+    training rows; ``apply_polynomial`` then evaluates that basis on each row
+    of the input series and embeds the result into a full-length, NaN-prefilled
+    array. A single missing value therefore affects only its own row.
     """
 
     def test_row_count_matches_input_even_with_nulls(self) -> None:
         """5 input rows -> 5 output rows, regardless of how many were null."""
         frame = _df({"x": [1.0, 2.0, None, 4.0, 5.0]})
-        out = apply_polynomial(frame, {"x": 2})
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
         assert out.shape == (5, 2)
 
     def test_null_rows_are_nan_other_rows_are_finite(self) -> None:
         """Only the null-input rows are NaN in the output."""
         frame = _df({"x": [1.0, 2.0, None, 4.0, 5.0]})
-        out = apply_polynomial(frame, {"x": 2}).to_numpy()
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=2)).to_numpy()
         # The null row (index 2) is fully NaN.
         assert np.all(np.isnan(out[2]))
         # Every other row is fully finite.
@@ -455,7 +487,7 @@ class TestApplyMissingValues:
         # The complete subset is the same as R case 1 ([1, 2, 3] at degree 2),
         # so we can reuse the R ground truth.
         frame = _df({"x": [1.0, 2.0, None, 3.0]})
-        out = apply_polynomial(frame, {"x": 2}).to_numpy()
+        out = apply_polynomial(frame, fit_polynomial(frame, degree=2)).to_numpy()
         # Non-null rows in the output line up with rows 0, 1, 2 of the
         # original 3-row ground truth.
         np.testing.assert_allclose(out[0], R_POLY_CASE_1_EXPECTED[0], atol=1e-9)
@@ -469,10 +501,12 @@ class TestApplyMissingValues:
         independently and don't affect the other rows' polynomial values."""
         # Complete subset is still [1, 2, 3, 4, 5] — same as a clean fit.
         clean = _df({"x": [1.0, 2.0, 3.0, 4.0, 5.0]})
-        clean_out = apply_polynomial(clean, {"x": 3}).to_numpy()
+        clean_out = apply_polynomial(clean, fit_polynomial(clean, degree=3)).to_numpy()
 
         with_nulls = _df({"x": [1.0, None, 2.0, 3.0, None, 4.0, 5.0]})
-        out = apply_polynomial(with_nulls, {"x": 3}).to_numpy()
+        out = apply_polynomial(
+            with_nulls, fit_polynomial(with_nulls, degree=3)
+        ).to_numpy()
 
         # Non-null rows in `out` correspond to rows 0..4 of `clean_out`.
         non_null_idx = [0, 2, 3, 5, 6]
@@ -486,8 +520,8 @@ class TestApplyMissingValues:
         """All-null + effective degree 0 still goes through the degree-0 path."""
         frame = _df({"x": [None, None, None]})
         # `fit_polynomial` returns degree 0 for this column, so the
-        # degree-0 branch fires and the column is kept untouched (we never
-        # call `_ortho_poly` on an all-null vector).
+        # degree-0 branch fires and the column is kept untouched — we never
+        # evaluate the basis on an all-null vector.
         with pytest.warns(UserWarning, match="x"):
             out = apply_polynomial(frame, fit_polynomial(frame, degree=3))
         assert out.columns == ["x"]

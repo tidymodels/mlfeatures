@@ -51,4 +51,5 @@ Key invariants the framework guarantees:
 | [serialization.md](serialization.md)   | Pickle + stable format, `minimize()`, no closures    |
 | [extensibility.md](extensibility.md)   | Plugin steps via entry points, base classes          |
 | [inspection.md](inspection.md)         | `repr`, errors, `summary()`                          |
+| [dependencies.md](dependencies.md)     | Optional dependencies — lazy imports in steps        |
 | [goals.md](goals.md)                   | Non-goals, open questions, v0.1 success criteria     |
