@@ -61,3 +61,12 @@ class TestPickleRoundTrip:
         before = fitted.transform(train)
         restored = pickle.loads(pickle.dumps(fitted))
         pd.testing.assert_frame_equal(restored.transform(train), before)
+
+
+class TestFitIdempotence:
+    """Fitting twice on the same training data yields identical transform output."""
+
+    def test_fit_is_idempotent(self) -> None:
+        first, train = _fitted()
+        second, _ = _fitted()
+        pd.testing.assert_frame_equal(first.transform(train), second.transform(train))
