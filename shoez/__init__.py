@@ -14,8 +14,9 @@ from shoez.step_class_distance import (
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
-from shoez.step_imputation_mean import StepImputationMean
-from shoez.step_imputation_median import StepImputationMedian
+from shoez.step_impute_mean import StepImputeMean
+from shoez.step_impute_median import StepImputeMedian
+from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
@@ -48,8 +49,9 @@ __all__ = [
     "StepDummy",
     "StepOneHot",
     "StepDropZeroVariance",
-    "StepImputationMedian",
-    "StepImputationMean",
+    "StepImputeMedian",
+    "StepImputeMean",
+    "StepImputeMode",
     "StepIntercept",
     "StepNormalize",
     "StepUnknown",
