@@ -203,10 +203,8 @@ from shoez import RecipeTransformer
 X, y = load_breast_cancer(return_X_y=True, as_frame=True)
 features = list(X.columns)
 
-recipe = (
-    Recipe(data=X.assign(target=y))
-    .set_roles(outcome="target", predictor=features)
-    .add(StepNormalize(features))
+recipe = Recipe(data=X.assign(target=y), outcome="target", predictors=features).add(
+    StepNormalize(features)
 )
 
 pipe = Pipeline(

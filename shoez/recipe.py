@@ -15,9 +15,13 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 from __future__ import annotations
 
 from shoez import _frame
-from shoez._formula import parse_formula
 from shoez.step import RowOp, Step
-from shoez.types import DataFrame, Roles, SchemaInfo
+from shoez.types import (
+    DataFrame,
+    Roles,
+    SchemaInfo,
+    _apply_role_assignments,  # pyright: ignore[reportPrivateUsage]
+)
 
 __all__ = ["Recipe", "FittedRecipe"]
 
@@ -36,10 +40,8 @@ class Recipe:
         Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
 
     A prototype ``data`` frame may be supplied to capture the column names used
-    when assigning roles. Roles are declared either explicitly with
-    :meth:`set_roles` or via the minimal ``formula`` sugar (``"y ~ ."``,
-    ``"y ~ x1 + x2"``); the formula is just shorthand for an outcome/predictor
-    split, never a richer mechanism.
+    when assigning roles. Roles are declared via ``outcome``, ``predictors``,
+    and ``case_weights`` keyword arguments.
     """
 
     def __init__(
@@ -47,7 +49,9 @@ class Recipe:
         steps: list[Step] | None = None,
         *,
         data: DataFrame | None = None,
-        formula: str | None = None,
+        outcome: str | list[str] | None = None,
+        predictors: str | list[str] | None = None,
+        case_weights: str | list[str] | None = None,
     ):
         self.steps: list[Step] = list(steps) if steps is not None else []
         self._prototype_columns: list[str] | None = None
@@ -55,10 +59,11 @@ class Recipe:
             info = SchemaInfo.from_frame(_frame.from_native(data))
             self._prototype_columns = info.columns
         self.roles = Roles()
-        if formula is not None:
-            if self._prototype_columns is None:
-                raise ValueError("formula requires a prototype `data=` frame")
-            self.roles = parse_formula(formula, self._prototype_columns)
+        _apply_role_assignments(
+            self.roles,
+            {"outcome": outcome, "predictor": predictors, "case_weights": case_weights},
+            check_col=self._check_column_exists,
+        )
 
     def _clone(self) -> "Recipe":
         """A shallow copy that preserves steps, prototype, and roles."""
@@ -92,20 +97,7 @@ class Recipe:
         list of names. Incompatible combinations (e.g. outcome + predictor on
         one column) are rejected.
         """
-        new = self._clone()
-        assignments: dict[str, str | list[str] | None] = {
-            "outcome": outcome,
-            "predictor": predictor,
-            "case_weights": case_weights,
-            **custom,
-        }
-        for role, cols in assignments.items():
-            if cols is None:
-                continue
-            for column in [cols] if isinstance(cols, str) else cols:
-                self._check_column_exists(column)
-                new.roles.add(column, role)
-        return new
+        raise NotImplementedError("set_roles is not yet implemented")
 
     def _check_column_exists(self, column: str) -> None:
         """Validate ``column`` against the prototype, if one was supplied."""
@@ -124,15 +116,28 @@ class Recipe:
         affect training data and so never run during ``transform()`` either.
         """
         current = _frame.from_native(data)
+        live_roles = self.roles.copy()
+        if not live_roles.columns_with_role("predictor"):
+            reserved = {
+                col
+                for col in _frame.columns(current)
+                if "outcome" in live_roles.of(col)
+                or "case_weights" in live_roles.of(col)
+            }
+            for col in _frame.columns(current):
+                if col not in reserved:
+                    live_roles.add(col, "predictor")
         fitted_steps: list[Step] = []
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
+            info.roles = live_roles
             fitted = step.fit(current, info)
             fitted.trained = True  # set by the recipe, not the step (per contract)
             if not isinstance(step, RowOp):
                 current = fitted.transform(current)
+            fitted.update_roles(live_roles)
             fitted_steps.append(fitted)
-        return FittedRecipe(steps=fitted_steps, roles=self.roles.copy())
+        return FittedRecipe(steps=fitted_steps, roles=live_roles)
 
 
 class FittedRecipe:

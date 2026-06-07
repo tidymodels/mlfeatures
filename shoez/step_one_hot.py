@@ -20,7 +20,9 @@ from shoez.types import (
     ColSchema,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
+    Selector,
 )
 
 if TYPE_CHECKING:
@@ -85,12 +87,12 @@ class StepOneHot(Step):
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
         id: str | None = None,
     ) -> None:
-        self.columns = list(columns)
+        self.columns = columns
         self.name_fn = name_fn
         self.keep_original_cols = keep_original_cols
         self.id = id if id is not None else "one_hot"
@@ -102,10 +104,10 @@ class StepOneHot(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the full sorted level list for each selected column."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._levels = fit_one_hot(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         out_cols = [
             self._col_name(col, str(lvl))
             for col, lvls in self._levels.items()
@@ -137,6 +139,18 @@ class StepOneHot(Step):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Accepts discrete columns; rejects float and decimal."""
         return set(DISCRETE_DTYPES)
+
+    def update_roles(self, roles: Roles) -> None:
+        if self._levels is None:
+            return
+        for source_col, levels in self._levels.items():
+            source_roles = roles.of(source_col)
+            for role in source_roles:
+                for lvl in levels:
+                    roles.add(self._col_name(source_col, str(lvl)), role)
+            if not self.keep_original_cols:
+                for role in list(source_roles):
+                    roles.remove(source_col, role)
 
     @property
     def produces_sparse(self) -> bool:

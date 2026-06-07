@@ -12,7 +12,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from shoez.types import AcceptedDtypes, ColSchema, Frame, SchemaInfo
+from shoez.types import AcceptedDtypes, ColSchema, Frame, Roles, SchemaInfo
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -76,6 +76,14 @@ class Step(ABC):
     def produces_sparse(self) -> bool:
         """Whether this step produces sparse output."""
         raise NotImplementedError
+
+    def update_roles(self, roles: Roles) -> None:
+        """Update ``roles`` to reflect the column changes made by this step.
+
+        Called by the recipe after each step is fitted and transformed. The
+        default is a no-op; steps that add, remove, or rename columns override
+        this to keep roles in sync with the live schema.
+        """
 
     def required_pkgs(self) -> list[str]:
         """Third-party packages required to run this step. Defaults to none."""

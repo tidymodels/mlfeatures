@@ -25,7 +25,7 @@ import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo
+from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo, Selector
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -132,11 +132,11 @@ class StepUnknown(Step):
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         new_level: str = DEFAULT_UNKNOWN_LEVEL,
         id: str | None = None,
     ):
-        self.columns = list(columns)
+        self.columns = columns
         self.new_level = new_level
         self.id = id if id is not None else "unknown"
         self.trained = False
@@ -148,10 +148,10 @@ class StepUnknown(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the columns to recode and check for level collisions."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._columns = fit_unknown(features, self.new_level)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -173,9 +173,9 @@ class StepUnknown(Step):
         recoded = set(self._columns)
         dtypes = {
             col: ("String" if col in recoded else self._schema_in.dtypes[col])
-            for col in self.columns
+            for col in self._schema_in.columns
         }
-        return ColSchema(columns=list(self.columns), dtypes=dtypes)
+        return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Recoding missing levels is only meaningful on categorical columns."""

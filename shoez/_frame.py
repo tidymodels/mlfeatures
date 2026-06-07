@@ -22,7 +22,8 @@ from typing import Any
 import narwhals.stable.v2 as nw
 
 from shoez._dependencies import import_optional
-from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Selector
+from shoez.selectors import ShoezSelector
+from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 
@@ -48,14 +49,18 @@ def columns(frame: Frame) -> list[str]:
     return frame.columns
 
 
-def select(frame: Frame, names: Selector) -> Frame:
+def select(frame: Frame, names: Selector, roles: Roles | None = None) -> Frame:
     """Return a frame with only the selected columns.
 
     ``names`` may be a single column name, a sequence of names (kept in the
     given order), a narwhals selector (e.g. ``narwhals.selectors.numeric()``),
-    or a polars selector (``polars.selectors``). A polars selector is resolved
-    against the frame's schema, so it works regardless of the frame's backend.
+    a polars selector (``polars.selectors``), or a :class:`~shoez.selectors.ShoezSelector`.
+    A polars selector is resolved against the frame's schema, so it works
+    regardless of the frame's backend. A ``ShoezSelector`` additionally uses
+    ``roles`` to filter by role.
     """
+    if isinstance(names, ShoezSelector):
+        return frame.select(names.resolve(frame, roles or Roles()))
     if isinstance(names, str):
         return frame.select([names])
     if isinstance(names, NwSelector):
@@ -157,6 +162,42 @@ def categorical_columns(frame: Frame) -> list[str]:
         for name, dtype in frame.schema.items()
         if dtype == nw.Categorical or dtype == nw.Enum
     ]
+
+
+def is_string(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a string dtype."""
+    return frame.schema[column] == nw.String
+
+
+def is_integer(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has an integer dtype (signed or unsigned)."""
+    return frame.schema[column].is_integer()
+
+
+def is_double(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a floating-point dtype."""
+    return frame.schema[column].is_float()
+
+
+def is_date(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Date dtype."""
+    return frame.schema[column] == nw.Date
+
+
+def is_datetime(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Datetime dtype."""
+    return isinstance(frame.schema[column], nw.Datetime)
+
+
+def is_boolean(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Boolean dtype."""
+    return frame.schema[column] == nw.Boolean
+
+
+def is_nominal(frame: Frame, column: str) -> bool:
+    """Whether ``column`` is nominal: categorical, enum, or string."""
+    dtype = frame.schema[column]
+    return dtype == nw.String or dtype == nw.Categorical or dtype == nw.Enum
 
 
 # --- Missing-value awareness -----------------------------------------------

@@ -9,7 +9,7 @@ changing the names the rest of the team codes against.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeAlias, Union
 
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from polars.selectors import Selector as PlSelector
+
+    from shoez.selectors import ShoezSelector
 
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
@@ -46,7 +48,9 @@ Frame: TypeAlias = nw.DataFrame[Any]
 #: ``narwhals.selectors.numeric()``), or a polars selector (:data:`PlSelector`,
 #: ``polars.selectors``). Any selector is resolved against the frame's schema at
 #: fit time, for any backend. See ``design/selectors.md``.
-Selector: TypeAlias = Union[str, Sequence[str], NwSelector, "PlSelector"]
+Selector: TypeAlias = Union[
+    str, Sequence[str], NwSelector, "PlSelector", "ShoezSelector"
+]
 
 # Listed so the selector aliases (``NwSelector`` is a renamed import; ``PlSelector``
 # is a conditional import under TYPE_CHECKING) count as explicit re-exports for
@@ -101,9 +105,11 @@ class SchemaInfo:
         self,
         columns: list[str] | None = None,
         dtypes: dict[str, str] | None = None,
+        roles: Roles | None = None,
     ):
         self.columns = list(columns) if columns is not None else []
         self.dtypes = dict(dtypes) if dtypes is not None else {}
+        self.roles: Roles = roles if roles is not None else Roles()
 
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":
@@ -148,6 +154,13 @@ class Roles:
                 )
         current.add(role)
 
+    def remove(self, column: str, role: str) -> None:
+        """Remove ``role`` from ``column``. No-op if the column or role is absent."""
+        if column in self._roles:
+            self._roles[column].discard(role)
+            if not self._roles[column]:
+                del self._roles[column]
+
     def of(self, column: str) -> set[str]:
         """Roles assigned to ``column`` (empty set if none)."""
         return set(self._roles.get(column, set()))
@@ -167,6 +180,22 @@ class Roles:
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"Roles({self._roles!r})"
+
+
+def _apply_role_assignments(  # pyright: ignore[reportUnusedFunction]
+    roles: Roles,
+    assignments: dict[str, str | list[str] | None],
+    *,
+    check_col: Callable[[str], None] | None = None,
+) -> None:
+    """Apply a role→columns mapping to *roles*, with optional column validation."""
+    for role, cols in assignments.items():
+        if cols is None:
+            continue
+        for column in [cols] if isinstance(cols, str) else cols:
+            if check_col is not None:
+                check_col(column)
+            roles.add(column, role)
 
 
 class _AnyDtype:

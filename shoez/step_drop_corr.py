@@ -21,6 +21,7 @@ from shoez.types import (
     ColSchema,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
     Selector,
 )
@@ -190,7 +191,7 @@ class StepDropCorr(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._to_drop = fit_drop_corr(features, self.threshold, self.method)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         # Record the resolved column names (a selector is concrete only now).
@@ -218,6 +219,12 @@ class StepDropCorr(Step):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Correlation is only meaningful on numeric columns."""
         return set(NUMERIC_DTYPES)
+
+    def update_roles(self, roles: Roles) -> None:
+        if self._to_drop:
+            for col in self._to_drop:
+                for role in list(roles.of(col)):
+                    roles.remove(col, role)
 
     @property
     def produces_sparse(self) -> bool:

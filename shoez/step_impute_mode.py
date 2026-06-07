@@ -26,7 +26,7 @@ import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo
+from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo, Selector
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -158,10 +158,10 @@ class StepImputeMode(Step):
 
     def __init__(
         self,
-        columns: list[str],
+        columns: Selector,
         id: str | None = None,
     ):
-        self.columns = list(columns)
+        self.columns = columns
         self.id = id if id is not None else "impute_mode"
         self.trained = False
         self.keep_original_cols = False
@@ -173,10 +173,10 @@ class StepImputeMode(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mode over the selected columns."""
-        features = _frame.select(training_data, self.columns)
+        features = _frame.select(training_data, self.columns, info.roles)
         self._columns, self._modes = fit_impute_mode(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=list(self.columns), dtypes=dtypes)
+        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -196,7 +196,7 @@ class StepImputeMode(Step):
         if self._schema_in is None:
             raise RuntimeError("StepImputeMode.schema_out() called before fit().")
         return ColSchema(
-            columns=list(self.columns), dtypes=dict(self._schema_in.dtypes)
+            columns=self._schema_in.columns, dtypes=dict(self._schema_in.dtypes)
         )
 
     def accepts_dtypes(self) -> AcceptedDtypes:
