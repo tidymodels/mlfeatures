@@ -3,11 +3,6 @@
 Part of the per-step ``StepConformanceTest`` contract (see
 ``design/step-contract.md``): the checks here are generic properties every step
 must satisfy, not step-specific behavior.
-
-Note: the empty-selection conformance check does not apply to StepIntercept.
-It is an ADDING step that takes no column selector — it always appends a single
-constant column regardless of the input columns — so there is no "zero features
-selected" state to exercise.
 """
 
 from __future__ import annotations
@@ -22,6 +17,17 @@ from shoez import Recipe, StepIntercept
 def _fitted() -> tuple[Recipe, pd.DataFrame]:
     train = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
     return Recipe(steps=[StepIntercept()]).fit(train), train
+
+
+class TestEmptySelection:
+    """Not applicable to StepIntercept.
+
+    StepIntercept is an ADDING step that takes no column selector — it always
+    appends a single constant column regardless of the input columns — so there
+    is no "zero features selected" state to exercise. The class is kept as a
+    visible slot (per ``tests/CLAUDE.md``) so the omission is documented rather
+    than silently missing.
+    """
 
 
 class TestRowCountEdges:
