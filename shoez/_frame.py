@@ -21,9 +21,9 @@ from typing import Any
 
 import narwhals.stable.v2 as nw
 
+from shoez._dependencies import import_optional
 from shoez.selectors import ShoezSelector
 from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
-from shoez._dependencies import import_optional
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 
