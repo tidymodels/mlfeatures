@@ -225,6 +225,17 @@ class TestApplyShape:
         out = apply_class_distance(features, fit)
         assert out.shape[0] == 5
 
+    def test_integer_features_yield_float_distance_columns(self) -> None:
+        # class_distance accepts integer feature columns, but distances are
+        # real-valued — the new columns must be float even when the inputs are
+        # int and a distance could coincidentally land on a whole number.
+        features = _df({"x": [0, 2, 10, 12], "y": [0, 4, 10, 14]})
+        assert features["x"].dtype.is_integer()  # integer in
+        fit = fit_class_distance(features, _series(SMALL_OUTCOME))
+        out = apply_class_distance(features, fit)
+        for col in ("distance_0", "distance_1"):
+            assert out[col].dtype in (nw.Float32, nw.Float64)
+
 
 # ---------------------------------------------------------------------------
 # apply_class_distance — column naming
