@@ -59,3 +59,12 @@ class TestFitIdempotence:
         first, train = _fitted()
         second, _ = _fitted()
         pd.testing.assert_frame_equal(first.transform(train), second.transform(train))
+
+
+class TestStableId:
+    """The same step type with the same hyperparameters yields the same id."""
+
+    def test_id_is_stable(self) -> None:
+        first, _ = _fitted()
+        second, _ = _fitted()
+        assert first.steps[0].id == second.steps[0].id
