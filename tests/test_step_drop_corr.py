@@ -88,25 +88,29 @@ class TestGuards:
 
 
 class TestCoreAlgorithm:
-    def test_perfectly_correlated_pair_drops_one(self) -> None:
+    def test_perfectly_correlated_pair_drops_row_variable(self) -> None:
+        # a and b have equal mean |corr|, so the tie-break decides: it goes to
+        # the row variable (lower column index) → "a". Asserting the exact
+        # column catches a `>`→`>=` regression in the rank comparison, which
+        # would instead drop "b".
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [1.0, 2.0, 3.0]))
         result = fit_drop_corr(df, threshold=0.9)
-        assert len(result) == 1
-        assert result[0] in ("a", "b")
+        assert result == ["a"]
 
-    def test_integer_columns_drop_one_of_correlated_pair(self) -> None:
+    def test_integer_columns_drop_row_variable(self) -> None:
         # drop_corr accepts every numeric dtype, not just float — a perfectly
-        # correlated *integer* pair must behave the same as a float pair.
+        # correlated *integer* pair must behave the same as a float pair,
+        # dropping the row variable "a" on the tie.
         df = _df(("a", [1, 2, 3, 4]), ("b", [2, 4, 6, 8]))
         result = fit_drop_corr(df, threshold=0.9)
-        assert len(result) == 1
-        assert result[0] in ("a", "b")
+        assert result == ["a"]
 
     def test_negatively_correlated_pair_dropped(self) -> None:
-        # abs(r) is what matters — strong negative correlation should also trigger
+        # abs(r) is what matters — strong negative correlation should also
+        # trigger; the tie-break still drops the row variable "a".
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [-1.0, -2.0, -3.0]))
         result = fit_drop_corr(df, threshold=0.9)
-        assert len(result) == 1
+        assert result == ["a"]
 
     def test_drops_column_with_higher_mean_abs_corr(self) -> None:
         # c is correlated with both a and b; a and b are roughly uncorrelated.
@@ -132,9 +136,10 @@ class TestCoreAlgorithm:
         data["V6"] = [-v + rng.uniform(0, 0.2) for v in data["V2"]]
         df = nw.from_native(pd.DataFrame(data))
         result = fit_drop_corr(df, threshold=0.5)
-        # One of V1/duplicate (r=1 pair) and one of V2/V6 (r≈-1 pair) must be dropped
-        assert "V1" in result or "duplicate" in result
-        assert "V2" in result or "V6" in result
+        # Deterministic for this fixed seed: the row variable of each correlated
+        # pair is dropped — V1 (from the V1/duplicate pair) and V6 (from the
+        # V2/V6 pair). Asserting exact removals makes the test falsifiable.
+        assert sorted(result) == ["V1", "V6"]
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +185,7 @@ class TestNaNHandling:
         assert "b" in result
         assert "c" in result
 
-    def test_sporadic_nan_warns_and_does_not_crash(self) -> None:
+    def test_sporadic_nan_warns_and_drops_expected(self) -> None:
         df = _df(
             ("a", [1.0, None, 3.0]),
             ("b", [1.0, 2.0, None]),
@@ -189,8 +194,10 @@ class TestNaNHandling:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             result = fit_drop_corr(df, threshold=0.9)
-        assert isinstance(result, list)
-        _ = w  # warning may or may not fire depending on backend
+        # The pandas correlation matrix has sporadic NaNs from pairwise-complete
+        # observations; the step warns and still returns a deterministic drop.
+        assert any("sporadic" in str(warning.message).lower() for warning in w)
+        assert result == ["c"]
 
 
 # ---------------------------------------------------------------------------
