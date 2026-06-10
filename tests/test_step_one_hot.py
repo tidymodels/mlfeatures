@@ -8,10 +8,11 @@ from typing import Any
 
 import narwhals.stable.v2 as nw
 import pandas as pd
+import polars as pl
 import pytest
 
 from shoez.step_one_hot import StepOneHot, fit_one_hot
-from shoez.types import SchemaInfo
+from shoez.types import Roles, SchemaInfo
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -269,6 +270,14 @@ class TestStepOneHotGuards:
     def test_float_column_not_in_accepts_dtypes(self) -> None:
         step = StepOneHot(columns=["x"])
         assert nw.Float64 not in step.accepts_dtypes()
+        assert nw.Float32 not in step.accepts_dtypes()
+        assert nw.Decimal not in step.accepts_dtypes()
+
+    def test_discrete_dtypes_accepted(self) -> None:
+        step = StepOneHot(columns=["x"])
+        accepted = step.accepts_dtypes()
+        for dtype in (nw.String, nw.Boolean, nw.Categorical, nw.Int32, nw.UInt8):
+            assert dtype in accepted
 
     def test_produces_sparse_false(self) -> None:
         assert StepOneHot(columns=["x"]).produces_sparse is False
@@ -297,3 +306,104 @@ class TestStepOneHotInfrastructure:
 
     def test_output_role_is_predictor(self) -> None:
         assert StepOneHot(columns=["x"]).output_role == "predictor"
+
+
+# ---------------------------------------------------------------------------
+# Indicator dtype: Int8 when clean, Float64 when null/unseen rows appear
+# ---------------------------------------------------------------------------
+
+
+class TestIndicatorDtype:
+    """Indicator columns must be numeric so downstream numeric steps accept them."""
+
+    def test_clean_indicators_are_int8_numeric_pandas(self) -> None:
+        df = _pd(("cat", ["a", "b", "c", "a", "b", "c"]))
+        out = nw.from_native(
+            StepOneHot(columns=["cat"]).fit(df, _schema()).transform(df)
+        )
+        for col in out.columns:
+            assert out.schema[col] == nw.Int8
+            assert out.schema[col].is_numeric()
+
+    def test_clean_indicators_are_int8_numeric_polars(self) -> None:
+        df = nw.from_native(
+            pl.DataFrame({"cat": ["a", "b", "c", "a", "b", "c"]}), eager_only=True
+        )
+        out = StepOneHot(columns=["cat"]).fit(df, _schema()).transform(df)
+        for col in out.columns:
+            assert out.schema[col] == nw.Int8
+            assert out.schema[col].is_numeric()
+
+    def test_null_source_rows_force_float64_numeric(self) -> None:
+        df = _pd(("cat", ["a", "b", None]))
+        out = nw.from_native(
+            StepOneHot(columns=["cat"]).fit(df, _schema()).transform(df)
+        )
+        for col in out.columns:
+            assert out.schema[col] == nw.Float64
+            assert out.schema[col].is_numeric()
+
+    def test_unseen_level_forces_float64_numeric(self) -> None:
+        step = StepOneHot(columns=["cat"]).fit(_pd(("cat", ["a", "b"])), _schema())
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            out = nw.from_native(step.transform(_pd(("cat", ["a", "b", "UNSEEN"]))))
+        assert out.schema["cat_b"] == nw.Float64
+        assert out.schema["cat_b"].is_numeric()
+
+
+# ---------------------------------------------------------------------------
+# Categorical / Enum input dtypes (both in DISCRETE_DTYPES)
+# ---------------------------------------------------------------------------
+
+
+class TestStepOneHotCategoricalEnum:
+    def test_categorical_fit_transform(self) -> None:
+        df = nw.from_native(
+            pl.DataFrame({"x": pl.Series(["a", "b", "c", "a"], dtype=pl.Categorical)}),
+            eager_only=True,
+        )
+        step = StepOneHot(columns=["x"]).fit(df, _schema())
+        assert step.schema_out().columns == ["x_a", "x_b", "x_c"]
+        out = nw.from_native(step.transform(df))
+        assert set(out.columns) == {"x_a", "x_b", "x_c"}
+
+    def test_enum_fit_transform(self) -> None:
+        enum = pl.Enum(["a", "b", "c"])
+        df = nw.from_native(
+            pl.DataFrame({"x": pl.Series(["a", "b", "c", "a"], dtype=enum)}),
+            eager_only=True,
+        )
+        step = StepOneHot(columns=["x"]).fit(df, _schema())
+        assert step.schema_out().columns == ["x_a", "x_b", "x_c"]
+        out = nw.from_native(step.transform(df))
+        assert set(out.columns) == {"x_a", "x_b", "x_c"}
+
+
+# ---------------------------------------------------------------------------
+# Role propagation (ONE_TO_MANY): generated columns inherit the source role
+# ---------------------------------------------------------------------------
+
+
+class TestStepOneHotRoles:
+    def test_generated_columns_inherit_source_role(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"]).fit(df, _schema())
+        roles = Roles({"x": {"predictor"}})
+        step.update_roles(roles)
+        for col in ("x_a", "x_b", "x_c"):
+            assert "predictor" in roles.of(col)
+
+    def test_source_role_retained_when_keep_original_cols(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"], keep_original_cols=True).fit(df, _schema())
+        roles = Roles({"x": {"predictor"}})
+        step.update_roles(roles)
+        assert "predictor" in roles.of("x")
+
+    def test_source_role_removed_when_not_keeping_original(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"], keep_original_cols=False).fit(df, _schema())
+        roles = Roles({"x": {"predictor"}})
+        step.update_roles(roles)
+        assert roles.of("x") == set()
