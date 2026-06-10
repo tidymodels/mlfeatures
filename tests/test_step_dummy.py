@@ -13,7 +13,7 @@ import pytest
 
 from shoez import Recipe, StepNormalize
 from shoez.step_dummy import StepDummy, apply_dummy, fit_dummy
-from shoez.types import SchemaInfo
+from shoez.types import Roles, SchemaInfo
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -321,6 +321,14 @@ class TestStepDummyCorrectness:
         so = step.schema_out()
         assert so.columns == ["x_b"]
 
+    def test_schema_out_multi_level_column_order(self) -> None:
+        # Reference level "a" is dropped; the remaining levels appear in
+        # ascending-sort order.
+        df = _pd(("x", ["c", "a", "b", "a", "b", "c"]))
+        step = StepDummy(columns=["x"])
+        step.fit(df, _schema())
+        assert step.schema_out().columns == ["x_b", "x_c"]
+
     def test_polars_backend(self) -> None:
         pl = pytest.importorskip("polars")
         df = nw.from_native(
@@ -484,3 +492,60 @@ class TestIndicatorDtype:
             # normalized indicators come out as proper floats, not Object
             assert normalized.schema[col] == nw.Float64
             assert normalized[col].mean() == pytest.approx(0.0, abs=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# Categorical / Enum input dtypes (both in DISCRETE_DTYPES)
+# ---------------------------------------------------------------------------
+
+
+class TestStepDummyCategoricalEnum:
+    def test_categorical_fit_transform(self) -> None:
+        df = nw.from_native(
+            pl.DataFrame({"x": pl.Series(["a", "b", "c", "a"], dtype=pl.Categorical)}),
+            eager_only=True,
+        )
+        step = StepDummy(columns=["x"]).fit(df, _schema())
+        assert step.schema_out().columns == ["x_b", "x_c"]
+        out = nw.from_native(step.transform(df))
+        assert set(out.columns) == {"x_b", "x_c"}
+
+    def test_enum_fit_transform(self) -> None:
+        enum = pl.Enum(["a", "b", "c"])
+        df = nw.from_native(
+            pl.DataFrame({"x": pl.Series(["a", "b", "c", "a"], dtype=enum)}),
+            eager_only=True,
+        )
+        step = StepDummy(columns=["x"]).fit(df, _schema())
+        assert step.schema_out().columns == ["x_b", "x_c"]
+        out = nw.from_native(step.transform(df))
+        assert set(out.columns) == {"x_b", "x_c"}
+
+
+# ---------------------------------------------------------------------------
+# Role propagation (ONE_TO_MANY): generated columns inherit the source role
+# ---------------------------------------------------------------------------
+
+
+class TestStepDummyRoles:
+    def test_generated_columns_inherit_source_role(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepDummy(columns=["x"]).fit(df, _schema())
+        roles = Roles({"x": {"predictor"}})
+        step.update_roles(roles)
+        assert "predictor" in roles.of("x_b")
+        assert "predictor" in roles.of("x_c")
+
+    def test_source_role_retained_when_keep_original_cols(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepDummy(columns=["x"], keep_original_cols=True).fit(df, _schema())
+        roles = Roles({"x": {"predictor"}})
+        step.update_roles(roles)
+        assert "predictor" in roles.of("x")
+
+    def test_source_role_removed_when_not_keeping_original(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepDummy(columns=["x"], keep_original_cols=False).fit(df, _schema())
+        roles = Roles({"x": {"predictor"}})
+        step.update_roles(roles)
+        assert roles.of("x") == set()

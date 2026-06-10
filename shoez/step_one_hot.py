@@ -79,10 +79,12 @@ class StepOneHot(Step):
     """Expand discrete columns into *k* binary indicator columns.
 
     A ``ONE_TO_MANY`` step: each selected column is replaced by *k* indicator
-    columns (``nw.Int8``, 0/1/null) where *k* is the number of unique non-null
-    levels seen during ``fit()``. Unlike :class:`~shoez.step_dummy.StepDummy`,
-    no reference level is dropped. Transform logic is shared via
-    :func:`~shoez.step_dummy.apply_dummy`.
+    columns where *k* is the number of unique non-null levels seen during
+    ``fit()``. Indicators are ``nw.Int8`` (0/1); a column that contains
+    null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
+    since pandas' ``Int8`` cannot hold the missing values. Unlike
+    :class:`~shoez.step_dummy.StepDummy`, no reference level is dropped.
+    Transform logic is shared via :func:`~shoez.step_dummy.apply_dummy`.
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
