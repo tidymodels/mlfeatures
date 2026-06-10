@@ -108,5 +108,14 @@ class TestStepImputeMeanUnit:
         step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
         assert step.schema_out().dtypes["a"] == "Float64"
 
+    def test_schema_out_promotes_selected_no_null_column(self) -> None:
+        # A selected integer column with no nulls is still promoted to Float64
+        # in schema_out (it has a valid mean), matching transform-time behavior.
+        df = nw.from_native(pd.DataFrame({"a": [1, 2, 3, 4]}), eager_only=True)
+        step = StepImputeMean(["a"])
+        step.fit(df, SchemaInfo())
+        assert step.schema_in().dtypes["a"] == "Int64"
+        assert step.schema_out().dtypes["a"] == "Float64"
+
     def test_not_sparse(self) -> None:
         assert StepImputeMean(["a"]).produces_sparse is False
