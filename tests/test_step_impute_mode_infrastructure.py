@@ -57,10 +57,10 @@ class TestPickleRoundTrip:
         pd.testing.assert_frame_equal(restored.transform(train), before)
 
 
-class TestFitIdempotence:
-    """Fitting twice on the same training data yields identical transform output."""
+class TestFitDeterminism:
+    """Fitting two independent recipes on the same data yields identical transform output."""
 
-    def test_fit_is_idempotent(self) -> None:
+    def test_fit_is_deterministic(self) -> None:
         first, train = _fitted()
         second, _ = _fitted()
         pd.testing.assert_frame_equal(first.transform(train), second.transform(train))

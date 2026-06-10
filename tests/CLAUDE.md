@@ -15,7 +15,7 @@ Every `test_step_x_infrastructure.py` must contain **every** infrastructure test
 - `TestEmptySelection` — an empty column selection is a no-op (frame passes through unchanged).
 - `TestRowCountEdges` — `transform()` on 0-row and 1-row frames yields schema-correct output.
 - `TestPickleRoundTrip` — a pickled fitted step reproduces the same `transform()` output.
-- `TestFitIdempotence` — fitting twice on the same training data yields identical `transform()` output.
+- `TestFitDeterminism` — fitting two independent recipes on the same data yields identical `transform()` output.
 - `TestStableId` — the same step type with the same hyperparameters yields the same `id`.
 
 If a class genuinely does not apply to a step, **still add the class** (or keep its slot visible) and write a comment explaining why instead of silently omitting it — so a reader can see the test was considered, not forgotten. For example, `TestEmptySelection` does not apply to `step_intercept` (an ADDING step with no column selector), so that file documents the omission in its module docstring rather than dropping the class without explanation.

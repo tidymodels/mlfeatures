@@ -147,6 +147,14 @@ class FittedRecipe:
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
 
+    def fit(self, data: DataFrame) -> "FittedRecipe":
+        """Re-fitting an already-fitted recipe is a no-op: returns ``self``.
+
+        The stored statistics are never re-estimated, so ``rec.fit().fit()`` is
+        cheap and yields the same object. ``data`` is ignored.
+        """
+        return self
+
     def transform(self, data: DataFrame) -> DataFrame:
         """Apply each fitted step in order, skipping ``RowOp`` steps.
 
