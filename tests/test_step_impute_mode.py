@@ -27,9 +27,12 @@ class TestFitImputeMode:
         assert columns == ["g"]
         assert modes == ["a"]
 
-    def test_numeric_mode(self) -> None:
-        _, modes = fit_impute_mode(_df(("n", [1, 1, 1, 2, 3])))
-        assert modes[0] == 1
+    def test_mode_picks_most_frequent(self) -> None:
+        # The mode is the most frequent level among several distinct ones.
+        # (Uses string data: impute_mode rejects numeric dtypes at the step
+        # boundary, so a numeric column never reaches fit_impute_mode.)
+        _, modes = fit_impute_mode(_df(("g", ["a", "a", "a", "b", "c"])))
+        assert modes[0] == "a"
 
     def test_tie_broken_by_smallest(self) -> None:
         # "a" and "b" each appear once -> deterministic: smallest by sort order.
@@ -42,11 +45,11 @@ class TestFitImputeMode:
         assert modes[0] == "x"
 
     def test_parallel_to_columns_in_order(self) -> None:
-        df = _df(("b", ["y", "y", "z"]), ("a", [5, 5, 9]))
+        df = _df(("b", ["y", "y", "z"]), ("a", ["q", "q", "r"]))
         columns, modes = fit_impute_mode(df)
         assert columns == ["b", "a"]
         assert modes[0] == "y"
-        assert modes[1] == 5
+        assert modes[1] == "q"
 
     def test_no_columns_returns_empties(self) -> None:
         columns, modes = fit_impute_mode(
@@ -91,18 +94,22 @@ class TestApplyImputeMode:
 
     def test_categorical_input_imputed_with_mode(self) -> None:
         # impute_mode accepts Categorical as well as String — a pandas
-        # categorical column must have its nulls filled with the mode.
+        # categorical column must have its nulls filled with the mode, and the
+        # Categorical dtype must be preserved through transform.
         df = _df(("g", pd.Categorical(["a", "a", "b", None])))
         out = apply_impute_mode(df, *fit_impute_mode(df))
         assert out["g"].to_list() == ["a", "a", "b", "a"]
+        assert out["g"].dtype == nw.Categorical
 
     def test_enum_input_imputed_with_mode(self) -> None:
-        # ...and Enum, exercised through polars where the dtype is native.
+        # ...and Enum, exercised through polars where the dtype is native; the
+        # Enum dtype must be preserved through transform.
         pl = pytest.importorskip("polars")
         series = pl.Series(["a", "a", "b", None], dtype=pl.Enum(["a", "b"]))
         df = nw.from_native(pl.DataFrame({"g": series}), eager_only=True)
         out = apply_impute_mode(df, *fit_impute_mode(df))
         assert out["g"].to_list() == ["a", "a", "b", "a"]
+        assert out["g"].dtype == nw.Enum(["a", "b"])
 
     def test_null_most_frequent_still_imputed_with_real_level(self) -> None:
         # null is the most common value (2 nulls vs 1 "x"); imputation must still

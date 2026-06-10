@@ -12,7 +12,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Recipe, SchemaInfo, StepDropZeroVariance
+from shoez import Mode, Recipe, SchemaInfo, StepDropZeroVariance
 
 
 def _data() -> dict[str, list[float]]:
@@ -74,6 +74,22 @@ class TestEndToEnd:
         fitted = Recipe(steps=[StepDropZeroVariance(["a", "const"])]).fit(df)
         assert all(step.trained for step in fitted.steps)
 
+    def test_unselected_columns_pass_through(self) -> None:
+        df = pd.DataFrame(_data())
+        # b is outside the selection, so it is never a drop candidate.
+        recipe = Recipe(steps=[StepDropZeroVariance(["a", "const"])])
+        out = recipe.fit(df).transform(df)
+        assert "b" in out.columns
+
+    def test_transform_uses_train_decision_not_new_data(self) -> None:
+        train = pd.DataFrame(_data())
+        fitted = Recipe(steps=[StepDropZeroVariance(["a", "const", "b"])]).fit(train)
+        kept = set(fitted.transform(train).columns)
+        # New data where ``const`` now varies must not resurrect it — the drop
+        # decision is fixed at fit time.
+        new = pd.DataFrame({"a": [1.0, 2.0], "const": [7.0, 9.0], "b": [5.0, 1.0]})
+        assert set(fitted.transform(new).columns) == kept
+
 
 class TestStepDropZeroVarianceGuards:
     def test_transform_before_fit_raises(self) -> None:
@@ -94,3 +110,12 @@ class TestStepDropZeroVarianceGuards:
 
     def test_default_id(self) -> None:
         assert StepDropZeroVariance(["a"]).id == "zv"
+
+    def test_explicit_id(self) -> None:
+        assert StepDropZeroVariance(["a"], id="my_zv").id == "my_zv"
+
+    def test_mode_is_removing(self) -> None:
+        assert StepDropZeroVariance(["a", "const"]).mode is Mode.REMOVING
+
+    def test_not_sparse(self) -> None:
+        assert StepDropZeroVariance(["a"]).produces_sparse is False

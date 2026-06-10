@@ -77,6 +77,14 @@ class TestEdgeShapes:
         assert "intercept" in result.columns
         assert result["intercept"].to_list() == []
 
+    def test_zero_columns(self) -> None:
+        # The intercept is independent of input columns: a frame with no columns
+        # but N rows still gets an N-length column of ones.
+        df = nw.from_native(pd.DataFrame(index=range(3)))
+        result = add_intercept(df)
+        assert result.columns == ["intercept"]
+        assert result["intercept"].to_list() == [1.0, 1.0, 1.0]
+
 
 # ---------------------------------------------------------------------------
 # Backends

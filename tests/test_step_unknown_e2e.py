@@ -105,5 +105,29 @@ class TestStepUnknownUnit:
         step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
         assert step.schema_out().dtypes["color"] == "String"
 
+    def test_schema_out_preserves_multi_column_order(self) -> None:
+        step = StepUnknown(["color", "size"])
+        step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
+        so = step.schema_out()
+        assert so.columns == ["color", "size"]
+        assert so.dtypes == {"color": "String", "size": "String"}
+
+    def test_schema_out_passthrough_branch_keeps_original_dtype(self) -> None:
+        # The non-recoded branch of schema_out: a column present in schema_in but
+        # not in the recoded set keeps its original dtype. This branch is
+        # defensive — fit() only records selected (recoded) columns in
+        # schema_in, so it is exercised here via constructed state.
+        from shoez.types import ColSchema
+
+        step = StepUnknown(["color"])
+        step._columns = ["color"]
+        step._schema_in = ColSchema(
+            columns=["color", "n"], dtypes={"color": "String", "n": "Int64"}
+        )
+        so = step.schema_out()
+        assert so.columns == ["color", "n"]
+        assert so.dtypes["color"] == "String"  # recoded
+        assert so.dtypes["n"] == "Int64"  # passthrough keeps original dtype
+
     def test_not_sparse(self) -> None:
         assert StepUnknown(["c"]).produces_sparse is False

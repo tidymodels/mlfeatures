@@ -207,5 +207,31 @@ class TestStepClassDistanceUnit:
             "distance_b": "Float64",
         }
 
+    def test_schema_out_sorts_classes_regardless_of_input_order(self) -> None:
+        # Outcome labels appear in reverse-sorted order ("b" before "a"); the
+        # distance columns must still come out sorted at the wrapper layer.
+        df = pd.DataFrame(
+            {
+                "x": [10.0, 12.0, 0.0, 2.0],
+                "y": [10.0, 14.0, 0.0, 4.0],
+                "label": ["b", "b", "a", "a"],
+            }
+        )
+        step = StepClassDistance(["x", "y"], outcome="label")
+        step.fit(nw.from_native(df), SchemaInfo())
+        assert step.schema_out().columns == ["distance_a", "distance_b"]
+
+    def test_single_class_yields_single_distance_column(self) -> None:
+        df = pd.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0], "label": ["a", "a"]})
+        step = StepClassDistance(["x", "y"], outcome="label")
+        step.fit(nw.from_native(df), SchemaInfo())
+        assert step.schema_out().columns == ["distance_a"]
+
+    def test_missing_outcome_column_raises(self) -> None:
+        df = pd.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0]})  # no "label"
+        step = StepClassDistance(["x", "y"], outcome="label")
+        with pytest.raises(KeyError):
+            step.fit(nw.from_native(df), SchemaInfo())
+
     def test_not_sparse(self) -> None:
         assert StepClassDistance(["x"], outcome="label").produces_sparse is False
