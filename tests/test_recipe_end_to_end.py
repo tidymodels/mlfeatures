@@ -70,12 +70,19 @@ class TestEndToEnd:
         second = fitted.transform(df)
         pd.testing.assert_frame_equal(first, second)
 
-    def test_fit_is_idempotent(self) -> None:
+    def test_fit_is_deterministic(self) -> None:
         df = pd.DataFrame(_data())
         recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"])])
         out1 = recipe.fit(df).transform(df)
         out2 = recipe.fit(df).transform(df)
         pd.testing.assert_frame_equal(out1, out2)
+
+    def test_refit_is_a_noop(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(steps=[StepDropCorr(["a", "b", "c"])]).fit(df)
+        refitted = fitted.fit(df)
+        assert refitted is fitted
+        assert refitted.steps is fitted.steps
 
     def test_extra_columns_outside_selection_are_preserved(self) -> None:
         df = pd.DataFrame(_data())
