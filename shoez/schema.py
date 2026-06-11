@@ -20,12 +20,12 @@ The DAG is **recipe-side state**: it is not handed to steps (steps receive a
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
-from shoez.types import Frame, Roles
+from shoez.types import DataFrame, Frame, Roles
 
 if TYPE_CHECKING:
     from shoez.step import Step
@@ -220,6 +220,70 @@ class Schema:
     def dtypes(self) -> dict[str, nw.dtypes.DType]:
         """Map of live column name to its current narwhals dtype."""
         return {name: node.dtype for name, node in self._live.items()}
+
+    def summary(self) -> DataFrame:
+        """The live schema as a tidy frame (see ``design/schema.md``).
+
+        Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse`` — one row
+        per live column, in frame order. ``dtype`` is the taxonomy category
+        (``"float"``, ``"categorical_unordered"``, …) from
+        `shoez._frame.dtype_category`; ``roles`` is the sorted role set joined
+        with ``", "``. Built on the polars backend and returned native.
+        """
+        nodes = list(self._live.values())
+        data: dict[str, list[Any]] = {
+            "name": [n.name for n in nodes],
+            "dtype": [_frame.dtype_category(n.dtype) for n in nodes],
+            "roles": [", ".join(sorted(n.roles)) for n in nodes],
+            "source": [n.source for n in nodes],
+            "sparse": [n.sparse for n in nodes],
+        }
+        return nw.from_dict(data, backend="polars").to_native()
+
+    def columns_from_source(self, step_id: str) -> list[str]:
+        """Live columns produced by the step with ``id == step_id``.
+
+        The primitive behind the ``has_source(step_id)`` selector (#20). Pass
+        ``"original"`` for the input columns that survive to the live schema.
+        """
+        return [name for name, node in self._live.items() if node.source == step_id]
+
+    def parents(self, name: str) -> list[str]:
+        """Immediate parent columns of ``name`` (live or archived)."""
+        node = self._node(name)
+        if node is None:
+            raise KeyError(name)
+        return list(node.parent_cols)
+
+    def ancestors(self, name: str) -> set[str]:
+        """All columns ``name`` descends from, transitively.
+
+        Walks ``parent_cols`` through archived nodes too, so a column traces
+        back through removed intermediates (e.g. a reduced component back to a
+        dummy column back to the categorical it replaced). Cycles — which a DAG
+        should never contain — are guarded against defensively.
+        """
+        result: set[str] = set()
+        stack = list(self.parents(name))
+        while stack:
+            parent = stack.pop()
+            if parent in result:
+                continue
+            result.add(parent)
+            node = self._node(parent)
+            if node is not None:
+                stack.extend(node.parent_cols)
+        return result
+
+    def _node(self, name: str) -> ColumnNode | None:
+        """The node named ``name``, preferring the live one, else most-recently
+        archived. ``None`` if no such column ever existed."""
+        if name in self._live:
+            return self._live[name]
+        for node in reversed(self._history):
+            if node.name == name:
+                return node
+        return None
 
     def __getitem__(self, name: str) -> ColumnNode:
         """The live node named ``name`` (raises ``KeyError`` if not live)."""

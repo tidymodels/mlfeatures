@@ -326,3 +326,69 @@ def test_update_composes_across_a_multi_step_sequence() -> None:
     assert any(n.name == "g" and n.removed_by == "dummy" for n in schema._history)
     # the live DAG order matches the transformed frame.
     assert schema.columns == _frame.columns(frame)
+
+
+# --- summary() and provenance queries ----------------------------------------
+
+
+@pytest.mark.parametrize("backend", list(BACKENDS))
+def test_summary_columns_and_values(backend: str) -> None:
+    frame = _frame_of(backend, {"a": [1, 2, 3], "b": [1.5, 2.5, 3.5]})
+    schema = Schema.from_frame(frame, Roles({"a": {"predictor"}}))
+    out = nw.from_native(schema.summary())
+
+    assert out.columns == ["name", "dtype", "roles", "source", "sparse"]
+    assert out["name"].to_list() == ["a", "b"]
+    assert out["dtype"].to_list() == ["int", "float"]  # taxonomy categories
+    assert out["roles"].to_list() == ["predictor", ""]
+    assert out["source"].to_list() == ["original", "original"]
+    assert out["sparse"].to_list() == [False, False]
+
+
+def test_summary_reflects_steps() -> None:
+    schema, _ = _apply(
+        [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
+    )
+    out = nw.from_native(schema.summary())
+    source_of = dict(zip(out["name"].to_list(), out["source"].to_list()))
+
+    assert "g" not in source_of  # replaced
+    assert source_of["g_b"] == "dummy"
+    assert source_of["h"] == "original"
+
+
+def test_summary_of_empty_schema_has_headers_but_no_rows() -> None:
+    out = nw.from_native(Schema.from_frame(_frame_of("polars", {})).summary())
+    assert out.columns == ["name", "dtype", "roles", "source", "sparse"]
+    assert out.shape[0] == 0
+
+
+def test_columns_from_source() -> None:
+    schema, _ = _apply(
+        [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
+    )
+    assert schema.columns_from_source("dummy") == ["g_b"]
+    assert schema.columns_from_source("original") == ["h"]
+    assert schema.columns_from_source("nope") == []
+
+
+def test_parents_of_produced_and_original_columns() -> None:
+    schema, _ = _apply(
+        [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
+    )
+    assert schema.parents("g_b") == ["g"]
+    assert schema.parents("h") == []
+    with pytest.raises(KeyError):
+        schema.parents("missing")
+
+
+def test_ancestors_trace_through_archived_columns() -> None:
+    # dummy(g) -> g_b, then reduce(g_b, x) -> pc1, pc2: pc1's lineage must reach
+    # back through the archived g_b to the original g.
+    schema, _ = _apply(
+        [StepDummy(["g"]), _FakeReduce(["g_b", "x"])],
+        "polars",
+        {"g": ["a", "b", "a"], "x": [1, 2, 3]},
+    )
+    assert schema.ancestors("pc1") == {"g_b", "x", "g"}
+    assert schema.columns_from_source("reduce") == ["pc1", "pc2"]
