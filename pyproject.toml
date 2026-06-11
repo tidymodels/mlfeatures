@@ -45,6 +45,7 @@ dev = [
     "pyright>=1.1.407",
     "build>=0.7",
     "twine>=3.4",
+    "pyyaml",
 ]
 
 [project.urls]
