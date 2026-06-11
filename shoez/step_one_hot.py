@@ -105,19 +105,19 @@ class StepOneHot(Step):
         self.id = id if id is not None else "one_hot"
         self.trained = False
         self.output_role: str | None = "predictor"
-        self._levels: dict[str, list[Any]] | None = None
+        self._estimates: dict[str, list[Any]] | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the full sorted level list for each selected column."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._levels = fit_one_hot(features)
+        self._estimates = fit_one_hot(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         out_cols = [
             self._col_name(col, str(lvl))
-            for col, lvls in self._levels.items()
+            for col, lvls in self._estimates.items()
             for lvl in lvls
         ]
         self._schema_out = ColSchema(columns=out_cols)
@@ -125,10 +125,10 @@ class StepOneHot(Step):
 
     def transform(self, new_data: Frame) -> Frame:
         """Apply stored level lists to produce indicator columns."""
-        if self._levels is None:
+        if self._estimates is None:
             raise RuntimeError("StepOneHot.transform() called before fit().")
         return apply_dummy(
-            new_data, self._levels, self._col_name, self.keep_original_cols
+            new_data, self._estimates, self._col_name, self.keep_original_cols
         )
 
     def schema_in(self) -> ColSchema:
@@ -148,9 +148,9 @@ class StepOneHot(Step):
         return set(DISCRETE_DTYPES)
 
     def update_roles(self, roles: Roles) -> None:
-        if self._levels is None:
+        if self._estimates is None:
             return
-        for source_col, levels in self._levels.items():
+        for source_col, levels in self._estimates.items():
             source_roles = roles.of(source_col)
             for role in source_roles:
                 for lvl in levels:

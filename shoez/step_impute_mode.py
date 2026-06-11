@@ -150,22 +150,22 @@ class StepImputeMode(Step):
         self.keep_original_cols = False
         self.output_role = None
         # Populated by ``fit()``: {column: mode} over the imputable columns.
-        self._modes: dict[str, Any] | None = None
+        self._estimates: dict[str, Any] | None = None
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mode over the selected columns."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._modes = fit_impute_mode(features)
+        self._estimates = fit_impute_mode(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored modes. Never re-estimates."""
-        if self._modes is None:
+        if self._estimates is None:
             raise RuntimeError("StepImputeMode.transform() called before fit().")
-        return apply_impute_mode(new_data, self._modes)
+        return apply_impute_mode(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""

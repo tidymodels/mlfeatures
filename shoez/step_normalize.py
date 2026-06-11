@@ -150,22 +150,22 @@ class StepNormalize(Step):
         self.keep_original_cols = False
         self.output_role = None
         # Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
-        self._stats: dict[str, tuple[float, float]] | None = None
+        self._estimates: dict[str, tuple[float, float]] | None = None
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-column mean and std over the selected columns."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._stats = fit_normalize(features)
+        self._estimates = fit_normalize(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Apply the stored mean and std: ``(x - mean) / std``. Never re-estimates."""
-        if self._stats is None:
+        if self._estimates is None:
             raise RuntimeError("StepNormalize.transform() called before fit().")
-        return apply_normalize(new_data, self._stats)
+        return apply_normalize(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -175,9 +175,9 @@ class StepNormalize(Step):
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, normalized ones now float."""
-        if self._schema_in is None or self._stats is None:
+        if self._schema_in is None or self._estimates is None:
             raise RuntimeError("StepNormalize.schema_out() called before fit().")
-        normalized = set(self._stats)
+        normalized = set(self._estimates)
         dtypes = {
             col: ("Float64" if col in normalized else self._schema_in.dtypes[col])
             for col in self._schema_in.columns

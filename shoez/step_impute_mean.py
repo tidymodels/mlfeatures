@@ -136,22 +136,22 @@ class StepImputeMean(Step):
         self.keep_original_cols = False
         self.output_role = None
         # Populated by ``fit()``: {column: mean} over the imputable columns.
-        self._means: dict[str, float] | None = None
+        self._estimates: dict[str, float] | None = None
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mean over the selected columns."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._means = fit_impute_mean(features)
+        self._estimates = fit_impute_mean(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored means. Never re-estimates."""
-        if self._means is None:
+        if self._estimates is None:
             raise RuntimeError("StepImputeMean.transform() called before fit().")
-        return apply_impute_mean(new_data, self._means)
+        return apply_impute_mean(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -161,11 +161,11 @@ class StepImputeMean(Step):
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, imputed ones now float."""
-        if self._schema_in is None or self._means is None:
+        if self._schema_in is None or self._estimates is None:
             raise RuntimeError("StepImputeMean.schema_out() called before fit().")
         # Only columns that were actually imputed (non-NaN mean) become float;
         # an entirely-null column is left unchanged and keeps its input dtype.
-        imputed = {col for col, mean in self._means.items() if not math.isnan(mean)}
+        imputed = {col for col, mean in self._estimates.items() if not math.isnan(mean)}
         dtypes = {
             col: ("Float64" if col in imputed else self._schema_in.dtypes[col])
             for col in self._schema_in.columns

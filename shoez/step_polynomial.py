@@ -377,14 +377,14 @@ class StepPolynomial(Step):
         self.keep_original_cols = False
         self.output_role = role
         # Populated by ``fit()``: per-column fitted basis + schemas.
-        self._fit_result: dict[str, PolynomialFit] | None = None
+        self._estimates: dict[str, PolynomialFit] | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the polynomial basis for each selected column on training data."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._fit_result = fit_polynomial(features, self.degree)
+        self._estimates = fit_polynomial(features, self.degree)
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
         # Degree-0 columns stay put with their original dtype; the rest become
@@ -393,7 +393,7 @@ class StepPolynomial(Step):
         out_cols: list[str] = []
         out_dtypes: dict[str, str] = {}
         for col in self._schema_in.columns:
-            fit = self._fit_result.get(col)
+            fit = self._estimates.get(col)
             d = fit.degree if fit is not None else 0
             if d <= 0:
                 out_cols.append(col)
@@ -408,9 +408,9 @@ class StepPolynomial(Step):
 
     def transform(self, new_data: Frame) -> Frame:
         """Replace each selected column with its polynomial expansion."""
-        if self._fit_result is None:
+        if self._estimates is None:
             raise RuntimeError("StepPolynomial.transform() called before fit().")
-        return apply_polynomial(new_data, self._fit_result)
+        return apply_polynomial(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
