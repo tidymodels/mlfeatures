@@ -380,6 +380,7 @@ class StepPolynomial(Step):
         self._estimates: dict[str, PolynomialFit] | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
+        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the polynomial basis for each selected column on training data."""
@@ -392,6 +393,10 @@ class StepPolynomial(Step):
         # ``apply_polynomial`` produces).
         out_cols: list[str] = []
         out_dtypes: dict[str, str] = {}
+        # Each expansion column descends from its single source column. A
+        # degree-0 column is a pass-through (kept unchanged), not a newly
+        # produced column, so it is excluded from output_parents.
+        parents: dict[str, list[str]] = {}
         for col in self._schema_in.columns:
             fit = self._estimates.get(col)
             d = fit.degree if fit is not None else 0
@@ -403,7 +408,9 @@ class StepPolynomial(Step):
                 name = f"{col}_{i}"
                 out_cols.append(name)
                 out_dtypes[name] = "Float64"
+                parents[name] = [col]
         self._schema_out = ColSchema(columns=out_cols, dtypes=out_dtypes)
+        self._output_parents = parents
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -423,6 +430,12 @@ class StepPolynomial(Step):
         if self._schema_out is None:
             raise RuntimeError("StepPolynomial.schema_out() called before fit().")
         return self._schema_out
+
+    def output_parents(self) -> dict[str, list[str]]:
+        """Each expansion column descends from its single source column."""
+        if self._output_parents is None:
+            raise RuntimeError("StepPolynomial.output_parents() called before fit().")
+        return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Orthogonal polynomial expansion is only meaningful on numeric columns."""

@@ -98,6 +98,7 @@ class StepIntercept(Step):
         self.output_role = role
         # Populated by ``fit()``.
         self._schema_out: ColSchema | None = None
+        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the produced column's schema. Estimates nothing."""
@@ -107,6 +108,8 @@ class StepIntercept(Step):
         produced = add_intercept(training_data, self.value, self.name)
         out_dtype = str(produced.schema[self.name])
         self._schema_out = ColSchema(columns=[self.name], dtypes={self.name: out_dtype})
+        # A constant column descends from no input column.
+        self._output_parents = {self.name: []}
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -124,6 +127,12 @@ class StepIntercept(Step):
         if self._schema_out is None:
             raise RuntimeError("StepIntercept.schema_out() called before fit().")
         return self._schema_out
+
+    def output_parents(self) -> dict[str, list[str]]:
+        """The intercept column is a constant — it has no parent columns."""
+        if self._output_parents is None:
+            raise RuntimeError("StepIntercept.output_parents() called before fit().")
+        return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """No input columns are consumed, so no dtype constraint applies."""

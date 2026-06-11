@@ -92,3 +92,18 @@ class TestEstimatesLifecycle:
         assert step._estimates is None
         Recipe(steps=[step]).fit(train)
         assert step._estimates is not None
+
+
+class TestLineage:
+    """output_parents() declares exactly the columns the step adds, each with valid parents."""
+
+    def test_output_parents_matches_added_columns(self) -> None:
+        fitted, train = _fitted()
+        step = fitted.steps[0]
+        pre = set(train.columns)
+        added = set(fitted.transform(train).columns) - pre
+        parents = step.output_parents()
+        assert set(parents) == added
+        assert all(
+            parent in pre for parents_of in parents.values() for parent in parents_of
+        )

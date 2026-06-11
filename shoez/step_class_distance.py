@@ -432,6 +432,7 @@ class StepClassDistance(Step):
         self._estimates: ClassDistanceFit | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
+        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-class centroids from the predictor + outcome columns."""
@@ -456,6 +457,9 @@ class StepClassDistance(Step):
             columns=out_names,
             dtypes=dict.fromkeys(out_names, "Float64"),
         )
+        # Every distance column is derived from the full feature set (the
+        # outcome drives centroid fitting but is not a transform-time input).
+        self._output_parents = {name: list(features.columns) for name in out_names}
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -475,6 +479,14 @@ class StepClassDistance(Step):
         if self._schema_out is None:
             raise RuntimeError("StepClassDistance.schema_out() called before fit().")
         return self._schema_out
+
+    def output_parents(self) -> dict[str, list[str]]:
+        """Each distance column is derived from the full feature set."""
+        if self._output_parents is None:
+            raise RuntimeError(
+                "StepClassDistance.output_parents() called before fit()."
+            )
+        return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Distances are only meaningful on numeric predictor columns."""

@@ -257,6 +257,7 @@ class StepDummy(Step):
         self._estimates: DummyEstimates | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
+        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the sorted level list for each selected column."""
@@ -272,12 +273,13 @@ class StepDummy(Step):
         )
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
-        out_cols = [
-            self._col_name(col, str(lvl))
+        # Each indicator descends from exactly its source column (a1, a2 ← a).
+        self._output_parents = {
+            self._col_name(col, str(lvl)): [col]
             for col, lvls in self._estimates.levels.items()
             for lvl in lvls
-        ]
-        self._schema_out = ColSchema(columns=out_cols)
+        }
+        self._schema_out = ColSchema(columns=list(self._output_parents))
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -303,6 +305,12 @@ class StepDummy(Step):
         if self._schema_out is None:
             raise RuntimeError("StepDummy.schema_out() called before fit().")
         return self._schema_out
+
+    def output_parents(self) -> dict[str, list[str]]:
+        """Each indicator column descends from its single source column."""
+        if self._output_parents is None:
+            raise RuntimeError("StepDummy.output_parents() called before fit().")
+        return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Accepts discrete columns; rejects float and decimal."""
