@@ -137,7 +137,7 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 ## `fit()`
 
 - Resolves selectors against the current schema.
-- Estimates and stores statistics.
+- Estimates and stores statistics. By convention a step holds its fitted statistics on a single `_estimates` attribute, initialized to `None` in `__init__` and populated in `fit()`; steps with more than one piece of fitted state bundle it into one frozen dataclass (e.g. `DummyEstimates`, `PolynomialFit`). This is a convention, not a base-class slot — the stored type varies per step, so `Step` declares no `_estimates`.
 - Returns the fitted step. Setting `trained=True` is done by `recipe.fit()` after calling `step.fit()` — not by the step itself.
 - Declares `schema_in()` and `schema_out()` so the recipe can update its column-lineage DAG. See [schema.md](schema.md).
 - Must be idempotent given the same training data.
