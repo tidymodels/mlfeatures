@@ -50,6 +50,13 @@ duration
 list[<type>]
 ```
 
+This taxonomy is realized directly as **narwhals dtype classes**, not a custom `DType` enum: narwhals is already the one backend-agnostic type system the framework depends on, so a parallel taxonomy would only have to be kept in sync with it. Concretely:
+
+- `accepts_dtypes()` returns `set[type[nw.dtypes.DType]]` (or the `ANY_DTYPE` sentinel) — see `shoez/types.py`, which also exports `NUMERIC_DTYPES`.
+- The classification surface lives in `shoez/_frame.py`: per-category predicates (`is_numeric`, `is_integer`, `is_double`, `is_boolean`, `is_string`, `is_categorical`, `is_ordered_categorical`, `is_date`, `is_datetime`, `is_duration`, `is_list`) plus `dtype_category()`, which maps a narwhals dtype to its taxonomy leaf name.
+
+narwhals normalizes ordered categoricals (polars `Enum`, pandas `Categorical(ordered=True)`) to `Enum` and unordered ones (polars `Categorical`, pandas `Categorical(ordered=False)`) to `Categorical`, so the ordered/unordered distinction round-trips across backends. `Decimal` is numeric but reported as neither float nor int, so `dtype_category()` gives it its own leaf.
+
 Each step declares which dtypes it `accepts_dtypes()` — rejection happens at the schema boundary, not buried in fitting code. This catches type mismatches before any data is processed.
 
 ---
