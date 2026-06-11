@@ -153,20 +153,10 @@ def fit_class_distance(
     >>> fit.centroids[0].tolist()
     [0.5, 10.5]
     """
-    # Empty feature selection is a no-op — with no predictors there are no
-    # centroids and no distances to compute. Return an empty fit so ``apply``
-    # adds no columns and passes the frame through unchanged. Checked first: a
-    # 0-column frame collapses to shape (0, 0), which would otherwise misalign
-    # the outcome mask against a zero-row predictor array (IndexError).
-    if len(features.columns) == 0:
-        return ClassDistanceFit(
-            columns=[],
-            classes=[],
-            centroids=np.empty((0, 0), dtype=np.float64),
-            metric=metric,
-            log_distance=log_distance,
-            eps=eps,
-        )
+    # Empty feature selections never reach here: the recipe detects a
+    # zero-column selection and treats the step as the identity transform, so
+    # ``fit`` is not called. See ``Recipe.fit`` / ``Step._empty_selection``.
+    #
     # Drop rows where the outcome is null: a null label isn't a class, so it
     # can't contribute to any centroid. Filtering on the outcome side keeps the
     # rest of the function dealing only with rows that have a real label.

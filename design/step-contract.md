@@ -152,11 +152,27 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 
 ---
 
+## Empty selection ⇒ identity (structural)
+
+An **empty column selection is a no-op**: a step whose primary selector resolves to zero columns passes the frame through unchanged. Like the `RowOp` transform-time skip above, this is enforced **structurally by the framework, not by a per-step convention** — a step author cannot get it wrong because the step is never fitted on an empty selection.
+
+The mechanism, all at the recipe boundary:
+
+- `Step.resolve_selection(data, info) -> list[str]` resolves the step's *primary input selector* to concrete column names. The base default resolves `self.columns`, which is correct for every selector-taking step — including multi-selector steps like `step_class_distance`, whose primary (feature) selector is `columns` (the `outcome` selector does not gate the no-op). It takes `data` (not just `info`) because narwhals / polars selectors resolve against the frame's schema.
+- `recipe.fit()` calls `resolve_selection` *before* `fit()`. If the result is `[]`, it sets `Step._empty_selection = True`, sets `trained`, keeps the step in the fitted pipeline (so it stays inspectable), and **skips** `fit()` / `transform()` / `update_roles()`. The marker is reset each fit, so re-fitting with a selection that now matches columns is not stuck in identity mode.
+- `FittedRecipe.transform()` skips any step with `_empty_selection` set, alongside `RowOp` steps.
+
+Steps with **no input selector** (e.g. `step_intercept`, an `ADDING` step with no `columns`) must always run; the recipe special-cases them so `resolve_selection` is never called on them and the marker is never set.
+
+Because the no-op lives in the recipe, individual steps' `fit()` code must **not** add their own empty-selection guards — `fit()` is guaranteed a non-empty selection.
+
+---
+
 ## `StepConformanceTest`
 
 Every step must pass this test suite before merging:
 
-- Empty selection returns empty output without error.
+- Empty selection returns empty output without error (handled structurally by the recipe — see [Empty selection ⇒ identity](#empty-selection--identity-structural); the step's own `fit()` is never called on an empty selection).
 - 0-row and 1-row `transform()` produce schema-correct output.
 - All declared constructor arguments are type-validated.
 - `fit()` is idempotent given the same training data.

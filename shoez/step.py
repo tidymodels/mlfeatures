@@ -12,7 +12,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Roles, SchemaInfo
+from shoez.types import AcceptedDtypes, ColSchema, Frame, Roles, SchemaInfo, Selector
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -38,6 +38,18 @@ class Step(ABC):
     keep_original_cols: bool
     #: Role assigned to new columns produced by this step.
     output_role: str | None
+    #: The step's primary input selector. Present on every selector-taking step
+    #: (steps with no input selector, e.g. ``StepIntercept``, do not set it and
+    #: are special-cased by the recipe so ``resolve_selection`` is never called
+    #: on them).
+    columns: Selector
+    #: Set ``True`` by ``recipe.fit()`` when the step's primary selection
+    #: resolves to zero columns. A marked step is the identity transform: it is
+    #: kept in the fitted pipeline for inspection but never fitted and never run.
+    #: This makes "empty selection ⇒ no-op" structural rather than a per-step
+    #: convention — mirroring how `RowOp` makes the transform-time skip
+    #: structural. Defaults to ``False``.
+    _empty_selection: bool = False
 
     @abstractmethod
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
@@ -76,6 +88,24 @@ class Step(ABC):
     def produces_sparse(self) -> bool:
         """Whether this step produces sparse output."""
         raise NotImplementedError
+
+    def resolve_selection(self, data: Frame, info: SchemaInfo) -> list[str]:
+        """Resolve this step's primary input selector to concrete column names.
+
+        Called by ``recipe.fit()`` *before* ``fit()`` so the recipe can detect
+        an empty selection and treat the step as the identity transform (see
+        ``_empty_selection``). The default resolves ``self.columns`` against the
+        current frame, which is correct for every selector-taking step —
+        including multi-selector steps like ``StepClassDistance`` whose primary
+        (feature) selector is ``columns``. Steps with no input selector are
+        special-cased by the recipe and never reach this method.
+
+        Takes ``data`` (not just ``info``) because narwhals / polars selectors
+        resolve against the frame's schema.
+        """
+        from shoez import _frame
+
+        return _frame.select(data, self.columns, info.roles).columns
 
     def update_roles(self, roles: Roles) -> None:
         """Update ``roles`` to reflect the column changes made by this step.

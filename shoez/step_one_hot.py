@@ -53,11 +53,9 @@ def fit_one_hot(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
         If the frame has zero rows, or if any column has fewer than two unique
         non-null levels.
     """
-    # Empty selection (no columns) is a no-op — there is nothing to encode.
-    # Check this before the zero-row guard: a 0-column frame collapses to
-    # shape (0, 0) in pandas, which would otherwise look like a zero-row frame.
-    if len(features.columns) == 0:
-        return {}
+    # Empty selections never reach here: the recipe detects a zero-column
+    # selection and treats the step as the identity transform, so ``fit`` is
+    # not called. See ``Recipe.fit`` / ``Step._empty_selection``.
     if features.shape[0] == 0:
         raise ValueError(
             "Cannot fit one-hot encoding on a zero-row frame — "
