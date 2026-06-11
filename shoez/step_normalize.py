@@ -17,8 +17,6 @@ import warnings
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
-import numpy as np
-import numpy.typing as npt
 
 from shoez import _frame
 from shoez._frame import as_float
@@ -41,7 +39,7 @@ __all__ = ["fit_normalize", "apply_normalize", "StepNormalize"]
 
 def fit_normalize(
     features: Frame,
-) -> tuple[list[str], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+) -> dict[str, tuple[float, float]]:
     """Estimate per-column mean and standard deviation for normalization.
 
     Parameters
@@ -56,10 +54,8 @@ def fit_normalize(
 
     Returns
     -------
-    tuple ``(columns, means, stds)`` — ``columns`` is the list of column names
-    that were normalizable, and ``means`` / ``stds`` are ``numpy.float64``
-    arrays parallel to ``columns`` (``means[i]`` / ``stds[i]`` belong to
-    ``columns[i]``).  All three are empty when ``features`` has no columns.
+    ``dict`` mapping each normalizable column name to its ``(mean, std)`` pair.
+    Empty when ``features`` has no columns.
 
     Columns with a standard deviation of ``0`` (constant columns — every value
     the same) cannot be scaled to unit variance, so they are **omitted** from
@@ -74,9 +70,7 @@ def fit_normalize(
     single-row fit) is not treated as constant — it is kept and propagates as
     ``NaN`` at transform time, signalling a degenerate fit.
     """
-    columns: list[str] = []
-    means_list: list[float] = []
-    stds_list: list[float] = []
+    stats: dict[str, tuple[float, float]] = {}
     constant: list[str] = []
 
     for col in features.columns:
@@ -86,9 +80,7 @@ def fit_normalize(
         if std == 0.0:
             constant.append(col)
             continue
-        columns.append(col)
-        means_list.append(as_float(features[col].mean()))
-        stds_list.append(std)
+        stats[col] = (as_float(features[col].mean()), std)
 
     if constant:
         warnings.warn(
@@ -97,16 +89,12 @@ def fit_normalize(
             stacklevel=2,
         )
 
-    means = np.asarray(means_list, dtype=np.float64)
-    stds = np.asarray(stds_list, dtype=np.float64)
-    return columns, means, stds
+    return stats
 
 
 def apply_normalize(
     features: Frame,
-    columns: list[str],
-    means: npt.NDArray[np.float64],
-    stds: npt.NDArray[np.float64],
+    stats: dict[str, tuple[float, float]],
 ) -> Frame:
     """Standardize ``features`` as ``(x - mean) / std`` using stored statistics.
 
@@ -114,37 +102,19 @@ def apply_normalize(
     ----------
     features:
         A narwhals DataFrame to normalize.
-    columns:
-        The column names to normalize — the ``columns`` returned by
-        `fit_normalize()`. Any column of ``features`` not in this list (e.g.
-        a constant column dropped at fit time) is passed through untouched.
-    means:
-        Per-column means from `fit_normalize()`, parallel to ``columns``.
-    stds:
-        Per-column standard deviations from `fit_normalize()`, parallel to
-        ``columns``.
+    stats:
+        The ``{column: (mean, std)}`` mapping returned by `fit_normalize()`. Any
+        column of ``features`` not present as a key (e.g. a constant column
+        dropped at fit time) is passed through untouched.
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``columns`` replaced
+    narwhals.DataFrame — the input frame with each column in ``stats`` replaced
     in place by its standardized value. Column names, order, and structure are
     unchanged.
-
-    Raises
-    ------
-    ValueError
-        If ``means`` or ``stds`` does not have exactly one entry per name in
-        ``columns``.
     """
-    if len(means) != len(columns) or len(stds) != len(columns):
-        raise ValueError(
-            f"`means` ({len(means)}) and `stds` ({len(stds)}) must each have one "
-            f"entry per name in `columns` ({len(columns)})."
-        )
-
     exprs = [
-        ((nw.col(col) - float(means[i])) / float(stds[i])).alias(col)
-        for i, col in enumerate(columns)
+        ((nw.col(col) - mean) / std).alias(col) for col, (mean, std) in stats.items()
     ]
     return features.with_columns(*exprs)
 
@@ -179,25 +149,23 @@ class StepNormalize(Step):
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None
-        # Populated by ``fit()``: the normalizable columns and their statistics.
-        self._columns: list[str] | None = None
-        self._means: npt.NDArray[np.float64] | None = None
-        self._stds: npt.NDArray[np.float64] | None = None
+        # Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
+        self._stats: dict[str, tuple[float, float]] | None = None
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-column mean and std over the selected columns."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._columns, self._means, self._stds = fit_normalize(features)
+        self._stats = fit_normalize(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Apply the stored mean and std: ``(x - mean) / std``. Never re-estimates."""
-        if self._columns is None or self._means is None or self._stds is None:
+        if self._stats is None:
             raise RuntimeError("StepNormalize.transform() called before fit().")
-        return apply_normalize(new_data, self._columns, self._means, self._stds)
+        return apply_normalize(new_data, self._stats)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -207,9 +175,9 @@ class StepNormalize(Step):
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, normalized ones now float."""
-        if self._schema_in is None or self._columns is None:
+        if self._schema_in is None or self._stats is None:
             raise RuntimeError("StepNormalize.schema_out() called before fit().")
-        normalized = set(self._columns)
+        normalized = set(self._stats)
         dtypes = {
             col: ("Float64" if col in normalized else self._schema_in.dtypes[col])
             for col in self._schema_in.columns

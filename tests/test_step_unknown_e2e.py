@@ -112,22 +112,18 @@ class TestStepUnknownUnit:
         assert so.columns == ["color", "size"]
         assert so.dtypes == {"color": "String", "size": "String"}
 
-    def test_schema_out_passthrough_branch_keeps_original_dtype(self) -> None:
-        # The non-recoded branch of schema_out: a column present in schema_in but
-        # not in the recoded set keeps its original dtype. This branch is
-        # defensive — fit() only records selected (recoded) columns in
-        # schema_in, so it is exercised here via constructed state.
+    def test_schema_out_recodes_every_selected_column_to_string(self) -> None:
+        # The resolved selection (_schema_in.columns) is the recoded set: every
+        # selected column becomes String regardless of its input dtype.
         from shoez.types import ColSchema
 
-        step = StepUnknown(["color"])
-        step._columns = ["color"]
+        step = StepUnknown(["color", "n"])
         step._schema_in = ColSchema(
             columns=["color", "n"], dtypes={"color": "String", "n": "Int64"}
         )
         so = step.schema_out()
         assert so.columns == ["color", "n"]
-        assert so.dtypes["color"] == "String"  # recoded
-        assert so.dtypes["n"] == "Int64"  # passthrough keeps original dtype
+        assert so.dtypes == {"color": "String", "n": "String"}
 
     def test_not_sparse(self) -> None:
         assert StepUnknown(["c"]).produces_sparse is False

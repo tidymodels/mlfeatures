@@ -23,8 +23,6 @@ import warnings
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
-import numpy as np
-import numpy.typing as npt
 
 from shoez import _frame
 from shoez._frame import as_float
@@ -51,7 +49,7 @@ __all__ = [
 
 def fit_impute_median(
     features: Frame,
-) -> tuple[list[str], npt.NDArray[np.float64]]:
+) -> dict[str, float]:
     """Estimate the per-column median used to impute missing values.
 
     Parameters
@@ -62,20 +60,17 @@ def fit_impute_median(
 
     Returns
     -------
-    tuple ``(columns, medians)`` — ``columns`` is every input column name and
-    ``medians`` is a ``numpy.float64`` array parallel to it (``medians[i]`` is
-    the median of ``columns[i]``). Both are empty when ``features`` has no
-    columns.
+    ``dict`` mapping every input column name to its median. Empty when
+    ``features`` has no columns.
 
     A column whose values are *all* null has an undefined (``NaN``) median and
-    so cannot be imputed. It is **not** dropped: it stays in ``columns`` with a
-    ``NaN`` median, `apply_impute_median()` leaves it unchanged, and a
+    so cannot be imputed. It is **not** dropped: it stays in the mapping with a
+    ``NaN`` value, `apply_impute_median()` leaves it unchanged, and a
     `UserWarning` is emitted naming such columns.
     """
-    columns = list(features.columns)
-    medians = [as_float(features[col].median()) for col in columns]
+    medians = {col: as_float(features[col].median()) for col in features.columns}
 
-    all_null = [col for col, med in zip(columns, medians) if math.isnan(med)]
+    all_null = [col for col, med in medians.items() if math.isnan(med)]
     if all_null:
         warnings.warn(
             f"{len(all_null)} column(s) are entirely null and cannot be "
@@ -83,51 +78,36 @@ def fit_impute_median(
             stacklevel=2,
         )
 
-    return columns, np.asarray(medians, dtype=np.float64)
+    return medians
 
 
 def apply_impute_median(
     features: Frame,
-    columns: list[str],
-    medians: npt.NDArray[np.float64],
+    medians: dict[str, float],
 ) -> Frame:
-    """Fill nulls in ``columns`` with the stored per-column median.
+    """Fill nulls with the stored per-column median.
 
     Parameters
     ----------
     features:
         A narwhals DataFrame to impute.
-    columns:
-        The column names to impute — the ``columns`` returned by
-        `fit_impute_median()`. Any column of ``features`` not in this
-        list is passed through untouched.
     medians:
-        Per-column medians from `fit_impute_median()`, parallel to
-        ``columns``. A ``NaN`` median marks a column that could not be estimated
-        (entirely null at fit time); such columns are left unchanged.
+        The ``{column: median}`` mapping returned by `fit_impute_median()`. Any
+        column of ``features`` not present as a key is passed through untouched.
+        A ``NaN`` median marks a column that could not be estimated (entirely
+        null at fit time); such columns are left unchanged.
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with nulls in each column of
-    ``columns`` filled by its median (columns with a ``NaN`` median are left
-    as-is). Column names, order, and structure are unchanged.
-
-    Raises
-    ------
-    ValueError
-        If ``medians`` does not have exactly one entry per name in ``columns``.
+    narwhals.DataFrame — the input frame with nulls in each mapped column filled
+    by its median (columns with a ``NaN`` median are left as-is). Column names,
+    order, and structure are unchanged.
     """
-    if len(medians) != len(columns):
-        raise ValueError(
-            f"`medians` ({len(medians)}) must have one entry per name in "
-            f"`columns` ({len(columns)})."
-        )
-
     # Skip columns with a NaN median (entirely null at fit time): leave as-is.
     exprs = [
-        nw.col(col).fill_null(float(medians[i])).alias(col)
-        for i, col in enumerate(columns)
-        if not math.isnan(medians[i])
+        nw.col(col).fill_null(med).alias(col)
+        for col, med in medians.items()
+        if not math.isnan(med)
     ]
     return features.with_columns(*exprs)
 
@@ -161,24 +141,23 @@ class StepImputeMedian(Step):
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None
-        # Populated by ``fit()``: the columns and their medians.
-        self._columns: list[str] | None = None
-        self._medians: npt.NDArray[np.float64] | None = None
+        # Populated by ``fit()``: {column: median} over the imputable columns.
+        self._medians: dict[str, float] | None = None
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column median over the selected columns."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._columns, self._medians = fit_impute_median(features)
+        self._medians = fit_impute_median(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored medians. Never re-estimates."""
-        if self._columns is None or self._medians is None:
+        if self._medians is None:
             raise RuntimeError("StepImputeMedian.transform() called before fit().")
-        return apply_impute_median(new_data, self._columns, self._medians)
+        return apply_impute_median(new_data, self._medians)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -188,13 +167,11 @@ class StepImputeMedian(Step):
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, imputed ones now float."""
-        if self._schema_in is None or self._columns is None or self._medians is None:
+        if self._schema_in is None or self._medians is None:
             raise RuntimeError("StepImputeMedian.schema_out() called before fit().")
         # Only columns that were actually imputed (non-NaN median) become float;
         # an entirely-null column is left unchanged and keeps its input dtype.
-        imputed = {
-            col for col, med in zip(self._columns, self._medians) if not math.isnan(med)
-        }
+        imputed = {col for col, med in self._medians.items() if not math.isnan(med)}
         dtypes = {
             col: ("Float64" if col in imputed else self._schema_in.dtypes[col])
             for col in self._schema_in.columns
