@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from shoez import _frame
 from shoez.step import RowOp, Step
+from shoez.step_intercept import StepIntercept
 from shoez.types import (
     DataFrame,
     Roles,
@@ -135,6 +136,25 @@ class Recipe:
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
             info.roles = live_roles
+            # Empty selection ⇒ identity. Resolved here, once, at the recipe
+            # boundary so the no-op is structural: a step is never fitted on a
+            # zero-column selection and so cannot misread it (the failure mode
+            # the per-step guards used to handle). ``StepIntercept`` and any
+            # other step with no input selector are exempt — they have no
+            # ``columns`` to resolve and must always run. The marker is reset
+            # each fit so re-fitting with a selection that now matches columns
+            # is not stuck in identity mode.
+            empty = (
+                not isinstance(step, StepIntercept)
+                and step.resolve_selection(current, info) == []
+            )
+            step._empty_selection = empty  # pyright: ignore[reportPrivateUsage]
+            if empty:
+                # Kept in the pipeline (inspectable) but marked identity: skip
+                # fit / transform / update_roles.
+                step.trained = True
+                fitted_steps.append(step)
+                continue
             fitted = step.fit(current, info)
             fitted.trained = True  # set by the recipe, not the step (per contract)
             if not isinstance(step, RowOp):
@@ -160,13 +180,18 @@ class FittedRecipe:
         return self
 
     def transform(self, data: DataFrame) -> DataFrame:
-        """Apply each fitted step in order, skipping ``RowOp`` steps.
+        """Apply each fitted step in order, skipping ``RowOp`` and identity steps.
 
-        Never re-estimates. Returns a native frame at the sklearn boundary.
+        ``RowOp`` steps never run on new data; steps whose primary selection
+        resolved to zero columns at fit time (``_empty_selection``) are the
+        identity transform and pass the frame through unchanged. Both are
+        skipped here — structurally, by inspecting the step rather than by any
+        per-step convention. Never re-estimates. Returns a native frame at the
+        sklearn boundary.
         """
         current = _frame.from_native(data)
         for step in self.steps:
-            if isinstance(step, RowOp):
+            if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
                 continue
             current = step.transform(current)
         return _frame.to_native(current)
