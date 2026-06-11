@@ -164,6 +164,18 @@ def categorical_columns(frame: Frame) -> list[str]:
     ]
 
 
+def is_ordered_categorical(frame: Frame, column: str) -> bool:
+    """Whether ``column`` is an *ordered* categorical.
+
+    narwhals normalizes ordered categoricals to `narwhals.Enum` (polars ``Enum``
+    and pandas ``Categorical(ordered=True)``) and unordered ones to
+    `narwhals.Categorical` (polars ``Categorical`` and pandas
+    ``Categorical(ordered=False)``). So ordering *is* preserved across backends:
+    ``Enum`` is ordered, ``Categorical`` is not.
+    """
+    return frame.schema[column] == nw.Enum
+
+
 def is_string(frame: Frame, column: str) -> bool:
     """Whether ``column`` has a string dtype."""
     return frame.schema[column] == nw.String
@@ -198,6 +210,59 @@ def is_nominal(frame: Frame, column: str) -> bool:
     """Whether ``column`` is nominal: categorical, enum, or string."""
     dtype = frame.schema[column]
     return dtype == nw.String or dtype == nw.Categorical or dtype == nw.Enum
+
+
+def is_duration(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a Duration (time-delta) dtype."""
+    return isinstance(frame.schema[column], nw.Duration)
+
+
+def is_list(frame: Frame, column: str) -> bool:
+    """Whether ``column`` has a List dtype (a variable-length list per row)."""
+    return isinstance(frame.schema[column], nw.List)
+
+
+# --- Taxonomy classification -----------------------------------------------
+
+
+def dtype_category(dtype: nw.dtypes.DType) -> str:
+    """Classify a narwhals dtype into a `design/schema.md` taxonomy category.
+
+    Returns one of the taxonomy leaf names: ``"float"``, ``"int"``,
+    ``"decimal"``, ``"bool"``, ``"str"``, ``"categorical_ordered"``,
+    ``"categorical_unordered"``, ``"date"``, ``"datetime"``, ``"duration"``,
+    or ``"list"``. Anything narwhals reports that falls outside the taxonomy
+    maps to ``"other"``.
+
+    This is the single place that names the taxonomy categories; the lineage
+    DAG and ``recipe.summary()`` (see ``design/schema.md``) will consume it.
+    ``"decimal"`` is split out from the numeric group because narwhals'
+    ``Decimal`` is neither ``is_float`` nor ``is_integer``, so it has no home
+    under the float/int leaves of the taxonomy tree.
+    """
+    if dtype.is_float():
+        return "float"
+    if dtype.is_integer():
+        return "int"
+    if dtype == nw.Decimal:
+        return "decimal"
+    if dtype == nw.Boolean:
+        return "bool"
+    if dtype == nw.String:
+        return "str"
+    if dtype == nw.Enum:
+        return "categorical_ordered"
+    if dtype == nw.Categorical:
+        return "categorical_unordered"
+    if dtype == nw.Date:
+        return "date"
+    if isinstance(dtype, nw.Datetime):
+        return "datetime"
+    if isinstance(dtype, nw.Duration):
+        return "duration"
+    if isinstance(dtype, nw.List):
+        return "list"
+    return "other"
 
 
 # --- Missing-value awareness -----------------------------------------------
