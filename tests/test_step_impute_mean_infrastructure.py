@@ -73,3 +73,14 @@ class TestStableId:
         first, _ = _fitted()
         second, _ = _fitted()
         assert first.steps[0].id == second.steps[0].id
+
+
+class TestEstimatesLifecycle:
+    """`_estimates` is None before fit() and populated after (generic fitted-state contract)."""
+
+    def test_estimates_populated_after_fit(self) -> None:
+        train = pd.DataFrame({"a": [1.0, None, 3.0], "b": [2.0, 4.0, None]})
+        step = StepImputeMean(["a", "b"])
+        assert step._estimates is None
+        Recipe(steps=[step]).fit(train)
+        assert step._estimates is not None
