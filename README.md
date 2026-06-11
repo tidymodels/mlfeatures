@@ -9,7 +9,8 @@ pipelines — a Python port of the R
 [recipes](https://recipes.tidymodels.org/) package.
 
 > **Status:** Pre-alpha. The package is under active design; see
-> [`design/`](design/) for the specification.
+> [`design/`](https://github.com/tidymodels/shoez/tree/main/design) for
+> the specification.
 
 ## Lifecycle
 
@@ -46,7 +47,9 @@ result.shape
 
     (5, 2)
 
-See [`design/README.md`](design/README.md) for the full design.
+See
+[`design/README.md`](https://github.com/tidymodels/shoez/blob/main/design/README.md)
+for the full design.
 
 ## Development
 

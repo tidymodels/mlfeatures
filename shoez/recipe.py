@@ -1,4 +1,4 @@
-"""The :class:`Recipe` lifecycle driver.
+"""The `Recipe` lifecycle driver.
 
 A minimal, vertical-slice implementation of the ``specify → fit → transform``
 lifecycle described in ``design/lifecycle.md``. It exercises the step contract
@@ -29,15 +29,19 @@ __all__ = ["Recipe", "FittedRecipe"]
 class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
-    Steps are first-class :class:`~shoez.step.Step` objects (Option A in
-    ``design/interfaces.md``). Assemble a recipe by passing them at construction::
+    Steps are first-class `Step` objects (Option A in
+    ``design/interfaces.md``). Assemble a recipe by passing them at construction:
 
-        Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+    ```python
+    Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+    ```
 
-    or with the immutable :meth:`add` builder, which returns a new recipe each
-    call (preserving the purity guarantee in ``design/lifecycle.md``)::
+    or with the immutable `add()` builder, which returns a new recipe each
+    call (preserving the purity guarantee in ``design/lifecycle.md``):
 
-        Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
+    ```python
+    Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
+    ```
 
     A prototype ``data`` frame may be supplied to capture the column names used
     when assigning roles. Roles are declared via ``outcome``, ``predictors``,

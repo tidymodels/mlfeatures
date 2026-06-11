@@ -2,8 +2,8 @@
 
 ``fit_dummy`` decides which levels to retain (all except the first, after
 sorting). ``apply_dummy`` performs the indicator expansion and is shared with
-:mod:`shoez.step_one_hot`. ``StepDummy`` wraps both in the
-:class:`~shoez.step.Step` lifecycle.
+`shoez.step_one_hot`. ``StepDummy`` wraps both in the
+`Step` lifecycle.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def fit_dummy(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     ----------
     features:
         A narwhals DataFrame whose columns are all discrete (string, integer,
-        boolean, categorical, or enum). Passed in by :meth:`StepDummy.fit`
+        boolean, categorical, or enum). Passed in by `StepDummy.fit()`
         after column selection.
 
     Returns
@@ -102,8 +102,8 @@ def apply_dummy(
 ) -> Frame:
     """Expand discrete columns into binary indicator columns.
 
-    Shared transform utility used by both :class:`StepDummy` and
-    :class:`~shoez.step_one_hot.StepOneHot`.
+    Shared transform utility used by both `StepDummy` and
+    `StepOneHot`.
 
     Parameters
     ----------
@@ -210,8 +210,8 @@ class StepDummy(Step):
     null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
     since pandas' ``Int8`` cannot hold the missing values. The first level in
     ascending sort order is the reference level and is dropped. Statistical
-    logic lives in :func:`fit_dummy`; transform logic is shared via
-    :func:`apply_dummy`.
+    logic lives in `fit_dummy()`; transform logic is shared via
+    `apply_dummy()`.
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.

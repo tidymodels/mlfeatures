@@ -1,8 +1,8 @@
 """One-hot encoding: expand discrete columns into k indicator columns.
 
 ``fit_one_hot`` identifies all unique levels per column (no reference level
-dropped). Transform logic is shared with :mod:`shoez.step_dummy` via
-:func:`~shoez.step_dummy.apply_dummy`.
+dropped). Transform logic is shared with `shoez.step_dummy` via
+`apply_dummy()`.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def fit_one_hot(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     ----------
     features:
         A narwhals DataFrame whose columns are all discrete (string, integer,
-        boolean, categorical, or enum). Passed in by :meth:`StepOneHot.fit`
+        boolean, categorical, or enum). Passed in by `StepOneHot.fit()`
         after column selection.
 
     Returns
@@ -83,8 +83,8 @@ class StepOneHot(Step):
     ``fit()``. Indicators are ``nw.Int8`` (0/1); a column that contains
     null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
     since pandas' ``Int8`` cannot hold the missing values. Unlike
-    :class:`~shoez.step_dummy.StepDummy`, no reference level is dropped.
-    Transform logic is shared via :func:`~shoez.step_dummy.apply_dummy`.
+    `StepDummy`, no reference level is dropped.
+    Transform logic is shared via `apply_dummy()`.
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.

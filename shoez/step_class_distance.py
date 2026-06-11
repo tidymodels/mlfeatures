@@ -1,13 +1,13 @@
 """Class-distance feature: distance from each row to per-class centroids.
 
-The *fit* half (:func:`fit_class_distance`) learns one multidimensional centroid per class
-from a labelled training set. The *apply* half (:func:`apply_class_distance`)
+The *fit* half (`fit_class_distance()`) learns one multidimensional centroid per class
+from a labelled training set. The *apply* half (`apply_class_distance()`)
 appends the distance from each row to each centroid as new columns, without affecting
-the original columns. :class:`StepClassDistance` wraps them into the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can
+the original columns. `StepClassDistance` wraps them into the
+`Step` lifecycle so a `Recipe` can
 fit and apply it.
 
-See :mod:`shoez.step_normalize` and :mod:`shoez.step_polynomial` for the
+See `shoez.step_normalize` and `shoez.step_polynomial` for the
 canonical examples of the same fit/apply pattern.
 """
 
@@ -53,9 +53,9 @@ Metric = Literal["euclidean", "manhattan"]
 
 @dataclass(frozen=True)
 class ClassDistanceFit:
-    """The fitted result returned by :func:`fit_class_distance`.
+    """The fitted result returned by `fit_class_distance()`.
 
-    Bundles everything :func:`apply_class_distance` needs to compute distances:
+    Bundles everything `apply_class_distance()` needs to compute distances:
     the centroid matrix, the names and order of the predictor columns and class
     labels, plus the distance configuration so the apply call can be a one-arg
     invocation (no risk of mismatching fit-time and apply-time settings).
@@ -66,11 +66,11 @@ class ClassDistanceFit:
     Attributes
     ----------
     columns
-        Predictor column names in the row order of :attr:`centroids`. Length
+        Predictor column names in the row order of `centroids`. Length
         equals the number of predictors ``p``.
     classes
-        Class labels in the column order of :attr:`centroids`, sorted by
-        :func:`sorted` so the order is deterministic across fits.
+        Class labels in the column order of `centroids`, sorted by
+        `sorted()` so the order is deterministic across fits.
         Length equals the number of classes ``c``.
     centroids
         Float-64 matrix of shape ``(p, c)`` — row ``i`` is the centroid
@@ -78,9 +78,9 @@ class ClassDistanceFit:
         for class ``classes[j]``. This matches the orientation
         ``p predictors × c classes`` requested by the original spec.
     metric
-        Distance function to apply (see :data:`Metric`).
+        Distance function to apply (see `Metric`).
     log_distance
-        Whether :func:`apply_class_distance` should return
+        Whether `apply_class_distance()` should return
         ``log(distance + eps)`` rather than the raw distance.
     eps
         Small positive offset added inside the log so ``log(0)`` (a row sitting
@@ -109,14 +109,14 @@ def fit_class_distance(
     For each unique class label, the centroid is the column-wise mean of the
     rows belonging to that class. The fitted object pairs the centroid matrix
     with the column names, class labels, and distance configuration so
-    :func:`apply_class_distance` can reconstruct everything without extra args.
+    `apply_class_distance()` can reconstruct everything without extra args.
 
     Parameters
     ----------
     features
         Narwhals ``DataFrame`` of numeric predictor columns. Dtype screening is
         the selector / ``accepts_dtypes`` layer's job; this function does not
-        re-validate it (matching :func:`~shoez.step_normalize.fit_normalize`).
+        re-validate it (matching `fit_normalize()`).
     outcome
         Narwhals ``Series`` of class labels, aligned row-for-row with
         ``features``. Rows where the outcome is null are dropped before the
@@ -126,7 +126,7 @@ def fit_class_distance(
         does not change the centroid computation itself (Euclidean and
         Manhattan both use the arithmetic mean as their natural centroid).
     log_distance
-        If ``True`` (the default), :func:`apply_class_distance` returns
+        If ``True`` (the default), `apply_class_distance()` returns
         ``log(distance + eps)``. The log compresses the long tail of raw
         distances, which is usually what downstream models want.
     eps
@@ -137,7 +137,7 @@ def fit_class_distance(
     -------
     ClassDistanceFit
         Fitted object containing the centroid matrix and configuration. See
-        :class:`ClassDistanceFit` for the field-by-field layout.
+        `ClassDistanceFit` for the field-by-field layout.
 
     Examples
     --------
@@ -239,7 +239,7 @@ def apply_class_distance(
         Narwhals ``DataFrame`` whose columns include those named in
         ``fit_result.columns``. Extra columns are passed through unchanged.
     fit_result
-        Output of :func:`fit_class_distance`. Carries the centroid matrix and
+        Output of `fit_class_distance()`. Carries the centroid matrix and
         the distance configuration (metric, log toggle, epsilon).
     prefix
         Prefix for the new column names. Default ``"distance"`` produces
@@ -256,7 +256,7 @@ def apply_class_distance(
     NaN propagation: a null in any predictor column produces ``NaN`` for that
     row's distances in every new column. NumPy's arithmetic handles this
     naturally; other rows are unaffected (parallel to
-    :func:`~shoez.step_polynomial.apply_polynomial`'s per-row null tolerance).
+    `apply_polynomial()`'s per-row null tolerance).
 
     The column name is the same whether or not the distances were
     log-transformed — the transformation is recorded in ``fit_result.log_distance``
@@ -314,7 +314,7 @@ def _compute_distances(
         Predictor matrix of shape ``(n, p)``.
     centroids
         Centroid matrix of shape ``(p, c)`` — same layout as
-        :attr:`ClassDistanceFit.centroids`.
+        `ClassDistanceFit.centroids`.
     metric
         Which distance function to compute.
 
@@ -380,9 +380,9 @@ class StepClassDistance(Step):
     columns themselves are passed through untouched. The new
     ``distance_<class>`` columns are appended at the end of the frame.
 
-    Wraps :func:`fit_class_distance` and :func:`apply_class_distance` into the
-    :class:`~shoez.step.Step` lifecycle, parallel to
-    :class:`~shoez.step_normalize.StepNormalize`.
+    Wraps `fit_class_distance()` and `apply_class_distance()` into the
+    `Step` lifecycle, parallel to
+    `StepNormalize`.
 
     Parameters
     ----------
@@ -392,9 +392,9 @@ class StepClassDistance(Step):
     outcome
         Name of the column in the training frame that holds the class labels.
         Read at fit time only; the column is *not* declared as an input
-        feature in :meth:`schema_in`.
+        feature in `schema_in()`.
     metric
-        Distance function (see :data:`Metric`). Default ``"euclidean"``.
+        Distance function (see `Metric`). Default ``"euclidean"``.
     log_distance
         Whether to return ``log(distance + eps)`` instead of raw distances.
         Default ``True``.

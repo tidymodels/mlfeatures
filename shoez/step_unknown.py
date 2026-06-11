@@ -1,9 +1,9 @@
 """Replace missing categorical levels with an explicit ``"unknown"`` level.
 
-The *fit* half lives in :func:`fit_unknown` and the *apply* half in
-:func:`apply_unknown`, both plain functions so the data-ops core can be
-exercised on its own. :class:`StepUnknown` wraps them in the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+The *fit* half lives in `fit_unknown()` and the *apply* half in
+`apply_unknown()`, both plain functions so the data-ops core can be
+exercised on its own. `StepUnknown` wraps them in the
+`Step` lifecycle so a `Recipe` can fit
 and apply it.
 
 A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected
@@ -60,7 +60,7 @@ def fit_unknown(
     nulls appearing at transform time are still recoded — guaranteeing
     train/serve parity.
 
-    A :class:`UserWarning` is emitted if ``new_level`` already appears as a value
+    A `UserWarning` is emitted if ``new_level`` already appears as a value
     in any column, since recoding would then merge genuine observations into the
     "unknown" bucket.
     """
@@ -90,7 +90,7 @@ def apply_unknown(
     features:
         A narwhals DataFrame to recode.
     columns:
-        The column names to recode — the columns returned by :func:`fit_unknown`.
+        The column names to recode — the columns returned by `fit_unknown()`.
         Any column of ``features`` not in this list is passed through untouched.
     new_level:
         The level that null values are recoded to. Default ``"unknown"``.
@@ -119,9 +119,9 @@ class StepUnknown(Step):
     """Recode missing categorical levels to an explicit ``"unknown"`` level.
 
     A ``ONE_TO_ONE`` step: each selected categorical column has its nulls
-    replaced in place by ``new_level``. The work is done by :func:`fit_unknown`
-    and :func:`apply_unknown`; this class wraps them in the
-    :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can
+    replaced in place by ``new_level``. The work is done by `fit_unknown()`
+    and `apply_unknown()`; this class wraps them in the
+    `Step` lifecycle so a `Recipe` can
     fit and apply it.
 
     Selectors are not yet implemented, so the columns to consider are passed

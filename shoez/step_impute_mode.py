@@ -1,9 +1,9 @@
 """Impute missing values with the column mode (most frequent value).
 
-The *fit* half lives in :func:`fit_impute_mode` and the *apply* half in
-:func:`apply_impute_mode`, both plain functions so the data-ops core can be
-exercised on its own. :class:`StepImputeMode` wraps them in the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+The *fit* half lives in `fit_impute_mode()` and the *apply* half in
+`apply_impute_mode()`, both plain functions so the data-ops core can be
+exercised on its own. `StepImputeMode` wraps them in the
+`Step` lifecycle so a `Recipe` can fit
 and apply it.
 
 A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected
@@ -57,7 +57,7 @@ def fit_impute_mode(features: Frame) -> tuple[list[str], list[Any]]:
 
     A column whose values are *all* null has no mode and so cannot be imputed.
     It is **not** dropped: its entry in ``modes`` is ``None``,
-    :func:`apply_impute_mode` leaves it unchanged, and a :class:`UserWarning`
+    `apply_impute_mode()` leaves it unchanged, and a `UserWarning`
     is emitted naming such columns.
     """
     columns = list(features.columns)
@@ -101,10 +101,10 @@ def apply_impute_mode(
         A narwhals DataFrame to impute.
     columns:
         The column names to impute — the ``columns`` returned by
-        :func:`fit_impute_mode`. Any column of ``features`` not in this list
+        `fit_impute_mode()`. Any column of ``features`` not in this list
         is passed through untouched.
     modes:
-        Per-column modes from :func:`fit_impute_mode`, parallel to
+        Per-column modes from `fit_impute_mode()`, parallel to
         ``columns``. A ``None`` mode marks a column that had no mode (entirely
         null at fit time); such columns are left unchanged.
 
@@ -139,9 +139,9 @@ class StepImputeMode(Step):
 
     A ``ONE_TO_ONE`` step: each selected column has its nulls filled in place
     with that column's mode, estimated at fit time. The work is done by
-    :func:`fit_impute_mode` and :func:`apply_impute_mode`; this class
-    wraps them in the :class:`~shoez.step.Step` lifecycle so a
-    :class:`~shoez.recipe.Recipe` can fit and apply it.
+    `fit_impute_mode()` and `apply_impute_mode()`; this class
+    wraps them in the `Step` lifecycle so a
+    `Recipe` can fit and apply it.
 
     Mode imputation is for categorical columns (it accepts
     ``Categorical``/``Enum``/``String``, not numeric dtypes) and is

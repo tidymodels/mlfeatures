@@ -2,7 +2,7 @@
 
 Several of these are placeholders for types owned by other foundation issues
 (notably the schema subsystem — see ``design/schema.md``). They exist so that
-the :mod:`shoez.step` contract is importable and type-checkable today. The
+the `shoez.step` contract is importable and type-checkable today. The
 concrete implementations will replace the placeholder bodies here without
 changing the names the rest of the team codes against.
 """
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
-    #: :data:`Frame` on entry to the recipe and back at the sklearn boundary.
+    #: `Frame` on entry to the recipe and back at the sklearn boundary.
     DataFrame = Union["pd.DataFrame", "pl.DataFrame"]
 else:
     DataFrame = Any
@@ -40,12 +40,12 @@ else:
 
 #: The internal frame type that flows between steps. A backend-agnostic narwhals
 #: ``DataFrame`` wrapping the user's native frame; steps write their data ops
-#: against this via :mod:`shoez._frame`. See ``design/ecosystem.md``.
+#: against this via `shoez._frame`. See ``design/ecosystem.md``.
 Frame: TypeAlias = nw.DataFrame[Any]
 
 #: How a step names the columns it operates on: a single column name, an explicit
-#: list of names, a narwhals selector (:data:`NwSelector`, e.g.
-#: ``narwhals.selectors.numeric()``), or a polars selector (:data:`PlSelector`,
+#: list of names, a narwhals selector (`NwSelector`, e.g.
+#: ``narwhals.selectors.numeric()``), or a polars selector (`PlSelector`,
 #: ``polars.selectors``). Any selector is resolved against the frame's schema at
 #: fit time, for any backend. See ``design/selectors.md``.
 Selector: TypeAlias = Union[
@@ -94,7 +94,7 @@ class ColSchema:
 
 
 class SchemaInfo:
-    """Schema-derived context handed to :meth:`Step.fit`.
+    """Schema-derived context handed to `Step.fit()`.
 
     Minimal stand-in for the full type defined by the schema subsystem
     (``design/schema.md``). For now it carries the current column names and
@@ -113,7 +113,7 @@ class SchemaInfo:
 
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":
-        """Build a :class:`SchemaInfo` snapshot from an internal :data:`Frame`."""
+        """Build a `SchemaInfo` snapshot from an internal `Frame`."""
         from shoez import _frame
 
         dtypes = {name: str(dtype) for name, dtype in _frame.dtypes(frame).items()}
@@ -199,7 +199,7 @@ def _apply_role_assignments(  # pyright: ignore[reportUnusedFunction]
 
 
 class _AnyDtype:
-    """Sentinel type for :data:`ANY_DTYPE` (a singleton)."""
+    """Sentinel type for `ANY_DTYPE` (a singleton)."""
 
     _instance: "_AnyDtype | None" = None
 
@@ -221,13 +221,13 @@ class _AnyDtype:
 ANY_DTYPE = _AnyDtype()
 
 #: Return type of ``Step.accepts_dtypes()``: an explicit set of narwhals dtype
-#: classes, or the :data:`ANY_DTYPE` sentinel. Using narwhals' own dtype types
+#: classes, or the `ANY_DTYPE` sentinel. Using narwhals' own dtype types
 #: rather than a custom string taxonomy keeps the framework aligned with the one
 #: backend-agnostic type system it already depends on (see ``design/schema.md``).
 AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
 
 #: The narwhals numeric dtypes — a convenience set for steps that only accept
-#: numeric columns (e.g. :class:`~shoez.step_drop_corr.StepDropCorr`, ``step_normalize``).
+#: numeric columns (e.g. `StepDropCorr`, ``step_normalize``).
 NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.Int8,
     nw.Int16,

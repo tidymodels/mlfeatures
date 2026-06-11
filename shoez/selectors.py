@@ -1,9 +1,11 @@
 """Role- and type-aware column selectors for use in step declarations.
 
 Import as ``from shoez import Selectors as cs`` and pass the result of a
-factory call directly to any step::
+factory call directly to any step:
 
-    StepDropCorr(cs.predictors_numeric())
+```python
+StepDropCorr(cs.predictors_numeric())
+```
 
 Selectors are resolved at fit time, when both the frame schema (dtypes) and
 the recipe roles are available.

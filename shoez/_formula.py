@@ -31,7 +31,7 @@ def parse_formula(formula: str, columns: list[str]) -> Roles:
     """Parse ``formula`` into role assignments against ``columns``.
 
     Only ``lhs ~ rhs`` with ``+``-separated names (or ``.`` on the RHS for "all
-    remaining columns") is accepted. Raises :class:`ValueError` on anything
+    remaining columns") is accepted. Raises `ValueError` on anything
     richer, on unknown column names, or on a malformed expression.
     """
     if formula.count("~") != 1:

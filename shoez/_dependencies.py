@@ -29,14 +29,14 @@ failure instead of an ``ImportError`` at ``import shoez`` time.
 
 Two tools, for two situations:
 
-- :func:`import_optional` — eager import-or-raise. Use it where you need the
+- `import_optional()` — eager import-or-raise. Use it where you need the
   module object right now (e.g. inside a step's ``fit``/``apply`` body, or when
   guarding a class definition). On a missing module it raises
-  :class:`MissingDependencyError` with an install hint.
+  `MissingDependencyError` with an install hint.
 
-- :data:`numpy` (and friends, via :func:`_lazy_import`) — a *lazy* module proxy.
+- `numpy` (and friends, via `_lazy_import()`) — a *lazy* module proxy.
   Importing it never fails; the real import is deferred to first attribute
-  access, and a missing library surfaces there as :class:`MissingDependencyError`.
+  access, and a missing library surfaces there as `MissingDependencyError`.
   This lets a step write ``from shoez._dependencies import numpy as np`` and keep
   every ``np.<...>`` call site unchanged, while ``import shoez`` stays cheap and
   works even when numpy is not installed.
@@ -78,7 +78,7 @@ _EXTRAS: dict[str, str] = {
 class MissingDependencyError(ModuleNotFoundError):
     """An optional dependency was used but is not installed.
 
-    Subclasses :class:`ModuleNotFoundError` so existing ``except
+    Subclasses `ModuleNotFoundError` so existing ``except
     ModuleNotFoundError`` / ``except ImportError`` guards keep working.
     """
 
@@ -105,7 +105,7 @@ def _missing_error(
 
 
 def import_optional(module_name: str, *, purpose: str | None = None) -> ModuleType:
-    """Import ``module_name``, or raise :class:`MissingDependencyError`.
+    """Import ``module_name``, or raise `MissingDependencyError`.
 
     Parameters
     ----------
@@ -139,9 +139,9 @@ class _LazyModule(ModuleType):
     """A stand-in for an optional module whose import is deferred to first use.
 
     Construction never imports anything. The first access of a public attribute
-    triggers the real import via :func:`import_optional`, so a missing library
-    raises :class:`MissingDependencyError` at the call site rather than at
-    ``import`` time. Dunder lookups deliberately raise :class:`AttributeError`
+    triggers the real import via `import_optional()`, so a missing library
+    raises `MissingDependencyError` at the call site rather than at
+    ``import`` time. Dunder lookups deliberately raise `AttributeError`
     instead, so inspection/tooling probes are not mistaken for usage.
     """
 
@@ -163,7 +163,7 @@ class _LazyModule(ModuleType):
 
 
 def _lazy_import(module_name: str) -> ModuleType:
-    """Return a lazy proxy for ``module_name`` (see :class:`_LazyModule`)."""
+    """Return a lazy proxy for ``module_name`` (see `_LazyModule`)."""
     return _LazyModule(module_name)
 
 

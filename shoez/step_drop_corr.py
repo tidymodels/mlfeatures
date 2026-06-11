@@ -156,8 +156,8 @@ class StepDropCorr(Step):
 
     A ``REMOVING`` step: the selected columns that exceed ``threshold`` are
     dropped, and no new columns are produced. The statistical decision is made by
-    :func:`fit_drop_corr`; this class wraps it in the :class:`~shoez.step.Step`
-    lifecycle so a :class:`~shoez.recipe.Recipe` can fit and apply it.
+    `fit_drop_corr()`; this class wraps it in the `Step`
+    lifecycle so a `Recipe` can fit and apply it.
 
     The columns to consider may be given as a single name, an explicit list of
     names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a

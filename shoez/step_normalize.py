@@ -1,9 +1,9 @@
 """Center-and-scale normalization: fit per-column mean/std, then standardize.
 
-The *fit* half lives in :func:`fit_normalize` and the *apply* half in
-:func:`apply_normalize`, both plain functions so the data-ops core can be
-exercised on its own. :class:`StepNormalize` wraps them in the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+The *fit* half lives in `fit_normalize()` and the *apply* half in
+`apply_normalize()`, both plain functions so the data-ops core can be
+exercised on its own. `StepNormalize` wraps them in the
+`Step` lifecycle so a `Recipe` can fit
 and apply it.
 
 They are the pure ``prep`` / ``bake`` counterparts of R ``recipes``'
@@ -63,7 +63,7 @@ def fit_normalize(
 
     Columns with a standard deviation of ``0`` (constant columns — every value
     the same) cannot be scaled to unit variance, so they are **omitted** from
-    the result and a :class:`UserWarning` is emitted naming them.
+    the result and a `UserWarning` is emitted naming them.
 
     Notes
     -----
@@ -116,12 +116,12 @@ def apply_normalize(
         A narwhals DataFrame to normalize.
     columns:
         The column names to normalize — the ``columns`` returned by
-        :func:`fit_normalize`. Any column of ``features`` not in this list (e.g.
+        `fit_normalize()`. Any column of ``features`` not in this list (e.g.
         a constant column dropped at fit time) is passed through untouched.
     means:
-        Per-column means from :func:`fit_normalize`, parallel to ``columns``.
+        Per-column means from `fit_normalize()`, parallel to ``columns``.
     stds:
-        Per-column standard deviations from :func:`fit_normalize`, parallel to
+        Per-column standard deviations from `fit_normalize()`, parallel to
         ``columns``.
 
     Returns
@@ -154,13 +154,13 @@ class StepNormalize(Step):
 
     A ``ONE_TO_ONE`` step: each selected numeric column ``x`` is replaced in
     place by ``(x - mean) / std``, with the mean and standard deviation
-    estimated at fit time. The statistical work is done by :func:`fit_normalize`
-    and :func:`apply_normalize`; this class wraps them in the
-    :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can
+    estimated at fit time. The statistical work is done by `fit_normalize()`
+    and `apply_normalize()`; this class wraps them in the
+    `Step` lifecycle so a `Recipe` can
     fit and apply it.
 
     Constant (zero-variance) columns among the selection cannot be scaled to
-    unit variance; :func:`fit_normalize` drops them from the normalization (with
+    unit variance; `fit_normalize()` drops them from the normalization (with
     a warning), and they pass through ``transform`` untouched.
 
     Selectors are not yet implemented, so the columns to consider are passed

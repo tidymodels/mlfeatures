@@ -1,8 +1,8 @@
 """scikit-learn interoperability.
 
 Per ``design/ecosystem.md`` §"Sklearn adapter", a prepped recipe should drop into
-:class:`sklearn.pipeline.Pipeline` as a single transformer. :class:`RecipeTransformer`
-is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of :class:`~shoez.recipe.Recipe`
+`sklearn.pipeline.Pipeline` as a single transformer. `RecipeTransformer`
+is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
 without re-implementing it.
 
 The adapter resolves one impedance mismatch between the two worlds. shoez fits on a *single*
@@ -29,24 +29,26 @@ __all__ = ["RecipeTransformer"]
 
 
 class RecipeTransformer(BaseEstimator, TransformerMixin):
-    """Wrap a :class:`~shoez.recipe.Recipe` as a scikit-learn transformer.
+    """Wrap a `Recipe` as a scikit-learn transformer.
 
-    Usable as a single step in a :class:`sklearn.pipeline.Pipeline`::
+    Usable as a single step in a `sklearn.pipeline.Pipeline`:
 
-        from shoez.compat import RecipeTransformer
+    ```python
+    from shoez.compat import RecipeTransformer
 
-        pipe = Pipeline([
-            ("recipe", RecipeTransformer(rec)),
-            ("model", LogisticRegression()),
-        ])
-        pipe.fit(X_train, y_train)
+    pipe = Pipeline([
+        ("recipe", RecipeTransformer(rec)),
+        ("model", LogisticRegression()),
+    ])
+    pipe.fit(X_train, y_train)
+    ```
 
-    The recipe is stored verbatim so that :func:`sklearn.base.clone` (and therefore
-    cross-validation / grid search) round-trips correctly; :class:`Recipe` is immutable, so
+    The recipe is stored verbatim so that `sklearn.base.clone()` (and therefore
+    cross-validation / grid search) round-trips correctly; `Recipe` is immutable, so
     this is safe.
 
-    It implements :meth:`get_feature_names_out` and therefore composes inside a
-    :class:`sklearn.compose.ColumnTransformer` and supports
+    It implements `get_feature_names_out()` and therefore composes inside a
+    `sklearn.compose.ColumnTransformer` and supports
     ``set_output(transform="pandas" | "polars")``.
     """
 
@@ -80,11 +82,11 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     def get_feature_names_out(
         self, input_features: Any = None
     ) -> "np.ndarray[Any, Any]":
-        """Names of the columns produced by :meth:`transform`.
+        """Names of the columns produced by `transform()`.
 
         ``input_features`` is accepted for sklearn-API compatibility but ignored: the
         output names are determined by the recipe, not the caller. Enables
-        :class:`~sklearn.compose.ColumnTransformer` composition and ``set_output``.
+        `ColumnTransformer` composition and ``set_output``.
         """
         if not hasattr(self, "feature_names_out_"):
             raise NotFittedError(
