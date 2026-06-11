@@ -59,8 +59,8 @@ Because every step declares its input/output mode and the recipe maintains a col
 ```python
 rec = (
     Recipe(data=df)
-    .step_dummy(all_categorical_predictors())
-    .step_pca(has_source(step_type=step_dummy))  # PCA only over the dummies
+    .add(Dummy(all_categorical_predictors()))
+    .add(PCA(has_source(step_type=step_dummy)))  # PCA only over the dummies
 )
 ```
 
@@ -137,7 +137,7 @@ At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolv
 
 ## Relationship to polars selectors
 
-Since `pyrecipes` uses polars internally, the [polars selectors API](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) is a natural reference point and potential foundation. Polars selectors already cover most of the by-type and by-name surface:
+Since `shoez` uses polars internally, the [polars selectors API](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) is a natural reference point and potential foundation. Polars selectors already cover most of the by-type and by-name surface:
 
 ```python
 import polars.selectors as cs

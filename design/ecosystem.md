@@ -58,7 +58,7 @@ Sparse output format: `scipy.sparse`, mirroring `sparsevctrs` in R.
 A prepped `Recipe` exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
 
 ```python
-from pyrecipes.compat import RecipeTransformer
+from shoez.compat import RecipeTransformer
 
 pipe = Pipeline([
     ("recipe", RecipeTransformer(rec)),

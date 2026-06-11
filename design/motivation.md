@@ -112,19 +112,19 @@ pipe = Pipeline([("pre", pre), ("model", ...)])
   numeric predictors", no "everything starting with `geo_`".
 - Output is a bare array — provenance and a train/serve column contract are gone.
 
-## The pyrecipes way
+## The shoez way
 
 ```python
 rec = (
     Recipe(formula="price ~ .", data=df_train)
-    .step_impute_median(all_numeric_predictors())
-    .step_unknown(all_categorical_predictors())
-    .step_dummy(all_categorical_predictors())
-    .step_pca(
+    .add(ImputeMedian(all_numeric_predictors()))
+    .add(Unknown(all_categorical_predictors()))
+    .add(Dummy(all_categorical_predictors()))
+    .add(PCA(
         has_source(step_type=step_dummy) | starts_with("geo_"),
         num_comp=10,
-    )
-    .step_normalize(all_numeric_predictors())
+    ))
+    .add(Normalize(all_numeric_predictors()))
 )
 
 prepped = rec.fit(df_train)

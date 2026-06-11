@@ -16,9 +16,9 @@ rec = Recipe(data=df_train).set_roles(outcome=["y"], predictor=["x1", "x2", ...]
 
 rec = (
     rec
-    .step_impute_knn(all_predictors())
-    .step_dummy(all_nominal_predictors())
-    .step_normalize(all_numeric_predictors())
+    .add(ImputeKNN(all_predictors()))
+    .add(Dummy(all_nominal_predictors()))
+    .add(Normalize(all_numeric_predictors()))
 )
 
 prepped = rec.fit(df_train)        # fits statistics
@@ -32,7 +32,7 @@ X_new   = prepped.transform(df_new, all_predictors())  # selector at transform t
 ## Required behaviors
 
 - `Recipe(...)` accepts either a formula-style spec **or** explicit role assignment from a sample dataframe (used only for schema, not for fitting). There is **one canonical constructor** — formula is sugar over explicit role assignment, never the underlying mechanism. The formula interface is intentionally minimal: it supports only simple outcome/predictor splits (`"y ~ ."`, `"y ~ x1 + x2"`). No interactions, no transformations, no arithmetic — anything beyond basic column selection must be expressed as a step. A simple parser is shipped with the package; no Patsy-style complexity.
-- Steps are pure: calling `.step_X()` returns a new `Recipe` with the step appended; it does **not** touch data.
+- Steps are pure: `.add(Step(...))` returns a new `Recipe` with the step appended; it does **not** touch data.
 - `fit()` runs each step's fit on the **training** data, in order. The baked output of step *i* becomes the input to step *i+1*'s fit.
 - `transform()` runs each step's transform on **new** data using stored statistics. Bake **never re-estimates**.
 - `transform()` accepts an optional selector (see [selectors.md](selectors.md)) to subset returned columns.
@@ -106,7 +106,7 @@ This makes the skip behavior structural, not a boolean attribute. See [step-cont
 
 A significant design goal is that step authors should only need to implement the statistical logic of their step. Everything else is handled once, centrally, by the framework. In R `recipes`, each of the following had to be implemented (or forgotten) individually inside every step:
 
-| Concern | R `recipes` | `pyrecipes` |
+| Concern | R `recipes` | `shoez` |
 | --------------------------------- | ------------------------------------ | ------------------------------- |
 | Column presence at transform time | Each step checked, or silently broke | Ptype check before any step runs |
 | Dtype validation | Each step did its own or skipped it | `accepts_dtypes()` checked by framework before `fit()` |

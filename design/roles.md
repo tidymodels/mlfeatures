@@ -7,7 +7,7 @@
 > **Note:** Code examples in this document are illustrative and not final — API names, signatures, and patterns may change before implementation.
 
 
-Roles are a first-class concept and are what makes `pyrecipes` different from a typical sklearn `Pipeline`. Every variable in the recipe carries **zero or more** role labels stored as a `set[str]`.
+Roles are a first-class concept and are what makes `shoez` different from a typical sklearn `Pipeline`. Every variable in the recipe carries **zero or more** role labels stored as a `set[str]`.
 
 ---
 
@@ -68,15 +68,15 @@ Role management calls are **first-class pipeline operations**, interleaved with 
 ```python
 rec = (
     Recipe(data=df)
-    .step_impute_knn(all_predictors())
+    .add(ImputeKNN(all_predictors()))
     .add_role(starts_with("key_"), role="group")   # role change mid-pipeline
-    .step_dummy(all_nominal_predictors())
+    .add(Dummy(all_nominal_predictors()))
     .update_role("weight", new_role="case_weights")
-    .step_normalize(all_numeric_predictors())
+    .add(Normalize(all_numeric_predictors()))
 )
 ```
 
-In R `recipes`, role management is technically applied to the original data before any steps run, regardless of where it appears in the code. This caused persistent confusion — users expected role changes to take effect at the point they wrote them, and were surprised when they didn't [#437, #778]. In `pyrecipes`, the order is respected: a role change takes effect from that point in the pipeline forward, affecting which columns subsequent selectors resolve to.
+In R `recipes`, role management is technically applied to the original data before any steps run, regardless of where it appears in the code. This caused persistent confusion — users expected role changes to take effect at the point they wrote them, and were surprised when they didn't [#437, #778]. In `shoez`, the order is respected: a role change takes effect from that point in the pipeline forward, affecting which columns subsequent selectors resolve to.
 
 Role management also operates on **any** column in the schema — including columns produced by earlier steps — since the lineage DAG is updated after each operation. See [schema.md](schema.md).
 
@@ -87,7 +87,7 @@ Role management also operates on **any** column in the schema — including colu
 Steps that create new columns must declare a `role=` for those columns (default `"predictor"`). The user may override `role=` at the step call site:
 
 ```python
-recipe.step_classdist(all_predictors(), role="distance")
+recipe.add(ClassDist(all_predictors(), role="distance"))
 ```
 
 ---
