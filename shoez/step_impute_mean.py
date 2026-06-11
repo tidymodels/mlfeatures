@@ -1,9 +1,9 @@
 """Impute missing numeric values with the column mean.
 
-The *fit* half lives in :func:`fit_impute_mean` and the *apply* half in
-:func:`apply_impute_mean`, both plain functions so the data-ops core can be
-exercised on its own. :class:`StepImputeMean` wraps them in the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+The *fit* half lives in `fit_impute_mean()` and the *apply* half in
+`apply_impute_mean()`, both plain functions so the data-ops core can be
+exercised on its own. `StepImputeMean` wraps them in the
+`Step` lifecycle so a `Recipe` can fit
 and apply it.
 
 A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected numeric
@@ -62,8 +62,8 @@ def fit_impute_mean(
 
     A column whose values are *all* null has an undefined (``NaN``) mean and so
     cannot be imputed. It is **not** dropped: it stays in ``columns`` with a
-    ``NaN`` mean, :func:`apply_impute_mean` leaves it unchanged, and a
-    :class:`UserWarning` is emitted naming such columns.
+    ``NaN`` mean, `apply_impute_mean()` leaves it unchanged, and a
+    `UserWarning` is emitted naming such columns.
     """
     columns = list(features.columns)
     means_list = [as_float(features[col].mean()) for col in columns]
@@ -93,10 +93,10 @@ def apply_impute_mean(
         A narwhals DataFrame to impute.
     columns:
         The column names to impute — the ``columns`` returned by
-        :func:`fit_impute_mean`. Any column of ``features`` not in this list
+        `fit_impute_mean()`. Any column of ``features`` not in this list
         is passed through untouched.
     means:
-        Per-column means from :func:`fit_impute_mean`, parallel to
+        Per-column means from `fit_impute_mean()`, parallel to
         ``columns``. A ``NaN`` mean marks a column that could not be estimated
         (entirely null at fit time); such columns are left unchanged.
 
@@ -131,9 +131,9 @@ class StepImputeMean(Step):
 
     A ``ONE_TO_ONE`` step: each selected numeric column has its nulls filled in
     place with that column's mean, estimated at fit time. The work is done by
-    :func:`fit_impute_mean` and :func:`apply_impute_mean`; this class
-    wraps them in the :class:`~shoez.step.Step` lifecycle so a
-    :class:`~shoez.recipe.Recipe` can fit and apply it.
+    `fit_impute_mean()` and `apply_impute_mean()`; this class
+    wraps them in the `Step` lifecycle so a
+    `Recipe` can fit and apply it.
 
     A column that is entirely null at fit time has no mean to impute with; it is
     left unchanged (not dropped) with a warning, and passes through ``transform``

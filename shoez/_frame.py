@@ -5,9 +5,9 @@ v0.1: a step is written once against this surface and narwhals dispatches to the
 user's native backend (pandas in → pandas out, polars in → polars out). There are
 no per-backend code paths.
 
-This module wraps :mod:`narwhals.stable.v2` rather than re-exporting it, so the
+This module wraps `narwhals.stable.v2` rather than re-exporting it, so the
 escape-hatch discipline lives in one place: any operation that forces a drop to
-the native frame via :func:`to_native` outside the fixed sklearn boundary is a
+the native frame via `to_native()` outside the fixed sklearn boundary is a
 defect to upstream into narwhals, not a license to branch on backend.
 
 ``Frame`` is the internal type that flows between steps; ``to_native`` is called
@@ -29,12 +29,12 @@ from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selecto
 
 
 def from_native(df: DataFrame) -> Frame:
-    """Wrap a native (pandas/polars/...) dataframe as an internal :data:`Frame`."""
+    """Wrap a native (pandas/polars/...) dataframe as an internal `Frame`."""
     return nw.from_native(df, eager_only=True)
 
 
 def to_native(frame: Frame) -> DataFrame:
-    """Unwrap an internal :data:`Frame` back to its native dataframe.
+    """Unwrap an internal `Frame` back to its native dataframe.
 
     Called only at the fixed sklearn boundary (the output of ``transform``).
     """
@@ -54,7 +54,7 @@ def select(frame: Frame, names: Selector, roles: Roles | None = None) -> Frame:
 
     ``names`` may be a single column name, a sequence of names (kept in the
     given order), a narwhals selector (e.g. ``narwhals.selectors.numeric()``),
-    a polars selector (``polars.selectors``), or a :class:`~shoez.selectors.ShoezSelector`.
+    a polars selector (``polars.selectors``), or a `ShoezSelector`.
     A polars selector is resolved against the frame's schema, so it works
     regardless of the frame's backend. A ``ShoezSelector`` additionally uses
     ``roles`` to filter by role.
@@ -75,7 +75,7 @@ def _expand_polars_selector(frame: Frame, selector: PlSelector) -> list[str]:
 
     Polars selectors are not understood by narwhals, so the selector is expanded
     against the frame's schema converted to a polars schema via
-    :meth:`narwhals.Schema.to_polars`. This is pure name resolution that touches
+    `narwhals.Schema.to_polars()`. This is pure name resolution that touches
     no data and works for any backend (the schema is normalized by narwhals).
     """
     # Reached only when ``names`` is already a PlSelector instance, which the
@@ -98,7 +98,7 @@ def with_column(frame: Frame, name: str, values: Any) -> Frame:
 
     Used at the sklearn boundary to re-join a target ``y`` (a numpy array, list, or
     Series) onto the feature frame under its outcome-role name. ``values`` is wrapped as a
-    narwhals :class:`Series` on the frame's backend so the result stays native (pandas in →
+    narwhals `Series` on the frame's backend so the result stays native (pandas in →
     pandas out).
     """
     series = nw.new_series(name=name, values=values, backend=frame.implementation)
@@ -149,7 +149,7 @@ def is_categorical(frame: Frame, column: str) -> bool:
 
     Covers ``pandas.Categorical`` (ordered and unordered) and polars
     ``Categorical`` / ``Enum``, all of which narwhals normalizes to
-    :class:`narwhals.Categorical` or :class:`narwhals.Enum`.
+    `narwhals.Categorical` or `narwhals.Enum`.
     """
     dtype = frame.schema[column]
     return dtype == nw.Categorical or dtype == nw.Enum

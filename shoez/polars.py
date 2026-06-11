@@ -1,24 +1,26 @@
 """Opt-in polars accessor: ``df.shz.<step>(...)`` sugar over the shoez lifecycle.
 
 Importing this module registers a ``shz`` namespace on polars DataFrames, so a
-single step can be fitted and applied to a frame in one expression::
+single step can be fitted and applied to a frame in one expression:
 
-    import shoez.polars  # registers the `shz` namespace (side effect)
+```python
+import shoez.polars  # registers the `shz` namespace (side effect)
 
-    df.shz.step_dummy(["color"])                  # one step
-    df.shz.apply(StepNormalize(["x"]))            # any step(s), generic
-    df.shz.step_dummy(["color"]).shz.step_normalize(["x"])  # chains
+df.shz.step_dummy(["color"])                  # one step
+df.shz.apply(StepNormalize(["x"]))            # any step(s), generic
+df.shz.step_dummy(["color"]).shz.step_normalize(["x"])  # chains
+```
 
 Each method fits the step on ``df`` and immediately transforms ``df``, returning a
 fresh polars ``DataFrame`` (the fitted step is discarded). It is a thin convenience
-layer over :class:`~shoez.recipe.Recipe` — it adds no new data-operation surface and
+layer over `Recipe` — it adds no new data-operation surface and
 delegates conversion to the recipe lifecycle.
 
 Boundary note: this is the **one** module in ``shoez`` that imports ``polars`` at
 runtime, a deliberate exception to the package's no-runtime-backend-import rule
 (``design/ecosystem.md``, boundary rule #5). The accessor is an explicitly
 polars-only convenience and is kept out of the backend-agnostic core: it is never
-imported by :mod:`shoez.__init__`, so users opt in with ``import shoez.polars``.
+imported by `shoez.__init__`, so users opt in with ``import shoez.polars``.
 polars is already a hard dependency, so this adds no new requirement.
 """
 
@@ -68,7 +70,7 @@ class ShzNamespace:
         """Fit ``steps`` on the frame in order and return the transformed frame.
 
         The generic escape hatch behind every ``step_*`` method: it accepts any
-        :class:`~shoez.step.Step` instance(s), so steps without a dedicated
+        `Step` instance(s), so steps without a dedicated
         wrapper (or custom steps) are reachable too.
         """
         fitted = Recipe(steps=list(steps)).fit(self._df)
@@ -80,7 +82,7 @@ class ShzNamespace:
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
     ) -> pl.DataFrame:
-        """Treatment (drop-one) dummy encoding. See :class:`~shoez.step_dummy.StepDummy`."""
+        """Treatment (drop-one) dummy encoding. See `StepDummy`."""
         return self.apply(StepDummy(columns, name_fn, keep_original_cols))
 
     def step_one_hot(
@@ -89,7 +91,7 @@ class ShzNamespace:
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
     ) -> pl.DataFrame:
-        """One-hot encoding. See :class:`~shoez.step_one_hot.StepOneHot`."""
+        """One-hot encoding. See `StepOneHot`."""
         return self.apply(StepOneHot(columns, name_fn, keep_original_cols))
 
     def step_drop_corr(
@@ -98,11 +100,11 @@ class ShzNamespace:
         threshold: float = 0.9,
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> pl.DataFrame:
-        """Drop highly correlated columns. See :class:`~shoez.step_drop_corr.StepDropCorr`."""
+        """Drop highly correlated columns. See `StepDropCorr`."""
         return self.apply(StepDropCorr(columns, threshold, method))
 
     def step_drop_zero_variance(self, columns: list[str]) -> pl.DataFrame:
-        """Drop zero-variance columns. See :class:`~shoez.step_drop_zero_variance.StepDropZeroVariance`."""
+        """Drop zero-variance columns. See `StepDropZeroVariance`."""
         return self.apply(StepDropZeroVariance(columns))
 
     def step_intercept(
@@ -111,9 +113,9 @@ class ShzNamespace:
         name: str = "intercept",
         role: str | None = "predictor",
     ) -> pl.DataFrame:
-        """Add a constant intercept column. See :class:`~shoez.step_intercept.StepIntercept`."""
+        """Add a constant intercept column. See `StepIntercept`."""
         return self.apply(StepIntercept(value, name, role))
 
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
-        """Center and scale numeric columns. See :class:`~shoez.step_normalize.StepNormalize`."""
+        """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))

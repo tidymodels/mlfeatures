@@ -1,11 +1,11 @@
 """Zero-variance drop: find columns with a single unique value.
 
-The *fit* half of the zero-variance rule lives in :func:`fit_drop_zero_variance`
+The *fit* half of the zero-variance rule lives in `fit_drop_zero_variance()`
 as a plain function so the logic can be exercised on its own;
-:class:`StepDropZeroVariance` wraps it in the :class:`~shoez.step.Step`
-lifecycle so a :class:`~shoez.recipe.Recipe` can fit and apply it.
+`StepDropZeroVariance` wraps it in the `Step`
+lifecycle so a `Recipe` can fit and apply it.
 
-The *apply* half (dropping the named columns) is :func:`shoez._frame.apply_drop`,
+The *apply* half (dropping the named columns) is `shoez._frame.apply_drop()`,
 shared with every REMOVING-mode step (``step_drop_zv``, ``step_drop_corr``, ...).
 """
 
@@ -43,15 +43,15 @@ def fit_drop_zero_variance(features: Frame) -> list[str]:
     Parameters
     ----------
     features
-        Internal :data:`~shoez.types.Frame` (narwhals) holding the candidate
+        Internal `Frame` (narwhals) holding the candidate
         predictor columns. Native frames are wrapped via
-        :func:`shoez._frame.from_native` at the recipe boundary.
+        `shoez._frame.from_native()` at the recipe boundary.
 
     Returns
     -------
     list[str]
         Column names to drop, in their input order. Pair with
-        :func:`shoez._frame.apply_drop` to remove the offending columns
+        `shoez._frame.apply_drop()` to remove the offending columns
         from any frame with the same schema.
     """
     return [c for c in features.columns if features[c].drop_nulls().n_unique() <= 1]
@@ -62,8 +62,8 @@ class StepDropZeroVariance(Step):
 
     A ``REMOVING`` step: the selected columns whose observed values are all the
     same — or all missing — are dropped, and no new columns are produced. The
-    decision is made by :func:`fit_drop_zero_variance`; this class wraps it in
-    the :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe`
+    decision is made by `fit_drop_zero_variance()`; this class wraps it in
+    the `Step` lifecycle so a `Recipe`
     can fit and apply it.
 
     Selectors are not yet implemented, so the columns to consider are passed

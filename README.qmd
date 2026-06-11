@@ -9,7 +9,7 @@ jupyter: python3
 
 A framework for declaring, estimating, and applying feature-engineering pipelines — a Python port of the R [recipes](https://recipes.tidymodels.org/) package.
 
-> **Status:** Pre-alpha. The package is under active design; see [`design/`](design/) for the specification.
+> **Status:** Pre-alpha. The package is under active design; see [`design/`](https://github.com/tidymodels/shoez/tree/main/design) for the specification.
 
 ## Lifecycle
 
@@ -42,7 +42,7 @@ result = fitted.transform(df)
 result.shape
 ```
 
-See [`design/README.md`](design/README.md) for the full design.
+See [`design/README.md`](https://github.com/tidymodels/shoez/blob/main/design/README.md) for the full design.
 
 ## Development
 

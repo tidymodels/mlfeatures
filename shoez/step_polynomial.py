@@ -1,12 +1,12 @@
 """Orthogonal polynomial expansion: fit + apply.
 
-The *fit* half (:func:`fit_polynomial`) inspects training data to pick a
+The *fit* half (`fit_polynomial()`) inspects training data to pick a
 polynomial degree per column and **learns the orthogonal basis** (centering
 mean + QR transform matrix) for each fittable column. The *apply* half
-(:func:`apply_polynomial`) reuses those statistics to expand each selected
+(`apply_polynomial()`) reuses those statistics to expand each selected
 column; the basis is never recomputed from new data — train/serve parity with
-R's :func:`stats::poly`. :class:`StepPolynomial` wraps both into the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+R's `stats::poly()`. `StepPolynomial` wraps both into the
+`Step` lifecycle so a `Recipe` can fit
 and apply them.
 """
 
@@ -47,8 +47,8 @@ __all__ = [
 class PolynomialFit:
     """Per-column orthogonal polynomial basis learned at fit time.
 
-    Bundles everything :func:`apply_polynomial` needs to reproduce R's
-    :func:`stats::poly` output on new data: the effective polynomial degree,
+    Bundles everything `apply_polynomial()` needs to reproduce R's
+    `stats::poly()` output on new data: the effective polynomial degree,
     the training-set mean used for centering, and the linear transform
     derived from the QR factorization of the training-data Vandermonde so
     the basis is **pinned to the training set** (not recomputed at apply
@@ -89,14 +89,14 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
     terms before the Vandermonde becomes rank-deficient. For columns whose
     effective degree is positive, computes the centering mean and the QR
     transform matrix on the non-null training values and stores them in a
-    :class:`PolynomialFit`; constant / all-null columns get an empty fit
-    that :func:`apply_polynomial` passes through (with a warning).
+    `PolynomialFit`; constant / all-null columns get an empty fit
+    that `apply_polynomial()` passes through (with a warning).
 
     Parameters
     ----------
     features
-        Internal :data:`~shoez.types.Frame` (narwhals) holding the columns to
-        be expanded. Native frames are wrapped via :func:`shoez._frame.from_native`
+        Internal `Frame` (narwhals) holding the columns to
+        be expanded. Native frames are wrapped via `shoez._frame.from_native()`
         at the recipe boundary.
     degree
         Maximum polynomial degree. Must be an ``int`` strictly greater than
@@ -107,7 +107,7 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
     -------
     dict[str, PolynomialFit]
         Mapping from column name to its fitted polynomial state, in input
-        column order. Pair with :func:`apply_polynomial` to produce the
+        column order. Pair with `apply_polynomial()` to produce the
         expanded frame.
 
     Raises
@@ -197,19 +197,19 @@ def apply_polynomial(data: Frame, fit_result: dict[str, PolynomialFit]) -> Frame
       using the fit-time mean and transform matrix — the basis is **not
       recomputed** from ``data``.
     - If its effective degree is ``0``, keep the original column and emit a
-      :class:`UserWarning` naming the column. The caller can chain a
+      `UserWarning` naming the column. The caller can chain a
       zero-variance drop step to remove such columns.
 
     Columns named in ``fit_result`` that are absent from ``data`` are silently
     skipped — same schema-drift tolerance as
-    :func:`shoez._frame.apply_drop` (see ``design/lifecycle.md``).
+    `shoez._frame.apply_drop()` (see ``design/lifecycle.md``).
 
     Parameters
     ----------
     data
-        Internal :data:`~shoez.types.Frame` to transform.
+        Internal `Frame` to transform.
     fit_result
-        Output of :func:`fit_polynomial`: per-column :class:`PolynomialFit`
+        Output of `fit_polynomial()`: per-column `PolynomialFit`
         objects carrying the training-set mean and basis transform matrix.
 
     Returns
@@ -291,11 +291,11 @@ def _apply_ortho_poly(
     Parameters
     ----------
     series
-        Single narwhals :class:`Series` of numeric values. Missing entries
+        Single narwhals `Series` of numeric values. Missing entries
         (narwhals nulls / NumPy NaNs) become rows of ``NaN`` in the output;
         every other row is unaffected by their presence.
     fit
-        Stored basis from :func:`fit_polynomial`. ``fit.degree`` must be
+        Stored basis from `fit_polynomial()`. ``fit.degree`` must be
         positive — the caller (``apply_polynomial``) handles the degree-0 case
         before invoking this helper.
     """
@@ -330,15 +330,15 @@ class StepPolynomial(Step):
     ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``. The orthogonal basis (centering
     mean + QR transform matrix) is **learned at fit time on the training data
     and reused unchanged at transform time** — no re-estimation on new data.
-    The math lives in :func:`fit_polynomial` and :func:`apply_polynomial`;
-    this class wraps the in the :class:`~shoez.step.Step` lifecycle so a
-    :class:`~shoez.recipe.Recipe` can fit and apply it.
+    The math lives in `fit_polynomial()` and `apply_polynomial()`;
+    this class wraps the in the `Step` lifecycle so a
+    `Recipe` can fit and apply it.
 
     The effective degree per column is capped at ``n_unique_non_null - 1`` — a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
     polynomial terms. Constant (or all-null) columns get an effective degree
-    of ``0``; :meth:`transform` leaves those columns untouched and emits a
-    :class:`UserWarning`. The caller can chain a zero-variance drop step to
+    of ``0``; `transform()` leaves those columns untouched and emits a
+    `UserWarning`. The caller can chain a zero-variance drop step to
     clean them up.
 
     Selectors are not yet implemented, so the columns to consider are passed

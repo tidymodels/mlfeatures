@@ -1,14 +1,14 @@
 """Intercept: add a constant column.
 
-The *apply* half lives in :func:`add_intercept` as a plain function so the logic
-can be exercised on its own; :class:`StepIntercept` wraps it in the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+The *apply* half lives in `add_intercept()` as a plain function so the logic
+can be exercised on its own; `StepIntercept` wraps it in the
+`Step` lifecycle so a `Recipe` can fit
 and apply it.
 
 This is the ``ADDING``-mode prototype from ``design/steps-catalog.md``, based on
 ``step_intercept`` from the R ``recipes`` package and generalised from a column
 of ones to a configurable fixed value. An intercept estimates nothing from the
-data, so unlike a filter such as :func:`~shoez.step_drop_corr.fit_drop_corr`
+data, so unlike a filter such as `fit_drop_corr()`
 there is no *fit* half — only this *apply* half.
 """
 
@@ -42,8 +42,8 @@ def add_intercept(
     Parameters
     ----------
     features
-        Internal :data:`~shoez.types.Frame` (narwhals). Native frames are
-        wrapped via :func:`shoez._frame.from_native` at the recipe boundary.
+        Internal `Frame` (narwhals). Native frames are
+        wrapped via `shoez._frame.from_native()` at the recipe boundary.
     value
         The constant to fill the new column with. Default ``1.0`` — a column of
         ones, the classic regression intercept.
@@ -73,8 +73,8 @@ class StepIntercept(Step):
 
     An ``ADDING`` step: it consumes no input columns and appends a single
     constant column (default a column of ones named ``"intercept"``). The column
-    is produced by :func:`add_intercept`; this class wraps it in the
-    :class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can
+    is produced by `add_intercept()`; this class wraps it in the
+    `Step` lifecycle so a `Recipe` can
     fit and apply it.
 
     Because it adds rather than transforms existing columns, there is nothing to

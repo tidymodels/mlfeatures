@@ -1,9 +1,9 @@
 """Impute missing numeric values with the column median.
 
-The *fit* half lives in :func:`fit_impute_median` and the *apply* half in
-:func:`apply_impute_median`, both plain functions so the data-ops core can
-be exercised on its own. :class:`StepImputeMedian` wraps them in the
-:class:`~shoez.step.Step` lifecycle so a :class:`~shoez.recipe.Recipe` can fit
+The *fit* half lives in `fit_impute_median()` and the *apply* half in
+`apply_impute_median()`, both plain functions so the data-ops core can
+be exercised on its own. `StepImputeMedian` wraps them in the
+`Step` lifecycle so a `Recipe` can fit
 and apply it.
 
 A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected numeric
@@ -69,8 +69,8 @@ def fit_impute_median(
 
     A column whose values are *all* null has an undefined (``NaN``) median and
     so cannot be imputed. It is **not** dropped: it stays in ``columns`` with a
-    ``NaN`` median, :func:`apply_impute_median` leaves it unchanged, and a
-    :class:`UserWarning` is emitted naming such columns.
+    ``NaN`` median, `apply_impute_median()` leaves it unchanged, and a
+    `UserWarning` is emitted naming such columns.
     """
     columns = list(features.columns)
     medians = [as_float(features[col].median()) for col in columns]
@@ -99,10 +99,10 @@ def apply_impute_median(
         A narwhals DataFrame to impute.
     columns:
         The column names to impute — the ``columns`` returned by
-        :func:`fit_impute_median`. Any column of ``features`` not in this
+        `fit_impute_median()`. Any column of ``features`` not in this
         list is passed through untouched.
     medians:
-        Per-column medians from :func:`fit_impute_median`, parallel to
+        Per-column medians from `fit_impute_median()`, parallel to
         ``columns``. A ``NaN`` median marks a column that could not be estimated
         (entirely null at fit time); such columns are left unchanged.
 
@@ -137,9 +137,9 @@ class StepImputeMedian(Step):
 
     A ``ONE_TO_ONE`` step: each selected numeric column has its nulls filled in
     place with that column's median, estimated at fit time. The work is done by
-    :func:`fit_impute_median` and :func:`apply_impute_median`; this class
-    wraps them in the :class:`~shoez.step.Step` lifecycle so a
-    :class:`~shoez.recipe.Recipe` can fit and apply it.
+    `fit_impute_median()` and `apply_impute_median()`; this class
+    wraps them in the `Step` lifecycle so a
+    `Recipe` can fit and apply it.
 
     A column that is entirely null at fit time has no median to impute with; it
     is left unchanged (not dropped) with a warning, and passes through

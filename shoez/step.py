@@ -2,7 +2,7 @@
 
 These abstract base classes define the contract every feature-engineering step
 codes against. They are transcribed from ``design/step-contract.md`` and are, for
-now, importable stubs: the abstract methods raise :class:`NotImplementedError`.
+now, importable stubs: the abstract methods raise `NotImplementedError`.
 Selector resolution, content-derived ``id`` generation, ``StepError`` wrapping,
 and the conformance test suite are implemented in later issues (#17, #18, #21).
 """
@@ -23,7 +23,7 @@ class Step(ABC):
 
     A step is constructed declaratively, fitted against training data to estimate
     and store statistics, and then applied to new data. ``Step`` subclasses always
-    run at transform time; :class:`RowOp` subclasses never run on new data. There
+    run at transform time; `RowOp` subclasses never run on new data. There
     is intentionally no ``skip`` flag — whether a step runs at transform time is
     determined structurally by its type.
     """
@@ -67,7 +67,7 @@ class Step(ABC):
         """Dtypes this step is valid to apply to.
 
         Checked against the schema before ``fit()`` runs. Return
-        :data:`~shoez.types.ANY_DTYPE` to skip dtype validation entirely.
+        `ANY_DTYPE` to skip dtype validation entirely.
         """
         raise NotImplementedError
 
