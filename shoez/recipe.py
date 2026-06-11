@@ -5,8 +5,8 @@ lifecycle described in ``design/lifecycle.md``. It exercises the step contract
 end to end while deliberately omitting subsystems that are not yet built:
 selectors, roles, the ptype snapshot, dtype pre-checks, and the lineage DAG.
 
-Steps are pure: calling ``.step_*()`` returns a *new* ``Recipe`` with the step
-appended — it never touches data. ``fit()`` runs each step's ``fit`` on the
+Steps are pure: ``Recipe(steps=[...])`` and ``.add(...)`` return a *new*
+``Recipe`` with the step appended — they never touch data. ``fit()`` runs each step's ``fit`` on the
 training data in order, feeding the transformed output of one step into the next
 (``RowOp`` steps are fitted but not applied in the fit loop). ``transform()``
 applies the fitted steps to new data, skipping ``RowOp`` steps entirely.

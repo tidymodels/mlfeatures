@@ -17,7 +17,7 @@ Extensions register steps using Python's standard `importlib.metadata` entry poi
 
 ```toml
 # In a plugin package's pyproject.toml:
-[project.entry-points."pyrecipes.steps"]
+[project.entry-points."shoez.steps"]
 step_woe = "mypackage.steps:WoeStep"
 step_embed = "mypackage.steps:EmbedStep"
 ```
@@ -29,7 +29,7 @@ The core never relies on import order for correctness. Each plugin step declares
 ## Base classes
 
 ```python
-from pyrecipes import Step, Check, RowOp
+from shoez import Step, Check, RowOp
 ```
 
 - `Step` — base for all transformation steps. See [step-contract.md](step-contract.md) for the full ABC.
@@ -46,9 +46,9 @@ Namespace-reserved plugin packages — see [steps-catalog.md](steps-catalog.md):
 
 | Package               | Covers                                             |
 | --------------------- | -------------------------------------------------- |
-| `pyrecipes-embed`     | Supervised/target encoders, WoE, entity embeddings |
-| `pyrecipes-text`      | Tokenization, hashing, NLP steps                   |
-| `pyrecipes-imbalance` | Upsampling, downsampling, class-balance steps      |
+| `shoez-embed`     | Supervised/target encoders, WoE, entity embeddings |
+| `shoez-text`      | Tokenization, hashing, NLP steps                   |
+| `shoez-imbalance` | Upsampling, downsampling, class-balance steps      |
 
 ---
 

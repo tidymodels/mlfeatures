@@ -34,7 +34,12 @@ df = pd.DataFrame(
 # specify -> fit -> transform
 recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
 fitted = recipe.fit(df)
-fitted.transform(df)  # drops one of the correlated pair, keeps `c`
+result = fitted.transform(df)
+
+# `c` is uncorrelated and always kept; exactly one of the correlated pair
+# `a`/`b` is dropped. Which member is dropped is an implementation detail,
+# so we show the resulting shape rather than pinning the exact columns.
+result.shape
 ```
 
 See [`design/README.md`](design/README.md) for the full design.
