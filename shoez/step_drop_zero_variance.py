@@ -83,22 +83,22 @@ class StepDropZeroVariance(Step):
         self.keep_original_cols = False
         self.output_role = None
         # Populated by ``fit()``.
-        self._to_drop: list[str] | None = None
+        self._estimates: list[str] | None = None
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._to_drop = fit_drop_zero_variance(features)
+        self._estimates = fit_drop_zero_variance(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Drop the columns chosen at fit time. Never re-estimates."""
-        if self._to_drop is None:
+        if self._estimates is None:
             raise RuntimeError("StepDropZeroVariance.transform() called before fit().")
-        return _frame.apply_drop(new_data, self._to_drop)
+        return _frame.apply_drop(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -108,7 +108,7 @@ class StepDropZeroVariance(Step):
 
     def schema_out(self) -> ColSchema:
         """Schema of the columns this step produced — none; it only removes."""
-        if self._to_drop is None:
+        if self._estimates is None:
             raise RuntimeError("StepDropZeroVariance.schema_out() called before fit().")
         return ColSchema(columns=[])
 
@@ -117,8 +117,8 @@ class StepDropZeroVariance(Step):
         return ANY_DTYPE
 
     def update_roles(self, roles: Roles) -> None:
-        if self._to_drop:
-            for col in self._to_drop:
+        if self._estimates:
+            for col in self._estimates:
                 for role in list(roles.of(col)):
                     roles.remove(col, role)
 

@@ -74,3 +74,9 @@ class TestStableId:
         first, _ = _fitted()
         second, _ = _fitted()
         assert first.steps[0].id == second.steps[0].id
+
+
+class TestEstimatesLifecycle:
+    """Not applicable: StepIntercept estimates no statistics — it adds a constant
+    column and stores only its output schema, so there is no ``_estimates``
+    attribute. Slot kept visible per the conformance contract."""

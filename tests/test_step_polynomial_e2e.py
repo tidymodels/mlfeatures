@@ -148,9 +148,9 @@ class TestEndToEnd:
         train = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
         step = StepPolynomial(["a"], degree=2)
         Recipe(steps=[step]).fit(train)
-        # ``_fit_result`` is private but exists post-fit; using it for the
+        # ``_estimates`` is private but exists post-fit; using it for the
         # invariant check is the most direct way to assert pinning.
-        fit_result = step._fit_result
+        fit_result = step._estimates
         assert fit_result is not None
         assert fit_result["a"].mean == pytest.approx(3.0)
 

@@ -439,7 +439,7 @@ class StepClassDistance(Step):
         self.keep_original_cols = True
         self.output_role = role
         # Populated by ``fit()`` — both schemas plus the fitted statistics.
-        self._fit: ClassDistanceFit | None = None
+        self._estimates: ClassDistanceFit | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
 
@@ -449,7 +449,7 @@ class StepClassDistance(Step):
         # ``training_data[col]`` returns a narwhals Series — the same shape
         # ``_ortho_poly`` consumes in step_polynomial.
         outcome_series = training_data[self.outcome]
-        self._fit = fit_class_distance(
+        self._estimates = fit_class_distance(
             features,
             outcome_series,
             metric=self.metric,
@@ -461,7 +461,7 @@ class StepClassDistance(Step):
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
         # ``schema_out`` lists the new distance columns; all are Float64.
-        out_names = [f"{self.prefix}_{cls}" for cls in self._fit.classes]
+        out_names = [f"{self.prefix}_{cls}" for cls in self._estimates.classes]
         self._schema_out = ColSchema(
             columns=out_names,
             dtypes=dict.fromkeys(out_names, "Float64"),
@@ -470,9 +470,9 @@ class StepClassDistance(Step):
 
     def transform(self, new_data: Frame) -> Frame:
         """Append the distance columns to ``new_data``. Never re-estimates."""
-        if self._fit is None:
+        if self._estimates is None:
             raise RuntimeError("StepClassDistance.transform() called before fit().")
-        return apply_class_distance(new_data, self._fit, prefix=self.prefix)
+        return apply_class_distance(new_data, self._estimates, prefix=self.prefix)
 
     def schema_in(self) -> ColSchema:
         """Schema of the predictor columns consumed at fit time."""

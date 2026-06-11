@@ -73,3 +73,9 @@ class TestStableId:
         first, _ = _fitted()
         second, _ = _fitted()
         assert first.steps[0].id == second.steps[0].id
+
+
+class TestEstimatesLifecycle:
+    """Not applicable: StepUnknown estimates no statistics — its recoding is
+    parameter-driven and it stores only its input schema, so there is no
+    ``_estimates`` attribute. Slot kept visible per the conformance contract."""

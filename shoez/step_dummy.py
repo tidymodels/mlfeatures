@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
@@ -29,7 +30,7 @@ from shoez.types import (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-__all__ = ["fit_dummy", "apply_dummy", "StepDummy", "DISCRETE_DTYPES"]
+__all__ = ["fit_dummy", "apply_dummy", "StepDummy", "DummyEstimates", "DISCRETE_DTYPES"]
 
 DISCRETE_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.String,
@@ -47,6 +48,29 @@ DISCRETE_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.UInt64,
     nw.UInt128,
 }
+
+
+@dataclass(frozen=True)
+class DummyEstimates:
+    """Per-column dummy-encoding state learned at fit time.
+
+    Bundles the two things `apply_dummy()` needs so the encoding is pinned to
+    the training set. Marked ``frozen=True`` so the fitted state can't be
+    mutated and drift train-to-serve.
+
+    Attributes
+    ----------
+    levels
+        Retained levels per column (all except the reference level), as
+        returned by `fit_dummy()`. Drives the indicator columns produced.
+    all_known
+        Full set of levels seen at fit time per column (retained *and*
+        reference). Lets `apply_dummy()` distinguish the reference level
+        from genuinely unseen levels at transform time.
+    """
+
+    levels: dict[str, list[Any]]
+    all_known: dict[str, set[Any]]
 
 
 def fit_dummy(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
@@ -232,26 +256,27 @@ class StepDummy(Step):
         self.id = id if id is not None else "dummy"
         self.trained = False
         self.output_role: str | None = "predictor"
-        self._levels: dict[str, list[Any]] | None = None
-        self._all_known: dict[str, set[Any]] | None = None
+        self._estimates: DummyEstimates | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the sorted level list for each selected column."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._levels = fit_dummy(features)
         # Build the full known-level set (retained + reference) so that
         # apply_dummy does not flag the reference level as "unseen" at transform.
-        self._all_known = {
-            col: set(features[col].drop_nulls().unique().to_list())
-            for col in features.columns
-        }
+        self._estimates = DummyEstimates(
+            levels=fit_dummy(features),
+            all_known={
+                col: set(features[col].drop_nulls().unique().to_list())
+                for col in features.columns
+            },
+        )
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         out_cols = [
             self._col_name(col, str(lvl))
-            for col, lvls in self._levels.items()
+            for col, lvls in self._estimates.levels.items()
             for lvl in lvls
         ]
         self._schema_out = ColSchema(columns=out_cols)
@@ -259,14 +284,14 @@ class StepDummy(Step):
 
     def transform(self, new_data: Frame) -> Frame:
         """Apply stored level lists to produce indicator columns."""
-        if self._levels is None:
+        if self._estimates is None:
             raise RuntimeError("StepDummy.transform() called before fit().")
         return apply_dummy(
             new_data,
-            self._levels,
+            self._estimates.levels,
             self._col_name,
             self.keep_original_cols,
-            all_known=self._all_known,
+            all_known=self._estimates.all_known,
         )
 
     def schema_in(self) -> ColSchema:
@@ -286,9 +311,9 @@ class StepDummy(Step):
         return set(DISCRETE_DTYPES)
 
     def update_roles(self, roles: Roles) -> None:
-        if self._levels is None:
+        if self._estimates is None:
             return
-        for source_col, levels in self._levels.items():
+        for source_col, levels in self._estimates.levels.items():
             source_roles = roles.of(source_col)
             for role in source_roles:
                 for lvl in levels:

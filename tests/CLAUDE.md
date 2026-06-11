@@ -10,13 +10,15 @@ Each step function has its own series of test files. For a step `step_x`, there 
 
 ## Infrastructure test coverage
 
-Every `test_step_x_infrastructure.py` must contain **every** infrastructure test class — the set is uniform across all steps so the conformance contract is enforced identically everywhere. The current classes are:
+Every `test_step_x_infrastructure.py` must contain the **same set** of infrastructure test classes — the set is uniform across all steps so the conformance contract is enforced identically everywhere. Each class name is `Test...` and its docstring states the property it checks.
 
-- `TestEmptySelection` — an empty column selection is a no-op (frame passes through unchanged).
-- `TestRowCountEdges` — `transform()` on 0-row and 1-row frames yields schema-correct output.
-- `TestPickleRoundTrip` — a pickled fitted step reproduces the same `transform()` output.
-- `TestFitDeterminism` — fitting two independent recipes on the same data yields identical `transform()` output.
-- `TestStableId` — the same step type with the same hyperparameters yields the same `id`.
+The canonical, up-to-date set is whatever the existing infrastructure files contain — read one (e.g. `test_step_impute_mean_infrastructure.py`) to see the current classes rather than relying on a list here. To check the set is uniform across files:
+
+```bash
+grep -h "^class Test" tests/test_step_*_infrastructure.py | sort | uniq -c
+```
+
+Every count should equal the number of step infrastructure files.
 
 If a class genuinely does not apply to a step, **still add the class** (or keep its slot visible) and write a comment explaining why instead of silently omitting it — so a reader can see the test was considered, not forgotten. For example, `TestEmptySelection` does not apply to `step_intercept` (an ADDING step with no column selector), so that file documents the omission in its module docstring rather than dropping the class without explanation.
 
