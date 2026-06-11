@@ -20,11 +20,15 @@ The DAG is **recipe-side state**: it is not handed to steps (steps receive a
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez.types import Frame, Roles
+
+if TYPE_CHECKING:
+    from shoez.step import Step
 
 __all__ = ["ColumnNode", "Schema"]
 
@@ -112,6 +116,100 @@ class Schema:
                 sparse=False,
             )
         return schema
+
+    def update(self, step: "Step", frame_after: Frame, roles: Roles) -> None:
+        """Fold one fitted, transformed step into the DAG.
+
+        Called by the recipe after ``step.fit()`` and (for non-``RowOp`` steps)
+        ``step.transform()``. The algorithm is **frame-driven**: the transformed
+        frame is the source of truth for which columns now exist, their order,
+        and their dtypes, while ``step.output_parents()`` is the source of truth
+        for the provenance of any *new* columns. ``step.mode`` is not consulted
+        — the shape is read off the frame.
+
+        Concretely, comparing the live columns against ``frame_after``:
+
+        - **Removed** columns (live, now gone) are archived into ``_history``
+          with ``removed_by`` set, so ancestry still resolves through them.
+        - **Surviving** columns have their roles refreshed and, if the dtype
+          changed, the new dtype appended to ``dtype_history``. ``source`` is
+          left unchanged — an in-place transform does not *produce* a column.
+        - **Added** columns become new nodes with ``source = step.id``,
+          ``parent_cols`` from ``output_parents()``, and ``sparse`` from
+          ``produces_sparse``.
+
+        Two integrity guards run first (before any mutation):
+
+        - **Uniqueness:** a produced column name must not collide with a column
+          that already exists.
+        - **Coverage:** ``output_parents()`` must declare exactly the columns
+          that actually appeared, and every declared parent must be a column
+          that was present before the step. A mismatch is a step bug.
+
+        ``RowOp`` and empty-selection steps never reach here (the recipe skips
+        them), so ``frame_after`` always reflects a real schema change or none.
+        """
+        after = _frame.columns(frame_after)
+        after_set = set(after)
+        new_dtypes = _frame.dtypes(frame_after)
+        live_before = set(self._live)
+        added = [name for name in after if name not in live_before]
+        removed = [name for name in self._live if name not in after_set]
+        parents = step.output_parents()
+
+        # --- integrity guards (no mutation yet) ---
+        collisions = set(parents) & live_before
+        if collisions:
+            raise ValueError(
+                f"step {step.id!r} produces column(s) {sorted(collisions)} that "
+                "already exist in the schema; output column names must be unique"
+            )
+        if set(parents) != set(added):
+            raise ValueError(
+                f"step {step.id!r}: declared produced columns {sorted(parents)} "
+                f"do not match the columns it added to the frame {sorted(added)}"
+            )
+        unknown_parents = {
+            parent
+            for parents_of in parents.values()
+            for parent in parents_of
+            if parent not in live_before
+        }
+        if unknown_parents:
+            raise ValueError(
+                f"step {step.id!r} declares parent column(s) "
+                f"{sorted(unknown_parents)} that are not in the schema"
+            )
+
+        # 1. archive removed columns (retain for provenance)
+        for name in removed:
+            node = self._live.pop(name)
+            node.removed_by = step.id
+            self._history.append(node)
+
+        # 2. refresh surviving columns in place (source unchanged)
+        for name in after:
+            if name in self._live:
+                node = self._live[name]
+                node.roles = set(roles.of(name))
+                if new_dtypes[name] != node.dtype:
+                    node.dtype = new_dtypes[name]
+                    node.dtype_history.append(new_dtypes[name])
+
+        # 3. add new columns with their provenance
+        for name in added:
+            self._live[name] = ColumnNode(
+                name=name,
+                dtype=new_dtypes[name],
+                roles=set(roles.of(name)),
+                source=step.id,
+                parent_cols=list(parents[name]),
+                dtype_history=[new_dtypes[name]],
+                sparse=step.produces_sparse,
+            )
+
+        # 4. reorder the live view to match the frame
+        self._live = {name: self._live[name] for name in after}
 
     @property
     def columns(self) -> list[str]:
