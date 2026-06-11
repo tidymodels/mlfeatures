@@ -142,23 +142,26 @@ class StepUnknown(Step):
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None
-        # Populated by ``fit()``.
-        self._columns: list[str] | None = None
+        # Populated by ``fit()``. ``_schema_in.columns`` is the resolved
+        # selection — every selected column is recoded, so no separate list is
+        # needed.
         self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the columns to recode and check for level collisions."""
         features = _frame.select(training_data, self.columns, info.roles)
-        self._columns = fit_unknown(features, self.new_level)
+        # Called for its collision check / warning; every selected column is
+        # recoded, so the resolved selection is recorded in ``_schema_in``.
+        fit_unknown(features, self.new_level)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
         """Recode nulls in the fitted columns to ``new_level``. Never re-estimates."""
-        if self._columns is None:
+        if self._schema_in is None:
             raise RuntimeError("StepUnknown.transform() called before fit().")
-        return apply_unknown(new_data, self._columns, self.new_level)
+        return apply_unknown(new_data, self._schema_in.columns, self.new_level)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -167,14 +170,11 @@ class StepUnknown(Step):
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
-        """Schema of the produced columns: same names, recoded ones now ``String``."""
-        if self._schema_in is None or self._columns is None:
+        """Schema of the produced columns: same names, all recoded to ``String``."""
+        if self._schema_in is None:
             raise RuntimeError("StepUnknown.schema_out() called before fit().")
-        recoded = set(self._columns)
-        dtypes = {
-            col: ("String" if col in recoded else self._schema_in.dtypes[col])
-            for col in self._schema_in.columns
-        }
+        # Every column in the resolved selection is recoded to String.
+        dtypes = dict.fromkeys(self._schema_in.columns, "String")
         return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
