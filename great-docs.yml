@@ -93,6 +93,9 @@ reference:
       - Recipe.add
       - Recipe.fit
       - Recipe.set_roles
+      - name: FittedRecipe
+        members: false
+      - FittedRecipe.transform
 
   - title: Steps
     desc: >-
@@ -111,9 +114,17 @@ reference:
         members: false
       - name: StepDummy
         members: false
+      - name: StepImputeMean
+        members: false
+      - name: StepImputeMedian
+        members: false
+      - name: StepImputeMode
+        members: false
       - name: StepIntercept
         members: false
       - name: StepNormalize
+        members: false
+      - name: StepPolynomial
         members: false
       - name: StepOneHot
         members: false
@@ -136,6 +147,35 @@ reference:
       - Step.schema_out
       - Step.accepts_dtypes
       - Step.required_pkgs
+      - name: RowOp
+        members: false
+
+  - title: Interop
+    desc: >-
+      Adapters for using recipes inside other ecosystems.
+    contents:
+      - name: RecipeTransformer
+        members: false
+
+  - title: Types & selectors
+    desc: >-
+      Selector DSL and the schema/type vocabulary that steps are written
+      against.
+    contents:
+      - name: Selectors
+        members: false
+      - name: ColSchema
+        members: false
+      - name: SchemaInfo
+        members: false
+      - name: Roles
+        members: false
+      - name: Mode
+        members: false
+      - DataFrame
+      - Frame
+      - ANY_DTYPE
+      - NUMERIC_DTYPES
 
 # Site URL
 # --------
