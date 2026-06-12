@@ -75,7 +75,7 @@ class ColumnNode:
     from shoez import Recipe, StepDummy
 
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-    node = Recipe(steps=[StepDummy(["color"])]).fit(df).schema["color_red"]
+    node = Recipe().add(StepDummy(["color"])).fit(df).schema["color_red"]
     node.name, node.source, node.parent_cols
     ```
     """
@@ -106,38 +106,49 @@ class Schema:
     Examples
     --------
     The DAG is built by the recipe; read it back from ``FittedRecipe.schema``.
+    Here a small pipeline imputes a missing value, rescales the numerics, and
+    dummy-encodes a categorical — composed step by step with ``.add()``:
 
     ```{python}
     import pandas as pd
-    from shoez import Recipe, StepDummy
+    from shoez import Recipe, StepImputeMean, StepNormalize, StepDummy
 
     df = pd.DataFrame(
-        {"color": ["red", "green", "blue", "red"], "x": [1.0, 2.0, 3.0, 4.0]}
+        {
+            "age": [25, 41, 33, 52],
+            "income": [50000.0, None, 62000.0, 88000.0],
+            "city": ["NYC", "LA", "NYC", "SF"],
+        }
     )
-    schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+    schema = (
+        Recipe()
+        .add(StepImputeMean(["income"]))
+        .add(StepNormalize(["age", "income"]))
+        .add(StepDummy(["city"]))
+        .fit(df)
+        .schema
+    )
+    schema.summary()
     ```
 
-    ``color`` was expanded into indicators and dropped; ``x`` passed through:
+    ``age`` stayed in place through both numeric steps, so its ``source`` is
+    still ``"original"`` — but ``dtype_history`` records the int → float cast
+    that ``StepNormalize`` applied:
 
     ```{python}
-    schema.columns
+    schema["age"].source, schema["age"].dtype_history
     ```
 
-    Provenance resolves — each indicator is sourced to the step and traces back
-    to ``color`` (gone from the live schema, but kept in the DAG):
+    ``city`` was expanded into indicators and dropped. ``columns_from_source``
+    grabs everything a step produced; ``ancestors`` traces an indicator back
+    through the now-removed ``city`` column:
 
     ```{python}
     schema.columns_from_source("dummy")
     ```
 
     ```{python}
-    sorted(schema.ancestors("color_red"))
-    ```
-
-    ``summary()`` renders the whole live schema as a tidy table:
-
-    ```{python}
-    schema.summary()
+    schema.ancestors("city_NYC")
     ```
     """
 
@@ -306,13 +317,23 @@ class Schema:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepDummy
+        from shoez import Recipe, StepNormalize, StepDummy
 
-        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        df = pd.DataFrame(
+            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
+        )
+        schema = (
+            Recipe()
+            .add(StepNormalize(["age"]))
+            .add(StepDummy(["city"]))
+            .fit(df)
+            .schema
+        )
         ```
 
-        For a recipe that dummy-encodes ``color`` — one row per live column:
+        One row per live column, mixing the normalized ``age`` (source
+        ``"original"``, now ``float``) with the dummy indicators (source
+        ``"dummy"``):
 
         ```{python}
         schema.summary()
@@ -340,14 +361,31 @@ class Schema:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepDummy
+        from shoez import Recipe, StepNormalize, StepDummy
 
-        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        df = pd.DataFrame(
+            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
+        )
+        schema = (
+            Recipe()
+            .add(StepNormalize(["age"]))
+            .add(StepDummy(["city"]))
+            .fit(df)
+            .schema
+        )
         ```
+
+        Select every column a step produced — the dummy indicators:
 
         ```{python}
         schema.columns_from_source("dummy")
+        ```
+
+        ``"original"`` picks the inputs that survive to the output (``age`` is
+        still here; ``city`` was consumed by the dummy step):
+
+        ```{python}
+        schema.columns_from_source("original")
         ```
         """
         return [name for name, node in self._live.items() if node.source == step_id]
@@ -364,8 +402,10 @@ class Schema:
         from shoez import Recipe, StepDummy
 
         df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        schema = Recipe().add(StepDummy(["color"])).fit(df).schema
         ```
+
+        Each indicator's immediate parent is the column it was encoded from:
 
         ```{python}
         schema.parents("color_green")
@@ -386,21 +426,38 @@ class Schema:
 
         Examples
         --------
-        ``color`` was dropped by the dummy step, but the indicator still traces
-        back to it through the archived node:
+        ``ancestors`` walks the whole chain, even through columns that later
+        steps removed. Here ``StepClassDistance`` builds ``distance_0`` from the
+        features ``x`` and ``y``, then ``StepPolynomial`` consumes ``distance_0``
+        and expands it into ``distance_0_1`` / ``distance_0_2``:
 
         ```{python}
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepDummy
+        from shoez import Recipe, StepClassDistance, StepPolynomial
 
-        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        df = pd.DataFrame(
+            {
+                "x": [1.0, 2.0, 5.0, 9.0],
+                "y": [2.0, 1.0, 8.0, 7.0],
+                "cls": [0, 0, 1, 1],
+            }
+        )
+        schema = (
+            Recipe()
+            .add(StepClassDistance(["x", "y"], outcome="cls"))
+            .add(StepPolynomial(["distance_0"], degree=2))
+            .fit(df)
+            .schema
+        )
         ```
 
+        ``distance_0_1`` traces back through the now-removed ``distance_0`` to
+        the original features it was built from:
+
         ```{python}
-        sorted(schema.ancestors("color_red"))
+        sorted(schema.ancestors("distance_0_1"))
         ```
         """
         result: set[str] = set()
