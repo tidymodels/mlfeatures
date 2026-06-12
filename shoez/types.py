@@ -72,13 +72,13 @@ __all__ = [
 
 
 class ColSchema:
-    """Column schema: names and dtypes for a column set.
+    """Column schema: the names and dtypes a step reports for a column set.
 
-    Minimal stand-in for the full type defined by the schema subsystem
-    (``design/schema.md``) — it carries only the column names and their dtype
-    names, enough for a step to describe what it consumed (``schema_in``) and
-    produced (``schema_out``). Roles, source, and sparsity land with the real
-    schema subsystem.
+    Carries the column names and their dtype names — enough for a step to
+    describe what it consumed (``schema_in``) and produced (``schema_out``).
+    This is the lightweight step-facing report; the recipe-side column-lineage
+    DAG that tracks roles, source, sparsity, and provenance is
+    `shoez.schema.Schema` (``design/schema.md``).
     """
 
     def __init__(
@@ -96,9 +96,10 @@ class ColSchema:
 class SchemaInfo:
     """Schema-derived context handed to `Step.fit()`.
 
-    Minimal stand-in for the full type defined by the schema subsystem
-    (``design/schema.md``). For now it carries the current column names and
-    dtype names; roles and the lineage DAG land with the real schema subsystem.
+    Carries the current column names, their dtype names, and the live `Roles`.
+    In practice a step reads only ``roles`` (for selector resolution). The
+    recipe-side column-lineage DAG (`shoez.schema.Schema`, ``design/schema.md``)
+    is maintained separately by the recipe and is not handed to steps.
     """
 
     def __init__(
