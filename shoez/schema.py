@@ -65,6 +65,19 @@ class ColumnNode:
     removed_by
         ``None`` while the column is live; set to the dropping step's ``id``
         once it has been removed from the frame and archived.
+
+    Examples
+    --------
+    Nodes are read off a fitted recipe's `Schema` by column name:
+
+    ```{python}
+    import pandas as pd
+    from shoez import Recipe, StepDummy
+
+    df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+    node = Recipe(steps=[StepDummy(["color"])]).fit(df).schema["color_red"]
+    node.name, node.source, node.parent_cols
+    ```
     """
 
     name: str
@@ -89,6 +102,43 @@ class Schema:
 
     Build the initial DAG with `from_frame`; the recipe then calls ``update()``
     after each step to keep it in sync with the transformed frame.
+
+    Examples
+    --------
+    The DAG is built by the recipe; read it back from ``FittedRecipe.schema``.
+
+    ```{python}
+    import pandas as pd
+    from shoez import Recipe, StepDummy
+
+    df = pd.DataFrame(
+        {"color": ["red", "green", "blue", "red"], "x": [1.0, 2.0, 3.0, 4.0]}
+    )
+    schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+    ```
+
+    ``color`` was expanded into indicators and dropped; ``x`` passed through:
+
+    ```{python}
+    schema.columns
+    ```
+
+    Provenance resolves — each indicator is sourced to the step and traces back
+    to ``color`` (gone from the live schema, but kept in the DAG):
+
+    ```{python}
+    schema.columns_from_source("dummy")
+    ```
+
+    ```{python}
+    sorted(schema.ancestors("color_red"))
+    ```
+
+    ``summary()`` renders the whole live schema as a tidy table:
+
+    ```{python}
+    schema.summary()
+    ```
     """
 
     def __init__(self) -> None:
@@ -102,6 +152,26 @@ class Schema:
         Each node takes its dtype from the frame, its roles from ``roles`` (an
         empty `Roles` if none given), an empty ``parent_cols``, a
         single-element ``dtype_history``, and ``sparse=False``.
+
+        Examples
+        --------
+        ```{python}
+        import pandas as pd
+        from shoez import _frame
+        from shoez.schema import Schema
+
+        frame = _frame.from_native(
+            pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
+        )
+        schema = Schema.from_frame(frame)
+        schema.columns
+        ```
+
+        Every node starts as an ``"original"`` with no parents:
+
+        ```{python}
+        schema["a"].source, schema["a"].parent_cols
+        ```
         """
         roles = roles if roles is not None else Roles()
         schema = cls()
@@ -229,6 +299,24 @@ class Schema:
         (``"float"``, ``"categorical_unordered"``, …) from
         `shoez._frame.dtype_category`; ``roles`` is the sorted role set joined
         with ``", "``. Built on the polars backend and returned native.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepDummy
+
+        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        ```
+
+        For a recipe that dummy-encodes ``color`` — one row per live column:
+
+        ```{python}
+        schema.summary()
+        ```
         """
         nodes = list(self._live.values())
         data: dict[str, list[Any]] = {
@@ -245,11 +333,44 @@ class Schema:
 
         The primitive behind the ``has_source(step_id)`` selector (#20). Pass
         ``"original"`` for the input columns that survive to the live schema.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepDummy
+
+        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        ```
+
+        ```{python}
+        schema.columns_from_source("dummy")
+        ```
         """
         return [name for name, node in self._live.items() if node.source == step_id]
 
     def parents(self, name: str) -> list[str]:
-        """Immediate parent columns of ``name`` (live or archived)."""
+        """Immediate parent columns of ``name`` (live or archived).
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepDummy
+
+        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        ```
+
+        ```{python}
+        schema.parents("color_green")
+        ```
+        """
         node = self._node(name)
         if node is None:
             raise KeyError(name)
@@ -262,6 +383,25 @@ class Schema:
         back through removed intermediates (e.g. a reduced component back to a
         dummy column back to the categorical it replaced). Cycles — which a DAG
         should never contain — are guarded against defensively.
+
+        Examples
+        --------
+        ``color`` was dropped by the dummy step, but the indicator still traces
+        back to it through the archived node:
+
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepDummy
+
+        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+        schema = Recipe(steps=[StepDummy(["color"])]).fit(df).schema
+        ```
+
+        ```{python}
+        sorted(schema.ancestors("color_red"))
+        ```
         """
         result: set[str] = set()
         stack = list(self.parents(name))
