@@ -248,3 +248,64 @@ class TestPolarsEscapeHatch:
         out = Recipe(steps=[StepNormalize(cs.numeric())]).fit(df).transform(df)
         assert isinstance(out, pl.DataFrame)
         assert abs(nw.from_native(out)["a"].mean()) < 1e-9
+
+
+class TestInRecipe:
+    """Native selectors driving a real step through Recipe.fit().transform().
+
+    The other suites resolve selectors directly; these prove the same selectors
+    pick the right columns end to end, including role plumbing through the recipe.
+    """
+
+    def _df(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "x1": [1.0, 2.0, 3.0],
+                "x2": [10.0, 20.0, 30.0],
+                "tag": ["a", "b", "c"],
+                "y": [0.0, 10.0, 20.0],
+            }
+        )
+
+    def test_role_selector_only_touches_predictors(self) -> None:
+        df = self._df()
+        recipe = Recipe(predictors=["x1", "x2"], outcome="y").add(
+            StepNormalize(Selectors.predictors_numeric())
+        )
+        out = recipe.fit(df).transform(df)
+        # predictors normalized (mean ~ 0); outcome left untouched.
+        assert abs(out["x1"].mean()) < 1e-9
+        assert abs(out["x2"].mean()) < 1e-9
+        assert out["y"].tolist() == [0.0, 10.0, 20.0]
+        assert out["tag"].tolist() == ["a", "b", "c"]
+
+    def test_name_selector_drives_step(self) -> None:
+        df = self._df()
+        out = (
+            Recipe()
+            .add(StepNormalize(Selectors.starts_with("x")))
+            .fit(df)
+            .transform(df)
+        )
+        assert abs(out["x1"].mean()) < 1e-9
+        assert abs(out["x2"].mean()) < 1e-9
+        assert out["y"].tolist() == [0.0, 10.0, 20.0]
+
+    def test_set_op_selector_drives_step(self) -> None:
+        df = self._df()
+        recipe = Recipe(predictors=["x1", "x2"], outcome="y").add(
+            StepNormalize(Selectors.numeric() & Selectors.predictors())
+        )
+        out = recipe.fit(df).transform(df)
+        assert abs(out["x1"].mean()) < 1e-9
+        assert out["y"].tolist() == [0.0, 10.0, 20.0]
+
+    def test_empty_native_selection_is_passthrough(self) -> None:
+        df = self._df()
+        out = (
+            Recipe()
+            .add(StepNormalize(Selectors.starts_with("zzz")))
+            .fit(df)
+            .transform(df)
+        )
+        pd.testing.assert_frame_equal(out, df)
