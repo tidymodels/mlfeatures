@@ -2,8 +2,9 @@
 
 A minimal, vertical-slice implementation of the ``specify → fit → transform``
 lifecycle described in ``design/lifecycle.md``. It exercises the step contract
-end to end while deliberately omitting subsystems that are not yet built:
-selectors, roles, the ptype snapshot, dtype pre-checks, and the lineage DAG.
+end to end and maintains the column-lineage DAG (``design/schema.md``) across
+``fit()``, while deliberately omitting subsystems not yet built: the ptype
+snapshot and dtype pre-checks.
 
 Steps are pure: ``Recipe(steps=[...])`` and ``.add(...)`` return a *new*
 ``Recipe`` with the step appended — they never touch data. ``fit()`` runs each step's ``fit`` on the
@@ -15,10 +16,12 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 from __future__ import annotations
 
 from shoez import _frame
+from shoez.schema import Schema
 from shoez.step import RowOp, Step
 from shoez.step_intercept import StepIntercept
 from shoez.types import (
     DataFrame,
+    Frame,
     Roles,
     SchemaInfo,
     _apply_role_assignments,  # pyright: ignore[reportPrivateUsage]
@@ -59,10 +62,13 @@ class Recipe:
         case_weights: str | list[str] | None = None,
     ):
         self.steps: list[Step] = list(steps) if steps is not None else []
-        self._prototype_columns: list[str] | None = None
-        if data is not None:
-            info = SchemaInfo.from_frame(_frame.from_native(data))
-            self._prototype_columns = info.columns
+        # The optional prototype frame backs column-existence checks during role
+        # assignment and the pre-fit ``summary()``. It is never mutated, so
+        # clones share the reference. The lineage DAG is derived from it on
+        # demand rather than stored — see ``summary()``.
+        self._prototype_frame: Frame | None = (
+            _frame.from_native(data) if data is not None else None
+        )
         self.roles = Roles()
         _apply_role_assignments(
             self.roles,
@@ -73,11 +79,7 @@ class Recipe:
     def _clone(self) -> "Recipe":
         """A shallow copy that preserves steps, prototype, and roles."""
         new = Recipe(steps=self.steps)
-        new._prototype_columns = (
-            list(self._prototype_columns)
-            if self._prototype_columns is not None
-            else None
-        )
+        new._prototype_frame = self._prototype_frame
         new.roles = self.roles.copy()
         return new
 
@@ -106,9 +108,8 @@ class Recipe:
 
     def _check_column_exists(self, column: str) -> None:
         """Validate ``column`` against the prototype, if one was supplied."""
-        if (
-            self._prototype_columns is not None
-            and column not in self._prototype_columns
+        if self._prototype_frame is not None and column not in _frame.columns(
+            self._prototype_frame
         ):
             raise ValueError(f"column {column!r} is not in the prototype data")
 
@@ -132,6 +133,10 @@ class Recipe:
             for col in _frame.columns(current):
                 if col not in reserved:
                     live_roles.add(col, "predictor")
+        # The column-lineage DAG, seeded from the training frame and updated
+        # after each column-changing step (see design/schema.md). RowOp and
+        # empty-selection steps make no schema change and are skipped below.
+        schema = Schema.from_frame(current, live_roles)
         fitted_steps: list[Step] = []
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
@@ -160,16 +165,40 @@ class Recipe:
             if not isinstance(step, RowOp):
                 current = fitted.transform(current)
             fitted.update_roles(live_roles)
+            if not isinstance(step, RowOp):
+                schema.update(fitted, current, live_roles)
             fitted_steps.append(fitted)
-        return FittedRecipe(steps=fitted_steps, roles=live_roles)
+        return FittedRecipe(steps=fitted_steps, roles=live_roles, schema=schema)
+
+    def summary(self) -> DataFrame:
+        """The initial (pre-fit) schema as a tidy frame. See ``design/schema.md``.
+
+        Shows the prototype columns before any step runs. Requires a prototype:
+        construct the recipe with ``Recipe(data=...)``, or call ``fit()`` and use
+        ``FittedRecipe.summary()`` for the post-fit schema.
+        """
+        if self._prototype_frame is None:
+            raise ValueError(
+                "summary() needs prototype data; construct the recipe with "
+                "Recipe(data=...), or fit it and call FittedRecipe.summary()."
+            )
+        return Schema.from_frame(self._prototype_frame, self.roles).summary()
 
 
 class FittedRecipe:
     """A fitted pipeline: applies stored statistics to new data."""
 
-    def __init__(self, steps: list[Step], roles: Roles | None = None):
+    def __init__(
+        self,
+        steps: list[Step],
+        roles: Roles | None = None,
+        schema: Schema | None = None,
+    ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
+        #: The post-all-steps column-lineage DAG (``design/schema.md``), or
+        #: ``None`` if the recipe was constructed without one.
+        self.schema = schema
 
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Re-fitting an already-fitted recipe is a no-op: returns ``self``.
@@ -195,3 +224,9 @@ class FittedRecipe:
                 continue
             current = step.transform(current)
         return _frame.to_native(current)
+
+    def summary(self) -> DataFrame:
+        """The fitted (post-all-steps) schema as a tidy frame. See ``design/schema.md``."""
+        if self.schema is None:
+            raise RuntimeError("this FittedRecipe was constructed without a schema")
+        return self.schema.summary()

@@ -80,3 +80,18 @@ class TestEstimatesLifecycle:
     """Not applicable: StepIntercept estimates no statistics — it adds a constant
     column and stores only its output schema, so there is no ``_estimates``
     attribute. Slot kept visible per the conformance contract."""
+
+
+class TestLineage:
+    """output_parents() declares exactly the columns the step adds, each with valid parents."""
+
+    def test_output_parents_matches_added_columns(self) -> None:
+        fitted, train = _fitted()
+        step = fitted.steps[0]
+        pre = set(train.columns)
+        added = set(fitted.transform(train).columns) - pre
+        parents = step.output_parents()
+        assert set(parents) == added
+        assert all(
+            parent in pre for parents_of in parents.values() for parent in parents_of
+        )

@@ -93,9 +93,11 @@ reference:
       - Recipe.add
       - Recipe.fit
       - Recipe.set_roles
+      - Recipe.summary
       - name: FittedRecipe
         members: false
       - FittedRecipe.transform
+      - FittedRecipe.summary
 
   - title: Steps
     desc: >-
@@ -145,9 +147,24 @@ reference:
       - Step.transform
       - Step.schema_in
       - Step.schema_out
+      - Step.output_parents
       - Step.accepts_dtypes
       - Step.required_pkgs
       - name: RowOp
+        members: false
+
+  - title: Schema
+    desc: >-
+      The column-lineage DAG a fitted recipe maintains — per-column provenance
+      and dtype history, plus the queries that back has_source.
+    contents:
+      - name: Schema
+        members: false
+      - Schema.summary
+      - Schema.columns_from_source
+      - Schema.parents
+      - Schema.ancestors
+      - name: ColumnNode
         members: false
 
   - title: Interop

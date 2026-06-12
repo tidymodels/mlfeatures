@@ -4,6 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from shoez.compat import RecipeTransformer
 from shoez.recipe import FittedRecipe, Recipe
+from shoez.schema import ColumnNode, Schema
 from shoez.selectors import Selectors
 from shoez.step import RowOp, Step
 from shoez.step_class_distance import StepClassDistance
@@ -59,6 +60,8 @@ __all__ = [
     "Roles",
     "ColSchema",
     "SchemaInfo",
+    "Schema",
+    "ColumnNode",
     "DataFrame",
     "Frame",
     "Selectors",

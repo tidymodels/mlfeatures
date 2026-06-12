@@ -123,6 +123,17 @@ The mode labels below are a shorthand for the *shape* of the input/output relati
 | `ROW_OP` | No column schema change | `step_filter`, `step_shuffle` |
 | `UNCONSTRAINED` | Relationship cannot be declared in advance | `step_mutate` |
 
+### Declaring per-output provenance: `output_parents()`
+
+The mode is a coarse shape; it does not say *which* input produced *which* output, and that distinction is real and mode-dependent. Each `step_dummy` indicator descends from a single source column (`a1, a2 ← a`), whereas every `step_pca` component descends from the whole input set (`pc1, pc2 ← {a, b, c}`). Even within `ADDING`, `step_intercept` has no parents while `step_class_distance`'s outputs derive from the feature columns. So every step that *creates* columns declares the exact mapping:
+
+```python
+def output_parents(self) -> dict[str, list[str]]:
+    """Map each produced column to the input column(s) it descends from."""
+```
+
+Known after `fit()`. The keys are exactly the columns the step adds to the frame; the recipe validates them against the post-step frame and rejects a mismatch. The base-class default returns `{}` — correct for steps that create no new columns (in-place `ONE_TO_ONE`, `REMOVING`, `ROW_OP`). A degree-0 `step_poly` column is a pass-through, not a newly produced column, so it is excluded from the map.
+
 ### What recording this information enables
 
 After `fit()`, the lineage DAG contains the full input/output mapping for every step. This unlocks:
