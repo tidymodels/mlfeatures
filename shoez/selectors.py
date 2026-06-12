@@ -1,34 +1,165 @@
-"""Role- and type-aware column selectors for use in step declarations.
+"""Role-, type-, name-, and provenance-aware column selectors.
 
 Import as ``from shoez import Selectors as cs`` and pass the result of a
 factory call directly to any step:
 
 ```python
-StepDropCorr(cs.predictors_numeric())
+StepDropCorr(Selectors.predictors_numeric())
+StepPCA(Selectors.starts_with("x") & Selectors.predictors())
+StepPCA(Selectors.has_source(step_type=StepDummy))
 ```
 
-Selectors are resolved at fit time, when both the frame schema (dtypes) and
-the recipe roles are available.
+Selectors are resolved to a list of column names **at fit time**, when the
+frame schema (dtypes), the recipe roles, and the column-lineage DAG are all
+available. They are the recommended, fully composable selector surface for
+shoez. ``shoez`` also still accepts raw polars / narwhals selectors anywhere a
+selector is expected (see ``shoez._frame.select``), but those compose cleanly
+only *within* their own family — see ``design/selectors.md`` and `Selectors.wrap`.
+
+See ``design/selectors.md`` for the full design.
 """
 
 from __future__ import annotations
 
+import re
+from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
 if TYPE_CHECKING:
+    from shoez.schema import Schema
+    from shoez.step import Step
     from shoez.types import Frame, Roles
 
 
 class ShoezSelector:
-    """Base class for all shoez-native column selectors."""
+    """Base class for all shoez-native column selectors.
 
-    def resolve(self, frame: Frame, roles: Roles) -> list[str]:
+    Subclasses implement `resolve`. Instances compose with ``&`` (intersection),
+    ``|`` (union), ``~`` (complement), and ``-`` (difference). A shoez-native
+    selector must **lead** any cross-family expression — ``shoez_sel & cs.numeric()``
+    works (the right operand is coerced via `wrap`), but ``cs.numeric() & shoez_sel``
+    does not: polars raises ``TypeError`` and narwhals silently produces a broken
+    ``Expr``, neither of which shoez can intercept. Use `Selectors.wrap` to put a
+    polars / narwhals selector first.
+    """
+
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
+        """Resolve to concrete column names against ``frame`` (and ``roles``).
+
+        ``schema`` and ``steps`` are the live lineage DAG and id→step map, only
+        needed by provenance selectors; they are ``None`` outside a recipe fit.
+        """
         raise NotImplementedError
+
+    def __and__(self, other: object) -> ShoezSelector:
+        return _CompositeSelector("and", [self, _coerce(other)])
+
+    def __or__(self, other: object) -> ShoezSelector:
+        return _CompositeSelector("or", [self, _coerce(other)])
+
+    def __sub__(self, other: object) -> ShoezSelector:
+        return _CompositeSelector("and", [self, _Complement(_coerce(other))])
+
+    def __invert__(self) -> ShoezSelector:
+        return _Complement(self)
+
+
+def _coerce(value: object) -> ShoezSelector:
+    """Lift a selector-like value into a `ShoezSelector` leaf.
+
+    Accepts an existing `ShoezSelector` (returned as-is), a column name, a
+    sequence of names, or a polars / narwhals selector. This is what lets a
+    shoez selector lead a cross-family expression.
+    """
+    if isinstance(value, ShoezSelector):
+        return value
+    return _ForeignSelector(value)
+
+
+class _ForeignSelector(ShoezSelector):
+    """Adapts a raw name / list / polars / narwhals selector to `ShoezSelector`.
+
+    Resolution defers to ``shoez._frame.select``'s existing type dispatch, so a
+    polars selector still expands via the schema and a narwhals selector via
+    narwhals — for any backend.
+    """
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
+        from shoez import _frame
+
+        # ``self._value`` is one of the non-ShoezSelector Selector members
+        # (name, sequence of names, polars selector, or narwhals selector),
+        # all handled by ``_frame.select``'s type dispatch.
+        return _frame.select(frame, self._value, roles).columns  # type: ignore[arg-type]
+
+
+class _CompositeSelector(ShoezSelector):
+    """Set-op over child selectors, preserving frame column order."""
+
+    def __init__(self, op: str, children: Sequence[ShoezSelector]) -> None:
+        self._op = op
+        self._children = list(children)
+
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
+        from shoez import _frame
+
+        resolved: list[set[str]] = [
+            set(child.resolve(frame, roles, schema, steps)) for child in self._children
+        ]
+        keep: set[str] = set()
+        if resolved:
+            keep = resolved[0]
+            for other in resolved[1:]:
+                keep = keep & other if self._op == "and" else keep | other
+        # Restore deterministic frame order.
+        return [c for c in _frame.columns(frame) if c in keep]
+
+
+class _Complement(ShoezSelector):
+    """Everything in the frame *except* the wrapped selector's columns."""
+
+    def __init__(self, inner: ShoezSelector) -> None:
+        self._inner = inner
+
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
+        from shoez import _frame
+
+        excluded = set(self._inner.resolve(frame, roles, schema, steps))
+        return [c for c in _frame.columns(frame) if c not in excluded]
 
 
 class _RoleTypeSelector(ShoezSelector):
+    """Columns filtered by role (optional) and narwhals dtype (optional)."""
+
     def __init__(
         self,
         role: str | None,
@@ -37,7 +168,13 @@ class _RoleTypeSelector(ShoezSelector):
         self._role = role
         self._dtype = dtype
 
-    def resolve(self, frame: Frame, roles: Roles) -> list[str]:
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
         from shoez import _frame
 
         if self._role is not None:
@@ -52,8 +189,229 @@ class _RoleTypeSelector(ShoezSelector):
         return [c for c in candidates if issubclass(type(frame.schema[c]), self._dtype)]
 
 
+class _NameSelector(ShoezSelector):
+    """Columns whose names match a predicate, in frame order."""
+
+    def __init__(self, predicate: "Callable[[str], bool]") -> None:
+        self._predicate = predicate
+
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
+        from shoez import _frame
+
+        return [c for c in _frame.columns(frame) if self._predicate(c)]
+
+
+class _SourceSelector(ShoezSelector):
+    """Columns selected by which step produced them, via the lineage DAG.
+
+    ``ancestral=False`` matches a column's immediate producer (``has_source``);
+    ``ancestral=True`` matches any step in the column's ancestry (``has_ancestor``).
+    """
+
+    def __init__(
+        self,
+        step: str | None,
+        step_type: "type[Step] | None",
+        ancestral: bool,
+    ) -> None:
+        if (step is None) == (step_type is None):
+            raise ValueError("pass exactly one of `step` or `step_type=`")
+        self._step = step
+        self._step_type = step_type
+        self._ancestral = ancestral
+
+    def _matching_ids(self, schema: Schema, steps: dict[str, Step] | None) -> set[str]:
+        if self._step is not None:
+            return {self._step}
+        if steps is None:
+            return set()
+        return {
+            sid
+            for sid, s in steps.items()
+            if self._step_type is not None and isinstance(s, self._step_type)
+        }
+
+    def resolve(
+        self,
+        frame: Frame,
+        roles: Roles,
+        schema: Schema | None = None,
+        steps: dict[str, Step] | None = None,
+    ) -> list[str]:
+        from shoez import _frame
+
+        if schema is None:
+            # No DAG available (e.g. resolved outside a recipe fit): no matches.
+            return []
+        ids = self._matching_ids(schema, steps)
+        if not ids:
+            return []
+
+        live = set(_frame.columns(frame))
+        selected: set[str]
+        if not self._ancestral:
+            selected = {
+                name
+                for sid in ids
+                for name in schema.columns_from_source(sid)
+                if name in live
+            }
+        else:
+            selected = set()
+            for name in live:
+                node_sources = {schema[name].source} | {
+                    schema[a].source for a in schema.ancestors(name) if a in schema
+                }
+                if node_sources & ids:
+                    selected.add(name)
+        return [c for c in _frame.columns(frame) if c in selected]
+
+
 class Selectors:
-    """Namespace of factory methods for built-in shoez column selectors."""
+    """Namespace of factory methods for built-in shoez column selectors.
+
+    All factories return a `ShoezSelector` that composes with ``&`` / ``|`` /
+    ``~`` / ``-``. See ``design/selectors.md``.
+    """
+
+    # --- By name -----------------------------------------------------------
+
+    @classmethod
+    def col(cls, *names: str) -> ShoezSelector:
+        """The named column(s), if present.
+
+        ```python
+        Selectors.col("x1")
+        Selectors.col("x1", "x2")
+        ```
+        """
+        wanted = set(names)
+        return _NameSelector(lambda c: c in wanted)
+
+    @classmethod
+    def starts_with(cls, prefix: str) -> ShoezSelector:
+        """Columns whose name starts with ``prefix``."""
+        return _NameSelector(lambda c: c.startswith(prefix))
+
+    @classmethod
+    def ends_with(cls, suffix: str) -> ShoezSelector:
+        """Columns whose name ends with ``suffix``."""
+        return _NameSelector(lambda c: c.endswith(suffix))
+
+    @classmethod
+    def contains(cls, substring: str) -> ShoezSelector:
+        """Columns whose name contains ``substring``."""
+        return _NameSelector(lambda c: substring in c)
+
+    @classmethod
+    def matches(cls, pattern: str) -> ShoezSelector:
+        """Columns whose name matches the regular expression ``pattern``.
+
+        Uses ``re.search`` (anchor explicitly with ``^``/``$`` if desired).
+        """
+        compiled = re.compile(pattern)
+        return _NameSelector(lambda c: compiled.search(c) is not None)
+
+    @classmethod
+    def num_range(cls, prefix: str, rng: Iterable[int]) -> ShoezSelector:
+        """Columns named ``f"{prefix}{i}"`` for ``i`` in ``rng`` (e.g. x1..x5).
+
+        ```python
+        Selectors.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
+        ```
+        """
+        wanted = {f"{prefix}{i}" for i in rng}
+        return _NameSelector(lambda c: c in wanted)
+
+    @classmethod
+    def everything(cls) -> ShoezSelector:
+        """All columns."""
+        return _RoleTypeSelector(role=None, dtype=None)
+
+    # --- By role -----------------------------------------------------------
+
+    @classmethod
+    def has_role(cls, role: str) -> ShoezSelector:
+        """All columns carrying ``role``."""
+        return _RoleTypeSelector(role=role, dtype=None)
+
+    @classmethod
+    def predictors(cls) -> ShoezSelector:
+        """All predictor columns regardless of type."""
+        return _RoleTypeSelector(role="predictor", dtype=None)
+
+    @classmethod
+    def outcomes(cls) -> ShoezSelector:
+        """All outcome columns regardless of type."""
+        return _RoleTypeSelector(role="outcome", dtype=None)
+
+    # --- By type (bare) ----------------------------------------------------
+
+    @classmethod
+    def numeric(cls) -> ShoezSelector:
+        """All numeric (int + float) columns."""
+        return _RoleTypeSelector(role=None, dtype=nw.dtypes.NumericType)
+
+    @classmethod
+    def float(cls) -> ShoezSelector:
+        """All floating-point columns."""
+        return _RoleTypeSelector(role=None, dtype=nw.dtypes.FloatType)
+
+    #: Alias of `float`, matching R's ``all_double``.
+    double = float
+
+    @classmethod
+    def integer(cls) -> ShoezSelector:
+        """All integer columns (signed or unsigned)."""
+        return _RoleTypeSelector(role=None, dtype=nw.dtypes.IntegerType)
+
+    @classmethod
+    def string(cls) -> ShoezSelector:
+        """All string columns."""
+        return _RoleTypeSelector(role=None, dtype=nw.String)
+
+    @classmethod
+    def categorical(cls) -> ShoezSelector:
+        """All categorical/enum columns (ordered or unordered)."""
+        return _RoleTypeSelector(role=None, dtype=(nw.Categorical, nw.Enum))
+
+    @classmethod
+    def ordered(cls) -> ShoezSelector:
+        """All ordered-categorical columns (narwhals ``Enum``)."""
+        return _RoleTypeSelector(role=None, dtype=nw.Enum)
+
+    @classmethod
+    def unordered(cls) -> ShoezSelector:
+        """All unordered-categorical columns (narwhals ``Categorical``)."""
+        return _RoleTypeSelector(role=None, dtype=nw.Categorical)
+
+    @classmethod
+    def nominal(cls) -> ShoezSelector:
+        """All nominal columns (string, categorical, or enum)."""
+        return _RoleTypeSelector(role=None, dtype=(nw.String, nw.Categorical, nw.Enum))
+
+    @classmethod
+    def boolean(cls) -> ShoezSelector:
+        """All boolean columns."""
+        return _RoleTypeSelector(role=None, dtype=nw.Boolean)
+
+    @classmethod
+    def date(cls) -> ShoezSelector:
+        """All Date columns."""
+        return _RoleTypeSelector(role=None, dtype=nw.Date)
+
+    @classmethod
+    def datetime(cls) -> ShoezSelector:
+        """All Datetime columns."""
+        return _RoleTypeSelector(role=None, dtype=nw.Datetime)
+
+    # --- Compound predictor selectors (preferred in step args) -------------
 
     @classmethod
     def predictors_numeric(cls) -> ShoezSelector:
@@ -64,11 +422,6 @@ class Selectors:
     def predictors_categorical(cls) -> ShoezSelector:
         """All predictor columns that are categorical."""
         return _RoleTypeSelector(role="predictor", dtype=(nw.Categorical, nw.Enum))
-
-    @classmethod
-    def predictors(cls) -> ShoezSelector:
-        """All predictor columns regardless of type."""
-        return _RoleTypeSelector(role="predictor", dtype=None)
 
     @classmethod
     def predictors_nominal(cls) -> ShoezSelector:
@@ -107,7 +460,54 @@ class Selectors:
         """All predictor columns that are boolean-typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.Boolean)
 
+    # --- By source (lineage DAG) -------------------------------------------
+
     @classmethod
-    def outcomes(cls) -> ShoezSelector:
-        """All outcome columns regardless of type."""
-        return _RoleTypeSelector(role="outcome", dtype=None)
+    def has_source(
+        cls,
+        step: str | None = None,
+        *,
+        step_type: "type[Step] | None" = None,
+    ) -> ShoezSelector:
+        """Columns whose **immediate** producer is the given step.
+
+        Pass either a step id or ``step_type=`` (a `Step` subclass). Resolves
+        against the lineage DAG at fit time. For columns that trace back to a
+        step *anywhere* in their ancestry, use `has_ancestor`.
+
+        ```python
+        Selectors.has_source("dummy_abc123")
+        Selectors.has_source(step_type=StepDummy)
+        ```
+        """
+        return _SourceSelector(step=step, step_type=step_type, ancestral=False)
+
+    @classmethod
+    def has_ancestor(
+        cls,
+        step: str | None = None,
+        *,
+        step_type: "type[Step] | None" = None,
+    ) -> ShoezSelector:
+        """Columns with the given step **anywhere in their ancestry**.
+
+        The ancestral counterpart of `has_source`: matches columns even after
+        they were further transformed (e.g. dummies that were then normalized).
+        """
+        return _SourceSelector(step=step, step_type=step_type, ancestral=True)
+
+    # --- Escape hatch ------------------------------------------------------
+
+    @classmethod
+    def wrap(cls, selector: object) -> ShoezSelector:
+        """Lift a raw name / list / polars / narwhals selector into shoez-land.
+
+        Use this to let a polars or narwhals selector *lead* a composed
+        expression, since ``cs.numeric() & shoez_sel`` cannot work directly:
+
+        ```python
+        import polars.selectors as cs
+        Selectors.wrap(cs.starts_with("x_")) & Selectors.predictors()
+        ```
+        """
+        return _coerce(selector)

@@ -23,7 +23,9 @@ if TYPE_CHECKING:
     import polars as pl
     from polars.selectors import Selector as PlSelector
 
+    from shoez.schema import Schema
     from shoez.selectors import ShoezSelector
+    from shoez.step import Step
 
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
@@ -99,7 +101,10 @@ class SchemaInfo:
     Carries the current column names, their dtype names, and the live `Roles`.
     In practice a step reads only ``roles`` (for selector resolution). The
     recipe-side column-lineage DAG (`shoez.schema.Schema`, ``design/schema.md``)
-    is maintained separately by the recipe and is not handed to steps.
+    is maintained separately by the recipe and is not handed to steps for their
+    own logic; ``schema`` and ``producing_steps`` are populated by the recipe
+    purely so provenance selectors (``has_source`` / ``has_ancestor``) can
+    resolve against the DAG at fit time. Both are ``None`` outside a recipe fit.
     """
 
     def __init__(
@@ -107,10 +112,17 @@ class SchemaInfo:
         columns: list[str] | None = None,
         dtypes: dict[str, str] | None = None,
         roles: Roles | None = None,
+        schema: "Schema | None" = None,
+        producing_steps: "dict[str, Step] | None" = None,
     ):
         self.columns = list(columns) if columns is not None else []
         self.dtypes = dict(dtypes) if dtypes is not None else {}
         self.roles: Roles = roles if roles is not None else Roles()
+        #: The live column-lineage DAG, set by the recipe during fit (else None).
+        self.schema: "Schema | None" = schema
+        #: Map of step id → fitted step, set by the recipe during fit (else None).
+        #: Lets ``has_source(step_type=...)`` map ids back to step instances.
+        self.producing_steps: "dict[str, Step] | None" = producing_steps
 
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":
