@@ -180,7 +180,7 @@ reference:
       against.
     contents:
       - name: Selectors
-        members: false
+        members: true
       - name: ColSchema
         members: false
       - name: SchemaInfo
