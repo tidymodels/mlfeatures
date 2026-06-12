@@ -61,7 +61,7 @@ Because every step declares its input/output mode and the recipe maintains a col
 ```python
 rec = (
     Recipe(data=df)
-    .add(StepDummy(Selectors.predictors_categorical()))
+    .add(StepDummy(Selectors.categorical_predictors()))
     .add(StepPCA(Selectors.has_source(step_type=StepDummy)))  # PCA only over the dummies
 )
 ```
@@ -102,15 +102,15 @@ Names follow Python and polars conventions, not R. The dtype check is an interna
 ## Compound selectors
 
 ```python
-Selectors.predictors_numeric()       # numeric() & predictors()
-Selectors.predictors_double()        # float() & predictors()
-Selectors.predictors_integer()       # integer() & predictors()
-Selectors.predictors_categorical()   # categorical() & predictors()
-Selectors.predictors_string()        # string() & predictors()
-Selectors.predictors_nominal()       # nominal() & predictors()
+Selectors.numeric_predictors()       # numeric() & predictors()
+Selectors.double_predictors()        # float() & predictors()
+Selectors.integer_predictors()       # integer() & predictors()
+Selectors.categorical_predictors()   # categorical() & predictors()
+Selectors.string_predictors()        # string() & predictors()
+Selectors.nominal_predictors()       # nominal() & predictors()
 ```
 
-These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`Selectors.numeric()`, `Selectors.float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `Selectors.predictors_numeric()` should nearly always be the right choice over `Selectors.numeric()`.
+These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`Selectors.numeric()`, `Selectors.float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `Selectors.numeric_predictors()` should nearly always be the right choice over `Selectors.numeric()`.
 
 ---
 

@@ -99,7 +99,7 @@ class TestByRole:
     def test_has_role_and_compound(self) -> None:
         frame, roles = _frame_with_roles()
         assert _resolve(Selectors.has_role("outcome"), frame, roles) == ["y"]
-        assert _resolve(Selectors.predictors_numeric(), frame, roles) == [
+        assert _resolve(Selectors.numeric_predictors(), frame, roles) == [
             "x1",
             "x2",
             "count",
@@ -270,7 +270,7 @@ class TestInRecipe:
     def test_role_selector_only_touches_predictors(self) -> None:
         df = self._df()
         recipe = Recipe(predictors=["x1", "x2"], outcome="y").add(
-            StepNormalize(Selectors.predictors_numeric())
+            StepNormalize(Selectors.numeric_predictors())
         )
         out = recipe.fit(df).transform(df)
         # predictors normalized (mean ~ 0); outcome left untouched.

@@ -4,7 +4,7 @@ Import as ``from shoez import Selectors as cs`` and pass the result of a
 factory call directly to any step:
 
 ```python
-StepDropCorr(Selectors.predictors_numeric())
+StepDropCorr(Selectors.numeric_predictors())
 StepPCA(Selectors.starts_with("x") & Selectors.predictors())
 StepPCA(Selectors.has_source(step_type=StepDummy))
 ```
@@ -414,49 +414,49 @@ class Selectors:
     # --- Compound predictor selectors (preferred in step args) -------------
 
     @classmethod
-    def predictors_numeric(cls) -> ShoezSelector:
+    def numeric_predictors(cls) -> ShoezSelector:
         """All predictor columns that are numeric."""
         return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.NumericType)
 
     @classmethod
-    def predictors_categorical(cls) -> ShoezSelector:
+    def categorical_predictors(cls) -> ShoezSelector:
         """All predictor columns that are categorical."""
         return _RoleTypeSelector(role="predictor", dtype=(nw.Categorical, nw.Enum))
 
     @classmethod
-    def predictors_nominal(cls) -> ShoezSelector:
+    def nominal_predictors(cls) -> ShoezSelector:
         """All predictor columns that are nominal (categorical, enum, or string)."""
         return _RoleTypeSelector(
             role="predictor", dtype=(nw.String, nw.Categorical, nw.Enum)
         )
 
     @classmethod
-    def predictors_string(cls) -> ShoezSelector:
+    def string_predictors(cls) -> ShoezSelector:
         """All predictor columns that are string-typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.String)
 
     @classmethod
-    def predictors_integer(cls) -> ShoezSelector:
+    def integer_predictors(cls) -> ShoezSelector:
         """All predictor columns that are integer-typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.IntegerType)
 
     @classmethod
-    def predictors_double(cls) -> ShoezSelector:
+    def double_predictors(cls) -> ShoezSelector:
         """All predictor columns that are floating-point typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.FloatType)
 
     @classmethod
-    def predictors_date(cls) -> ShoezSelector:
+    def date_predictors(cls) -> ShoezSelector:
         """All predictor columns that are Date-typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.Date)
 
     @classmethod
-    def predictors_datetime(cls) -> ShoezSelector:
+    def datetime_predictors(cls) -> ShoezSelector:
         """All predictor columns that are Datetime-typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.Datetime)
 
     @classmethod
-    def predictors_boolean(cls) -> ShoezSelector:
+    def boolean_predictors(cls) -> ShoezSelector:
         """All predictor columns that are boolean-typed."""
         return _RoleTypeSelector(role="predictor", dtype=nw.Boolean)
 
