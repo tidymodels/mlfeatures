@@ -18,6 +18,7 @@ from shoez import (
     ANY_DTYPE,
     ColSchema,
     Mode,
+    Recipe,
     Step,
     StepClassDistance,
     StepDropZeroVariance,
@@ -392,3 +393,52 @@ def test_ancestors_trace_through_archived_columns() -> None:
     )
     assert schema.ancestors("pc1") == {"g_b", "x", "g"}
     assert schema.columns_from_source("reduce") == ["pc1", "pc2"]
+
+
+# --- Recipe integration ------------------------------------------------------
+
+
+def test_recipe_fit_builds_lineage_across_steps() -> None:
+    train = pd.DataFrame({"a": [1, 2, 3], "g": ["x", "y", "x"]})
+    fitted = Recipe(steps=[StepNormalize(["a"]), StepDummy(["g"])]).fit(train)
+    schema = fitted.schema
+    assert schema is not None
+    # normalize: in-place rescale (source unchanged, dtype became float)
+    assert schema["a"].source == "original"
+    assert schema["a"].dtype_history[-1] == nw.Float64
+    # dummy: g replaced by g_y, traceable back to g
+    assert "g" not in schema
+    assert schema["g_y"].source == "dummy"
+    assert schema.ancestors("g_y") == {"g"}
+    assert schema.columns_from_source("dummy") == ["g_y"]
+
+
+def test_fitted_recipe_summary_reflects_the_final_schema() -> None:
+    train = pd.DataFrame({"g": ["a", "b", "a"], "h": ["x", "y", "x"]})
+    out = nw.from_native(Recipe(steps=[StepDummy(["g"])]).fit(train).summary())
+    source_of = dict(zip(out["name"].to_list(), out["source"].to_list()))
+    assert "g" not in source_of
+    assert source_of["g_b"] == "dummy"
+    assert source_of["h"] == "original"
+
+
+def test_recipe_summary_pre_fit_shows_initial_schema_with_declared_roles() -> None:
+    train = pd.DataFrame({"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
+    out = nw.from_native(Recipe(data=train, outcome="y", predictors="x").summary())
+    assert out["name"].to_list() == ["y", "x"]
+    assert out["source"].to_list() == ["original", "original"]
+    role_of = dict(zip(out["name"].to_list(), out["roles"].to_list()))
+    assert role_of == {"y": "outcome", "x": "predictor"}
+
+
+def test_recipe_summary_without_prototype_raises() -> None:
+    with pytest.raises(ValueError, match="prototype data"):
+        Recipe(steps=[StepDummy(["g"])]).summary()
+
+
+def test_recipe_empty_selection_leaves_schema_unchanged() -> None:
+    train = pd.DataFrame({"g": ["a", "b", "a"], "h": ["x", "y", "x"]})
+    fitted = Recipe(steps=[StepDummy([])]).fit(train)
+    assert fitted.schema is not None
+    assert fitted.schema.columns == ["g", "h"]
+    assert all(fitted.schema[c].source == "original" for c in ("g", "h"))
