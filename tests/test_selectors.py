@@ -37,8 +37,48 @@ def _frame_with_roles() -> tuple[Frame, Roles]:
     return frame, roles
 
 
+def _typed_frame_with_roles() -> tuple[Frame, Roles]:
+    """A frame spanning every dtype family the type selectors target.
+
+    pandas cannot represent a narwhals ``Date`` without pyarrow, so this fixture
+    is polars-backed; the selector layer is backend-agnostic. Column order is
+    fixed so ``resolve`` results can be asserted exactly. ``y`` (float) and
+    ``grp`` (categorical) are outcomes so the ``*_predictors`` compounds have a
+    same-typed non-predictor column to exclude.
+    """
+    df = pl.DataFrame(
+        {
+            "fl": pl.Series([1.0, 2.0, 3.0], dtype=pl.Float64),
+            "i": pl.Series([1, 2, 3], dtype=pl.Int64),
+            "s": ["x", "y", "z"],
+            "cat": pl.Series(["a", "b", "c"], dtype=pl.Categorical),
+            "enum": pl.Series(["a", "b", "c"], dtype=pl.Enum(["a", "b", "c"])),
+            "flag": [True, False, True],
+            "d": pl.Series(["2020-01-01", "2020-01-02", "2020-01-03"]).str.to_date(),
+            "dt": pl.Series(
+                ["2020-01-01", "2020-01-02", "2020-01-03"]
+            ).str.to_datetime(),
+            "y": pl.Series([0.0, 1.0, 0.0], dtype=pl.Float64),
+            "grp": pl.Series(["p", "q", "p"], dtype=pl.Categorical),
+        }
+    )
+    frame = _frame.from_native(df)
+    roles = Roles()
+    for col in ("fl", "i", "s", "cat", "enum", "flag", "d", "dt"):
+        roles.add(col, "predictor")
+    roles.add("y", "outcome")
+    roles.add("grp", "outcome")
+    return frame, roles
+
+
 def _resolve(selector: object, frame: Frame, roles: Roles) -> list[str]:
     return _frame.select(frame, selector, roles).columns  # type: ignore[arg-type]
+
+
+class TestTypedFixture:
+    def test_everything_spans_all_columns(self) -> None:
+        frame, roles = _typed_frame_with_roles()
+        assert _resolve(Selectors.everything(), frame, roles) == _frame.columns(frame)
 
 
 class TestByName:

@@ -35,6 +35,8 @@ Selectors.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
 Selectors.everything()
 ```
 
+There is deliberately **no positional range selector** (recipes' `beds:sqft`, selecting every column between two positions). Position is a brittle thing to depend on: it changes as upstream steps add and drop columns, so a range that is correct when the recipe is written can silently capture the wrong columns at fit time. Select by name pattern (`starts_with`, `matches`, `num_range`), by role, or by type instead.
+
 ---
 
 ## By role
