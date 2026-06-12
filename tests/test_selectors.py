@@ -125,6 +125,42 @@ class TestByType:
         assert _resolve(Selectors.nominal(), frame, roles) == ["label"]
 
 
+class TestByTypeFullDtypeRange:
+    """Every type selector against a frame spanning all dtype families."""
+
+    @pytest.mark.parametrize(
+        ("selector", "expected"),
+        [
+            (Selectors.numeric(), ["fl", "i", "y"]),
+            (Selectors.integer(), ["i"]),
+            (Selectors.float(), ["fl", "y"]),
+            (Selectors.double(), ["fl", "y"]),  # alias of float()
+            (Selectors.string(), ["s"]),
+            (Selectors.categorical(), ["cat", "enum", "grp"]),
+            (Selectors.ordered(), ["enum"]),
+            (Selectors.unordered(), ["cat", "grp"]),
+            (Selectors.nominal(), ["s", "cat", "enum", "grp"]),
+            (Selectors.boolean(), ["flag"]),
+            (Selectors.date(), ["d"]),
+            (Selectors.datetime(), ["dt"]),
+        ],
+    )
+    def test_type_selector(self, selector: object, expected: list[str]) -> None:
+        frame, roles = _typed_frame_with_roles()
+        assert _resolve(selector, frame, roles) == expected
+
+    def test_nominal_distinguishes_from_string(self) -> None:
+        # nominal() must include categorical/enum that string() excludes.
+        frame, roles = _typed_frame_with_roles()
+        assert _resolve(Selectors.string(), frame, roles) == ["s"]
+        assert _resolve(Selectors.nominal(), frame, roles) == [
+            "s",
+            "cat",
+            "enum",
+            "grp",
+        ]
+
+
 class TestByRole:
     def test_predictors_and_outcomes(self) -> None:
         frame, roles = _frame_with_roles()
