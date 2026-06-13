@@ -49,7 +49,7 @@ Selectors.predictors()
 Selectors.outcomes()
 ```
 
-Shorthands like `Selectors.predictors()` exist because `has_role("predictor")` would otherwise inadvertently include outcome columns when used naively.
+`Selectors.predictors()` and `Selectors.outcomes()` are exact aliases for `has_role("predictor")` and `has_role("outcome")` — they exist for readability and as the conventional spelling (mirroring recipes' `all_predictors()` / `all_outcomes()`), not because they apply any extra filtering. The outcome is excluded from `predictors()` purely because `outcome` and `predictor` are mutually exclusive roles (see [`roles.md`](roles.md)); no column can carry both, so the bare role query already does the right thing.
 
 ---
 
