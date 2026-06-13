@@ -113,6 +113,29 @@ class TestByName:
         frame, roles = _frame_with_roles()
         assert _resolve(Selectors.everything(), frame, roles) == _frame.columns(frame)
 
+    def test_name_predicates_are_case_sensitive(self) -> None:
+        frame, roles = _frame_with_roles()
+        # Columns are lower-case x1/x2/label; upper-case queries match nothing.
+        assert _resolve(Selectors.starts_with("X"), frame, roles) == []
+        assert _resolve(Selectors.contains("AB"), frame, roles) == []
+        assert _resolve(Selectors.matches(r"^X"), frame, roles) == []
+
+    def test_num_range_empty_and_no_match(self) -> None:
+        frame, roles = _frame_with_roles()
+        assert _resolve(Selectors.num_range("x", range(0)), frame, roles) == []
+        assert _resolve(Selectors.num_range("x", range(7, 9)), frame, roles) == []
+
+    def test_everything_under_complement_and_difference(self) -> None:
+        frame, roles = _frame_with_roles()
+        # Complement of everything() is empty; everything() minus a column drops it.
+        assert _resolve(~Selectors.everything(), frame, roles) == []
+        assert _resolve(Selectors.everything() - Selectors.col("y"), frame, roles) == [
+            "x1",
+            "x2",
+            "count",
+            "label",
+        ]
+
 
 class TestByType:
     def test_numeric_integer_float(self) -> None:
@@ -182,6 +205,15 @@ class TestByRole:
             "x2",
             "count",
         ]
+
+    def test_has_role_custom_role(self) -> None:
+        # has_role resolves an arbitrary, non-built-in role.
+        frame, _ = _frame_with_roles()
+        roles = Roles()
+        roles.add("x1", "id")
+        roles.add("count", "id")
+        roles.add("x2", "predictor")
+        assert _resolve(Selectors.has_role("id"), frame, roles) == ["x1", "count"]
 
 
 class TestCompoundPredictors:
