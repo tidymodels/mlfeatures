@@ -9,6 +9,7 @@ cannot lead a cross-family expression.
 
 from __future__ import annotations
 
+import narwhals.selectors as ncs
 import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
@@ -275,12 +276,45 @@ class TestCrossFamily:
         result = _resolve(Selectors.numeric() & ["x1", "label"], frame, roles)
         assert result == ["x1"]
 
+    def test_shoez_leads_coerces_narwhals(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(Selectors.predictors() & ncs.numeric(), frame, roles)
+        assert result == ["x1", "x2", "count"]
+
+    def test_cross_family_union(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(Selectors.outcomes() | cs.starts_with("x"), frame, roles)
+        assert result == ["x1", "x2", "y"]
+
+    def test_cross_family_difference(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(Selectors.numeric() - cs.starts_with("x"), frame, roles)
+        assert result == ["count", "y"]
+
     def test_wrap_lets_polars_lead(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(
             Selectors.wrap(cs.starts_with("x")) & Selectors.predictors(), frame, roles
         )
         assert result == ["x1", "x2"]
+
+    def test_wrap_lets_narwhals_lead(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(
+            Selectors.wrap(ncs.numeric()) & Selectors.col("x1"), frame, roles
+        )
+        assert result == ["x1"]
+
+    def test_wrap_accepts_list(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(
+            Selectors.wrap(["x1", "label"]) | Selectors.col("x2"), frame, roles
+        )
+        assert result == ["x1", "x2", "label"]
+
+    def test_wrap_accepts_bare_name(self) -> None:
+        frame, roles = _frame_with_roles()
+        assert _resolve(Selectors.wrap("x1"), frame, roles) == ["x1"]
 
     def test_polars_leading_is_unsupported(self) -> None:
         # Documented limit: a polars selector on the left cannot see the shoez
