@@ -358,11 +358,41 @@ class TestProvenance:
         sel = Selectors.has_source(step_type=StepDummy)
         assert sel.resolve(frame, roles) == []
 
+    def test_has_ancestor_by_id(self) -> None:
+        df = _dummy_data()
+        fitted = (
+            Recipe()
+            .add(StepDummy(["color"], id="dummy"))
+            .add(StepNormalize(Selectors.has_source(step_type=StepDummy), id="norm"))
+            .add(StepNormalize(Selectors.has_ancestor("dummy"), id="capture"))
+            .fit(df)
+        )
+        assert sorted(fitted.steps[-1].schema_in().columns) == [
+            "color_green",
+            "color_red",
+        ]
+
+    def test_has_source_unknown_id_is_silent(self) -> None:
+        df = _dummy_data()
+        # An id that matches no step in the pipeline: matches nothing, identity.
+        out = (
+            Recipe()
+            .add(StepDummy(["color"], id="dummy"))
+            .add(StepNormalize(Selectors.has_source("nonexistent")))
+            .fit(df)
+            .transform(df)
+        )
+        # The dummies still exist; nothing was normalized away or dropped.
+        assert "color_green" in out.columns and "color_red" in out.columns
+
     def test_requires_exactly_one_argument(self) -> None:
-        with pytest.raises(ValueError):
-            Selectors.has_source()
-        with pytest.raises(ValueError):
-            Selectors.has_source("a", step_type=StepDummy)
+        # Validation lives in the shared _SourceSelector, so it applies to both
+        # has_source and has_ancestor.
+        for factory in (Selectors.has_source, Selectors.has_ancestor):
+            with pytest.raises(ValueError):
+                factory()
+            with pytest.raises(ValueError):
+                factory("a", step_type=StepDummy)
 
 
 class TestPolarsEscapeHatch:
