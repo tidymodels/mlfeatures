@@ -14,6 +14,7 @@ import pandas as pd
 import polars as pl
 import polars.selectors as cs
 import pytest
+from narwhals.exceptions import ColumnNotFoundError
 
 from shoez import Recipe, Selectors, StepDummy, StepNormalize, _frame
 from shoez.types import Frame, Roles
@@ -208,6 +209,24 @@ class TestCompoundPredictors:
     def test_compound_predictor(self, selector: object, expected: list[str]) -> None:
         frame, roles = _typed_frame_with_roles()
         assert _resolve(selector, frame, roles) == expected
+
+
+class TestMissingNameStrictness:
+    """`col` tolerates absent names; a bare list operand is strict.
+
+    This mirrors recipes' ``any_of`` (tolerant) vs ``all_of`` (strict) split:
+    ``Selectors.col`` silently drops names that aren't present, but a plain list
+    operand goes through ``Frame.select`` and raises on a missing column.
+    """
+
+    def test_col_drops_missing_names(self) -> None:
+        frame, roles = _frame_with_roles()
+        assert _resolve(Selectors.col("x1", "missing"), frame, roles) == ["x1"]
+
+    def test_list_operand_raises_on_missing(self) -> None:
+        frame, roles = _frame_with_roles()
+        with pytest.raises(ColumnNotFoundError):
+            _resolve(Selectors.numeric() & ["x1", "missing"], frame, roles)
 
 
 class TestSetOps:

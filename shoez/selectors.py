@@ -286,6 +286,11 @@ class Selectors:
     def col(cls, *names: str) -> ShoezSelector:
         """The named column(s), if present.
 
+        Names that aren't in the frame are silently skipped (tolerant, like R's
+        ``any_of``). This differs from passing a plain ``list`` of names as a
+        selector operand, which is strict and raises on a missing column (like
+        ``all_of``); use `col` when absence should be a no-op.
+
         ```python
         Selectors.col("x1")
         Selectors.col("x1", "x2")
