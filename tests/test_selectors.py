@@ -264,6 +264,36 @@ class TestSetOps:
         result = _resolve(Selectors.col("y") | Selectors.col("x1"), frame, roles)
         assert result == ["x1", "y"]
 
+    def test_added_then_removed_dedup(self) -> None:
+        frame, roles = _frame_with_roles()
+        # Add x2 in the union, then subtract it: it must not survive.
+        result = _resolve(
+            (Selectors.col("x1") | Selectors.col("x2")) - Selectors.col("x2"),
+            frame,
+            roles,
+        )
+        assert result == ["x1"]
+
+    def test_overlapping_union_dedups(self) -> None:
+        frame, roles = _frame_with_roles()
+        # numeric and float overlap on x1/x2; each column appears once.
+        result = _resolve(Selectors.numeric() | Selectors.float(), frame, roles)
+        assert result == ["x1", "x2", "count", "y"]
+
+    def test_complement_of_composite(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(~(Selectors.outcomes() | Selectors.string()), frame, roles)
+        assert result == ["x1", "x2", "count"]
+
+    def test_three_operand_chain(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(
+            Selectors.numeric() & Selectors.predictors() & Selectors.starts_with("x"),
+            frame,
+            roles,
+        )
+        assert result == ["x1", "x2"]
+
 
 class TestCrossFamily:
     def test_shoez_leads_coerces_polars(self) -> None:
