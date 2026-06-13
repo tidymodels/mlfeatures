@@ -182,6 +182,34 @@ class TestByRole:
         ]
 
 
+class TestCompoundPredictors:
+    """The ``*_predictors`` compounds = type selector intersected with predictors.
+
+    ``y`` (float) and ``grp`` (categorical) are outcomes in the fixture, so
+    ``numeric_predictors`` / ``double_predictors`` exclude ``y`` and
+    ``categorical_predictors`` / ``nominal_predictors`` exclude ``grp`` — proving
+    the role filter actually bites, not just the type filter.
+    """
+
+    @pytest.mark.parametrize(
+        ("selector", "expected"),
+        [
+            (Selectors.numeric_predictors(), ["fl", "i"]),
+            (Selectors.integer_predictors(), ["i"]),
+            (Selectors.double_predictors(), ["fl"]),
+            (Selectors.string_predictors(), ["s"]),
+            (Selectors.categorical_predictors(), ["cat", "enum"]),
+            (Selectors.nominal_predictors(), ["s", "cat", "enum"]),
+            (Selectors.boolean_predictors(), ["flag"]),
+            (Selectors.date_predictors(), ["d"]),
+            (Selectors.datetime_predictors(), ["dt"]),
+        ],
+    )
+    def test_compound_predictor(self, selector: object, expected: list[str]) -> None:
+        frame, roles = _typed_frame_with_roles()
+        assert _resolve(selector, frame, roles) == expected
+
+
 class TestSetOps:
     def test_and_or_not_difference(self) -> None:
         frame, roles = _frame_with_roles()
