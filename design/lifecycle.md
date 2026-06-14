@@ -10,8 +10,6 @@
 ## Minimum public surface
 
 ```python
-rec = Recipe(formula="y ~ .", data=df_train)
-# or:
 rec = Recipe(data=df_train).set_roles(outcome=["y"], predictor=["x1", "x2", ...])
 
 rec = (
@@ -31,7 +29,7 @@ X_new   = prepped.transform(df_new, all_predictors())  # selector at transform t
 
 ## Required behaviors
 
-- `Recipe(...)` accepts either a formula-style spec **or** explicit role assignment from a sample dataframe (used only for schema, not for fitting). There is **one canonical constructor** — formula is sugar over explicit role assignment, never the underlying mechanism. The formula interface is intentionally minimal: it supports only simple outcome/predictor splits (`"y ~ ."`, `"y ~ x1 + x2"`). No interactions, no transformations, no arithmetic — anything beyond basic column selection must be expressed as a step. A simple parser is shipped with the package; no Patsy-style complexity.
+- `Recipe(...)` takes explicit role assignment from a sample dataframe (used only for schema, not for fitting). There is **one canonical constructor**: roles are assigned explicitly via constructor kwargs or `set_roles`. **We have decided not to ship a formula interface.** It was originally planned as syntactic sugar over role assignment (simple `"y ~ ."` / `"y ~ x1 + x2"` splits only), but we removed it: it adds a parsing surface and a second way to do one thing, while explicit role assignment covers every case it could. Anything beyond basic column selection must be expressed as a step regardless.
 - Steps are pure: `.add(Step(...))` returns a new `Recipe` with the step appended; it does **not** touch data.
 - `fit()` runs each step's fit on the **training** data, in order. The baked output of step *i* becomes the input to step *i+1*'s fit.
 - `transform()` runs each step's transform on **new** data using stored statistics. Bake **never re-estimates**.

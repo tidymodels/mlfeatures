@@ -182,4 +182,4 @@ In practice the native DSL covers the name/type surface, so cross-family mixing 
 
 - No `*_at` / `*_if` family — R added these and they were superseded immediately by tidyselect [#662, #707].
 - No data-value-dependent selectors (e.g. "select columns with missing values") — selectors are about identity, not data content [#617].
-- Formulas as selectors are limited to syntactic sugar over role assignment; do not make them the canonical entry point. Long formulas blew R's C stack [#1279, #1289, #1517] and `y ~ .` silently ignored `-` [#388].
+- No formula interface at all. We considered formulas as syntactic sugar over role assignment but decided against shipping them: roles are assigned explicitly instead. (Long formulas blew R's C stack [#1279, #1289, #1517] and `y ~ .` silently ignored `-` [#388].)
