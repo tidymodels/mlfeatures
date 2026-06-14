@@ -123,7 +123,9 @@ class Step(ABC):
         """
         from shoez import _frame
 
-        return _frame.select(data, self.columns, info.roles).columns
+        return _frame.select(
+            data, self.columns, info.roles, info.schema, info.producing_steps
+        ).columns
 
     def update_roles(self, roles: Roles) -> None:
         """Update ``roles`` to reflect the column changes made by this step.

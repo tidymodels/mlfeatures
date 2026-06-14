@@ -141,6 +141,11 @@ class Recipe:
         for step in self.steps:
             info = SchemaInfo.from_frame(current)
             info.roles = live_roles
+            # Hand the live lineage DAG and the id→step map to selector
+            # resolution so provenance selectors (has_source/has_ancestor) can
+            # resolve; these are recipe-side state, not for steps' own logic.
+            info.schema = schema
+            info.producing_steps = {s.id: s for s in fitted_steps}
             # Empty selection ⇒ identity. Resolved here, once, at the recipe
             # boundary so the no-op is structural: a step is never fitted on a
             # zero-column selection and so cannot misread it (the failure mode

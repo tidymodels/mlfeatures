@@ -17,13 +17,17 @@ only at the sklearn boundary (the output of ``Recipe.transform``).
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 
 from shoez._dependencies import import_optional
 from shoez.selectors import ShoezSelector
 from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
+
+if TYPE_CHECKING:
+    from shoez.schema import Schema
+    from shoez.step import Step
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 
@@ -49,7 +53,13 @@ def columns(frame: Frame) -> list[str]:
     return frame.columns
 
 
-def select(frame: Frame, names: Selector, roles: Roles | None = None) -> Frame:
+def select(
+    frame: Frame,
+    names: Selector,
+    roles: Roles | None = None,
+    schema: "Schema | None" = None,
+    steps: "dict[str, Step] | None" = None,
+) -> Frame:
     """Return a frame with only the selected columns.
 
     ``names`` may be a single column name, a sequence of names (kept in the
@@ -57,10 +67,12 @@ def select(frame: Frame, names: Selector, roles: Roles | None = None) -> Frame:
     a polars selector (``polars.selectors``), or a `ShoezSelector`.
     A polars selector is resolved against the frame's schema, so it works
     regardless of the frame's backend. A ``ShoezSelector`` additionally uses
-    ``roles`` to filter by role.
+    ``roles`` to filter by role, and — for provenance selectors — the live
+    lineage DAG ``schema`` and id→step map ``steps`` when the recipe supplies
+    them at fit time.
     """
     if isinstance(names, ShoezSelector):
-        return frame.select(names.resolve(frame, roles or Roles()))
+        return frame.select(names.resolve(frame, roles or Roles(), schema, steps))
     if isinstance(names, str):
         return frame.select([names])
     if isinstance(names, NwSelector):

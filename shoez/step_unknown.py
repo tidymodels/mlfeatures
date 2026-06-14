@@ -149,7 +149,9 @@ class StepUnknown(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the columns to recode and check for level collisions."""
-        features = _frame.select(training_data, self.columns, info.roles)
+        features = _frame.select(
+            training_data, self.columns, info.roles, info.schema, info.producing_steps
+        )
         # Called for its collision check / warning; every selected column is
         # recoded, so the resolved selection is recorded in ``_schema_in``.
         fit_unknown(features, self.new_level)

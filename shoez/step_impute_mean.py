@@ -141,7 +141,9 @@ class StepImputeMean(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mean over the selected columns."""
-        features = _frame.select(training_data, self.columns, info.roles)
+        features = _frame.select(
+            training_data, self.columns, info.roles, info.schema, info.producing_steps
+        )
         self._estimates = fit_impute_mean(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)

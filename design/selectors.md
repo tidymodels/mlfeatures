@@ -21,37 +21,43 @@ R `recipes` only supported selectors in the leading `...` of steps, making secon
 
 ---
 
+The native DSL is exposed as factory methods on the `Selectors` namespace (`from shoez import Selectors`). Every factory returns a `ShoezSelector` that composes with `&` / `|` / `~` / `-` and resolves to column names at fit time. The examples below use the `Selectors.` prefix.
+
 ## By name
 
 ```python
-col("x1")                    # literal column name
-starts_with("x")
-ends_with("_score")
-contains("date")
-matches(r"^x\d+$")           # regex
-num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
-everything()
+Selectors.col("x1")                    # literal column name(s)
+Selectors.starts_with("x")
+Selectors.ends_with("_score")
+Selectors.contains("date")
+Selectors.matches(r"^x\d+$")           # regex (re.search)
+Selectors.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
+Selectors.everything()
 ```
+
+`Selectors.col` is **tolerant**: names not present in the frame are silently skipped (like R's `any_of`). Passing a plain `list` of names as an operand is **strict** and raises on a missing column (like `all_of`) — so `Selectors.col("a", "missing")` is a no-op on the absent name, while `... & ["a", "missing"]` raises. Reach for `col` when absence should be a no-op, and a bare list when a missing name is a mistake worth surfacing.
+
+There is deliberately **no positional range selector** (recipes' `beds:sqft`, selecting every column between two positions). Position is a brittle thing to depend on: it changes as upstream steps add and drop columns, so a range that is correct when the recipe is written can silently capture the wrong columns at fit time. Select by name pattern (`starts_with`, `matches`, `num_range`), by role, or by type instead.
 
 ---
 
 ## By role
 
 ```python
-has_role("group")
-all_predictors()
-all_outcomes()
+Selectors.has_role("group")
+Selectors.predictors()
+Selectors.outcomes()
 ```
 
-Shorthands like `all_predictors()` exist because `has_role("predictor")` would otherwise inadvertently include outcome columns when used naively.
+`Selectors.predictors()` and `Selectors.outcomes()` are exact aliases for `has_role("predictor")` and `has_role("outcome")` — they exist for readability and as the conventional spelling (mirroring recipes' `all_predictors()` / `all_outcomes()`), not because they apply any extra filtering. The outcome is excluded from `predictors()` purely because `outcome` and `predictor` are mutually exclusive roles (see [`roles.md`](roles.md)); no column can carry both, so the bare role query already does the right thing.
 
 ---
 
 ## By source (producing step)
 
 ```python
-has_source("dummy_abc123")          # all columns produced by a specific step id
-has_source(step_type=step_dummy)    # all columns produced by any step_dummy step
+Selectors.has_source("dummy_abc123")        # columns whose immediate producer is this step id
+Selectors.has_source(step_type=StepDummy)   # columns produced directly by any StepDummy step
 ```
 
 Because every step declares its input/output mode and the recipe maintains a column-lineage DAG, it is possible to select columns by *which step produced them* — not just by name, role, or type. This is directly useful for things like selecting all dummy-encoded columns to inspect or further transform them:
@@ -59,54 +65,56 @@ Because every step declares its input/output mode and the recipe maintains a col
 ```python
 rec = (
     Recipe(data=df)
-    .add(Dummy(all_categorical_predictors()))
-    .add(PCA(has_source(step_type=step_dummy)))  # PCA only over the dummies
+    .add(StepDummy(Selectors.categorical_predictors()))
+    .add(StepPCA(Selectors.has_source(step_type=StepDummy)))  # PCA only over the dummies
 )
 ```
 
-This was impossible in R `recipes` because provenance was not tracked [tidymodels/recipes#571]. It falls out naturally from the mode-declaration design in [step-contract.md](step-contract.md). The `has_source()` selector resolves against the lineage DAG at fit time — see [schema.md](schema.md).
+This was impossible in R `recipes` because provenance was not tracked [tidymodels/recipes#571]. It falls out naturally from the mode-declaration design in [step-contract.md](step-contract.md). The provenance selectors resolve against the lineage DAG at fit time — see [schema.md](schema.md).
 
-### Direct vs. ancestral provenance
+### Direct vs. ancestral provenance — `has_source` vs `has_ancestor`
 
-The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. a dummy column that was subsequently passed through `step_normalize`. Both are useful:
+The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. a dummy column that was subsequently passed through `StepNormalize`. Both are useful, and shoez exposes them as **two separate selectors** (the decision for issue #20's "Q3"):
 
-- **Direct:** "give me the columns that `step_dummy` just produced" — the raw dummies before any further transformation.
-- **Ancestral:** "give me all columns that trace back to `step_dummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed.
+- **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Schema.columns_from_source`.
+- **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Schema.ancestors`.
 
-The exact API for expressing this distinction is not yet decided — possible forms include a `direct=True` flag, separate functions (`has_source` vs `has_ancestor`), or a `depth=` argument. This should be resolved before v0.1.
+Both accept either a step id (positional) or a step class (`step_type=`), and both are silent no-ops when nothing matches. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
 
 ---
 
 ## By type
 
 ```python
-all_numeric()          # float + int
-all_float()            # (R: all_double)
-all_int()              # (R: all_integer)
-all_categorical()      # ordered + unordered (R: all_factor)
-all_ordered()
-all_unordered()
-all_str()              # (R: all_string)
-all_bool()             # (R: all_logical)
-all_date()
-all_datetime()
+Selectors.numeric()        # float + int
+Selectors.float()          # alias: Selectors.double  (R: all_double)
+Selectors.integer()        # (R: all_integer)
+Selectors.categorical()    # ordered + unordered (R: all_factor)
+Selectors.ordered()
+Selectors.unordered()
+Selectors.nominal()        # string + categorical + enum
+Selectors.string()         # (R: all_string)
+Selectors.boolean()        # (R: all_logical)
+Selectors.date()
+Selectors.datetime()
 ```
 
-Names follow Python and polars conventions, not R. `has_type()` is an internal primitive used to implement these and is not part of the public surface. See [schema.md](schema.md) for the full type taxonomy.
+Names follow Python and polars conventions, not R. The dtype check is an internal primitive (see `shoez._frame`) and is not part of the public surface. See [schema.md](schema.md) for the full type taxonomy.
 
 ---
 
 ## Compound selectors
 
 ```python
-all_numeric_predictors()       # all_numeric() & all_predictors()
-all_float_predictors()         # all_float() & all_predictors()
-all_int_predictors()           # all_int() & all_predictors()
-all_categorical_predictors()   # all_categorical() & all_predictors()
-all_str_predictors()           # all_str() & all_predictors()
+Selectors.numeric_predictors()       # numeric() & predictors()
+Selectors.double_predictors()        # float() & predictors()
+Selectors.integer_predictors()       # integer() & predictors()
+Selectors.categorical_predictors()   # categorical() & predictors()
+Selectors.string_predictors()        # string() & predictors()
+Selectors.nominal_predictors()       # nominal() & predictors()
 ```
 
-These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`all_numeric()`, `all_float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `all_numeric_predictors()` should nearly always be the right choice over `all_numeric()`.
+These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`Selectors.numeric()`, `Selectors.float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `Selectors.numeric_predictors()` should nearly always be the right choice over `Selectors.numeric()`.
 
 ---
 
@@ -115,15 +123,16 @@ These compound selectors are the **preferred API** for step arguments. They are 
 All selectors compose freely with `&`, `|`, and `~`:
 
 ```python
-all_predictors() & all_numeric()                        # intersection
-all_predictors() | col("weight")                        # union
-all_predictors() & ~all_outcomes()                      # difference
-has_source(step_type=step_dummy) & all_float()          # dummy columns that are float
-has_source(step_type=step_dummy) | all_categorical()    # dummies or categoricals
-~has_source(step_type=step_pca)                         # everything except PCA outputs
+Selectors.predictors() & Selectors.numeric()                       # intersection
+Selectors.predictors() | Selectors.col("weight")                   # union
+Selectors.predictors() & ~Selectors.outcomes()                     # difference
+Selectors.predictors() - Selectors.outcomes()                      # difference (sugar)
+Selectors.has_source(step_type=StepDummy) & Selectors.float()      # dummy columns that are float
+Selectors.has_source(step_type=StepDummy) | Selectors.categorical()  # dummies or categoricals
+~Selectors.has_source(step_type=StepPCA)                           # everything except PCA outputs
 ```
 
-Negation uses `~` (or `-` as sugar). Multiple positional arguments to a step are treated as a union.
+Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set operations preserve the frame's column order regardless of operand order. Multiple positional arguments to a step are treated as a union.
 
 ---
 
@@ -135,23 +144,37 @@ At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolv
 
 ---
 
-## Relationship to polars selectors
+## Relationship to polars / narwhals selectors
 
-Since `shoez` uses polars internally, the [polars selectors API](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) is a natural reference point and potential foundation. Polars selectors already cover most of the by-type and by-name surface:
+The native `Selectors.*` DSL is the recommended surface: it covers name, type, role, and provenance in **one family** that always composes with `&` / `|` / `~` / `-`, and resolves against the lineage DAG.
+
+`shoez` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
 
 ```python
 import polars.selectors as cs
 
-cs.numeric()        # ~ all_numeric()
-cs.string()         # ~ all_string()
-cs.by_name("x1")    # ~ col("x1")
-cs.starts_with("x") # ~ starts_with("x")
-cs.matches(r"...")   # ~ matches(r"...")
+StepNormalize(cs.numeric())   # accepted; resolves fine on pandas- or polars-backed frames
 ```
 
-Polars selectors also compose with `&`, `|`, and `~` natively, which aligns exactly with our set-operation design.
+### Cross-family composition has a hard limit
 
-The main gap is **role-based selection** — polars has no concept of roles, so `all_predictors()`, `all_outcomes()`, etc. will need to be layered on top. But for the type- and name-based selectors, building on or wrapping `polars.selectors` rather than reimplementing from scratch is worth serious consideration. It would reduce maintenance burden and give users a familiar API if they already know polars.
+polars and narwhals selectors compose cleanly *within their own family*, and native shoez selectors compose cleanly with each other. **Mixing the two families with `&` / `|` / `~` is asymmetric and only works when a shoez selector leads**, because shoez does not control polars'/narwhals' operators:
+
+| Expression | Behavior |
+| --- | --- |
+| shoez & shoez | ✅ native composition |
+| polars & polars, narwhals & narwhals | ✅ their own native composition |
+| `shoez_sel & cs.numeric()` (shoez leads) | ✅ supported — shoez coerces the right operand |
+| `cs.numeric() & shoez_sel` (polars leads) | ❌ polars raises `TypeError` |
+| `ncs.numeric() & shoez_sel` (narwhals leads) | ❌ narwhals **silently** returns a broken `Expr` (no error) |
+
+The narwhals case is the dangerous one: it produces no error at all, just a meaningless `Expr` that fails downstream. **Rule: a shoez-native selector must lead any cross-family expression.** To put a polars/narwhals selector first, lift it into shoez-land with `Selectors.wrap`:
+
+```python
+Selectors.wrap(cs.starts_with("x_")) & Selectors.predictors()
+```
+
+In practice the native DSL covers the name/type surface, so cross-family mixing is rarely needed — but when it is, lead with shoez or use `wrap`.
 
 ---
 
