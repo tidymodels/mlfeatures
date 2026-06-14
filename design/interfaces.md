@@ -26,8 +26,8 @@ from shoez import Recipe
 from shoez.steps import ImputeMedian, Dummy, Normalize
 
 rec = Recipe(
-    formula="price ~ .",
     data=df_train,
+    outcome=["price"],
     steps=[
         ImputeMedian(all_numeric_predictors()),
         Dummy(all_nominal_predictors()),
@@ -40,7 +40,7 @@ Equivalently, an **immutable builder** that returns a new recipe each call (note
 
 ```python
 rec = (
-    Recipe(formula="price ~ .", data=df_train)
+    Recipe(data=df_train, outcome=["price"])
     .add(ImputeMedian(all_numeric_predictors()))
     .add(Dummy(all_nominal_predictors()))
     .add(Normalize(all_numeric_predictors()))
@@ -56,7 +56,7 @@ Steps are objects (as in A), composed with an overloaded operator.
 
 ```python
 rec = (
-    Recipe(formula="price ~ .", data=df_train)
+    Recipe(data=df_train, outcome=["price"])
     >> ImputeMedian(all_numeric_predictors())
     >> Dummy(all_nominal_predictors())
     >> Normalize(all_numeric_predictors())

@@ -116,7 +116,7 @@ pipe = Pipeline([("pre", pre), ("model", ...)])
 
 ```python
 rec = (
-    Recipe(formula="price ~ .", data=df_train)
+    Recipe(data=df_train, outcome=["price"])
     .add(ImputeMedian(all_numeric_predictors()))
     .add(Unknown(all_categorical_predictors()))
     .add(Dummy(all_categorical_predictors()))
