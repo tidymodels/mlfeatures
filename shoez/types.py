@@ -182,6 +182,14 @@ class Roles:
         """Columns carrying ``role``, in insertion order."""
         return [col for col, roles in self._roles.items() if role in roles]
 
+    def role_labels(self) -> list[str]:
+        """Every role label currently in use, sorted. Empty if no roles assigned."""
+        return sorted({role for roles in self._roles.values() for role in roles})
+
+    def all_columns(self) -> list[str]:
+        """Every column carrying at least one role, in insertion order."""
+        return list(self._roles)
+
     def copy(self) -> "Roles":
         """A deep copy safe to mutate independently."""
         return Roles({col: set(roles) for col, roles in self._roles.items()})

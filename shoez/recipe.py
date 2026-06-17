@@ -37,6 +37,45 @@ from shoez.types import (
 __all__ = ["Recipe", "FittedRecipe"]
 
 
+def _format_recipe(
+    *, prepped: bool, roles: Roles, steps: list[Step], n_columns: int | None
+) -> str:
+    """Render the shared ``repr`` block for `Recipe` / `FittedRecipe`.
+
+    Follows the layout in ``design/inspection.md``: a header tagging the
+    training state, an ``Inputs`` line summarising column roles, and the steps
+    aligned so their ``[trained]`` / ``[untrained]`` markers line up.
+    """
+    header = f"Recipe ({'prepped' if prepped else 'unprepped'})"
+
+    labels = roles.role_labels()
+    if labels:
+        parts: list[str] = []
+        for label in labels:
+            count = len(roles.columns_with_role(label))
+            name = label if count == 1 or label.endswith("s") else f"{label}s"
+            parts.append(f"{count} {name}")
+        role_summary = ", ".join(parts)
+    else:
+        role_summary = "no roles assigned"
+    if n_columns is not None:
+        inputs = f"  Inputs: {n_columns} columns — {role_summary}"
+    else:
+        inputs = f"  Inputs: {role_summary}"
+
+    lines = [header, inputs, "  Steps:"]
+    if not steps:
+        lines.append("    <none>")
+        return "\n".join(lines)
+
+    heads = [step._repr_head() for step in steps]  # pyright: ignore[reportPrivateUsage]
+    width = max(len(head) for head in heads)
+    for step, head in zip(steps, heads):
+        marker = "trained" if step.trained else "untrained"
+        lines.append(f"    {head.ljust(width)}  [{marker}]")
+    return "\n".join(lines)
+
+
 class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
@@ -85,6 +124,24 @@ class Recipe:
             self.roles,
             {"outcome": outcome, "predictor": predictors, "case_weights": case_weights},
             check_col=self._check_column_exists,
+        )
+
+    def __repr__(self) -> str:
+        """A human-readable, unprepped view of the pipeline (``design/inspection.md``).
+
+        Shows the declared role assignments and the steps with their unresolved
+        selectors, each tagged ``[untrained]``. Column counts come from the
+        prototype frame when one was supplied; otherwise only the explicitly
+        assigned roles are summarised. ``FittedRecipe`` has its own ``repr`` that
+        shows resolved columns and the ``prepped`` state instead.
+        """
+        n_columns = (
+            len(_frame.columns(self._prototype_frame))
+            if self._prototype_frame is not None
+            else None
+        )
+        return _format_recipe(
+            prepped=False, roles=self.roles, steps=self.steps, n_columns=n_columns
         )
 
     def _clone(self) -> "Recipe":
@@ -294,6 +351,18 @@ class FittedRecipe:
         #: The training-data ptype snapshot (``design/lifecycle.md``) used to
         #: validate new data in ``transform()``, or ``None`` if absent.
         self.ptype = ptype
+
+    def __repr__(self) -> str:
+        """A human-readable, prepped view of the fitted pipeline (``design/inspection.md``).
+
+        Shows the post-fit role assignments and each step with the concrete
+        columns its selector resolved to at fit time, tagged ``[trained]``. This
+        is the resolved counterpart of ``Recipe``'s unresolved ``repr``.
+        """
+        n_columns = len(self.roles.all_columns()) if self.roles.all_columns() else None
+        return _format_recipe(
+            prepped=True, roles=self.roles, steps=self.steps, n_columns=n_columns
+        )
 
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Re-fitting an already-fitted recipe is a no-op: returns ``self``.

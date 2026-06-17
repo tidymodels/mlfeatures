@@ -95,6 +95,9 @@ class _ForeignSelector(ShoezSelector):
     def __init__(self, value: object) -> None:
         self._value = value
 
+    def __repr__(self) -> str:
+        return repr(self._value)
+
     def resolve(
         self,
         frame: Frame,
@@ -116,6 +119,10 @@ class _CompositeSelector(ShoezSelector):
     def __init__(self, op: str, children: Sequence[ShoezSelector]) -> None:
         self._op = op
         self._children = list(children)
+
+    def __repr__(self) -> str:
+        joiner = " & " if self._op == "and" else " | "
+        return joiner.join(repr(child) for child in self._children)
 
     def resolve(
         self,
@@ -144,6 +151,9 @@ class _Complement(ShoezSelector):
     def __init__(self, inner: ShoezSelector) -> None:
         self._inner = inner
 
+    def __repr__(self) -> str:
+        return f"~{self._inner!r}"
+
     def resolve(
         self,
         frame: Frame,
@@ -167,6 +177,20 @@ class _RoleTypeSelector(ShoezSelector):
     ) -> None:
         self._role = role
         self._dtype = dtype
+
+    def __repr__(self) -> str:
+        if self._role is None and self._dtype is None:
+            return "everything()"
+        parts: list[str] = []
+        if self._role is not None:
+            parts.append(f"role={self._role!r}")
+        if self._dtype is not None:
+            if isinstance(self._dtype, tuple):
+                names = ", ".join(t.__name__ for t in self._dtype)
+                parts.append(f"type=({names})")
+            else:
+                parts.append(f"type={self._dtype.__name__}")
+        return f"select({', '.join(parts)})"
 
     def resolve(
         self,
@@ -192,8 +216,14 @@ class _RoleTypeSelector(ShoezSelector):
 class _NameSelector(ShoezSelector):
     """Columns whose names match a predicate, in frame order."""
 
-    def __init__(self, predicate: "Callable[[str], bool]") -> None:
+    def __init__(
+        self, predicate: "Callable[[str], bool]", label: str = "name_selector()"
+    ) -> None:
         self._predicate = predicate
+        self._label = label
+
+    def __repr__(self) -> str:
+        return self._label
 
     def resolve(
         self,
@@ -225,6 +255,15 @@ class _SourceSelector(ShoezSelector):
         self._step = step
         self._step_type = step_type
         self._ancestral = ancestral
+
+    def __repr__(self) -> str:
+        name = "has_ancestor" if self._ancestral else "has_source"
+        if self._step is not None:
+            arg = repr(self._step)
+        else:
+            assert self._step_type is not None
+            arg = f"step_type={self._step_type.__name__}"
+        return f"{name}({arg})"
 
     def _matching_ids(self, schema: Schema, steps: dict[str, Step] | None) -> set[str]:
         if self._step is not None:
@@ -297,22 +336,23 @@ class Selectors:
         ```
         """
         wanted = set(names)
-        return _NameSelector(lambda c: c in wanted)
+        label = f"col({', '.join(repr(n) for n in names)})"
+        return _NameSelector(lambda c: c in wanted, label)
 
     @classmethod
     def starts_with(cls, prefix: str) -> ShoezSelector:
         """Columns whose name starts with ``prefix``."""
-        return _NameSelector(lambda c: c.startswith(prefix))
+        return _NameSelector(lambda c: c.startswith(prefix), f"starts_with({prefix!r})")
 
     @classmethod
     def ends_with(cls, suffix: str) -> ShoezSelector:
         """Columns whose name ends with ``suffix``."""
-        return _NameSelector(lambda c: c.endswith(suffix))
+        return _NameSelector(lambda c: c.endswith(suffix), f"ends_with({suffix!r})")
 
     @classmethod
     def contains(cls, substring: str) -> ShoezSelector:
         """Columns whose name contains ``substring``."""
-        return _NameSelector(lambda c: substring in c)
+        return _NameSelector(lambda c: substring in c, f"contains({substring!r})")
 
     @classmethod
     def matches(cls, pattern: str) -> ShoezSelector:
@@ -321,7 +361,9 @@ class Selectors:
         Uses ``re.search`` (anchor explicitly with ``^``/``$`` if desired).
         """
         compiled = re.compile(pattern)
-        return _NameSelector(lambda c: compiled.search(c) is not None)
+        return _NameSelector(
+            lambda c: compiled.search(c) is not None, f"matches({pattern!r})"
+        )
 
     @classmethod
     def num_range(cls, prefix: str, rng: Iterable[int]) -> ShoezSelector:
@@ -331,8 +373,9 @@ class Selectors:
         Selectors.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
         ```
         """
+        rng = list(rng)
         wanted = {f"{prefix}{i}" for i in rng}
-        return _NameSelector(lambda c: c in wanted)
+        return _NameSelector(lambda c: c in wanted, f"num_range({prefix!r}, {rng!r})")
 
     @classmethod
     def everything(cls) -> ShoezSelector:

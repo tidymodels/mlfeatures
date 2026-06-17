@@ -9,6 +9,7 @@ and the conformance test suite are implemented in later issues (#17, #18, #21).
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,20 @@ from shoez.types import AcceptedDtypes, ColSchema, Frame, Roles, SchemaInfo, Sel
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+
+def _step_type_label(step: "Step") -> str:
+    """The R-style snake-case name for a step's type (e.g. ``step_normalize``).
+
+    Derived from the class name: the ``Step`` prefix is dropped and the
+    remaining CamelCase is converted to ``snake_case`` (``StepDropCorr`` →
+    ``step_drop_corr``). Used by the printing methods in ``design/inspection.md``.
+    """
+    name = type(step).__name__
+    if name.startswith("Step"):
+        name = name[len("Step") :]
+    snake = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+    return f"step_{snake}"
 
 
 class Step(ABC):
@@ -138,6 +153,36 @@ class Step(ABC):
     def required_pkgs(self) -> list[str]:
         """Third-party packages required to run this step. Defaults to none."""
         return []
+
+    def _describe_selection(self) -> str:
+        """A short description of what columns this step acts on, for printing.
+
+        Untrained: the unresolved selector (``all_numeric_predictors()``,
+        ``['age']``). Trained: the concrete columns the selector resolved to at
+        fit time, mirroring the resolved/unresolved distinction in
+        ``design/inspection.md``. A trained identity step (empty selection) and a
+        step that consumes no columns (e.g. ``step_intercept``) describe
+        themselves explicitly rather than showing an empty list.
+        """
+        if self.trained:
+            if self._empty_selection:
+                return "<empty selection>"
+            try:
+                consumed = self.schema_in().columns
+            except Exception:  # pragma: no cover - defensive: pre-fit / odd steps
+                consumed = None
+            if consumed is not None:
+                return ", ".join(consumed)
+        columns = getattr(self, "columns", None)
+        return repr(columns) if columns is not None else ""
+
+    def _repr_head(self) -> str:
+        """The ``step_name(selection)`` half of the printed line (no state marker)."""
+        return f"{_step_type_label(self)}({self._describe_selection()})"
+
+    def __repr__(self) -> str:
+        state = "trained" if self.trained else "untrained"
+        return f"{self._repr_head()}  [{state}]"
 
 
 class RowOp(Step):
