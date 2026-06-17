@@ -62,6 +62,14 @@ pipe.fit(X, y)
 pipe.score(X, y)
 ```
 
+Displaying the fitted pipeline renders scikit-learn's diagram. The recipe shows
+up as a labelled `RecipeTransformer (prepped)` block that expands to the recipe
+and its steps:
+
+```{python}
+pipe
+```
+
 ## Cross-validation and tuning
 
 Because the adapter stores the recipe verbatim, it clones cleanly — so it works
