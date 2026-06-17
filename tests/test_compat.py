@@ -151,6 +151,40 @@ class TestEstimatorContract:
         assert hasattr(rt, "feature_names_out_")
 
 
+class TestRepr:
+    """Printing the transformer and rendering it inside a pipeline diagram."""
+
+    def test_repr_shows_unprepped_recipe(self) -> None:
+        text = repr(RecipeTransformer(_supervised_recipe()))
+        assert text.startswith("RecipeTransformer")
+        assert "Recipe (unprepped)" in text
+        assert "[untrained]" in text
+
+    def test_repr_shows_prepped_recipe_after_fit(self) -> None:
+        text = repr(RecipeTransformer(_supervised_recipe()).fit(*_X_y()))
+        assert "Recipe (prepped)" in text
+        assert "[trained]" in text
+        assert "[untrained]" not in text
+
+    def test_html_repr_labels_transformer_and_embeds_recipe(self) -> None:
+        from sklearn.pipeline import Pipeline
+        from sklearn.utils import estimator_html_repr
+
+        rt = RecipeTransformer(_supervised_recipe()).fit(*_X_y())
+        html = estimator_html_repr(Pipeline([("recipe", rt)]))
+        # The diagram labels the block by training state and tucks the recipe
+        # into the (expandable) detail rather than inlining it raw. sklearn may
+        # truncate the middle of long details, so assert on the clean label and
+        # that recipe content is present rather than an exact recipe string.
+        assert "RecipeTransformer (prepped)" in html
+        assert "step_normalize" in html
+
+    def test_visual_block_class_resolves(self) -> None:
+        from shoez.compat import _visual_block_class
+
+        assert _visual_block_class() is not None
+
+
 def _cancer_recipe() -> tuple[Recipe, pd.DataFrame, pd.Series]:
     """A normalize recipe on the breast-cancer dataset, plus its (X, y)."""
     from sklearn.datasets import load_breast_cancer
