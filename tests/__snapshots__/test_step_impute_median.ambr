@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestFitImputeMedian.test_all_null_column_kept_with_nan_median_and_warning
+  "1 column(s) are entirely null and cannot be median-imputed; left unchanged: ['empty']."
+# ---

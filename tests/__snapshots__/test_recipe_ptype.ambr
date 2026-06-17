@@ -1,0 +1,22 @@
+# serializer version: 1
+# name: TestDtypeMatching.test_dtype_mismatch_errors
+  "dtype mismatch against the training ptype: 'x' (expected Float64, got String)"
+# ---
+# name: TestPickle.test_ptype_survives_pickle_roundtrip
+  "missing required column(s) at transform time: 'x'"
+# ---
+# name: TestPolarsBackend.test_dtype_mismatch_errors
+  "dtype mismatch against the training ptype: 'x' (expected Float64, got String)"
+# ---
+# name: TestPolarsBackend.test_missing_predictor_errors
+  "missing required column(s) at transform time: 'x'"
+# ---
+# name: TestRoleRequirements.test_outcome_requirement_not_configurable
+  "requirement for role 'outcome' is not configurable"
+# ---
+# name: TestRoleRequirements.test_predictor_requirement_not_configurable
+  "requirement for role 'predictor' is not configurable"
+# ---
+# name: TestTransformColumnPresence.test_missing_predictor_errors
+  "missing required column(s) at transform time: 'x'"
+# ---

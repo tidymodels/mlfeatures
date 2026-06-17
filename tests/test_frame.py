@@ -17,6 +17,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import _frame as f
 
@@ -52,15 +53,16 @@ def test_columns(construct: Constructor) -> None:
     assert f.columns(frame) == ["a", "b"]
 
 
-def test_from_native_rejects_duplicate_column_names() -> None:
+def test_from_native_rejects_duplicate_column_names(
+    snapshot: SnapshotAssertion,
+) -> None:
     # pandas permits duplicate labels (polars cannot construct them), so the
     # boundary must fail early with a clear, framework-owned error that names
     # the offending columns.
     native = pd.DataFrame([[1, 2, 3, 4]], columns=["a", "a", "b", "b"])
-    with pytest.raises(ValueError, match=r"duplicate column names are not allowed"):
+    with pytest.raises(ValueError) as excinfo:
         f.from_native(native)
-    with pytest.raises(ValueError, match=r"\['a', 'b'\]"):
-        f.from_native(native)
+    assert str(excinfo.value) == snapshot
 
 
 # --- Column selection ------------------------------------------------------

@@ -11,6 +11,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, Recipe, SchemaInfo, StepImputeMean
 
@@ -55,11 +56,14 @@ class TestEndToEnd:
         out = Recipe(steps=[StepImputeMean(["a"])]).fit(df).transform(df)
         assert out["a"].to_list() == [1.0, 2.0, 3.0]
 
-    def test_all_null_column_warns_and_passes_through(self) -> None:
+    def test_all_null_column_warns_and_passes_through(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = pd.DataFrame({"a": [1.0, None, 3.0], "empty": [None, None, None]})
         recipe = Recipe(steps=[StepImputeMean(["a", "empty"])])
-        with pytest.warns(UserWarning, match="entirely null"):
+        with pytest.warns(UserWarning) as record:
             fitted = recipe.fit(df)
+        assert str(record[0].message) == snapshot
         out = fitted.transform(df)
         assert out["a"].tolist() == [1.0, 2.0, 3.0]
         assert out["empty"].isna().all()  # untouched

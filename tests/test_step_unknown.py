@@ -8,6 +8,7 @@ from typing import Any
 import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_unknown import apply_unknown, fit_unknown
 
@@ -32,10 +33,11 @@ class TestFitUnknown:
         df = _df(("g", ["a", "b", "c"]))
         assert fit_unknown(df) == ["g"]
 
-    def test_collision_warns(self) -> None:
+    def test_collision_warns(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("g", ["a", "unknown", None]))
-        with pytest.warns(UserWarning, match="already exists"):
+        with pytest.warns(UserWarning) as record:
             result = fit_unknown(df)
+        assert str(record[0].message) == snapshot
         assert result == ["g"]
 
     def test_no_collision_no_warning(self) -> None:
@@ -44,10 +46,11 @@ class TestFitUnknown:
             warnings.simplefilter("error")
             assert fit_unknown(df) == ["g"]
 
-    def test_custom_level_collision(self) -> None:
+    def test_custom_level_collision(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("g", ["a", "MISSING", None]))
-        with pytest.warns(UserWarning, match="MISSING"):
+        with pytest.warns(UserWarning) as record:
             fit_unknown(df, new_level="MISSING")
+        assert str(record[0].message) == snapshot
 
 
 # ---------------------------------------------------------------------------

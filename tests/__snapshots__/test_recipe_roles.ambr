@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestRoles.test_incompatible_combo_rejected
+  "column 'a' cannot hold incompatible roles: outcome, predictor"
+# ---

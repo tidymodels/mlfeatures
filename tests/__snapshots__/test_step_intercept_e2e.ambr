@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestEndToEnd.test_clash_with_existing_column_raises
+  "step 'intercept' produces column(s) ['intercept'] that already exist in the schema; output column names must be unique"
+# ---

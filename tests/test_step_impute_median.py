@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_impute_median import (
     apply_impute_median,
@@ -60,13 +61,16 @@ class TestFitImputeMedian:
         medians = fit_impute_median(nw.from_native(pd.DataFrame(), eager_only=True))
         assert medians == {}
 
-    def test_all_null_column_kept_with_nan_median_and_warning(self) -> None:
+    def test_all_null_column_kept_with_nan_median_and_warning(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = _df(
             ("a", [1.0, 2.0, 3.0]),
             ("empty", pd.Series([None, None, None], dtype="float64")),
         )
-        with pytest.warns(UserWarning, match="entirely null"):
+        with pytest.warns(UserWarning) as record:
             medians = fit_impute_median(df)
+        assert str(record[0].message) == snapshot
         # "empty" is NOT dropped — it stays with a NaN median.
         assert list(medians) == ["a", "empty"]
         assert medians["a"] == pytest.approx(2.0)

@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestEndToEnd.test_all_null_column_warns_and_passes_through
+  "1 column(s) are entirely null and cannot be median-imputed; left unchanged: ['empty']."
+# ---

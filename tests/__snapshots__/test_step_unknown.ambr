@@ -1,0 +1,7 @@
+# serializer version: 1
+# name: TestFitUnknown.test_collision_warns
+  "The level 'unknown' already exists in 1 column(s); recoded nulls will be merged with it: ['g']."
+# ---
+# name: TestFitUnknown.test_custom_level_collision
+  "The level 'MISSING' already exists in 1 column(s); recoded nulls will be merged with it: ['g']."
+# ---

@@ -13,6 +13,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import (
     ANY_DTYPE,
@@ -276,13 +277,14 @@ def test_update_many_to_many_every_output_descends_from_all_inputs(
     assert {n.name for n in schema._history} == {"a", "b", "c"}
 
 
-def test_update_rejects_name_collision() -> None:
-    with pytest.raises(ValueError, match="already exist"):
+def test_update_rejects_name_collision(snapshot: SnapshotAssertion) -> None:
+    with pytest.raises(ValueError) as excinfo:
         _apply(
             [_FakeReduce(["a", "b"], out_names=("h",))],
             "polars",
             {"a": [1, 2, 3], "b": [4, 5, 6], "h": [7, 8, 9]},
         )
+    assert str(excinfo.value) == snapshot
 
 
 def test_check_additions_accepts_unique_new_columns() -> None:
@@ -291,36 +293,46 @@ def test_check_additions_accepts_unique_new_columns() -> None:
     schema.check_additions("step", ["c", "d"])
 
 
-def test_check_additions_rejects_collision_with_existing() -> None:
+def test_check_additions_rejects_collision_with_existing(
+    snapshot: SnapshotAssertion,
+) -> None:
     schema = Schema.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
-    with pytest.raises(ValueError, match="already exist"):
+    with pytest.raises(ValueError) as excinfo:
         schema.check_additions("step", ["b", "c"])
+    assert str(excinfo.value) == snapshot
 
 
-def test_check_additions_rejects_within_step_duplicate() -> None:
+def test_check_additions_rejects_within_step_duplicate(
+    snapshot: SnapshotAssertion,
+) -> None:
     # The gap a post-transform check cannot see: a step emitting one name twice.
     schema = Schema.from_frame(_frame_of("polars", {"a": [1]}))
-    with pytest.raises(ValueError, match="duplicate column name"):
+    with pytest.raises(ValueError) as excinfo:
         schema.check_additions("step", ["x", "x"])
+    assert str(excinfo.value) == snapshot
 
 
-def test_update_rejects_undeclared_produced_column() -> None:
-    with pytest.raises(ValueError, match="do not match"):
+def test_update_rejects_undeclared_produced_column(
+    snapshot: SnapshotAssertion,
+) -> None:
+    with pytest.raises(ValueError) as excinfo:
         _apply(
             # transform produces pc1 + pc2 but output_parents declares only pc1
             [_FakeReduce(["a", "b"], parent_override={"pc1": ["a", "b"]})],
             "polars",
             {"a": [1, 2, 3], "b": [4, 5, 6]},
         )
+    assert str(excinfo.value) == snapshot
 
 
-def test_update_rejects_unknown_parent() -> None:
-    with pytest.raises(ValueError, match="not in the schema"):
+def test_update_rejects_unknown_parent(snapshot: SnapshotAssertion) -> None:
+    with pytest.raises(ValueError) as excinfo:
         _apply(
             [_FakeReduce(["a", "b"], parent_override={"pc1": ["ghost"], "pc2": ["a"]})],
             "polars",
             {"a": [1, 2, 3], "b": [4, 5, 6]},
         )
+    assert str(excinfo.value) == snapshot
 
 
 def test_update_propagates_roles_to_produced_columns() -> None:
@@ -450,9 +462,12 @@ def test_recipe_summary_pre_fit_shows_initial_schema_with_declared_roles() -> No
     assert role_of == {"y": "outcome", "x": "predictor"}
 
 
-def test_recipe_summary_without_prototype_raises() -> None:
-    with pytest.raises(ValueError, match="prototype data"):
+def test_recipe_summary_without_prototype_raises(
+    snapshot: SnapshotAssertion,
+) -> None:
+    with pytest.raises(ValueError) as excinfo:
         Recipe(steps=[StepDummy(["g"])]).summary()
+    assert str(excinfo.value) == snapshot
 
 
 def test_recipe_empty_selection_leaves_schema_unchanged() -> None:

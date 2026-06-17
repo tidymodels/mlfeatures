@@ -11,6 +11,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, Recipe, SchemaInfo, StepNormalize
 
@@ -54,11 +55,14 @@ class TestEndToEnd:
         assert out["b"].tolist() == [5.0, 1.0, 4.0, 1.0, 9.0]
         assert out["const"].tolist() == [7.0] * 5
 
-    def test_constant_column_warns_and_is_left_unchanged(self) -> None:
+    def test_constant_column_warns_and_is_left_unchanged(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = pd.DataFrame(_data())
         recipe = Recipe(steps=[StepNormalize(["a", "const"])])
-        with pytest.warns(UserWarning, match="zero standard deviation"):
+        with pytest.warns(UserWarning) as record:
             fitted = recipe.fit(df)
+        assert str(record[0].message) == snapshot
         out = fitted.transform(df)
         # "const" is dropped from normalization -> passes through unchanged.
         assert out["const"].tolist() == [7.0] * 5

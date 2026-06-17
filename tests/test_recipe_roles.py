@@ -9,6 +9,7 @@ from __future__ import annotations
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Recipe, Roles, StepDropCorr
 
@@ -34,11 +35,12 @@ class TestRoles:
     def test_of_missing_is_empty(self) -> None:
         assert Roles().of("nope") == set()
 
-    def test_incompatible_combo_rejected(self) -> None:
+    def test_incompatible_combo_rejected(self, snapshot: SnapshotAssertion) -> None:
         roles = Roles()
         roles.add("a", "outcome")
-        with pytest.raises(ValueError, match="incompatible"):
+        with pytest.raises(ValueError) as excinfo:
             roles.add("a", "predictor")
+        assert str(excinfo.value) == snapshot
 
     def test_copy_is_independent(self) -> None:
         roles = Roles({"a": {"predictor"}})
@@ -72,9 +74,10 @@ class TestSetRoles:
         assert extended.roles.of("y") == {"outcome"}
         assert base is not extended
 
-    def test_unknown_column_rejected(self) -> None:
-        with pytest.raises(ValueError, match="not in the prototype"):
+    def test_unknown_column_rejected(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
             Recipe(data=_df()).set_roles(outcome="missing")
+        assert str(excinfo.value) == snapshot
 
     def test_without_prototype_skips_existence_check(self) -> None:
         rec = Recipe().set_roles(outcome="anything")

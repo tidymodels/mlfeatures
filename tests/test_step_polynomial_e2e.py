@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, Recipe, SchemaInfo, StepPolynomial
 
@@ -71,15 +72,19 @@ class TestEndToEnd:
         assert out["b"].tolist() == [5.0, 1.0, 4.0, 1.0, 9.0]
         assert out["const"].tolist() == [7.0] * 5
 
-    def test_constant_column_warns_and_is_left_unchanged(self) -> None:
+    def test_constant_column_warns_and_is_left_unchanged(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = pd.DataFrame(_data())
         recipe = Recipe(steps=[StepPolynomial(["a", "const"], degree=2)])
         # Warn at fit (during the inline transform in Recipe.fit), and warn
         # again on the explicit transform — both come from apply_polynomial.
-        with pytest.warns(UserWarning, match="const"):
+        with pytest.warns(UserWarning) as record:
             fitted = recipe.fit(df)
-        with pytest.warns(UserWarning, match="const"):
+        assert str(record[0].message) == snapshot
+        with pytest.warns(UserWarning) as record:
             out = fitted.transform(df)
+        assert str(record[0].message) == snapshot
         # "const" stays put with its original value.
         assert out["const"].tolist() == [7.0] * 5
         assert list(out.columns) == ["a_1", "a_2", "const", "b"]
@@ -250,8 +255,9 @@ class TestStepPolynomialUnit:
     def test_not_sparse(self) -> None:
         assert StepPolynomial(["a"]).produces_sparse is False
 
-    def test_invalid_degree_raises_at_fit(self) -> None:
+    def test_invalid_degree_raises_at_fit(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame(_data())
         step = StepPolynomial(["a"], degree=0)
-        with pytest.raises(ValueError, match="degree"):
+        with pytest.raises(ValueError) as excinfo:
             step.fit(nw.from_native(df), SchemaInfo())
+        assert str(excinfo.value) == snapshot

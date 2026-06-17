@@ -1,0 +1,7 @@
+# serializer version: 1
+# name: TestConstantColumns.test_constant_column_is_omitted
+  "1 column(s) had zero standard deviation (constant) and were not normalized: ['c']."
+# ---
+# name: TestConstantColumns.test_warning_names_the_columns
+  "1 column(s) had zero standard deviation (constant) and were not normalized: ['c']."
+# ---

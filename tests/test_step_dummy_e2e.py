@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, Recipe, SchemaInfo, StepDummy
 
@@ -87,16 +88,19 @@ class TestNameCollisions:
 
     @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
     def test_generated_name_collides_with_existing_column_raises(
-        self, ctor: type
+        self, ctor: type, snapshot: SnapshotAssertion
     ) -> None:
         # "color" expands to color_green/color_red; color_red already exists.
         df = ctor({"color": ["red", "green", "blue", "red"], "color_red": [1, 2, 3, 4]})
         recipe = Recipe(steps=[StepDummy(["color"], keep_original_cols=True)])
-        with pytest.raises(ValueError, match="already exist"):
+        with pytest.raises(ValueError) as excinfo:
             recipe.fit(df)
+        assert str(excinfo.value) == snapshot
 
     @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
-    def test_two_generated_columns_with_same_name_raises(self, ctor: type) -> None:
+    def test_two_generated_columns_with_same_name_raises(
+        self, ctor: type, snapshot: SnapshotAssertion
+    ) -> None:
         # Default naming is f"{col}_{level}". Column "a" retains level "b_c"
         # (reference "a1" dropped) -> "a_b_c"; column "a_b" retains level "c"
         # (reference "a0" dropped) -> "a_b_c". Both indicators want one name.
@@ -104,8 +108,9 @@ class TestNameCollisions:
         # silently kept one column); check_additions now rejects it up front.
         df = ctor({"a": ["a1", "b_c", "a1", "b_c"], "a_b": ["a0", "c", "a0", "c"]})
         recipe = Recipe(steps=[StepDummy(["a", "a_b"])])
-        with pytest.raises(ValueError, match="duplicate column name"):
+        with pytest.raises(ValueError) as excinfo:
             recipe.fit(df)
+        assert str(excinfo.value) == snapshot
 
 
 class TestStepDummyUnit:
