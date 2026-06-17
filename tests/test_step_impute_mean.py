@@ -53,7 +53,9 @@ class TestFitImputeMean:
         df = _df(("a", [1.0, 2.0]), ("empty", [None, None]))
         with pytest.warns(UserWarning) as record:
             means = fit_impute_mean(df)
-        assert str(record[0].message) == snapshot
+        # numpy may also emit a RuntimeWarning ("Mean of empty slice"); select
+        # our UserWarning explicitly rather than relying on record order.
+        assert str(record.pop(UserWarning).message) == snapshot
         # "empty" is NOT dropped — it stays with a NaN mean.
         assert list(means) == ["a", "empty"]
         assert means["a"] == pytest.approx(1.5)

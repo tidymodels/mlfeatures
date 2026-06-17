@@ -68,7 +68,9 @@ class TestEndToEnd:
         recipe = Recipe(steps=[StepImputeMedian(["a", "empty"])])
         with pytest.warns(UserWarning) as record:
             fitted = recipe.fit(df)
-        assert str(record[0].message) == snapshot
+        # numpy may also emit a RuntimeWarning ("Mean of empty slice"); select
+        # our UserWarning explicitly rather than relying on record order.
+        assert str(record.pop(UserWarning).message) == snapshot
         out = fitted.transform(df)
         assert out["a"].tolist() == [1.0, 2.0, 3.0]
         assert out["empty"].isna().all()  # untouched
