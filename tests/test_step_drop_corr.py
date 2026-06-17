@@ -163,7 +163,7 @@ class TestNaNHandling:
             result = fit_drop_corr(df, threshold=0.9)
         assert "const" in result
 
-    def test_zero_variance_column_warns(self) -> None:
+    def test_zero_variance_column_warns(self, snapshot: SnapshotAssertion) -> None:
         df = _df(
             ("a", [1.0, 2.0, 3.0]),
             ("b", [4.0, 5.0, 6.0]),
@@ -172,9 +172,12 @@ class TestNaNHandling:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             fit_drop_corr(df, threshold=0.9)
-        assert any("removed" in str(warning.message).lower() for warning in w)
+        msg = next(str(x.message) for x in w if "removed" in str(x.message).lower())
+        assert msg == snapshot
 
-    def test_too_many_na_columns_warns_and_returns_na_drops(self) -> None:
+    def test_too_many_na_columns_warns_and_returns_na_drops(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         # Two all-null columns out of three → fewer than 2 non-NA remain
         df = _df(
             ("a", [1.0, 2.0, 3.0]),
@@ -184,12 +187,15 @@ class TestNaNHandling:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             result = fit_drop_corr(df, threshold=0.9)
-        assert any("skipping" in str(warning.message).lower() for warning in w)
+        msg = next(str(x.message) for x in w if "skipping" in str(x.message).lower())
+        assert msg == snapshot
         # b and c should still be returned as drops
         assert "b" in result
         assert "c" in result
 
-    def test_sporadic_nan_warns_and_drops_expected(self) -> None:
+    def test_sporadic_nan_warns_and_drops_expected(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = _df(
             ("a", [1.0, None, 3.0]),
             ("b", [1.0, 2.0, None]),
@@ -200,7 +206,8 @@ class TestNaNHandling:
             result = fit_drop_corr(df, threshold=0.9)
         # The pandas correlation matrix has sporadic NaNs from pairwise-complete
         # observations; the step warns and still returns a deterministic drop.
-        assert any("sporadic" in str(warning.message).lower() for warning in w)
+        msg = next(str(x.message) for x in w if "sporadic" in str(x.message).lower())
+        assert msg == snapshot
         assert result == ["c"]
 
 

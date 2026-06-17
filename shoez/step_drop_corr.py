@@ -97,7 +97,7 @@ def fit_drop_corr(
     if na_drop:
         warnings.warn(
             f"the correlation matrix has missing values; "
-            f"{len(na_drop)} column(s) were removed from the data",
+            f"{len(na_drop)} column(s) were removed from the data: {na_drop!r}",
             stacklevel=2,
         )
         corr[all_na, :] = 0.0
@@ -108,16 +108,18 @@ def fit_drop_corr(
     n_remaining = int((~all_na).sum())
     if n_remaining < 2:
         warnings.warn(
-            "too many correlations are NA; skipping correlation filter",
+            f"only {n_remaining} usable column(s) remain after dropping all-NA "
+            f"column(s) {na_drop!r}; skipping correlation filter",
             stacklevel=2,
         )
         return na_drop
 
     # Zero out sporadic NaN (pairs where one column had partial nulls).
     if np.any(np.isnan(corr)):
+        sporadic = [col_names[i] for i in range(n) if np.isnan(corr[i]).any()]
         warnings.warn(
-            "the correlation matrix has sporadic missing values; "
-            "some columns were excluded from the filter",
+            f"the correlation matrix has sporadic missing values; "
+            f"column(s) {sporadic!r} were excluded from the filter",
             stacklevel=2,
         )
         corr[np.isnan(corr)] = 0.0
