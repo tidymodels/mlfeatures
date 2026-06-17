@@ -107,6 +107,30 @@ class Step(ABC):
         """
         return {}
 
+    def produced_columns(self) -> list[str]:
+        """Ordered names of the columns this step *adds* to the frame.
+
+        Known after ``fit()``. Unlike ``output_parents()`` (a name→parents map,
+        so its keys are necessarily unique), this is an ordered list that
+        *preserves duplicates*: a step that would emit two columns with the same
+        name reports that name twice. The recipe validates this list for
+        uniqueness — both against the existing schema and within the step
+        itself — *before* the step runs, which is the single centralized
+        name-collision check every column-adding step relies on. Validating up
+        front means the error is clean on every backend (polars raises a
+        backend-specific error when two columns share a name; pandas silently
+        keeps only one), rather than a confusing failure or a silently dropped
+        column mid-transform.
+
+        The default derives the list from ``output_parents()`` keys, correct for
+        every step whose outputs cannot collide by construction. Steps with a
+        free-form naming scheme that *could* collide (``step_dummy`` /
+        ``step_one_hot``, whose ``{col}_{level}`` names can clash across source
+        columns or under a custom ``name_fn``) override this to preserve any
+        duplicate names so the recipe can reject them.
+        """
+        return list(self.output_parents())
+
     @abstractmethod
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Dtypes this step is valid to apply to.

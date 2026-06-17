@@ -77,6 +77,28 @@ class TestEndToEnd:
         assert all(step.trained for step in fitted.steps)
 
 
+class TestNameCollisions:
+    """Generated indicator names are validated centrally by the recipe."""
+
+    @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
+    def test_generated_name_collides_with_existing_column_raises(
+        self, ctor: type
+    ) -> None:
+        df = ctor({"color": ["red", "green", "red"], "color_red": [1, 2, 3]})
+        recipe = Recipe(steps=[StepOneHot(["color"], keep_original_cols=True)])
+        with pytest.raises(ValueError, match="already exist"):
+            recipe.fit(df)
+
+    @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
+    def test_two_generated_columns_with_same_name_raises(self, ctor: type) -> None:
+        # One-hot keeps every level, so "a" + level "b_c" and "a_b" + level "c"
+        # both want the name "a_b_c".
+        df = ctor({"a": ["b_c", "z", "b_c"], "a_b": ["c", "z", "c"]})
+        recipe = Recipe(steps=[StepOneHot(["a", "a_b"])])
+        with pytest.raises(ValueError, match="duplicate column name"):
+            recipe.fit(df)
+
+
 class TestStepOneHotUnit:
     def test_mode_is_one_to_many(self) -> None:
         assert StepOneHot(["color"]).mode is Mode.ONE_TO_MANY

@@ -147,25 +147,12 @@ def apply_dummy(
         the reference level is not incorrectly flagged as unseen.
     """
     source_cols = list(levels.keys())
-    existing_non_source = set(frame.columns) - set(source_cols)
-    generated_so_far: set[str] = set()
 
     for col, retained_levels in levels.items():
         if not retained_levels:
             continue
 
         out_names = [col_name_fn(col, str(lvl)) for lvl in retained_levels]
-
-        # Collision check before mutating the frame.
-        collisions = [
-            n for n in out_names if n in existing_non_source or n in generated_so_far
-        ]
-        if collisions:
-            raise ValueError(
-                f"Generated indicator column(s) {collisions!r} conflict with "
-                "existing columns. Use ``name_fn`` to choose different names."
-            )
-        generated_so_far.update(out_names)
 
         # Detect truly unseen levels — values not seen at fit time at all.
         # The reference level (present in all_known but not in retained_levels)
@@ -276,12 +263,19 @@ class StepDummy(Step):
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         # Each indicator descends from exactly its source column (a1, a2 ← a).
+        # The ordered list preserves any duplicate name (which the parents map,
+        # keyed by name, would silently dedup).
+        produced = [
+            self._col_name(col, str(lvl))
+            for col, lvls in self._estimates.levels.items()
+            for lvl in lvls
+        ]
         self._output_parents = {
             self._col_name(col, str(lvl)): [col]
             for col, lvls in self._estimates.levels.items()
             for lvl in lvls
         }
-        self._schema_out = ColSchema(columns=list(self._output_parents))
+        self._schema_out = ColSchema(columns=produced)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -313,6 +307,10 @@ class StepDummy(Step):
         if self._output_parents is None:
             raise RuntimeError("StepDummy.output_parents() called before fit().")
         return self._output_parents
+
+    def produced_columns(self) -> list[str]:
+        """Indicator names in order, preserving duplicates (see ``Step``)."""
+        return list(self.schema_out().columns)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Accepts discrete columns; rejects float and decimal."""

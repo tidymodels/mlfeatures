@@ -113,7 +113,7 @@ A significant design goal is that step authors should only need to implement the
 | Skip on new data (row ops) | `skip=TRUE` convention, routinely missed | Structural — `RowOp` subclass, framework enforces |
 | Error messages with step identity | Each step wrapped errors, or didn't | Framework wraps all `fit()`/`transform()` calls |
 | `keep_original_cols` | Implemented separately in each step | Framework enforces after `step.transform()` returns |
-| Output column name uniqueness | Each step checked, or collisions happened silently | Framework validates after `schema_out()` |
+| Output column name uniqueness | Each step checked, or collisions happened silently | Framework validates `produced_columns()` before each step runs |
 | Lineage DAG update | Not tracked at all | Framework updates from `schema_out()` after each step |
 | Sparse propagation | Each step handled or silently densified | Framework tracks through lineage DAG |
 

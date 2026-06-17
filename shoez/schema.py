@@ -198,6 +198,42 @@ class Schema:
             )
         return schema
 
+    def check_additions(self, step_id: str, produced: list[str]) -> None:
+        """Validate the columns a step will *add*, before it runs.
+
+        ``produced`` is the step's ``produced_columns()`` — an ordered list of
+        the names it adds, preserving duplicates. This is the single centralized
+        name-collision check: it rejects a produced name that already exists in
+        the live schema *and* a name the step would emit more than once. Running
+        before ``step.transform()`` keeps the error clean and identical on every
+        backend; left to transform time, polars raises a backend-specific error
+        and pandas silently keeps only one of the colliding columns.
+
+        ``update()`` re-checks collisions against the *post-transform* frame as a
+        backstop, but cannot see a within-step duplicate (the frame has already
+        collapsed the two columns into one), which is why this guard runs here.
+        """
+        live = set(self._live)
+        seen: set[str] = set()
+        existing: list[str] = []
+        duplicated: list[str] = []
+        for name in produced:
+            if name in live and name not in existing:
+                existing.append(name)
+            elif name in seen and name not in duplicated:
+                duplicated.append(name)
+            seen.add(name)
+        if existing:
+            raise ValueError(
+                f"step {step_id!r} produces column(s) {sorted(existing)} that "
+                "already exist in the schema; output column names must be unique"
+            )
+        if duplicated:
+            raise ValueError(
+                f"step {step_id!r} produces duplicate column name(s) "
+                f"{sorted(duplicated)}; output column names must be unique"
+            )
+
     def update(self, step: "Step", frame_after: Frame, roles: Roles) -> None:
         """Fold one fitted, transformed step into the DAG.
 

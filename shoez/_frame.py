@@ -46,11 +46,32 @@ def from_native(df: DataFrame) -> Frame:
     except nw.exceptions.DuplicateError as exc:
         # narwhals already rejects duplicate labels (which pandas permits but
         # polars does not), but its message is phrased in narwhals' terms.
-        # Re-raise with a framework-owned message so the boundary owns the error.
+        # Re-raise with a framework-owned message that names the offenders.
+        dupes = _duplicate_names(df)
+        listed = f": {dupes}" if dupes else ""
         raise ValueError(
-            "duplicate column names are not allowed; "
+            f"duplicate column names are not allowed{listed}; "
             "every column must have a unique name"
         ) from exc
+
+
+def _duplicate_names(df: DataFrame) -> list[str]:
+    """Names appearing more than once in ``df.columns``, in first-seen order.
+
+    Reads ``columns`` off the native frame (both pandas and polars expose it);
+    used only to enrich the duplicate-column error, so an unexpected shape just
+    yields an empty list rather than masking the original failure.
+    """
+    columns = getattr(df, "columns", None)
+    if columns is None:
+        return []
+    seen: set[str] = set()
+    dupes: list[str] = []
+    for name in list(columns):
+        if name in seen and name not in dupes:
+            dupes.append(name)
+        seen.add(name)
+    return dupes
 
 
 def to_native(frame: Frame) -> DataFrame:

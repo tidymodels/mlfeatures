@@ -203,12 +203,9 @@ class TestApplyDummy:
             )
         assert not any("not seen" in str(warning.message).lower() for warning in w)
 
-    def test_column_name_collision_raises(self) -> None:
-        frame = _pd(("x", ["a", "b"]), ("x_b", [10, 20]))
-        with pytest.raises(ValueError, match="conflict"):
-            apply_dummy(
-                frame, self._levels(), _default_name, False, all_known=self._all_known()
-            )
+    # Name-collision protection is no longer enforced in ``apply_dummy``; it is
+    # centralized in the recipe (``Schema.check_additions``). See the recipe-level
+    # collision tests in ``test_step_dummy_e2e.py``.
 
     def test_zero_row_frame(self) -> None:
         frame = _pd(("x", []))
