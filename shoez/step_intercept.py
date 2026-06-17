@@ -57,14 +57,10 @@ def add_intercept(
         across every row, so 0-row and 1-row frames still produce a
         schema-correct constant column.
 
-    Raises
-    ------
-    ValueError
-        If ``name`` already exists in ``features``. Erroring here avoids
-        silently clobbering a real column the user did not mean to replace.
+    A clash with an existing column is not checked here: within a recipe the
+    framework rejects it up front (``Schema.check_additions``), the single
+    centralized name-collision guard for every column-adding step.
     """
-    if name in features.columns:
-        raise ValueError(f"Column {name!r} already exists; choose a different `name`.")
     return features.with_columns(nw.lit(value).alias(name))
 
 
@@ -102,9 +98,10 @@ class StepIntercept(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the produced column's schema. Estimates nothing."""
-        # Build the column on the training frame to read its concrete dtype
-        # (and to surface a name clash here, at fit time). ``add_intercept`` is
-        # idempotent, so the recipe re-applying it in ``transform`` is harmless.
+        # Build the column on the training frame to read its concrete dtype.
+        # ``add_intercept`` is idempotent, so the recipe re-applying it in
+        # ``transform`` is harmless. A name clash is rejected by the recipe via
+        # Schema.check_additions before this step runs.
         produced = add_intercept(training_data, self.value, self.name)
         out_dtype = str(produced.schema[self.name])
         self._schema_out = ColSchema(columns=[self.name], dtypes={self.name: out_dtype})

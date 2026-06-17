@@ -109,12 +109,14 @@ class TestBackends:
 
 
 class TestNameClash:
-    def test_existing_default_name_raises(self) -> None:
-        df = _df(("intercept", [1.0, 2.0]))
-        with pytest.raises(ValueError, match="already exists"):
-            add_intercept(df)
+    """``add_intercept`` itself does not guard against a clash.
 
-    def test_existing_custom_name_raises(self) -> None:
-        df = _df(("x", [1.0, 2.0]))
-        with pytest.raises(ValueError, match="already exists"):
-            add_intercept(df, name="x")
+    Name-collision rejection is centralized in the recipe
+    (``Schema.check_additions``); see the recipe-level test in
+    ``test_step_intercept_e2e.py``. The bare helper just overwrites.
+    """
+
+    def test_existing_name_is_overwritten_not_an_error(self) -> None:
+        df = _df(("intercept", [1.0, 2.0]))
+        result = add_intercept(df, value=7.0)
+        assert result.to_native()["intercept"].tolist() == [7.0, 7.0]

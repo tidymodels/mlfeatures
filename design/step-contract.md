@@ -134,13 +134,24 @@ def output_parents(self) -> dict[str, list[str]]:
 
 Known after `fit()`. The keys are exactly the columns the step adds to the frame; the recipe validates them against the post-step frame and rejects a mismatch. The base-class default returns `{}` — correct for steps that create no new columns (in-place `ONE_TO_ONE`, `REMOVING`, `ROW_OP`). A degree-0 `step_poly` column is a pass-through, not a newly produced column, so it is excluded from the map.
 
+### Declaring added columns for collision checking: `produced_columns()`
+
+`output_parents()` keys are necessarily unique (it is a `dict`), so they cannot express a step that would emit the *same* name twice. `produced_columns()` fills that gap: an ordered list of the names a step adds, **preserving duplicates**.
+
+```python
+def produced_columns(self) -> list[str]:
+    """Ordered names this step adds, with duplicates preserved."""
+```
+
+The recipe passes this list to the single centralized name-collision check (`Schema.check_additions`) **before** the step runs, rejecting both a name that already exists in the schema and a name the step would emit more than once. Validating up front keeps the error clean and identical across backends: at transform time polars raises a backend-specific error while pandas silently keeps only one of the colliding columns, so a post-transform check cannot see a within-step duplicate. The base-class default derives the list from `output_parents()` keys; steps with a free-form naming scheme that could self-collide (`step_dummy` / `step_one_hot`) override it to preserve duplicates. Steps no longer perform their own collision checks.
+
 ### What recording this information enables
 
 After `fit()`, the lineage DAG contains the full input/output mapping for every step. This unlocks:
 
 - **Feature provenance.** The lineage DAG records which input columns produced which output columns. Tracing PCA components or dummy columns back to their source is possible programmatically. This is the core problem identified in [tidymodels/recipes#1158](https://github.com/tidymodels/recipes/issues/1158).
 - **`has_source()` selector.** Users can select all columns produced by a given step or step type — e.g. `has_source(step_type=step_dummy)`. See [selectors.md](selectors.md).
-- **Naming contract enforcement.** The framework validates that generated column names are unique after each step runs.
+- **Naming contract enforcement.** The framework validates that generated column names are unique — both against the existing schema and within the step — before each step runs, via `produced_columns()` and `Schema.check_additions`. Steps do not self-check.
 - **`keep_original_cols` applicability.** Only meaningful for `ONE_TO_ONE` and `ONE_TO_MANY` modes — the framework ignores it for others.
 
 ---

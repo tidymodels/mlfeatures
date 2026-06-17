@@ -285,6 +285,25 @@ def test_update_rejects_name_collision() -> None:
         )
 
 
+def test_check_additions_accepts_unique_new_columns() -> None:
+    schema = Schema.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
+    # No raise: names are new and unique.
+    schema.check_additions("step", ["c", "d"])
+
+
+def test_check_additions_rejects_collision_with_existing() -> None:
+    schema = Schema.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
+    with pytest.raises(ValueError, match="already exist"):
+        schema.check_additions("step", ["b", "c"])
+
+
+def test_check_additions_rejects_within_step_duplicate() -> None:
+    # The gap a post-transform check cannot see: a step emitting one name twice.
+    schema = Schema.from_frame(_frame_of("polars", {"a": [1]}))
+    with pytest.raises(ValueError, match="duplicate column name"):
+        schema.check_additions("step", ["x", "x"])
+
+
 def test_update_rejects_undeclared_produced_column() -> None:
     with pytest.raises(ValueError, match="do not match"):
         _apply(

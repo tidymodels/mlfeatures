@@ -55,8 +55,10 @@ class TestEndToEnd:
         assert all(step.trained for step in fitted.steps)
 
     def test_clash_with_existing_column_raises(self) -> None:
+        # Rejected centrally by the recipe (Schema.check_additions), not by
+        # the step itself.
         df = pd.DataFrame({"intercept": [1.0, 2.0], "x": [3.0, 4.0]})
-        with pytest.raises(ValueError, match="already exists"):
+        with pytest.raises(ValueError, match="already exist"):
             Recipe(steps=[StepIntercept()]).fit(df)
 
 

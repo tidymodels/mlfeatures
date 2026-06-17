@@ -284,6 +284,10 @@ class Recipe:
             fitted = step.fit(current, info)
             fitted.trained = True  # set by the recipe, not the step (per contract)
             if not isinstance(step, RowOp):
+                # Centralized name-collision guard: reject produced columns that
+                # clash with the live schema or with each other, before the step
+                # runs (see Schema.check_additions). Steps no longer self-check.
+                schema.check_additions(fitted.id, fitted.produced_columns())
                 current = fitted.transform(current)
             fitted.update_roles(live_roles)
             if not isinstance(step, RowOp):

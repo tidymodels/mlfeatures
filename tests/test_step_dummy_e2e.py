@@ -78,6 +78,36 @@ class TestEndToEnd:
         assert all(step.trained for step in fitted.steps)
 
 
+class TestNameCollisions:
+    """Generated indicator names are validated centrally by the recipe.
+
+    ``StepDummy`` no longer checks names itself; the recipe rejects collisions
+    via ``Schema.check_additions`` before the step runs, on every backend.
+    """
+
+    @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
+    def test_generated_name_collides_with_existing_column_raises(
+        self, ctor: type
+    ) -> None:
+        # "color" expands to color_green/color_red; color_red already exists.
+        df = ctor({"color": ["red", "green", "blue", "red"], "color_red": [1, 2, 3, 4]})
+        recipe = Recipe(steps=[StepDummy(["color"], keep_original_cols=True)])
+        with pytest.raises(ValueError, match="already exist"):
+            recipe.fit(df)
+
+    @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
+    def test_two_generated_columns_with_same_name_raises(self, ctor: type) -> None:
+        # Default naming is f"{col}_{level}". Column "a" retains level "b_c"
+        # (reference "a1" dropped) -> "a_b_c"; column "a_b" retains level "c"
+        # (reference "a0" dropped) -> "a_b_c". Both indicators want one name.
+        # This intra-step clash used to slip past the centralized check (pandas
+        # silently kept one column); check_additions now rejects it up front.
+        df = ctor({"a": ["a1", "b_c", "a1", "b_c"], "a_b": ["a0", "c", "a0", "c"]})
+        recipe = Recipe(steps=[StepDummy(["a", "a_b"])])
+        with pytest.raises(ValueError, match="duplicate column name"):
+            recipe.fit(df)
+
+
 class TestStepDummyUnit:
     def test_mode_is_one_to_many(self) -> None:
         assert StepDummy(["color"]).mode is Mode.ONE_TO_MANY
