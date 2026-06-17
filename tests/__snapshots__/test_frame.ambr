@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: test_from_native_rejects_duplicate_column_names
+  "duplicate column names are not allowed: ['a', 'b']; every column must have a unique name"
+# ---

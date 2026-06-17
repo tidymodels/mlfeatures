@@ -8,6 +8,7 @@ from typing import Any
 import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_impute_mode import apply_impute_mode, fit_impute_mode
 
@@ -54,13 +55,16 @@ class TestFitImputeMode:
         modes = fit_impute_mode(nw.from_native(pd.DataFrame(), eager_only=True))
         assert modes == {}
 
-    def test_all_null_column_kept_with_none_mode_and_warning(self) -> None:
+    def test_all_null_column_kept_with_none_mode_and_warning(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = _df(
             ("g", ["a", "a", "b"]),
             ("empty", pd.Series([None, None, None], dtype="object")),
         )
-        with pytest.warns(UserWarning, match="entirely null"):
+        with pytest.warns(UserWarning) as record:
             modes = fit_impute_mode(df)
+        assert str(record[0].message) == snapshot
         assert list(modes) == ["g", "empty"]
         assert modes["g"] == "a"
         assert modes["empty"] is None

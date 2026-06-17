@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestEndToEnd.test_collision_warns_through_recipe
+  "The level 'unknown' already exists in 1 column(s); recoded nulls will be merged with it: ['c']."
+# ---

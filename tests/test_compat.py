@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Recipe, StepNormalize
 from shoez.compat import RecipeTransformer
@@ -59,12 +60,13 @@ class TestAssemble:
         out = RecipeTransformer(rec).fit_transform(X)
         assert list(out.columns) == ["x1"]
 
-    def test_y_without_outcome_role_raises(self) -> None:
+    def test_y_without_outcome_role_raises(self, snapshot: SnapshotAssertion) -> None:
         data = pd.DataFrame({"x1": [1.0, 2.0, 3.0]})
         rec = Recipe(data=data).add(StepNormalize(["x1"]))
         X, y = _X_y()
-        with pytest.raises(ValueError, match="no `outcome` role"):
+        with pytest.raises(ValueError) as excinfo:
             RecipeTransformer(rec).fit(pd.DataFrame({"x1": [1.0, 2.0, 3.0]}), y)
+        assert str(excinfo.value) == snapshot
 
 
 class TestBackendParity:

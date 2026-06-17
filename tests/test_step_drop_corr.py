@@ -9,6 +9,7 @@ import pandas as pd
 import polars as pl
 import polars.selectors as cs
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import SchemaInfo
 from shoez.step_drop_corr import StepDropCorr, fit_drop_corr
@@ -42,20 +43,23 @@ class TestReturnType:
 
 
 class TestInputValidation:
-    def test_threshold_above_1_raises(self) -> None:
+    def test_threshold_above_1_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
-        with pytest.raises(ValueError, match="threshold"):
+        with pytest.raises(ValueError) as excinfo:
             fit_drop_corr(df, threshold=1.1)
+        assert str(excinfo.value) == snapshot
 
-    def test_threshold_below_0_raises(self) -> None:
+    def test_threshold_below_0_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
-        with pytest.raises(ValueError, match="threshold"):
+        with pytest.raises(ValueError) as excinfo:
             fit_drop_corr(df, threshold=-0.1)
+        assert str(excinfo.value) == snapshot
 
-    def test_invalid_method_raises(self) -> None:
+    def test_invalid_method_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
-        with pytest.raises(ValueError, match="method"):
+        with pytest.raises(ValueError) as excinfo:
             fit_drop_corr(df, method="kendall")  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
 
 
 # ---------------------------------------------------------------------------

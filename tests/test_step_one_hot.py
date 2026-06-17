@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_one_hot import StepOneHot, fit_one_hot
 from shoez.types import Roles, SchemaInfo
@@ -75,20 +76,23 @@ class TestFitOneHot:
         assert isinstance(result, dict)
         assert all(isinstance(v, list) for v in result.values())
 
-    def test_single_level_raises(self) -> None:
+    def test_single_level_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _pd(("x", ["a", "a", "a"]))
-        with pytest.raises(ValueError, match="fewer than 2"):
+        with pytest.raises(ValueError) as excinfo:
             fit_one_hot(df)
+        assert str(excinfo.value) == snapshot
 
-    def test_all_null_raises(self) -> None:
+    def test_all_null_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _pd(("x", [None, None]))
-        with pytest.raises(ValueError, match="fewer than 2"):
+        with pytest.raises(ValueError) as excinfo:
             fit_one_hot(df)
+        assert str(excinfo.value) == snapshot
 
-    def test_zero_row_raises(self) -> None:
+    def test_zero_row_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _pd(("x", []))
-        with pytest.raises(ValueError, match="zero-row"):
+        with pytest.raises(ValueError) as excinfo:
             fit_one_hot(df)
+        assert str(excinfo.value) == snapshot
 
 
 # ---------------------------------------------------------------------------
@@ -236,11 +240,12 @@ class TestStepOneHotCorrectness:
 
 
 class TestStepOneHotGuards:
-    def test_transform_before_fit_raises(self) -> None:
+    def test_transform_before_fit_raises(self, snapshot: SnapshotAssertion) -> None:
         step = StepOneHot(columns=["x"])
         df = _pd(("x", ["a"]))
-        with pytest.raises(RuntimeError, match="before fit"):
+        with pytest.raises(RuntimeError) as excinfo:
             step.transform(df)
+        assert str(excinfo.value) == snapshot
 
     def test_schema_in_after_fit(self) -> None:
         df = _pd(("a", ["x", "y"]), ("b", ["p", "q"]))
@@ -251,21 +256,24 @@ class TestStepOneHotGuards:
         assert si.columns == ["a", "b"]
         assert set(si.dtypes) == {"a", "b"}
 
-    def test_schema_in_before_fit_raises(self) -> None:
+    def test_schema_in_before_fit_raises(self, snapshot: SnapshotAssertion) -> None:
         step = StepOneHot(columns=["x"])
-        with pytest.raises(RuntimeError, match="before fit"):
+        with pytest.raises(RuntimeError) as excinfo:
             step.schema_in()
+        assert str(excinfo.value) == snapshot
 
-    def test_schema_out_before_fit_raises(self) -> None:
+    def test_schema_out_before_fit_raises(self, snapshot: SnapshotAssertion) -> None:
         step = StepOneHot(columns=["x"])
-        with pytest.raises(RuntimeError, match="before fit"):
+        with pytest.raises(RuntimeError) as excinfo:
             step.schema_out()
+        assert str(excinfo.value) == snapshot
 
-    def test_single_level_raises_at_fit(self) -> None:
+    def test_single_level_raises_at_fit(self, snapshot: SnapshotAssertion) -> None:
         df = _pd(("x", ["a", "a"]))
         step = StepOneHot(columns=["x"])
-        with pytest.raises(ValueError, match="fewer than 2"):
+        with pytest.raises(ValueError) as excinfo:
             step.fit(df, _schema())
+        assert str(excinfo.value) == snapshot
 
     def test_float_column_not_in_accepts_dtypes(self) -> None:
         step = StepOneHot(columns=["x"])

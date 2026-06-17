@@ -8,6 +8,7 @@ from typing import Any
 import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_normalize import apply_normalize, fit_normalize
 
@@ -104,16 +105,18 @@ class TestCoreEstimates:
 
 
 class TestConstantColumns:
-    def test_constant_column_is_omitted(self) -> None:
+    def test_constant_column_is_omitted(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("x", [1.0, 2.0, 3.0]), ("c", [5.0, 5.0, 5.0]))
-        with pytest.warns(UserWarning, match="zero standard deviation"):
+        with pytest.warns(UserWarning) as record:
             stats = fit_normalize(df)
+        assert str(record[0].message) == snapshot
         assert list(stats) == ["x"]  # constant "c" dropped
 
-    def test_warning_names_the_columns(self) -> None:
+    def test_warning_names_the_columns(self, snapshot: SnapshotAssertion) -> None:
         df = _df(("c", [5.0, 5.0, 5.0]))
-        with pytest.warns(UserWarning, match=r"'c'"):
+        with pytest.warns(UserWarning) as record:
             stats = fit_normalize(df)
+        assert str(record[0].message) == snapshot
         assert stats == {}
 
     def test_no_warning_when_no_constant_columns(self) -> None:

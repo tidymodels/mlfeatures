@@ -14,6 +14,7 @@ import pickle
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Ptype, Recipe, Selectors, StepNormalize
 
@@ -23,11 +24,12 @@ def _train() -> dict[str, list[float]]:
 
 
 class TestTransformColumnPresence:
-    def test_missing_predictor_errors(self) -> None:
+    def test_missing_predictor_errors(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame(_train())
         fitted = Recipe(outcome="y", predictors="x").add(StepNormalize(["x"])).fit(df)
-        with pytest.raises(ValueError, match="missing required column.*'x'"):
+        with pytest.raises(ValueError) as excinfo:
             fitted.transform(pd.DataFrame({"y": [0.0, 1.0]}))
+        assert str(excinfo.value) == snapshot
 
     def test_missing_outcome_is_allowed(self) -> None:
         # The outcome is never required at transform time.
@@ -44,11 +46,12 @@ class TestTransformColumnPresence:
 
 
 class TestDtypeMatching:
-    def test_dtype_mismatch_errors(self) -> None:
+    def test_dtype_mismatch_errors(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame(_train())
         fitted = Recipe(outcome="y", predictors="x").add(StepNormalize(["x"])).fit(df)
-        with pytest.raises(ValueError, match="dtype mismatch.*'x'"):
+        with pytest.raises(ValueError) as excinfo:
             fitted.transform(pd.DataFrame({"x": ["a", "b"]}))
+        assert str(excinfo.value) == snapshot
 
     def test_matching_dtype_ok(self) -> None:
         df = pd.DataFrame(_train())
@@ -93,17 +96,23 @@ class TestRoleRequirements:
         assert fitted.ptype is not None
         assert fitted.ptype.transform_required["y"] is False
 
-    def test_predictor_requirement_not_configurable(self) -> None:
-        with pytest.raises(ValueError, match="not configurable"):
+    def test_predictor_requirement_not_configurable(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
             Recipe(predictors="x").update_role_requirements(
                 "predictor", transform_required=False
             )
+        assert str(excinfo.value) == snapshot
 
-    def test_outcome_requirement_not_configurable(self) -> None:
-        with pytest.raises(ValueError, match="not configurable"):
+    def test_outcome_requirement_not_configurable(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
             Recipe(outcome="y").update_role_requirements(
                 "outcome", transform_required=True
             )
+        assert str(excinfo.value) == snapshot
 
     def test_update_role_requirements_is_pure(self) -> None:
         rec = Recipe(predictors="x")
@@ -114,26 +123,29 @@ class TestRoleRequirements:
 
 
 class TestPolarsBackend:
-    def test_missing_predictor_errors(self) -> None:
+    def test_missing_predictor_errors(self, snapshot: SnapshotAssertion) -> None:
         df = pl.DataFrame(_train())
         fitted = Recipe(outcome="y", predictors="x").add(StepNormalize(["x"])).fit(df)
-        with pytest.raises(ValueError, match="missing required column"):
+        with pytest.raises(ValueError) as excinfo:
             fitted.transform(pl.DataFrame({"y": [0.0, 1.0]}))
+        assert str(excinfo.value) == snapshot
 
-    def test_dtype_mismatch_errors(self) -> None:
+    def test_dtype_mismatch_errors(self, snapshot: SnapshotAssertion) -> None:
         df = pl.DataFrame(_train())
         fitted = Recipe(outcome="y", predictors="x").add(StepNormalize(["x"])).fit(df)
-        with pytest.raises(ValueError, match="dtype mismatch"):
+        with pytest.raises(ValueError) as excinfo:
             fitted.transform(pl.DataFrame({"x": ["a", "b"]}))
+        assert str(excinfo.value) == snapshot
 
 
 class TestPickle:
-    def test_ptype_survives_pickle_roundtrip(self) -> None:
+    def test_ptype_survives_pickle_roundtrip(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame(_train())
         fitted = Recipe(outcome="y", predictors="x").add(StepNormalize(["x"])).fit(df)
         restored = pickle.loads(pickle.dumps(fitted))
         assert isinstance(restored.ptype, Ptype)
         assert restored.ptype.transform_required == fitted.ptype.transform_required
         # The restored recipe still enforces the boundary check.
-        with pytest.raises(ValueError, match="missing required column"):
+        with pytest.raises(ValueError) as excinfo:
             restored.transform(pd.DataFrame({"y": [0.0]}))
+        assert str(excinfo.value) == snapshot

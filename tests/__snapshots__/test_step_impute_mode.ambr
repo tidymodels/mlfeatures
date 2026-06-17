@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestFitImputeMode.test_all_null_column_kept_with_none_mode_and_warning
+  "1 column(s) are entirely null and have no mode to impute with; left unchanged: ['empty']."
+# ---

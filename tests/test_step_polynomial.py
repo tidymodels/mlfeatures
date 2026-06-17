@@ -20,6 +20,7 @@ import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_polynomial import PolynomialFit, apply_polynomial, fit_polynomial
 
@@ -164,30 +165,36 @@ class TestFitDegreeComputation:
 class TestFitDegreeValidation:
     """`degree` must be an `int` strictly greater than zero."""
 
-    def test_zero_raises(self) -> None:
-        with pytest.raises(ValueError, match="degree"):
+    def test_zero_raises(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
             fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=0)
+        assert str(excinfo.value) == snapshot
 
-    def test_negative_raises(self) -> None:
-        with pytest.raises(ValueError, match="degree"):
+    def test_negative_raises(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
             fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=-1)
+        assert str(excinfo.value) == snapshot
 
-    def test_float_raises(self) -> None:
-        with pytest.raises(ValueError, match="degree"):
+    def test_float_raises(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
             fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=1.5)  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
 
-    def test_string_raises(self) -> None:
-        with pytest.raises(ValueError, match="degree"):
+    def test_string_raises(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
             fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree="2")  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
 
-    def test_bool_true_raises(self) -> None:
+    def test_bool_true_raises(self, snapshot: SnapshotAssertion) -> None:
         """`True` is technically an `int` subclass, but we reject it explicitly."""
-        with pytest.raises(ValueError, match="degree"):
+        with pytest.raises(ValueError) as excinfo:
             fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=True)  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
 
-    def test_bool_false_raises(self) -> None:
-        with pytest.raises(ValueError, match="degree"):
+    def test_bool_false_raises(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
             fit_polynomial(_df({"x": [1.0, 2.0, 3.0]}), degree=False)  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
 
     def test_positive_int_does_not_raise(self) -> None:
         # Sanity: the valid case actually works.
@@ -403,35 +410,43 @@ class TestApplyColumnLayout:
 class TestApplyDegreeZero:
     """A degree-0 entry leaves the column alone and emits a warning."""
 
-    def test_constant_column_kept_unchanged(self) -> None:
+    def test_constant_column_kept_unchanged(self, snapshot: SnapshotAssertion) -> None:
         frame = _df({"x": [7.0, 7.0, 7.0]})
-        with pytest.warns(UserWarning, match="x"):
+        with pytest.warns(UserWarning) as record:
             out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
+        assert str(record[0].message) == snapshot
         # Column name is preserved, values are unchanged.
         assert out.columns == ["x"]
         np.testing.assert_array_equal(out["x"].to_numpy(), np.array([7.0, 7.0, 7.0]))
 
-    def test_warning_names_offending_column(self) -> None:
+    def test_warning_names_offending_column(self, snapshot: SnapshotAssertion) -> None:
         frame = _df({"weird_name": [1.0, 1.0, 1.0]})
-        with pytest.warns(UserWarning, match="weird_name"):
+        with pytest.warns(UserWarning) as record:
             apply_polynomial(frame, fit_polynomial(frame, degree=2))
+        assert str(record[0].message) == snapshot
 
-    def test_round_trip_fit_then_apply_on_constant_column(self) -> None:
+    def test_round_trip_fit_then_apply_on_constant_column(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         """fit_polynomial on a constant column gives degree 0; apply warns."""
         frame = _df({"x": [5.0, 5.0, 5.0]})
         result = fit_polynomial(frame, degree=3)
         assert result["x"].degree == 0
-        with pytest.warns(UserWarning, match="x"):
+        with pytest.warns(UserWarning) as record:
             out = apply_polynomial(frame, result)
+        assert str(record[0].message) == snapshot
         assert out.columns == ["x"]
 
-    def test_explicit_degree_zero_fit_is_accepted(self) -> None:
+    def test_explicit_degree_zero_fit_is_accepted(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         """Callers can also build a PolynomialFit by hand for the degree-0 path."""
         frame = _df({"x": [1.0, 2.0, 3.0]})
-        with pytest.warns(UserWarning, match="x"):
+        with pytest.warns(UserWarning) as record:
             out = apply_polynomial(
                 frame, {"x": PolynomialFit(degree=0, mean=float("nan"))}
             )
+        assert str(record[0].message) == snapshot
         assert out.columns == ["x"]
 
 
@@ -526,13 +541,16 @@ class TestApplyMissingValues:
         assert np.all(np.isnan(out[1]))
         assert np.all(np.isnan(out[4]))
 
-    def test_all_null_column_kept_unchanged_and_warns(self) -> None:
+    def test_all_null_column_kept_unchanged_and_warns(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         """All-null + effective degree 0 still goes through the degree-0 path."""
         frame = _df({"x": [None, None, None]})
         # `fit_polynomial` returns degree 0 for this column, so the
         # degree-0 branch fires and the column is kept untouched — we never
         # evaluate the basis on an all-null vector.
-        with pytest.warns(UserWarning, match="x"):
+        with pytest.warns(UserWarning) as record:
             out = apply_polynomial(frame, fit_polynomial(frame, degree=3))
+        assert str(record[0].message) == snapshot
         assert out.columns == ["x"]
         assert np.all(np.isnan(out["x"].to_numpy().astype(float)))

@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestEndToEnd.test_constant_column_warns_and_is_left_unchanged
+  "Column 'const' has fewer than two unique values; no polynomial expansion was applied."
+# ---
+# name: TestEndToEnd.test_constant_column_warns_and_is_left_unchanged.1
+  "Column 'const' has fewer than two unique values; no polynomial expansion was applied."
+# ---
+# name: TestStepPolynomialUnit.test_invalid_degree_raises_at_fit
+  '`degree` must be an integer greater than zero, got 0.'
+# ---

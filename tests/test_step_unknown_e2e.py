@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, Recipe, SchemaInfo, StepUnknown
 
@@ -60,10 +61,11 @@ class TestEndToEnd:
         out = Recipe(steps=[StepUnknown(["c"])]).fit(df).transform(df)
         assert out["c"].tolist() == ["x", "unknown", "x"]
 
-    def test_collision_warns_through_recipe(self) -> None:
+    def test_collision_warns_through_recipe(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame({"c": ["a", "unknown", None]})
-        with pytest.warns(UserWarning, match="already exists"):
+        with pytest.warns(UserWarning) as record:
             Recipe(steps=[StepUnknown(["c"])]).fit(df)
+        assert str(record[0].message) == snapshot
 
     def test_trained_flag_set_by_recipe(self) -> None:
         fitted = Recipe(steps=[StepUnknown(["color"])]).fit(pd.DataFrame(_data()))

@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_impute_mean import apply_impute_mean, fit_impute_mean
 
@@ -46,10 +47,15 @@ class TestFitImputeMean:
         means = fit_impute_mean(nw.from_native(pd.DataFrame(), eager_only=True))
         assert means == {}
 
-    def test_all_null_column_kept_with_nan_mean_and_warning(self) -> None:
+    def test_all_null_column_kept_with_nan_mean_and_warning(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = _df(("a", [1.0, 2.0]), ("empty", [None, None]))
-        with pytest.warns(UserWarning, match="entirely null"):
+        with pytest.warns(UserWarning) as record:
             means = fit_impute_mean(df)
+        # numpy may also emit a RuntimeWarning ("Mean of empty slice"); select
+        # our UserWarning explicitly rather than relying on record order.
+        assert str(record.pop(UserWarning).message) == snapshot
         # "empty" is NOT dropped — it stays with a NaN mean.
         assert list(means) == ["a", "empty"]
         assert means["a"] == pytest.approx(1.5)

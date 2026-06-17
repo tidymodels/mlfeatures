@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, Recipe, SchemaInfo, StepOneHot
 
@@ -82,21 +83,25 @@ class TestNameCollisions:
 
     @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
     def test_generated_name_collides_with_existing_column_raises(
-        self, ctor: type
+        self, ctor: type, snapshot: SnapshotAssertion
     ) -> None:
         df = ctor({"color": ["red", "green", "red"], "color_red": [1, 2, 3]})
         recipe = Recipe(steps=[StepOneHot(["color"], keep_original_cols=True)])
-        with pytest.raises(ValueError, match="already exist"):
+        with pytest.raises(ValueError) as excinfo:
             recipe.fit(df)
+        assert str(excinfo.value) == snapshot
 
     @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
-    def test_two_generated_columns_with_same_name_raises(self, ctor: type) -> None:
+    def test_two_generated_columns_with_same_name_raises(
+        self, ctor: type, snapshot: SnapshotAssertion
+    ) -> None:
         # One-hot keeps every level, so "a" + level "b_c" and "a_b" + level "c"
         # both want the name "a_b_c".
         df = ctor({"a": ["b_c", "z", "b_c"], "a_b": ["c", "z", "c"]})
         recipe = Recipe(steps=[StepOneHot(["a", "a_b"])])
-        with pytest.raises(ValueError, match="duplicate column name"):
+        with pytest.raises(ValueError) as excinfo:
             recipe.fit(df)
+        assert str(excinfo.value) == snapshot
 
 
 class TestStepOneHotUnit:
