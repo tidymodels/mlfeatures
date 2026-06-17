@@ -52,6 +52,14 @@ def test_columns(construct: Constructor) -> None:
     assert f.columns(frame) == ["a", "b"]
 
 
+def test_from_native_rejects_duplicate_column_names() -> None:
+    # pandas permits duplicate labels (polars cannot construct them), so the
+    # boundary must fail early with a clear, framework-owned error.
+    native = pd.DataFrame([[1, 2, 3], [4, 5, 6]], columns=["a", "a", "b"])
+    with pytest.raises(ValueError, match="duplicate column names are not allowed"):
+        f.from_native(native)
+
+
 # --- Column selection ------------------------------------------------------
 
 

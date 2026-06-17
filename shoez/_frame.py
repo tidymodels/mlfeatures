@@ -33,8 +33,24 @@ if TYPE_CHECKING:
 
 
 def from_native(df: DataFrame) -> Frame:
-    """Wrap a native (pandas/polars/...) dataframe as an internal `Frame`."""
-    return nw.from_native(df, eager_only=True)
+    """Wrap a native (pandas/polars/...) dataframe as an internal `Frame`.
+
+    Rejects frames with duplicate column names up front. pandas allows repeated
+    labels (polars does not), but every downstream operation here selects and
+    aligns columns *by name*, so a duplicate makes the schema ambiguous. Failing
+    at the boundary gives a clear, framework-owned error instead of a confusing
+    failure (or silent wrong-column pick) deep inside a step.
+    """
+    try:
+        return nw.from_native(df, eager_only=True)
+    except nw.exceptions.DuplicateError as exc:
+        # narwhals already rejects duplicate labels (which pandas permits but
+        # polars does not), but its message is phrased in narwhals' terms.
+        # Re-raise with a framework-owned message so the boundary owns the error.
+        raise ValueError(
+            "duplicate column names are not allowed; "
+            "every column must have a unique name"
+        ) from exc
 
 
 def to_native(frame: Frame) -> DataFrame:
