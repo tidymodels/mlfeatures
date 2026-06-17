@@ -68,7 +68,7 @@ def fit_impute_mean(
     if all_null:
         warnings.warn(
             f"{len(all_null)} column(s) are entirely null and cannot be "
-            f"mean-imputed; left unchanged: {all_null!r}.",
+            f"mean-imputed; left unchanged: {all_null!r}",
             stacklevel=2,
         )
 
@@ -152,19 +152,19 @@ class StepImputeMean(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored means. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepImputeMean.transform() called before fit().")
+            raise RuntimeError("StepImputeMean.transform() called before fit()")
         return apply_impute_mean(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputeMean.schema_in() called before fit().")
+            raise RuntimeError("StepImputeMean.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, imputed ones now float."""
         if self._schema_in is None or self._estimates is None:
-            raise RuntimeError("StepImputeMean.schema_out() called before fit().")
+            raise RuntimeError("StepImputeMean.schema_out() called before fit()")
         # Only columns that were actually imputed (non-NaN mean) become float;
         # an entirely-null column is left unchanged and keeps its input dtype.
         imputed = {col for col, mean in self._estimates.items() if not math.isnan(mean)}

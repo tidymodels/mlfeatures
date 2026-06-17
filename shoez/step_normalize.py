@@ -85,7 +85,7 @@ def fit_normalize(
     if constant:
         warnings.warn(
             f"{len(constant)} column(s) had zero standard deviation (constant) "
-            f"and were not normalized: {constant!r}.",
+            f"and were not normalized: {constant!r}",
             stacklevel=2,
         )
 
@@ -166,19 +166,19 @@ class StepNormalize(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Apply the stored mean and std: ``(x - mean) / std``. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepNormalize.transform() called before fit().")
+            raise RuntimeError("StepNormalize.transform() called before fit()")
         return apply_normalize(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepNormalize.schema_in() called before fit().")
+            raise RuntimeError("StepNormalize.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, normalized ones now float."""
         if self._schema_in is None or self._estimates is None:
-            raise RuntimeError("StepNormalize.schema_out() called before fit().")
+            raise RuntimeError("StepNormalize.schema_out() called before fit()")
         normalized = set(self._estimates)
         dtypes = {
             col: ("Float64" if col in normalized else self._schema_in.dtypes[col])

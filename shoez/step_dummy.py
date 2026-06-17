@@ -100,15 +100,15 @@ def fit_dummy(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     # not called. See ``Recipe.fit`` / ``Step._empty_selection``.
     if features.shape[0] == 0:
         raise ValueError(
-            "Cannot fit dummy encoding on a zero-row frame — no levels can be learned."
+            "cannot fit dummy encoding on a zero-row frame; no levels can be learned"
         )
     result: dict[str, list[Any]] = {}
     for col in features.columns:
         levels: list[Any] = features[col].drop_nulls().unique().sort().to_list()
         if len(levels) < 2:
             raise ValueError(
-                f"Column {col!r} has fewer than 2 unique non-null levels "
-                f"({len(levels)} found). Dummy encoding requires at least 2 levels."
+                f"column {col!r} has fewer than 2 unique non-null levels "
+                f"({len(levels)} found); dummy encoding requires at least 2 levels"
             )
         result[col] = levels[1:]  # drop first element (reference level)
     return result
@@ -164,9 +164,9 @@ def apply_dummy(
         unseen: list[Any] = [v for v in col_values if v not in known]
         if unseen:
             warnings.warn(
-                f"Column {col!r} contains {len(unseen)} level(s) not seen "
-                f"during fit: {unseen!r}. "
-                "Those rows will be null in all indicator columns.",
+                f"column {col!r} contains {len(unseen)} level(s) not seen "
+                f"during fit: {unseen!r}; "
+                "those rows will be null in all indicator columns",
                 stacklevel=3,
             )
 
@@ -281,7 +281,7 @@ class StepDummy(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Apply stored level lists to produce indicator columns."""
         if self._estimates is None:
-            raise RuntimeError("StepDummy.transform() called before fit().")
+            raise RuntimeError("StepDummy.transform() called before fit()")
         return apply_dummy(
             new_data,
             self._estimates.levels,
@@ -293,19 +293,19 @@ class StepDummy(Step):
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepDummy.schema_in() called before fit().")
+            raise RuntimeError("StepDummy.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the indicator columns this step produced. Known after ``fit()``."""
         if self._schema_out is None:
-            raise RuntimeError("StepDummy.schema_out() called before fit().")
+            raise RuntimeError("StepDummy.schema_out() called before fit()")
         return self._schema_out
 
     def output_parents(self) -> dict[str, list[str]]:
         """Each indicator column descends from its single source column."""
         if self._output_parents is None:
-            raise RuntimeError("StepDummy.output_parents() called before fit().")
+            raise RuntimeError("StepDummy.output_parents() called before fit()")
         return self._output_parents
 
     def produced_columns(self) -> list[str]:

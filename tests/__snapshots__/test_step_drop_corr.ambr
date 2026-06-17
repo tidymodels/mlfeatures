@@ -1,10 +1,19 @@
 # serializer version: 1
 # name: TestInputValidation.test_invalid_method_raises
-  "`method` must be 'pearson' or 'spearman', got 'kendall'."
+  "'method' must be 'pearson' or 'spearman', got 'kendall'"
 # ---
 # name: TestInputValidation.test_threshold_above_1_raises
-  '`threshold` must be between 0 and 1, got 1.1.'
+  "'threshold' must be between 0 and 1, got 1.1"
 # ---
 # name: TestInputValidation.test_threshold_below_0_raises
-  '`threshold` must be between 0 and 1, got -0.1.'
+  "'threshold' must be between 0 and 1, got -0.1"
+# ---
+# name: TestNaNHandling.test_sporadic_nan_warns_and_drops_expected
+  "the correlation matrix has sporadic missing values; column(s) ['a', 'b'] were excluded from the filter"
+# ---
+# name: TestNaNHandling.test_too_many_na_columns_warns_and_returns_na_drops
+  "only 0 usable column(s) remain after dropping all-NA column(s) ['a', 'b', 'c']; skipping correlation filter"
+# ---
+# name: TestNaNHandling.test_zero_variance_column_warns
+  "the correlation matrix has missing values; 1 column(s) were removed from the data: ['const']"
 # ---

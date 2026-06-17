@@ -347,7 +347,7 @@ def _compute_distances(
     # guard helps callers passing string literals from untyped sources (CLI,
     # YAML configs, etc.).
     raise ValueError(  # pragma: no cover
-        f"Unknown metric {metric!r}; expected 'euclidean' or 'manhattan'."
+        f"unknown metric {metric!r}; expected 'euclidean' or 'manhattan'"
     )
 
 
@@ -467,27 +467,25 @@ class StepClassDistance(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Append the distance columns to ``new_data``. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepClassDistance.transform() called before fit().")
+            raise RuntimeError("StepClassDistance.transform() called before fit()")
         return apply_class_distance(new_data, self._estimates, prefix=self.prefix)
 
     def schema_in(self) -> ColSchema:
         """Schema of the predictor columns consumed at fit time."""
         if self._schema_in is None:
-            raise RuntimeError("StepClassDistance.schema_in() called before fit().")
+            raise RuntimeError("StepClassDistance.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the new distance columns produced by ``transform``."""
         if self._schema_out is None:
-            raise RuntimeError("StepClassDistance.schema_out() called before fit().")
+            raise RuntimeError("StepClassDistance.schema_out() called before fit()")
         return self._schema_out
 
     def output_parents(self) -> dict[str, list[str]]:
         """Each distance column is derived from the full feature set."""
         if self._output_parents is None:
-            raise RuntimeError(
-                "StepClassDistance.output_parents() called before fit()."
-            )
+            raise RuntimeError("StepClassDistance.output_parents() called before fit()")
         return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:

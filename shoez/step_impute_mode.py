@@ -79,7 +79,7 @@ def fit_impute_mode(features: Frame) -> dict[str, Any]:
     if all_null:
         warnings.warn(
             f"{len(all_null)} column(s) are entirely null and have no mode to "
-            f"impute with; left unchanged: {all_null!r}.",
+            f"impute with; left unchanged: {all_null!r}",
             stacklevel=2,
         )
 
@@ -166,19 +166,19 @@ class StepImputeMode(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored modes. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepImputeMode.transform() called before fit().")
+            raise RuntimeError("StepImputeMode.transform() called before fit()")
         return apply_impute_mode(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputeMode.schema_in() called before fit().")
+            raise RuntimeError("StepImputeMode.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns — unchanged: mode imputation preserves dtype."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputeMode.schema_out() called before fit().")
+            raise RuntimeError("StepImputeMode.schema_out() called before fit()")
         return ColSchema(
             columns=self._schema_in.columns, dtypes=dict(self._schema_in.dtypes)
         )
