@@ -142,7 +142,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         """Apply the fitted recipe to ``X`` and return the feature matrix only."""
         if not hasattr(self, "fitted_"):
             raise NotFittedError(
-                "This RecipeTransformer is not fitted yet; call `fit` before `transform`."
+                "This RecipeTransformer is not fitted yet; call 'fit' before 'transform'."
             )
         out = self.fitted_.transform(X)
         return self._drop_outcomes(out)
@@ -158,7 +158,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         """
         if not hasattr(self, "feature_names_out_"):
             raise NotFittedError(
-                "This RecipeTransformer is not fitted yet; call `fit` first."
+                "This RecipeTransformer is not fitted yet; call 'fit' first."
             )
         return np.asarray(self.feature_names_out_, dtype=object)
 
@@ -180,13 +180,13 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
             return X
         if not outcomes:
             raise ValueError(
-                "y was provided but the recipe declares no `outcome` role; "
-                "assign one with `set_roles(outcome=...)` or pass y=None."
+                "y was provided but the recipe declares no 'outcome' role; "
+                "assign one with set_roles(outcome=...) or pass y=None"
             )
         if len(outcomes) > 1:
             raise ValueError(
                 f"multi-outcome recipes are not yet supported (got {outcomes!r}); "
-                "declare a single outcome column."
+                "declare a single outcome column"
             )
         frame = _frame.from_native(X)
         return _frame.to_native(_frame.with_column(frame, outcomes[0], y))

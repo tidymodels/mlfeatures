@@ -251,7 +251,7 @@ class _SourceSelector(ShoezSelector):
         ancestral: bool,
     ) -> None:
         if (step is None) == (step_type is None):
-            raise ValueError("pass exactly one of `step` or `step_type=`")
+            raise ValueError("pass exactly one of 'step' or 'step_type='")
         self._step = step
         self._step_type = step_type
         self._ancestral = ancestral

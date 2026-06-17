@@ -74,7 +74,7 @@ def fit_impute_median(
     if all_null:
         warnings.warn(
             f"{len(all_null)} column(s) are entirely null and cannot be "
-            f"median-imputed; left unchanged: {all_null!r}.",
+            f"median-imputed; left unchanged: {all_null!r}",
             stacklevel=2,
         )
 
@@ -158,19 +158,19 @@ class StepImputeMedian(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Fill nulls with the stored medians. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepImputeMedian.transform() called before fit().")
+            raise RuntimeError("StepImputeMedian.transform() called before fit()")
         return apply_impute_median(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepImputeMedian.schema_in() called before fit().")
+            raise RuntimeError("StepImputeMedian.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, imputed ones now float."""
         if self._schema_in is None or self._estimates is None:
-            raise RuntimeError("StepImputeMedian.schema_out() called before fit().")
+            raise RuntimeError("StepImputeMedian.schema_out() called before fit()")
         # Only columns that were actually imputed (non-NaN median) become float;
         # an entirely-null column is left unchanged and keeps its input dtype.
         imputed = {col for col, med in self._estimates.items() if not math.isnan(med)}

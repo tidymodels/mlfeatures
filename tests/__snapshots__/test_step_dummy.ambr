@@ -1,22 +1,22 @@
 # serializer version: 1
 # name: TestFitDummy.test_all_null_raises
-  "Column 'x' has fewer than 2 unique non-null levels (0 found). Dummy encoding requires at least 2 levels."
+  "column 'x' has fewer than 2 unique non-null levels (0 found); dummy encoding requires at least 2 levels"
 # ---
 # name: TestFitDummy.test_single_level_raises
-  "Column 'x' has fewer than 2 unique non-null levels (1 found). Dummy encoding requires at least 2 levels."
+  "column 'x' has fewer than 2 unique non-null levels (1 found); dummy encoding requires at least 2 levels"
 # ---
 # name: TestFitDummy.test_zero_row_raises
-  'Cannot fit dummy encoding on a zero-row frame — no levels can be learned.'
+  'cannot fit dummy encoding on a zero-row frame; no levels can be learned'
 # ---
 # name: TestStepDummyGuards.test_schema_in_before_fit_raises
-  'StepDummy.schema_in() called before fit().'
+  'StepDummy.schema_in() called before fit()'
 # ---
 # name: TestStepDummyGuards.test_schema_out_before_fit_raises
-  'StepDummy.schema_out() called before fit().'
+  'StepDummy.schema_out() called before fit()'
 # ---
 # name: TestStepDummyGuards.test_single_level_raises_at_fit
-  "Column 'x' has fewer than 2 unique non-null levels (1 found). Dummy encoding requires at least 2 levels."
+  "column 'x' has fewer than 2 unique non-null levels (1 found); dummy encoding requires at least 2 levels"
 # ---
 # name: TestStepDummyGuards.test_transform_before_fit_raises
-  'StepDummy.transform() called before fit().'
+  'StepDummy.transform() called before fit()'
 # ---

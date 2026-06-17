@@ -99,19 +99,19 @@ class StepDropZeroVariance(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Drop the columns chosen at fit time. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepDropZeroVariance.transform() called before fit().")
+            raise RuntimeError("StepDropZeroVariance.transform() called before fit()")
         return _frame.apply_drop(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepDropZeroVariance.schema_in() called before fit().")
+            raise RuntimeError("StepDropZeroVariance.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the columns this step produced — none; it only removes."""
         if self._estimates is None:
-            raise RuntimeError("StepDropZeroVariance.schema_out() called before fit().")
+            raise RuntimeError("StepDropZeroVariance.schema_out() called before fit()")
         return ColSchema(columns=[])
 
     def accepts_dtypes(self) -> AcceptedDtypes:

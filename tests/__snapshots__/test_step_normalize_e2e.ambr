@@ -1,4 +1,4 @@
 # serializer version: 1
 # name: TestEndToEnd.test_constant_column_warns_and_is_left_unchanged
-  "1 column(s) had zero standard deviation (constant) and were not normalized: ['const']."
+  "1 column(s) had zero standard deviation (constant) and were not normalized: ['const']"
 # ---

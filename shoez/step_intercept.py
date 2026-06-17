@@ -108,7 +108,7 @@ class StepIntercept(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Append the constant column. Never re-estimates."""
         if self._schema_out is None:
-            raise RuntimeError("StepIntercept.transform() called before fit().")
+            raise RuntimeError("StepIntercept.transform() called before fit()")
         return add_intercept(new_data, self.value, self.name)
 
     def schema_in(self) -> ColSchema:
@@ -118,13 +118,13 @@ class StepIntercept(Step):
     def schema_out(self) -> ColSchema:
         """Schema of the single column this step produced. Known after ``fit()``."""
         if self._schema_out is None:
-            raise RuntimeError("StepIntercept.schema_out() called before fit().")
+            raise RuntimeError("StepIntercept.schema_out() called before fit()")
         return self._schema_out
 
     def output_parents(self) -> dict[str, list[str]]:
         """The intercept column is a constant — it has no parent columns."""
         if self._output_parents is None:
-            raise RuntimeError("StepIntercept.output_parents() called before fit().")
+            raise RuntimeError("StepIntercept.output_parents() called before fit()")
         return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:

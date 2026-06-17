@@ -134,7 +134,7 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
         or degree <= 0
     ):
         raise ValueError(
-            f"`degree` must be an integer greater than zero, got {degree!r}."
+            f"'degree' must be an integer greater than zero, got {degree!r}"
         )
 
     fit_result: dict[str, PolynomialFit] = {}
@@ -244,8 +244,8 @@ def apply_polynomial(data: Frame, fit_result: dict[str, PolynomialFit]) -> Frame
             # expand to. Keep the column unchanged and warn so the caller
             # knows the polynomial step had no effect on it.
             warnings.warn(
-                f"Column {col_name!r} has fewer than two unique values; "
-                "no polynomial expansion was applied.",
+                f"column {col_name!r} has fewer than 2 unique values; "
+                "no polynomial expansion was applied",
                 UserWarning,
                 stacklevel=2,
             )
@@ -418,25 +418,25 @@ class StepPolynomial(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Replace each selected column with its polynomial expansion."""
         if self._estimates is None:
-            raise RuntimeError("StepPolynomial.transform() called before fit().")
+            raise RuntimeError("StepPolynomial.transform() called before fit()")
         return apply_polynomial(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepPolynomial.schema_in() called before fit().")
+            raise RuntimeError("StepPolynomial.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the polynomial columns this step produced."""
         if self._schema_out is None:
-            raise RuntimeError("StepPolynomial.schema_out() called before fit().")
+            raise RuntimeError("StepPolynomial.schema_out() called before fit()")
         return self._schema_out
 
     def output_parents(self) -> dict[str, list[str]]:
         """Each expansion column descends from its single source column."""
         if self._output_parents is None:
-            raise RuntimeError("StepPolynomial.output_parents() called before fit().")
+            raise RuntimeError("StepPolynomial.output_parents() called before fit()")
         return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:

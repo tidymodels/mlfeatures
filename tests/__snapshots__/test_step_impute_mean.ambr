@@ -1,4 +1,4 @@
 # serializer version: 1
 # name: TestFitImputeMean.test_all_null_column_kept_with_nan_mean_and_warning
-  "1 column(s) are entirely null and cannot be mean-imputed; left unchanged: ['empty']."
+  "1 column(s) are entirely null and cannot be mean-imputed; left unchanged: ['empty']"
 # ---

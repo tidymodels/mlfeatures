@@ -332,7 +332,7 @@ class Recipe:
         if self._prototype_frame is None:
             raise ValueError(
                 "summary() needs prototype data; construct the recipe with "
-                "Recipe(data=...), or fit it and call FittedRecipe.summary()."
+                "Recipe(data=...), or fit it and call FittedRecipe.summary()"
             )
         return Schema.from_frame(self._prototype_frame, self.roles).summary()
 

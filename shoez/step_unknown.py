@@ -71,8 +71,8 @@ def fit_unknown(
     ]
     if collisions:
         warnings.warn(
-            f"The level {new_level!r} already exists in {len(collisions)} "
-            f"column(s); recoded nulls will be merged with it: {collisions!r}.",
+            f"the level {new_level!r} already exists in {len(collisions)} "
+            f"column(s); recoded nulls will be merged with it: {collisions!r}",
             stacklevel=2,
         )
     return list(features.columns)
@@ -162,19 +162,19 @@ class StepUnknown(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Recode nulls in the fitted columns to ``new_level``. Never re-estimates."""
         if self._schema_in is None:
-            raise RuntimeError("StepUnknown.transform() called before fit().")
+            raise RuntimeError("StepUnknown.transform() called before fit()")
         return apply_unknown(new_data, self._schema_in.columns, self.new_level)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepUnknown.schema_in() called before fit().")
+            raise RuntimeError("StepUnknown.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the produced columns: same names, all recoded to ``String``."""
         if self._schema_in is None:
-            raise RuntimeError("StepUnknown.schema_out() called before fit().")
+            raise RuntimeError("StepUnknown.schema_out() called before fit()")
         # Every column in the resolved selection is recoded to String.
         dtypes = dict.fromkeys(self._schema_in.columns, "String")
         return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)

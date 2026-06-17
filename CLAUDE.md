@@ -22,6 +22,19 @@ Both type-checkers run in strict mode over `shoez/` (tests are excluded). New co
 
 When adding a new step, also run its `StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass it before merging.
 
+## Error and warning messages
+
+Raised exceptions and `warnings.warn` messages follow a uniform style so they read consistently and match Python's own conventions:
+
+- **Lowercase first word**, unless it is an identifier that is naturally capitalized (e.g. a class name like `StepDummy` in the `called before fit()` guards).
+- **No trailing period.** Join what would be two sentences with `;` rather than `. ` so the message stays a single phrase.
+- **Single quotes** around parameter names, role names, and values (`'degree'`, `'outcome'`, `got 'kendall'`) — use `{value!r}` for interpolated values. Do not use backticks (a Markdown convention, not a runtime one).
+- **Numerals** for counts (`fewer than 2 unique levels`, not `two`).
+- **No em dashes** — use `;` or `:` instead.
+- Pluralize with the `(s)` form (`column(s)`, `name(s)`) and quote column lists as their repr (`['empty']`).
+
+Exception: the sklearn-compat layer (`compat.py`) raises `NotFittedError` with sklearn's own house style (capitalized, trailing period) so those messages read like the rest of the sklearn ecosystem; only the quoting rule applies there.
+
 ## Documentation
 
 The documentation site is built with [`great-docs`](https://github.com/posit-dev/great-docs), configured in [`great-docs.yml`](great-docs.yml). It auto-discovers the public API from `shoez.__all__`; when you add or rename a public export, update the `reference:` section in `great-docs.yml` to match.

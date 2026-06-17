@@ -65,9 +65,9 @@ def fit_drop_corr(
     excluded from the filter but kept.
     """
     if not 0.0 <= threshold <= 1.0:
-        raise ValueError(f"`threshold` must be between 0 and 1, got {threshold!r}.")
+        raise ValueError(f"'threshold' must be between 0 and 1, got {threshold!r}")
     if method not in ("pearson", "spearman"):
-        raise ValueError(f"`method` must be 'pearson' or 'spearman', got {method!r}.")
+        raise ValueError(f"'method' must be 'pearson' or 'spearman', got {method!r}")
 
     col_names = features.columns
     n = len(col_names)
@@ -96,8 +96,8 @@ def fit_drop_corr(
     na_drop: list[str] = [col_names[i] for i in range(n) if all_na[i]]
     if na_drop:
         warnings.warn(
-            f"The correlation matrix has missing values. "
-            f"{len(na_drop)} column(s) were removed from the data.",
+            f"the correlation matrix has missing values; "
+            f"{len(na_drop)} column(s) were removed from the data",
             stacklevel=2,
         )
         corr[all_na, :] = 0.0
@@ -108,7 +108,7 @@ def fit_drop_corr(
     n_remaining = int((~all_na).sum())
     if n_remaining < 2:
         warnings.warn(
-            "Too many correlations are NA; skipping correlation filter.",
+            "too many correlations are NA; skipping correlation filter",
             stacklevel=2,
         )
         return na_drop
@@ -116,8 +116,8 @@ def fit_drop_corr(
     # Zero out sporadic NaN (pairs where one column had partial nulls).
     if np.any(np.isnan(corr)):
         warnings.warn(
-            "The correlation matrix has sporadic missing values. "
-            "Some columns were excluded from the filter.",
+            "the correlation matrix has sporadic missing values; "
+            "some columns were excluded from the filter",
             stacklevel=2,
         )
         corr[np.isnan(corr)] = 0.0
@@ -203,19 +203,19 @@ class StepDropCorr(Step):
     def transform(self, new_data: Frame) -> Frame:
         """Drop the columns chosen at fit time. Never re-estimates."""
         if self._estimates is None:
-            raise RuntimeError("StepDropCorr.transform() called before fit().")
+            raise RuntimeError("StepDropCorr.transform() called before fit()")
         return _frame.drop(new_data, self._estimates)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
-            raise RuntimeError("StepDropCorr.schema_in() called before fit().")
+            raise RuntimeError("StepDropCorr.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
         """Schema of the columns this step produced — none; it only removes."""
         if self._estimates is None:
-            raise RuntimeError("StepDropCorr.schema_out() called before fit().")
+            raise RuntimeError("StepDropCorr.schema_out() called before fit()")
         return ColSchema(columns=[])
 
     def accepts_dtypes(self) -> AcceptedDtypes:

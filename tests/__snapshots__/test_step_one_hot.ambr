@@ -1,22 +1,22 @@
 # serializer version: 1
 # name: TestFitOneHot.test_all_null_raises
-  "Column 'x' has fewer than 2 unique non-null levels (0 found). One-hot encoding requires at least 2 levels."
+  "column 'x' has fewer than 2 unique non-null levels (0 found); one-hot encoding requires at least 2 levels"
 # ---
 # name: TestFitOneHot.test_single_level_raises
-  "Column 'x' has fewer than 2 unique non-null levels (1 found). One-hot encoding requires at least 2 levels."
+  "column 'x' has fewer than 2 unique non-null levels (1 found); one-hot encoding requires at least 2 levels"
 # ---
 # name: TestFitOneHot.test_zero_row_raises
-  'Cannot fit one-hot encoding on a zero-row frame — no levels can be learned.'
+  'cannot fit one-hot encoding on a zero-row frame; no levels can be learned'
 # ---
 # name: TestStepOneHotGuards.test_schema_in_before_fit_raises
-  'StepOneHot.schema_in() called before fit().'
+  'StepOneHot.schema_in() called before fit()'
 # ---
 # name: TestStepOneHotGuards.test_schema_out_before_fit_raises
-  'StepOneHot.schema_out() called before fit().'
+  'StepOneHot.schema_out() called before fit()'
 # ---
 # name: TestStepOneHotGuards.test_single_level_raises_at_fit
-  "Column 'x' has fewer than 2 unique non-null levels (1 found). One-hot encoding requires at least 2 levels."
+  "column 'x' has fewer than 2 unique non-null levels (1 found); one-hot encoding requires at least 2 levels"
 # ---
 # name: TestStepOneHotGuards.test_transform_before_fit_raises
-  'StepOneHot.transform() called before fit().'
+  'StepOneHot.transform() called before fit()'
 # ---

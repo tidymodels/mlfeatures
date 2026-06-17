@@ -6,7 +6,7 @@
   "step 'step' produces duplicate column name(s) ['x']; output column names must be unique"
 # ---
 # name: test_recipe_summary_without_prototype_raises
-  'summary() needs prototype data; construct the recipe with Recipe(data=...), or fit it and call FittedRecipe.summary().'
+  'summary() needs prototype data; construct the recipe with Recipe(data=...), or fit it and call FittedRecipe.summary()'
 # ---
 # name: test_update_rejects_name_collision
   "step 'reduce' produces column(s) ['h'] that already exist in the schema; output column names must be unique"
