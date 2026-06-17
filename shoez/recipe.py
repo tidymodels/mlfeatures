@@ -3,8 +3,10 @@
 A minimal, vertical-slice implementation of the ``specify → fit → transform``
 lifecycle described in ``design/lifecycle.md``. It exercises the step contract
 end to end and maintains the column-lineage DAG (``design/schema.md``) across
-``fit()``, while deliberately omitting subsystems not yet built: the ptype
-snapshot and dtype pre-checks.
+``fit()``. At ``fit()`` it snapshots the training schema into a ``Ptype`` and
+validates the incoming frame against it; the snapshot rides along on the
+``FittedRecipe`` so ``transform()`` can re-check new data at the boundary before
+any step runs (see ``design/lifecycle.md``).
 
 Steps are pure: ``Recipe(steps=[...])`` and ``.add(...)`` return a *new*
 ``Recipe`` with the step appended — they never touch data. ``fit()`` runs each step's ``fit`` on the
@@ -16,7 +18,12 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 from __future__ import annotations
 
 from shoez import _frame
+from shoez.ptype import (
+    _NON_CONFIGURABLE_ROLES,  # pyright: ignore[reportPrivateUsage]
+    Ptype,
+)
 from shoez.schema import Schema
+from shoez.selectors import ShoezSelector
 from shoez.step import RowOp, Step
 from shoez.step_intercept import StepIntercept
 from shoez.types import (
@@ -70,6 +77,10 @@ class Recipe:
             _frame.from_native(data) if data is not None else None
         )
         self.roles = Roles()
+        #: Pending transform-time requirement overrides, applied at ``fit()``.
+        #: Each entry is a (target, transform_required) pair where target is a
+        #: role name or a selector resolved against the training frame.
+        self._role_req_overrides: list[tuple[str | ShoezSelector, bool]] = []
         _apply_role_assignments(
             self.roles,
             {"outcome": outcome, "predictor": predictors, "case_weights": case_weights},
@@ -77,10 +88,11 @@ class Recipe:
         )
 
     def _clone(self) -> "Recipe":
-        """A shallow copy that preserves steps, prototype, and roles."""
+        """A shallow copy that preserves steps, prototype, roles, and overrides."""
         new = Recipe(steps=self.steps)
         new._prototype_frame = self._prototype_frame
         new.roles = self.roles.copy()
+        new._role_req_overrides = list(self._role_req_overrides)
         return new
 
     def add(self, *steps: Step) -> "Recipe":
@@ -105,6 +117,47 @@ class Recipe:
         one column) are rejected.
         """
         raise NotImplementedError("set_roles is not yet implemented")
+
+    def update_role_requirements(
+        self,
+        target: str | ShoezSelector,
+        *,
+        transform_required: bool,
+    ) -> "Recipe":
+        """Return a new recipe overriding whether columns are required at transform.
+
+        ``target`` is either a **role name** (a ``str``, e.g. ``"id"``) or a
+        selector (e.g. ``starts_with("id_")``) resolved against the training
+        frame at ``fit()``. The ``predictor`` and ``outcome`` roles are hardcoded
+        and cannot be configured (predictors are always required at transform,
+        outcomes never are); passing either as a string ``target`` raises. A
+        selector that happens to catch a predictor or outcome column is silently
+        a no-op for that column (the hardcoded role wins), so it does not raise.
+
+        See ``design/lifecycle.md`` for the per-role requirement defaults.
+        """
+        if isinstance(target, str) and target in _NON_CONFIGURABLE_ROLES:
+            raise ValueError(f"requirement for role {target!r} is not configurable")
+        new = self._clone()
+        new._role_req_overrides = [
+            *self._role_req_overrides,
+            (target, transform_required),
+        ]
+        return new
+
+    def _resolve_role_req_overrides(
+        self, frame: Frame, roles: Roles
+    ) -> dict[str, bool]:
+        """Resolve pending overrides to a column→requirement map (last wins)."""
+        resolved: dict[str, bool] = {}
+        for target, required in self._role_req_overrides:
+            if isinstance(target, str):
+                columns = roles.columns_with_role(target)
+            else:
+                columns = target.resolve(frame, roles)
+            for column in columns:
+                resolved[column] = required
+        return resolved
 
     def _check_column_exists(self, column: str) -> None:
         """Validate ``column`` against the prototype, if one was supplied."""
@@ -133,6 +186,12 @@ class Recipe:
             for col in _frame.columns(current):
                 if col not in reserved:
                     live_roles.add(col, "predictor")
+        # Snapshot the training schema into a ptype and validate the incoming
+        # frame against it (all columns required at fit). The snapshot rides on
+        # the FittedRecipe so transform() can re-check new data at the boundary.
+        overrides = self._resolve_role_req_overrides(current, live_roles)
+        ptype = Ptype.from_frame(current, live_roles, overrides)
+        ptype.check(current, context="fit")
         # The column-lineage DAG, seeded from the training frame and updated
         # after each column-changing step (see design/schema.md). RowOp and
         # empty-selection steps make no schema change and are skipped below.
@@ -173,7 +232,9 @@ class Recipe:
             if not isinstance(step, RowOp):
                 schema.update(fitted, current, live_roles)
             fitted_steps.append(fitted)
-        return FittedRecipe(steps=fitted_steps, roles=live_roles, schema=schema)
+        return FittedRecipe(
+            steps=fitted_steps, roles=live_roles, schema=schema, ptype=ptype
+        )
 
     def summary(self) -> DataFrame:
         """The initial (pre-fit) schema as a tidy frame. See ``design/schema.md``.
@@ -198,12 +259,16 @@ class FittedRecipe:
         steps: list[Step],
         roles: Roles | None = None,
         schema: Schema | None = None,
+        ptype: Ptype | None = None,
     ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
         #: The post-all-steps column-lineage DAG (``design/schema.md``), or
         #: ``None`` if the recipe was constructed without one.
         self.schema = schema
+        #: The training-data ptype snapshot (``design/lifecycle.md``) used to
+        #: validate new data in ``transform()``, or ``None`` if absent.
+        self.ptype = ptype
 
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Re-fitting an already-fitted recipe is a no-op: returns ``self``.
@@ -224,6 +289,8 @@ class FittedRecipe:
         sklearn boundary.
         """
         current = _frame.from_native(data)
+        if self.ptype is not None:
+            self.ptype.check(current, context="transform")
         for step in self.steps:
             if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
                 continue
