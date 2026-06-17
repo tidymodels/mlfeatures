@@ -93,11 +93,15 @@ reference:
       - Recipe.add
       - Recipe.fit
       - Recipe.set_roles
+      - Recipe.update_role_requirements
       - Recipe.summary
       - name: FittedRecipe
         members: false
       - FittedRecipe.transform
       - FittedRecipe.summary
+      - name: Ptype
+        members: false
+      - Ptype.check
 
   - title: Steps
     desc: >-

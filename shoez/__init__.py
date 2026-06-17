@@ -3,6 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from shoez.compat import RecipeTransformer
+from shoez.ptype import Ptype
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.schema import ColumnNode, Schema
 from shoez.selectors import Selectors
@@ -62,6 +63,7 @@ __all__ = [
     "SchemaInfo",
     "Schema",
     "ColumnNode",
+    "Ptype",
     "DataFrame",
     "Frame",
     "Selectors",

@@ -42,13 +42,14 @@ X_new   = prepped.transform(df_new, all_predictors())  # selector at transform t
 
 ## Input validation via ptype snapshot
 
-The `data` argument passed to `Recipe()` is used as the **prototype** for that recipe. At construction time, a snapshot of sufficient schema information is captured and stored:
+At `fit()` time a snapshot of sufficient schema information is captured from the training data and stored on the resulting `FittedRecipe` (as `FittedRecipe.ptype`):
 
 - Column names
 - Column dtypes
 - Role assignments
+- Per-column transform-time requirements (precomputed from the table below)
 
-No actual data values are retained — only the structural description. This snapshot is lightweight and survives serialization.
+The snapshot is taken at `fit()` rather than construction so that role-defaulting has already run and the per-role requirements are resolved against the actual training columns. No data values are retained — only the structural description (the name→dtype half reuses narwhals' `Schema`). The snapshot is lightweight and survives serialization, so a pickled `FittedRecipe` keeps validating new data at the boundary.
 
 ### Per-role requirements
 
@@ -128,8 +129,12 @@ A rough sketch of what `fit()` and `transform()` do internally. This is not fina
 
 ```python
 def fit(self, data):
-    # 1. validate input against ptype — all columns required at fit time
-    self._check_ptype(data, context="fit")
+    # 1. snapshot the training schema into a ptype, then validate the training
+    #    frame against it — all columns required at fit time. The snapshot is
+    #    captured here (not at construction), so role-defaulting has run and the
+    #    per-role transform requirements are known.
+    ptype = Ptype.from_frame(data, roles, overrides)
+    ptype.check(data, context="fit")
 
     # 2. iterate over steps in order
     current_data = data
@@ -154,7 +159,7 @@ def fit(self, data):
 
         fitted_steps.append(fitted_step)
 
-    return FittedRecipe(steps=fitted_steps, schema=self._schema, ptype=self._ptype)
+    return FittedRecipe(steps=fitted_steps, schema=self._schema, ptype=ptype)
 ```
 
 Key points:
@@ -166,8 +171,10 @@ Key points:
 
 ```python
 def transform(self, data, selector=None):
-    # 1. validate input against ptype — predictor-role columns only
-    self._check_ptype(data, context="transform")
+    # 1. validate input against the ptype captured at fit() — only columns
+    #    flagged required at transform time (predictors always; outcomes never;
+    #    others per role default / update_role_requirements) must be present.
+    self.ptype.check(data, context="transform")
 
     # 2. apply each step in order, skipping RowOps
     current_data = data
