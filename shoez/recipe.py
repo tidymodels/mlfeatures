@@ -242,6 +242,31 @@ class Recipe:
         Shows the prototype columns before any step runs. Requires a prototype:
         construct the recipe with ``Recipe(data=...)``, or call ``fit()`` and use
         ``FittedRecipe.summary()`` for the post-fit schema.
+
+        Examples
+        --------
+        The pre-fit summary describes the prototype columns and their roles
+        before any step has run, so ``city`` is still a single ``str`` column
+        with source ``"original"``:
+
+        ```{python}
+        import pandas as pd
+        from shoez import Recipe, StepNormalize, StepDummy
+
+        df = pd.DataFrame(
+            {
+                "price": [10.0, 22.5, 7.0, 30.0],
+                "age": [25, 41, 33, 52],
+                "city": ["NYC", "LA", "NYC", "SF"],
+            }
+        )
+        rec = (
+            Recipe(data=df, outcome="price", predictors=["age", "city"])
+            .add(StepNormalize(["age"]))
+            .add(StepDummy(["city"]))
+        )
+        rec.summary()
+        ```
         """
         if self._prototype_frame is None:
             raise ValueError(
@@ -298,7 +323,34 @@ class FittedRecipe:
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
-        """The fitted (post-all-steps) schema as a tidy frame. See ``design/schema.md``."""
+        """The fitted (post-all-steps) schema as a tidy frame. See ``design/schema.md``.
+
+        Examples
+        --------
+        After fitting, the summary reflects the transformed schema: ``city`` has
+        been expanded into dummy indicators (source ``"dummy"``) while the
+        normalized ``age`` keeps its predictor role:
+
+        ```{python}
+        import pandas as pd
+        from shoez import Recipe, StepNormalize, StepDummy
+
+        df = pd.DataFrame(
+            {
+                "price": [10.0, 22.5, 7.0, 30.0],
+                "age": [25, 41, 33, 52],
+                "city": ["NYC", "LA", "NYC", "SF"],
+            }
+        )
+        fitted = (
+            Recipe(data=df, outcome="price", predictors=["age", "city"])
+            .add(StepNormalize(["age"]))
+            .add(StepDummy(["city"]))
+            .fit(df)
+        )
+        fitted.summary()
+        ```
+        """
         if self.schema is None:
             raise RuntimeError("this FittedRecipe was constructed without a schema")
         return self.schema.summary()
