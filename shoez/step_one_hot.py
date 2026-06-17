@@ -116,10 +116,9 @@ class StepOneHot(Step):
         self._estimates = fit_one_hot(features)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
-        # Each indicator descends from exactly its source column. Build the
-        # names as an ordered list first (preserving any duplicate, which the
-        # recipe rejects via Schema.check_additions) before folding to the
-        # parents map, whose keys would otherwise silently dedup a clash.
+        # Each indicator descends from exactly its source column. The ordered
+        # list preserves any duplicate name (which the parents map, keyed by
+        # name, would silently dedup).
         produced = [
             self._col_name(col, str(lvl))
             for col, lvls in self._estimates.items()
@@ -160,12 +159,7 @@ class StepOneHot(Step):
         return self._output_parents
 
     def produced_columns(self) -> list[str]:
-        """Indicator names in order, preserving any duplicates (see ``Step``).
-
-        Drawn from ``schema_out()`` rather than ``output_parents()`` so a clash
-        between two ``{col}_{level}`` names survives for the recipe to reject;
-        the parents map would silently dedup it.
-        """
+        """Indicator names in order, preserving duplicates (see ``Step``)."""
         return list(self.schema_out().columns)
 
     def accepts_dtypes(self) -> AcceptedDtypes:

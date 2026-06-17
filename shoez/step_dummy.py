@@ -153,8 +153,6 @@ def apply_dummy(
             continue
 
         out_names = [col_name_fn(col, str(lvl)) for lvl in retained_levels]
-        # Name-collision validation is centralized in the recipe
-        # (Schema.check_additions), which runs before this transform.
 
         # Detect truly unseen levels — values not seen at fit time at all.
         # The reference level (present in all_known but not in retained_levels)
@@ -265,9 +263,8 @@ class StepDummy(Step):
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
         self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
         # Each indicator descends from exactly its source column (a1, a2 ← a).
-        # Build the names as an ordered list first (preserving any duplicates,
-        # which the recipe rejects via Schema.check_additions) before folding to
-        # the parents map, whose keys would otherwise silently dedup a clash.
+        # The ordered list preserves any duplicate name (which the parents map,
+        # keyed by name, would silently dedup).
         produced = [
             self._col_name(col, str(lvl))
             for col, lvls in self._estimates.levels.items()
@@ -312,12 +309,7 @@ class StepDummy(Step):
         return self._output_parents
 
     def produced_columns(self) -> list[str]:
-        """Indicator names in order, preserving any duplicates (see ``Step``).
-
-        Drawn from ``schema_out()`` rather than ``output_parents()`` so a clash
-        between two ``{col}_{level}`` names survives for the recipe to reject;
-        the parents map would silently dedup it.
-        """
+        """Indicator names in order, preserving duplicates (see ``Step``)."""
         return list(self.schema_out().columns)
 
     def accepts_dtypes(self) -> AcceptedDtypes:

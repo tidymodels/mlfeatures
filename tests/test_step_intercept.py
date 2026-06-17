@@ -7,7 +7,6 @@ from typing import Any
 import narwhals as nw
 import pandas as pd
 import polars as pl
-import pytest
 
 from shoez.step_intercept import add_intercept
 
