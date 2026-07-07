@@ -135,6 +135,23 @@ class StepNormalize(Step):
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
+
+    Examples
+    --------
+    Each selected column is replaced in place by its centered, unit-variance
+    values:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepNormalize
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
+    Recipe().add(StepNormalize(["x"])).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_ONE
