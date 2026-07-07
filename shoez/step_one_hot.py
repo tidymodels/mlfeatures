@@ -85,6 +85,23 @@ class StepOneHot(Step):
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
+
+    Examples
+    --------
+    Each categorical column is replaced by one indicator per level, with no
+    reference level dropped (contrast `StepDummy`):
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepOneHot
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+    Recipe().add(StepOneHot(["color"])).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_MANY
