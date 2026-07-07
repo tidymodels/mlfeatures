@@ -156,6 +156,8 @@ reference:
       - Step.required_pkgs
       - name: RowOp
         members: false
+      - name: StepError
+        members: false
 
   - title: Schema
     desc: >-
