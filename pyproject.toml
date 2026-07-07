@@ -38,6 +38,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    # numpy 2.5 ships stubs that break strict type-checking: its `__init__.pyi`
+    # uses the 3.12 `type` statement (rejected by mypy at our 3.10 target) and
+    # its reduction overloads (`all`/`any`/`unique`/`where`) resolve to partially
+    # unknown types under pyright strict. Cap the type-checked/CI environment
+    # below 2.5 until the stubs are fixed; runtime is unaffected (tests pass on
+    # 2.5) so the package's own `numpy>=1.24` floor stays open for users.
+    "numpy<2.5",
     "pytest>=7.0",
     "pytest-cov",
     "syrupy",
