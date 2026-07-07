@@ -139,19 +139,9 @@ def fit_class_distance(
         Fitted object containing the centroid matrix and configuration. See
         `ClassDistanceFit` for the field-by-field layout.
 
-    Examples
-    --------
-    >>> import narwhals.stable.v2 as nw
-    >>> import pandas as pd
-    >>> features = nw.from_native(pd.DataFrame({"x": [0.0, 1.0, 10.0, 11.0]}))
-    >>> outcome = nw.from_native(pd.Series(["a", "a", "b", "b"]), series_only=True)
-    >>> fit = fit_class_distance(features, outcome, log_distance=False)
-    >>> fit.classes
-    ['a', 'b']
-    >>> fit.centroids.shape
-    (1, 2)
-    >>> fit.centroids[0].tolist()
-    [0.5, 10.5]
+    The returned `ClassDistanceFit` holds one centroid per class in ``classes``
+    order; its ``centroids`` matrix has shape ``(n_features, n_classes)``. See
+    `StepClassDistance` for a runnable end-to-end example.
     """
     # Empty feature selections never reach here: the recipe detects a
     # zero-column selection and treats the step as the identity transform, so
@@ -398,6 +388,30 @@ class StepClassDistance(Step):
         Role assigned to the new distance columns. Default ``"predictor"``.
     id
         Stable step identifier. Default ``"class_distance"``.
+
+    Examples
+    --------
+    The predictor columns pass through untouched and one ``distance_<class>``
+    column is appended per class label found in ``outcome``:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepClassDistance
+    ```
+
+    ```{python}
+    df = pd.DataFrame(
+        {
+            "x": [0.0, 1.0, 10.0, 11.0],
+            "y": [0.0, 1.0, 10.0, 11.0],
+            "label": ["a", "a", "b", "b"],
+        }
+    )
+    step = StepClassDistance(["x", "y"], outcome="label", log_distance=False)
+    Recipe().add(step).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ADDING
