@@ -33,6 +33,50 @@ def _step_type_label(step: "Step") -> str:
     return f"step_{snake}"
 
 
+class StepError(Exception):
+    """A failure raised while fitting or transforming a step.
+
+    The recipe wraps any exception raised from a step's ``fit()`` or
+    ``transform()`` in a ``StepError`` and chains the original with ``raise ...
+    from``, so the underlying traceback is preserved. The wrapper attaches the
+    offending step's ``id``, its type, and the column(s) it was operating on, so
+    a failure deep inside a pipeline says *which* step broke without the user
+    having to read the whole stack.
+
+    Attributes
+    ----------
+    step_id:
+        The ``id`` of the step that failed.
+    step_type:
+        The step's snake-case type name (e.g. ``'step_normalize'``).
+    columns:
+        The column(s) the step was operating on, or ``[]`` if unknown.
+    phase:
+        ``'fit'`` or ``'transform'`` — the lifecycle stage the failure occurred in.
+    """
+
+    def __init__(
+        self,
+        step_id: str,
+        step_type: str,
+        columns: list[str],
+        phase: str,
+    ):
+        self.step_id = step_id
+        self.step_type = step_type
+        self.columns = columns
+        self.phase = phase
+        message = f"step {step_id!r} ({step_type}) failed during {phase}"
+        if columns:
+            message += f"; column(s) {columns!r}"
+        super().__init__(message)
+
+    @classmethod
+    def wrap(cls, step: "Step", columns: list[str], phase: str) -> "StepError":
+        """Build a ``StepError`` for ``step`` from its id, type, and ``columns``."""
+        return cls(step.id, _step_type_label(step), columns, phase)
+
+
 class Step(ABC):
     """Abstract base class for a feature-engineering step.
 

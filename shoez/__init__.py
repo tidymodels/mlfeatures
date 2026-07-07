@@ -7,7 +7,7 @@ from shoez.ptype import Ptype
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.schema import ColumnNode, Schema
 from shoez.selectors import Selectors
-from shoez.step import RowOp, Step
+from shoez.step import RowOp, Step, StepError
 from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
@@ -55,6 +55,7 @@ __all__ = [
     "StepUnknown",
     "Step",
     "RowOp",
+    "StepError",
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
     "Mode",

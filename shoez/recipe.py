@@ -24,7 +24,7 @@ from shoez.ptype import (
 )
 from shoez.schema import Schema
 from shoez.selectors import ShoezSelector
-from shoez.step import RowOp, Step
+from shoez.step import RowOp, Step, StepError
 from shoez.step_intercept import StepIntercept
 from shoez.types import (
     DataFrame,
@@ -270,10 +270,12 @@ class Recipe:
             # ``columns`` to resolve and must always run. The marker is reset
             # each fit so re-fitting with a selection that now matches columns
             # is not stuck in identity mode.
-            empty = (
-                not isinstance(step, StepIntercept)
-                and step.resolve_selection(current, info) == []
+            selected = (
+                []
+                if isinstance(step, StepIntercept)
+                else step.resolve_selection(current, info)
             )
+            empty = not isinstance(step, StepIntercept) and selected == []
             step._empty_selection = empty  # pyright: ignore[reportPrivateUsage]
             if empty:
                 # Kept in the pipeline (inspectable) but marked identity: skip
@@ -281,14 +283,25 @@ class Recipe:
                 step.trained = True
                 fitted_steps.append(step)
                 continue
-            fitted = step.fit(current, info)
+            # Only the step's own ``fit``/``transform`` calls are wrapped in a
+            # StepError; the recipe-side name-collision guard and schema/role
+            # bookkeeping raise their own errors and are left unwrapped.
+            try:
+                fitted = step.fit(current, info)
+            except StepError:
+                raise
+            except Exception as exc:
+                raise StepError.wrap(step, selected, "fit") from exc
             fitted.trained = True  # set by the recipe, not the step (per contract)
             if not isinstance(step, RowOp):
                 # Centralized name-collision guard: reject produced columns that
                 # clash with the live schema or with each other, before the step
                 # runs (see Schema.check_additions). Steps no longer self-check.
                 schema.check_additions(fitted.id, fitted.produced_columns())
-                current = fitted.transform(current)
+                try:
+                    current = fitted.transform(current)
+                except Exception as exc:
+                    raise StepError.wrap(fitted, selected, "fit") from exc
             fitted.update_roles(live_roles)
             if not isinstance(step, RowOp):
                 schema.update(fitted, current, live_roles)
@@ -392,7 +405,13 @@ class FittedRecipe:
         for step in self.steps:
             if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
                 continue
-            current = step.transform(current)
+            try:
+                current = step.transform(current)
+            except StepError:
+                raise
+            except Exception as exc:
+                columns = step.schema_in().columns if step.trained else []
+                raise StepError.wrap(step, columns, "transform") from exc
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
