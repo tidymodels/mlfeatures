@@ -115,13 +115,9 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
     ValueError
         If ``degree`` is not a positive integer.
 
-    Examples
-    --------
-    >>> import narwhals.stable.v2 as nw
-    >>> import pandas as pd
-    >>> frame = nw.from_native(pd.DataFrame({"x": [1.0, 2.0, 3.0]}))
-    >>> fit_polynomial(frame, degree=5)["x"].degree
-    2
+    The effective degree is capped at ``n_unique_non_null - 1``, so a column
+    with 3 unique values supports at most degree 2 even if a larger ``degree``
+    is requested. See `StepPolynomial` for a runnable end-to-end example.
     """
     # `bool` is technically an `int` subclass in Python (True == 1, False == 0),
     # so a plain `isinstance(degree, int)` check would let `degree=True` through.
@@ -356,6 +352,23 @@ class StepPolynomial(Step):
         Role assigned to the new polynomial columns. Default ``"predictor"``.
     id
         Stable step identifier. Default ``"polynomial"``.
+
+    Examples
+    --------
+    Each selected column is replaced in place by its orthogonal polynomial
+    terms ``{x}_1 ... {x}_degree``:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepPolynomial
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
+    Recipe().add(StepPolynomial(["x"], degree=2)).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_MANY
