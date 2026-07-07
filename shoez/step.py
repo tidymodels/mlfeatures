@@ -184,8 +184,10 @@ class Step(ABC):
         Untrained: the unresolved selector (``all_numeric_predictors()``,
         ``['age']``). Trained: the concrete columns the selector resolved to at
         fit time, mirroring the resolved/unresolved distinction in
-        ``design/inspection.md``. A trained identity step (empty selection) and a
-        step that consumes no columns (e.g. ``step_intercept``) describe
+        ``design/inspection.md``. A column-adding step additionally shows the
+        columns it produced (``city → city_LA, city_NYC``) so the expansion is
+        visible in the prepped view. A trained identity step (empty selection)
+        and a step that consumes no columns (e.g. ``step_intercept``) describe
         themselves explicitly rather than showing an empty list.
         """
         if self.trained:
@@ -196,7 +198,13 @@ class Step(ABC):
             except Exception:  # pragma: no cover - defensive: pre-fit / odd steps
                 consumed = None
             if consumed is not None:
-                return ", ".join(consumed)
+                produced = self.produced_columns()
+                consumed_str = ", ".join(consumed)
+                if produced and consumed_str:
+                    return f"{consumed_str} → {', '.join(produced)}"
+                if produced:
+                    return ", ".join(produced)
+                return consumed_str
         columns = getattr(self, "columns", None)
         return repr(columns) if columns is not None else ""
 

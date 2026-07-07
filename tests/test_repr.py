@@ -81,6 +81,17 @@ class TestStepRepr:
         (step,) = rec.steps
         assert repr(step) == snapshot
 
+    def test_trained_shows_produced_columns(self, snapshot: SnapshotAssertion) -> None:
+        # A column-adding step renders ``consumed → produced`` so the expansion
+        # is visible in the prepped view (design/inspection.md).
+        rec = (
+            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            .add(StepDummy(["city"]))
+            .fit(_df())
+        )
+        (step,) = rec.steps
+        assert repr(step) == snapshot
+
     def test_intercept_consumes_no_columns(self, snapshot: SnapshotAssertion) -> None:
         assert repr(StepIntercept()) == snapshot
 
