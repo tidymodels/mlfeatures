@@ -224,6 +224,23 @@ class StepDummy(Step):
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
+
+    Examples
+    --------
+    Each categorical column is replaced by *k−1* indicators; the first level in
+    sort order (``blue``) is the dropped reference:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepDummy
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+    Recipe().add(StepDummy(["color"])).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_MANY
