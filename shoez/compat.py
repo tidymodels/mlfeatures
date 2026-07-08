@@ -70,6 +70,33 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     It implements `get_feature_names_out()` and therefore composes inside a
     `sklearn.compose.ColumnTransformer` and supports
     ``set_output(transform="pandas" | "polars")``.
+
+    Examples
+    --------
+    Wrap a recipe and drive it with sklearn's ``fit`` / ``transform`` API:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepNormalize, StepDummy
+    from shoez.compat import RecipeTransformer
+    ```
+
+    ```{python}
+    X = pd.DataFrame(
+        {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
+    )
+    rec = Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"]))
+    RecipeTransformer(rec).fit(X).transform(X)
+    ```
+
+    `get_feature_names_out()` reports the produced feature names, so the
+    transformer composes inside a `sklearn.compose.ColumnTransformer`:
+
+    ```{python}
+    RecipeTransformer(rec).fit(X).get_feature_names_out()
+    ```
     """
 
     def __init__(self, recipe: Recipe):
