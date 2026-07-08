@@ -153,7 +153,24 @@ class Recipe:
         return new
 
     def add(self, *steps: Step) -> "Recipe":
-        """Return a new recipe with ``steps`` appended (steps are pure)."""
+        """Return a new recipe with ``steps`` appended (steps are pure).
+
+        Examples
+        --------
+        Each ``add()`` returns a new recipe, so steps chain into a pipeline
+        without mutating the original:
+
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepNormalize, StepDummy
+        ```
+
+        ```{python}
+        Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"]))
+        ```
+        """
         new = self._clone()
         new.steps = [*self.steps, *steps]
         return new
@@ -230,6 +247,26 @@ class Recipe:
         ``fit()``, so later steps see the schema as modified by earlier ones.
         ``RowOp`` steps are fitted but not applied here — row operations only
         affect training data and so never run during ``transform()`` either.
+
+        Examples
+        --------
+        ``fit()`` estimates each step's statistics on the training data and
+        returns a `FittedRecipe` with the selectors resolved to concrete
+        columns:
+
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepNormalize, StepDummy
+        ```
+
+        ```{python}
+        df = pd.DataFrame(
+            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
+        )
+        Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"])).fit(df)
+        ```
         """
         current = _frame.from_native(data)
         live_roles = self.roles.copy()
@@ -398,6 +435,28 @@ class FittedRecipe:
         skipped here — structurally, by inspecting the step rather than by any
         per-step convention. Never re-estimates. Returns a native frame at the
         sklearn boundary.
+
+        Examples
+        --------
+        ``transform()`` applies the fitted statistics to new data, returning a
+        native frame with the same schema the recipe learned at fit time:
+
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe, StepNormalize, StepDummy
+        ```
+
+        ```{python}
+        df = pd.DataFrame(
+            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
+        )
+        fitted = (
+            Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"])).fit(df)
+        )
+        fitted.transform(df)
+        ```
         """
         current = _frame.from_native(data)
         if self.ptype is not None:
