@@ -81,6 +81,19 @@ class ColSchema:
     This is the lightweight step-facing report; the recipe-side column-lineage
     DAG that tracks roles, source, sparsity, and provenance is
     `shoez.schema.Schema` (``design/schema.md``).
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from shoez import ColSchema
+    ```
+
+    ```{python}
+    schema = ColSchema(columns=["age", "city"], dtypes={"age": "Int64", "city": "String"})
+    schema.columns, schema.dtypes
+    ```
     """
 
     def __init__(
@@ -105,6 +118,24 @@ class SchemaInfo:
     own logic; ``schema`` and ``producing_steps`` are populated by the recipe
     purely so provenance selectors (``has_source`` / ``has_ancestor``) can
     resolve against the DAG at fit time. Both are ``None`` outside a recipe fit.
+
+    Examples
+    --------
+    Build a snapshot from a frame with `from_frame`; steps read ``columns``,
+    ``dtypes``, and ``roles`` off it during ``fit()``:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import SchemaInfo, _frame
+    ```
+
+    ```{python}
+    frame = _frame.from_native(pd.DataFrame({"x": [1, 2], "y": ["a", "b"]}))
+    info = SchemaInfo.from_frame(frame)
+    info.columns, info.dtypes
+    ```
     """
 
     def __init__(
@@ -143,6 +174,23 @@ class Roles:
     standard roles are ``"outcome"``, ``"predictor"``, and ``"case_weights"``;
     users may register arbitrary custom roles. A column may hold several roles
     at once, but nonsensical combinations are rejected at assignment time.
+
+    Examples
+    --------
+    Construct from a column → roles mapping, then query it:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    from shoez import Roles
+    ```
+
+    ```{python}
+    roles = Roles(
+        {"price": {"outcome"}, "age": {"predictor"}, "city": {"predictor"}}
+    )
+    roles.columns_with_role("predictor"), roles.of("price")
+    ```
     """
 
     #: Role pairs that may not co-occur on a single column.
@@ -270,6 +318,21 @@ class Mode(Enum):
     """Shape of a step's input/output relationship.
 
     Informs how the framework records lineage. See ``design/step-contract.md``.
+
+    Examples
+    --------
+    Each step class declares its mode; for example `StepDummy` expands one
+    column into many:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    from shoez import Mode, StepDummy
+    ```
+
+    ```{python}
+    StepDummy.mode, [m.value for m in Mode]
+    ```
     """
 
     ONE_TO_ONE = "one_to_one"
