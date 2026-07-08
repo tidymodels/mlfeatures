@@ -72,6 +72,23 @@ class StepIntercept(Step):
 
     Because it adds rather than transforms existing columns, there is nothing to
     estimate: ``fit()`` only records the produced schema.
+
+    Examples
+    --------
+    A constant ``intercept`` column of ones is appended; the input columns pass
+    through untouched:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepIntercept
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"x": [1.0, 2.0, 3.0]})
+    Recipe().add(StepIntercept()).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ADDING

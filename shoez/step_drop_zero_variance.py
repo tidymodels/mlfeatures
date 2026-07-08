@@ -68,6 +68,22 @@ class StepDropZeroVariance(Step):
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
+
+    Examples
+    --------
+    ``const`` has a single unique value, so it is dropped; ``x`` is kept:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepDropZeroVariance
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "const": [5.0, 5.0, 5.0]})
+    Recipe().add(StepDropZeroVariance(["x", "const"])).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.REMOVING

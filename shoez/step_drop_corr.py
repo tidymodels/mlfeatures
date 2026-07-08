@@ -166,6 +166,29 @@ class StepDropCorr(Step):
     polars selector (``polars.selectors``). Any selector is resolved against the
     frame's schema at fit time, regardless of backend. See
     ``design/selectors.md``.
+
+    Examples
+    --------
+    ``a`` and ``b`` are almost perfectly correlated, so one of them is dropped;
+    the uncorrelated ``c`` is kept:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepDropCorr
+    ```
+
+    ```{python}
+    df = pd.DataFrame(
+        {
+            "a": [1.0, 2.0, 3.0, 4.0],
+            "b": [1.0, 2.0, 3.0, 4.1],
+            "c": [4.0, 1.0, 3.0, 2.0],
+        }
+    )
+    Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9)).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.REMOVING

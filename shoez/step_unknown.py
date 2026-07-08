@@ -126,6 +126,25 @@ class StepUnknown(Step):
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
+
+    Examples
+    --------
+    Nulls in the selected column are recoded in place to an explicit
+    ``"unknown"`` level:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepUnknown
+    ```
+
+    ```{python}
+    df = pd.DataFrame(
+        {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
+    )
+    Recipe().add(StepUnknown(["city"])).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_ONE

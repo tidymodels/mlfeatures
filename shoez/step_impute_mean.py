@@ -121,6 +121,22 @@ class StepImputeMean(Step):
 
     Selectors are not yet implemented, so the columns to consider are passed
     explicitly as a list of names.
+
+    Examples
+    --------
+    The null is filled in place with the column mean of the observed values:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepImputeMean
+    ```
+
+    ```{python}
+    df = pd.DataFrame({"x": [1.0, 2.0, None, 4.0]})
+    Recipe().add(StepImputeMean(["x"])).fit(df).transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_ONE
