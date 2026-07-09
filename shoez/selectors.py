@@ -317,6 +317,27 @@ class Selectors:
 
     All factories return a `ShoezSelector` that composes with ``&`` / ``|`` /
     ``~`` / ``-``. See ``design/selectors.md``.
+
+    Examples
+    --------
+    A selector stands in for an explicit column list and is resolved against the
+    frame at fit time. Here ``starts_with("x")`` picks up ``x1`` and ``x2`` but
+    leaves ``y`` untouched:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from shoez import Recipe, StepNormalize, Selectors
+    ```
+
+    ```{python}
+    df = pd.DataFrame(
+        {"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "y": [7.0, 8.0, 9.0]}
+    )
+    step = StepNormalize(Selectors.starts_with("x"))
+    Recipe().add(step).fit(df).transform(df)
+    ```
     """
 
     # --- By name -----------------------------------------------------------
