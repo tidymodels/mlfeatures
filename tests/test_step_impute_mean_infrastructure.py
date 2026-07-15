@@ -12,6 +12,7 @@ import pickle
 import pandas as pd
 
 from shoez import Recipe, StepImputeMean
+from tests._conformance import assert_backend_dtype_parity
 
 
 def _fitted() -> tuple[Recipe, pd.DataFrame]:
@@ -98,4 +99,14 @@ class TestLineage:
         assert set(parents) == added
         assert all(
             parent in pre for parents_of in parents.values() for parent in parents_of
+        )
+
+
+class TestBackendDtypeParity:
+    """fit + transform yields identical narwhals schemas on pandas and polars."""
+
+    def test_pandas_and_polars_schemas_match(self) -> None:
+        assert_backend_dtype_parity(
+            lambda: Recipe(steps=[StepImputeMean(["a", "b"])]),
+            {"a": [1.0, None, 3.0], "b": [2.0, 4.0, None]},
         )

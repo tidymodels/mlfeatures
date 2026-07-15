@@ -202,6 +202,7 @@ Every step must pass this test suite before merging:
 - Sparse-in → sparse-out (or explicit densification warning) where declared.
 - Pickle round-trip preserves `transform()` output.
 - `id` is stable across sessions for the same hyperparameters.
+- Backend dtype parity: fitting and transforming the same data on a pandas frame and a polars frame produces identical narwhals output schemas (same column names, same dtypes). This guards against backend-divergence bugs like the `lit(None)` → `Object` footgun PR #74 fixed for `StepDummy`, where pandas emitted object-dtype indicators while polars stayed numeric. Checked via schema equality, not value-level comparison (which is fragile to float/repr differences across backends).
 
 ---
 

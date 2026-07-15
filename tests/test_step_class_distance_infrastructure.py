@@ -12,6 +12,7 @@ import pickle
 import pandas as pd
 
 from shoez import Recipe, StepClassDistance
+from tests._conformance import assert_backend_dtype_parity
 
 
 def _fitted() -> tuple[Recipe, pd.DataFrame]:
@@ -106,4 +107,14 @@ class TestLineage:
         assert set(parents) == added
         assert all(
             parent in pre for parents_of in parents.values() for parent in parents_of
+        )
+
+
+class TestBackendDtypeParity:
+    """fit + transform yields identical narwhals schemas on pandas and polars."""
+
+    def test_pandas_and_polars_schemas_match(self) -> None:
+        assert_backend_dtype_parity(
+            lambda: Recipe(steps=[StepClassDistance(["a", "b"], outcome="out")]),
+            {"a": [1.0, 2.0, 3.0, 4.0], "b": [2.0, 4.0, 6.0, 8.0], "out": [0, 0, 1, 1]},
         )
