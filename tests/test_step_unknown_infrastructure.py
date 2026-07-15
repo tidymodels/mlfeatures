@@ -12,7 +12,7 @@ import pickle
 import pandas as pd
 
 from shoez import Recipe, StepUnknown
-from tests._conformance import assert_backend_dtype_parity
+from tests._conformance import assert_backend_parity
 
 
 def _fitted() -> tuple[Recipe, pd.DataFrame]:
@@ -97,11 +97,11 @@ class TestLineage:
         )
 
 
-class TestBackendDtypeParity:
-    """fit + transform yields identical narwhals schemas on pandas and polars."""
+class TestBackendParity:
+    """fit + transform yields identical narwhals output (schema and values) on pandas and polars."""
 
-    def test_pandas_and_polars_schemas_match(self) -> None:
-        assert_backend_dtype_parity(
+    def test_pandas_and_polars_output_match(self) -> None:
+        assert_backend_parity(
             lambda: Recipe(steps=[StepUnknown(["g"])]),
             {"g": ["a", None, "b"], "h": ["x", "y", None]},
         )
