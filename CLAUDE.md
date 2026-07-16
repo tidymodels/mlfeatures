@@ -22,6 +22,8 @@ Both type-checkers run in strict mode over `shoez/` (tests are excluded). New co
 
 When adding a new step, also run its `StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass it before merging.
 
+When adding a new step, also add a matching `step_*` wrapper method to the `ShzNamespace` in [`shoez/polars.py`](shoez/polars.py) so the step is reachable through the `df.shz` accessor. Mirror the step's constructor signature and keep the one-line docstring pointing at the step class (e.g. `See \`StepDummy\`.`); without a wrapper the step is only reachable via the generic `df.shz.apply(...)`.
+
 ## Error and warning messages
 
 Raised exceptions and `warnings.warn` messages follow a uniform style so they read consistently and match Python's own conventions:
