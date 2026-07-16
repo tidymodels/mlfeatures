@@ -19,14 +19,16 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-def _step_type_label(step: "Step") -> str:
+def _step_type_label(step: "Step | type[Step]") -> str:
     """The R-style snake-case name for a step's type (e.g. ``step_normalize``).
 
     Derived from the class name: the ``Step`` prefix is dropped and the
     remaining CamelCase is converted to ``snake_case`` (``StepDropCorr`` →
-    ``step_drop_corr``). Used by the printing methods in ``design/inspection.md``.
+    ``step_drop_corr``). Used by the printing methods in ``design/inspection.md``
+    and by the polars accessor's parity test. Accepts either a step instance or a
+    step class.
     """
-    name = type(step).__name__
+    name = (step if isinstance(step, type) else type(step)).__name__
     if name.startswith("Step"):
         name = name[len("Step") :]
     snake = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()

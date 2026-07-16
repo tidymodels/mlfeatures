@@ -31,12 +31,18 @@ from typing import TYPE_CHECKING, cast
 from shoez._dependencies import import_optional
 from shoez.recipe import Recipe
 from shoez.step import Step
+from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
+from shoez.step_impute_mean import StepImputeMean
+from shoez.step_impute_median import StepImputeMedian
+from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
+from shoez.step_polynomial import StepPolynomial
+from shoez.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -44,6 +50,7 @@ if TYPE_CHECKING:
 
     import polars as pl
 
+    from shoez.step_class_distance import Metric
     from shoez.types import Selector
 else:
     # Runtime: this opt-in module is the one sanctioned place that imports polars
@@ -119,3 +126,57 @@ class ShzNamespace:
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))
+
+    def step_class_distance(
+        self,
+        columns: Selector,
+        outcome: str,
+        *,
+        metric: Metric = "euclidean",
+        log_distance: bool = True,
+        eps: float = 0.001,
+        prefix: str = "distance",
+        role: str | None = "predictor",
+    ) -> pl.DataFrame:
+        """Per-class distance features. See `StepClassDistance`."""
+        return self.apply(
+            StepClassDistance(
+                columns,
+                outcome,
+                metric=metric,
+                log_distance=log_distance,
+                eps=eps,
+                prefix=prefix,
+                role=role,
+            )
+        )
+
+    def step_impute_mean(self, columns: Selector) -> pl.DataFrame:
+        """Impute nulls with the column mean. See `StepImputeMean`."""
+        return self.apply(StepImputeMean(columns))
+
+    def step_impute_median(self, columns: Selector) -> pl.DataFrame:
+        """Impute nulls with the column median. See `StepImputeMedian`."""
+        return self.apply(StepImputeMedian(columns))
+
+    def step_impute_mode(self, columns: Selector) -> pl.DataFrame:
+        """Impute nulls with the column mode. See `StepImputeMode`."""
+        return self.apply(StepImputeMode(columns))
+
+    def step_polynomial(
+        self,
+        columns: Selector,
+        *,
+        degree: int = 2,
+        role: str | None = "predictor",
+    ) -> pl.DataFrame:
+        """Expand columns into a polynomial basis. See `StepPolynomial`."""
+        return self.apply(StepPolynomial(columns, degree=degree, role=role))
+
+    def step_unknown(
+        self,
+        columns: Selector,
+        new_level: str = DEFAULT_UNKNOWN_LEVEL,
+    ) -> pl.DataFrame:
+        """Recode unseen categorical levels. See `StepUnknown`."""
+        return self.apply(StepUnknown(columns, new_level))

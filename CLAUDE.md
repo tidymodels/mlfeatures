@@ -22,7 +22,7 @@ Both type-checkers run in strict mode over `shoez/` (tests are excluded). New co
 
 When adding a new step, also run its `StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass it before merging.
 
-When adding a new step, also add a matching `step_*` wrapper method to the `ShzNamespace` in [`shoez/polars.py`](shoez/polars.py) so the step is reachable through the `df.shz` accessor. Mirror the step's constructor signature and keep the one-line docstring pointing at the step class (e.g. `See \`StepDummy\`.`); without a wrapper the step is only reachable via the generic `df.shz.apply(...)`.
+When adding a new step, also add a matching `step_*` wrapper method to the `ShzNamespace` in [`shoez/polars.py`](shoez/polars.py) so the step is reachable through the `df.shz` accessor. Mirror the step's constructor signature and keep the one-line docstring pointing at the step class (e.g. `See \`StepDummy\`.`); without a wrapper the step is only reachable via the generic `df.shz.apply(...)`. The `TestWrapperStepParity` tests in [`tests/test_polars_accessor.py`](tests/test_polars_accessor.py) enforce this both ways: CI fails if a public step has no wrapper, or if a wrapper points at a step that no longer exists, so the accessor can never silently drift out of sync.
 
 ## Error and warning messages
 
