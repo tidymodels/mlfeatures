@@ -163,7 +163,7 @@ def fit_class_distance(
     # narwhals frame returns an ndarray with the columns in ``features.columns``
     # order, so the row index of the resulting centroid matrix maps 1-to-1 to
     # that list.
-    x = features.to_numpy().astype(float)
+    x = _frame.to_float_array(features)
     # Apply the null-outcome mask to both the labels and the predictors so they
     # stay aligned row-for-row.
     x = x[not_null]
@@ -249,7 +249,7 @@ def apply_class_distance(
     # Pull the predictor columns out as a (n, p) float array. ``select`` keeps
     # the order we stored at fit time so the row index of ``X`` matches the
     # row index of ``fit_result.centroids``.
-    x = _frame.select(data, fit_result.columns).to_numpy().astype(float)
+    x = _frame.to_float_array(_frame.select(data, fit_result.columns))
 
     # All the per-metric math lives in this one helper so the dispatch is in
     # one place and easy to extend.

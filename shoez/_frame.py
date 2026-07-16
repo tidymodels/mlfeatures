@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
+import numpy as np
 
 from shoez._dependencies import import_optional
 from shoez.selectors import ShoezSelector
@@ -330,6 +331,50 @@ def null_counts(frame: Frame) -> dict[str, int]:
 def has_nulls(frame: Frame, column: str) -> bool:
     """Whether ``column`` contains any null values."""
     return frame[column].null_count() > 0
+
+
+# --- NumPy bridge ----------------------------------------------------------
+
+
+def _is_numpy_unrepresentable(dtype: nw.dtypes.DType) -> bool:
+    """Whether ``dtype`` has no NumPy representation in polars' bridge.
+
+    128-bit integers have no NumPy scalar type, so a bare ``to_numpy()`` on such
+    a column raises a Rust ``PanicException`` rather than a clean error. Callers
+    upcast these to ``Float64`` (which every numpy-backed step coerces to anyway)
+    before crossing the boundary. See issue #108.
+    """
+    return dtype == nw.Int128 or dtype == nw.UInt128
+
+
+def _cast_numpy_safe(frame: Frame) -> Frame:
+    """Upcast any ``Int128``/``UInt128`` columns to ``Float64`` in place."""
+    casts = [
+        nw.col(name).cast(nw.Float64)
+        for name, dtype in frame.schema.items()
+        if _is_numpy_unrepresentable(dtype)
+    ]
+    return frame.with_columns(*casts) if casts else frame
+
+
+def to_float_array(frame: Frame) -> "np.ndarray[Any, Any]":
+    """Convert ``frame`` to a ``float64`` NumPy array without panicking.
+
+    Columns whose dtype has no NumPy representation (``Int128``/``UInt128``) are
+    upcast to ``Float64`` first, so steps that route data through NumPy can
+    honestly accept every numeric dtype in `NUMERIC_DTYPES`.
+    """
+    return _cast_numpy_safe(frame).to_numpy().astype(float)
+
+
+def series_to_float_array(series: "nw.Series[Any]") -> "np.ndarray[Any, Any]":
+    """Convert a `Series` to a ``float64`` NumPy array without panicking.
+
+    The single-column analogue of `to_float_array`; see issue #108.
+    """
+    if _is_numpy_unrepresentable(series.dtype):
+        series = series.cast(nw.Float64)
+    return series.to_numpy().astype(float)
 
 
 # --- Scalar extraction -----------------------------------------------------
