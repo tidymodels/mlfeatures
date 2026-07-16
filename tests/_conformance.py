@@ -15,10 +15,14 @@ import pandas as pd
 import polars as pl
 import pytest
 
+from shoez import _frame
+from shoez.types import DataFrame, SchemaInfo
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from shoez import Recipe
+    from shoez.step import Step
 
 
 def _is_missing(value: Any) -> bool:
@@ -89,3 +93,16 @@ def assert_backend_parity(
     pl_cols = pl_nw.to_dict(as_series=False)
     for name in pd_schema:
         _assert_columns_equal(name, pd_cols[name], pl_cols[name])
+
+
+def fit_transform_isolated(step: Step, data: DataFrame) -> DataFrame:
+    """Fit and transform a single step against a stubbed ``SchemaInfo``.
+
+    Exercises the step contract with no ``Recipe`` in the loop: the info is a
+    bare ``SchemaInfo.from_frame`` snapshot (no lineage DAG, no role overrides),
+    which is all a step reads for its own logic. Returns the native output frame
+    so callers can compare its columns against the recipe-driven path.
+    """
+    frame = _frame.from_native(data)
+    info = SchemaInfo.from_frame(frame)
+    return _frame.to_native(step.fit(frame, info).transform(frame))
