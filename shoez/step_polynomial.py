@@ -150,7 +150,7 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
             continue
         # Coerce to float ndarray for the QR. narwhals nulls become NaN here;
         # we drop them so the mean / Vandermonde / QR see complete rows only.
-        x = col.to_numpy().astype(float)
+        x = _frame.series_to_float_array(col)
         x_complete = x[~np.isnan(x)]
         mean = float(x_complete.mean())
         xc = x_complete - mean
@@ -297,7 +297,7 @@ def _apply_ortho_poly(
     """
     # narwhals nulls become NumPy NaN at the to_numpy() boundary; we mask
     # them out so they don't contaminate the Vandermonde with NaN powers.
-    x = series.to_numpy().astype(float)
+    x = _frame.series_to_float_array(series)
     mask = ~np.isnan(x)
     xc_complete = x[mask] - fit.mean
     # `polyvander` overloads confuse pyright; the cast pins it. mypy already
