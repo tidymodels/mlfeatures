@@ -12,12 +12,12 @@ Dtypes fall into two groups:
   surface; these round-trip through numpy/pandas and every step accepts them.
 * **polars-native** (``Int128``, ``UInt128``, ``Decimal``) — no numpy
   equivalent. ``step_normalize`` and the impute steps use polars-native ops and
-  accept all three. ``step_polynomial`` and ``step_class_distance`` route
-  through ``Series.to_numpy()``: ``Decimal`` survives (it converts cleanly) but
-  ``Int128``/``UInt128`` *panic* in polars' numpy bridge. Those two dtypes are
-  therefore excluded for the numpy-backed steps — a known overstatement in their
-  ``accepts_dtypes()`` (all of ``NUMERIC_DTYPES``) versus what they can actually
-  process at the numpy boundary.
+  accept all three directly. ``step_polynomial`` and ``step_class_distance``
+  route through ``Series.to_numpy()``, and polars' numpy bridge has no
+  representation for ``Int128``/``UInt128`` (a bare ``to_numpy()`` on them
+  *panics*). The ``_frame`` numpy-bridge helpers upcast those two to ``Float64``
+  before the boundary (see issue #108), so all three dtypes are now exercised
+  for the numpy-backed steps too.
 
 Output-dtype contract asserted here: a **non-float** input (integer or decimal)
 is promoted to ``Float64``; a **float** input stays float (``Float32`` is *not*
@@ -66,10 +66,11 @@ NUMPY_REPRESENTABLE = [
 DECIMAL = pl.Decimal(scale=0)
 INT128_DTYPES = [pl.Int128, pl.UInt128]
 
-# Steps backed by polars-native ops accept every numeric dtype.
+# Every numeric-accepting step handles all of NUMERIC_DTYPES: the polars-native
+# steps directly, the numpy-backed steps via the _frame upcast of Int128/UInt128
+# to Float64 before the numpy boundary (issue #108).
 ALL_NUMERIC = [*NUMPY_REPRESENTABLE, *INT128_DTYPES, DECIMAL]
-# Steps that route through numpy accept the 10 + Decimal, but not Int128/UInt128.
-NUMPY_BACKED = [*NUMPY_REPRESENTABLE, DECIMAL]
+NUMPY_BACKED = ALL_NUMERIC
 
 
 def _id(dtype: Any) -> str:
