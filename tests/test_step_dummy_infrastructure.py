@@ -12,7 +12,7 @@ import pickle
 import pandas as pd
 
 from shoez import Recipe, StepDummy
-from tests._conformance import assert_backend_parity
+from tests._conformance import assert_backend_parity, fit_transform_isolated
 
 
 def _fitted() -> tuple[Recipe, pd.DataFrame]:
@@ -110,3 +110,30 @@ class TestBackendParity:
             lambda: Recipe(steps=[StepDummy(["g"])]),
             {"g": ["a", "b", "a"], "h": ["x", "y", "x"]},
         )
+
+
+class TestIsolatedFit:
+    """A step fits and transforms against a stubbed SchemaInfo, with no Recipe."""
+
+    def test_isolated_fit_matches_recipe(self) -> None:
+        fitted, train = _fitted()
+        expected = list(fitted.transform(train).columns)
+        out = fit_transform_isolated(StepDummy(["g"]), train)
+        assert list(out.columns) == expected
+
+
+class TestTransformIdempotent:
+    """transform() is pure: re-transforming the same frame yields identical output."""
+
+    def test_transform_is_repeatable(self) -> None:
+        fitted, train = _fitted()
+        pd.testing.assert_frame_equal(fitted.transform(train), fitted.transform(train))
+
+
+class TestSparseContract:
+    """produces_sparse is a bool; no current step declares sparse output, so the
+    sparse-in/sparse-out path is a no-op until one does."""
+
+    def test_produces_sparse_is_bool(self) -> None:
+        fitted, _ = _fitted()
+        assert isinstance(fitted.steps[0].produces_sparse, bool)
