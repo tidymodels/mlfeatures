@@ -214,16 +214,48 @@ class _RoleTypeSelector(ShoezSelector):
 
 
 class _NameSelector(ShoezSelector):
-    """Columns whose names match a predicate, in frame order."""
+    """Columns whose names match a serializable name rule, in frame order.
 
-    def __init__(
-        self, predicate: "Callable[[str], bool]", label: str = "name_selector()"
-    ) -> None:
-        self._predicate = predicate
+    The match rule is stored as a ``kind`` string plus its ``params`` (never a
+    closure), so the selector serializes to plain data -- the no-closure
+    guarantee `shoez.serialization` relies on. ``resolve`` rebuilds the
+    predicate from ``kind``/``params`` on the fly.
+    """
+
+    def __init__(self, kind: str, params: "Sequence[object]", label: str) -> None:
+        self._kind = kind
+        self._params = list(params)
         self._label = label
 
     def __repr__(self) -> str:
         return self._label
+
+    def _predicate(self) -> "Callable[[str], bool]":
+        kind, params = self._kind, self._params
+        if kind == "col":
+            wanted = set(params)
+            return lambda c: c in wanted
+        if kind == "starts_with":
+            prefix = params[0]
+            assert isinstance(prefix, str)
+            return lambda c: c.startswith(prefix)
+        if kind == "ends_with":
+            suffix = params[0]
+            assert isinstance(suffix, str)
+            return lambda c: c.endswith(suffix)
+        if kind == "contains":
+            substring = params[0]
+            assert isinstance(substring, str)
+            return lambda c: substring in c
+        if kind == "matches":
+            pattern = params[0]
+            assert isinstance(pattern, str)
+            compiled = re.compile(pattern)
+            return lambda c: compiled.search(c) is not None
+        if kind == "num_range":
+            wanted = set(params)
+            return lambda c: c in wanted
+        raise ValueError(f"unknown name-selector kind {kind!r}")
 
     def resolve(
         self,
@@ -234,7 +266,8 @@ class _NameSelector(ShoezSelector):
     ) -> list[str]:
         from shoez import _frame
 
-        return [c for c in _frame.columns(frame) if self._predicate(c)]
+        predicate = self._predicate()
+        return [c for c in _frame.columns(frame) if predicate(c)]
 
 
 class _SourceSelector(ShoezSelector):
@@ -356,24 +389,23 @@ class Selectors:
         Selectors.col("x1", "x2")
         ```
         """
-        wanted = set(names)
         label = f"col({', '.join(repr(n) for n in names)})"
-        return _NameSelector(lambda c: c in wanted, label)
+        return _NameSelector("col", list(names), label)
 
     @classmethod
     def starts_with(cls, prefix: str) -> ShoezSelector:
         """Columns whose name starts with ``prefix``."""
-        return _NameSelector(lambda c: c.startswith(prefix), f"starts_with({prefix!r})")
+        return _NameSelector("starts_with", [prefix], f"starts_with({prefix!r})")
 
     @classmethod
     def ends_with(cls, suffix: str) -> ShoezSelector:
         """Columns whose name ends with ``suffix``."""
-        return _NameSelector(lambda c: c.endswith(suffix), f"ends_with({suffix!r})")
+        return _NameSelector("ends_with", [suffix], f"ends_with({suffix!r})")
 
     @classmethod
     def contains(cls, substring: str) -> ShoezSelector:
         """Columns whose name contains ``substring``."""
-        return _NameSelector(lambda c: substring in c, f"contains({substring!r})")
+        return _NameSelector("contains", [substring], f"contains({substring!r})")
 
     @classmethod
     def matches(cls, pattern: str) -> ShoezSelector:
@@ -381,10 +413,7 @@ class Selectors:
 
         Uses ``re.search`` (anchor explicitly with ``^``/``$`` if desired).
         """
-        compiled = re.compile(pattern)
-        return _NameSelector(
-            lambda c: compiled.search(c) is not None, f"matches({pattern!r})"
-        )
+        return _NameSelector("matches", [pattern], f"matches({pattern!r})")
 
     @classmethod
     def num_range(cls, prefix: str, rng: Iterable[int]) -> ShoezSelector:
@@ -395,8 +424,8 @@ class Selectors:
         ```
         """
         rng = list(rng)
-        wanted = {f"{prefix}{i}" for i in rng}
-        return _NameSelector(lambda c: c in wanted, f"num_range({prefix!r}, {rng!r})")
+        wanted = [f"{prefix}{i}" for i in rng]
+        return _NameSelector("num_range", wanted, f"num_range({prefix!r}, {rng!r})")
 
     @classmethod
     def everything(cls) -> ShoezSelector:
