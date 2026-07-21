@@ -10,6 +10,7 @@ from __future__ import annotations
 import pickle
 
 import pandas as pd
+import pytest
 
 from shoez import Recipe, StepMutate
 from tests._conformance import assert_backend_parity, fit_transform_isolated
@@ -143,3 +144,20 @@ class TestSparseContract:
     def test_produces_sparse_is_bool(self) -> None:
         fitted, _ = _fitted()
         assert isinstance(fitted.steps[0].produces_sparse, bool)
+
+
+class TestJsonRoundTrip:
+    """JSON round-trip does not apply to ``step_mutate``.
+
+    ``StepMutate`` is the UNCONSTRAINED escape hatch: it carries user-supplied
+    mutation callables and applies them to new data at ``transform`` time, so
+    those callables are load-bearing code that JSON cannot represent (unlike a
+    `RowOp`, whose code is inert after fit). Serializing therefore fails loudly
+    rather than silently dropping the mutations; pickle is the supported path
+    for recipes containing ``step_mutate``. The slot is kept (per
+    ``tests/CLAUDE.md``) with this test asserting the clear failure."""
+
+    def test_json_serialization_is_rejected(self) -> None:
+        fitted, _ = _fitted()
+        with pytest.raises(TypeError, match="step_mutate carries user-supplied"):
+            fitted.to_json()
