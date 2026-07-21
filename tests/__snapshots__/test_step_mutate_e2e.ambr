@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestStepMutate.test_empty_mutations_snapshot
+  "'mutations' must be a non-empty mapping of name to callable"
+# ---
