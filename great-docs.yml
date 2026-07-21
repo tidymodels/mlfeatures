@@ -120,6 +120,12 @@ reference:
         members: false
       - name: StepDummy
         members: false
+      - name: StepFilter
+        members: false
+      - name: StepMutate
+        members: false
+      - name: StepPca
+        members: false
       - name: StepImputeMean
         members: false
       - name: StepImputeMedian

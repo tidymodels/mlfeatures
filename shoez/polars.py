@@ -35,18 +35,21 @@ from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
+from shoez.step_filter import StepFilter
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
+from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
+from shoez.step_pca import StepPca
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Literal
+    from collections.abc import Callable, Mapping
+    from typing import Any, Literal
 
     import polars as pl
 
@@ -126,6 +129,33 @@ class ShzNamespace:
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))
+
+    def step_filter(
+        self,
+        predicate: Callable[[Any], Any],
+    ) -> pl.DataFrame:
+        """Keep only the rows matching a predicate. See `StepFilter`."""
+        return self.apply(StepFilter(predicate))
+
+    def step_mutate(
+        self,
+        mutations: Mapping[str, Callable[[Any], Any]],
+        *,
+        role: str | None = "predictor",
+    ) -> pl.DataFrame:
+        """Apply arbitrary column expressions. See `StepMutate`."""
+        return self.apply(StepMutate(mutations, role=role))
+
+    def step_pca(
+        self,
+        columns: Selector,
+        *,
+        num_comp: int = 5,
+        prefix: str = "PC",
+        role: str | None = "predictor",
+    ) -> pl.DataFrame:
+        """Project numeric columns onto principal components. See `StepPca`."""
+        return self.apply(StepPca(columns, num_comp=num_comp, prefix=prefix, role=role))
 
     def step_class_distance(
         self,
