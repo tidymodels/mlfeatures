@@ -25,7 +25,6 @@ from shoez.ptype import (
 from shoez.schema import Schema
 from shoez.selectors import ShoezSelector
 from shoez.step import RowOp, Step, StepError
-from shoez.step_intercept import StepIntercept
 from shoez.types import (
     DataFrame,
     Frame,
@@ -245,8 +244,9 @@ class Recipe:
 
         The transformed output of step *i* is the input to step *i+1*'s
         ``fit()``, so later steps see the schema as modified by earlier ones.
-        ``RowOp`` steps are fitted but not applied here — row operations only
-        affect training data and so never run during ``transform()`` either.
+        ``RowOp`` steps *are* applied here — a row operation reshapes the
+        training frame every later step then fits on — but never run during
+        ``transform()`` on new data, which the framework enforces structurally.
 
         Examples
         --------
@@ -302,17 +302,17 @@ class Recipe:
             # Empty selection ⇒ identity. Resolved here, once, at the recipe
             # boundary so the no-op is structural: a step is never fitted on a
             # zero-column selection and so cannot misread it (the failure mode
-            # the per-step guards used to handle). ``StepIntercept`` and any
-            # other step with no input selector are exempt — they have no
-            # ``columns`` to resolve and must always run. The marker is reset
-            # each fit so re-fitting with a selection that now matches columns
-            # is not stuck in identity mode.
-            selected = (
-                []
-                if isinstance(step, StepIntercept)
-                else step.resolve_selection(current, info)
-            )
-            empty = not isinstance(step, StepIntercept) and selected == []
+            # the per-step guards used to handle). Steps with no input selector
+            # (``StepIntercept``, the ``ADDING`` prototype; ``StepFilter``, a
+            # ``RowOp``; ``StepMutate``, the ``UNCONSTRAINED`` escape hatch) are
+            # exempt — they have no ``columns`` to resolve and must always run.
+            # They are detected structurally by the absence of a ``columns``
+            # attribute rather than by enumerating their types. The marker is
+            # reset each fit so re-fitting with a selection that now matches
+            # columns is not stuck in identity mode.
+            has_selector = hasattr(step, "columns")
+            selected = step.resolve_selection(current, info) if has_selector else []
+            empty = has_selector and selected == []
             step._empty_selection = empty  # pyright: ignore[reportPrivateUsage]
             if empty:
                 # Kept in the pipeline (inspectable) but marked identity: skip
@@ -335,10 +335,15 @@ class Recipe:
                 # clash with the live schema or with each other, before the step
                 # runs (see Schema.check_additions). Steps no longer self-check.
                 schema.check_additions(fitted.id, fitted.produced_columns())
-                try:
-                    current = fitted.transform(current)
-                except Exception as exc:
-                    raise StepError.wrap(fitted, selected, "fit") from exc
+            # ``transform`` runs at fit time even for ``RowOp`` steps: a row
+            # operation only ever takes effect on the *training* frame, so
+            # applying it here filters/reshapes the rows every later step fits
+            # on. It is skipped only at ``transform()`` time on new data, which
+            # the framework enforces structurally by dispatching on ``RowOp``.
+            try:
+                current = fitted.transform(current)
+            except Exception as exc:
+                raise StepError.wrap(fitted, selected, "fit") from exc
             fitted.update_roles(live_roles)
             if not isinstance(step, RowOp):
                 schema.update(fitted, current, live_roles)
