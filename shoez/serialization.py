@@ -149,11 +149,19 @@ def _encode(value: Any) -> Any:
     if isinstance(value, (set, frozenset)):
         return {"__set__": [_encode(v) for v in _sorted_safe(value)]}
     if isinstance(value, np.ndarray):
+        data = value.tolist()
+        # A float array can hold NaN / +-inf, which ``tolist`` surfaces as raw
+        # Python floats. Those are not valid JSON tokens, so route the data back
+        # through ``_encode`` (which tags them) whenever the array is not all
+        # finite -- mirroring the scalar-float path above. The common finite
+        # case keeps the flat ``tolist`` payload untouched.
+        if value.dtype.kind == "f" and not np.isfinite(value).all():
+            data = _encode(data)
         return {
             "__ndarray__": {
                 "dtype": str(value.dtype),
                 "shape": list(value.shape),
-                "data": value.tolist(),
+                "data": data,
             }
         }
     if isinstance(value, (np.integer, np.floating, np.bool_)):
@@ -213,7 +221,10 @@ def _decode(obj: Any) -> Any:
             if tag == "__set__":
                 return {_decode(v) for v in payload}
             if tag == "__ndarray__":
-                arr = np.array(payload["data"], dtype=payload["dtype"])
+                # ``data`` is a plain nested list in the finite case and a codec-
+                # tagged structure when the array held NaN / +-inf; ``_decode``
+                # is the identity on the former and untags the latter.
+                arr = np.array(_decode(payload["data"]), dtype=payload["dtype"])
                 return arr.reshape(payload["shape"])
             if tag == "__dtype__":
                 return _dtype_instance(payload)
@@ -517,6 +528,13 @@ def from_dict(data: dict[str, Any]) -> FittedRecipe:
     """Reconstruct a `FittedRecipe` from the ``dict`` produced by `to_dict`."""
     from shoez.recipe import FittedRecipe
 
+    found = data.get("format_version", FORMAT_VERSION)
+    if found != FORMAT_VERSION:
+        raise ValueError(
+            f"cannot load a recipe serialized with format_version {found!r}; "
+            f"this shoez writes and reads format_version {FORMAT_VERSION}, and "
+            "the layout changed incompatibly; re-fit the recipe to re-serialize"
+        )
     steps = [_decode_step(p) for p in data["steps"]]
     roles = _decode_roles(data["roles"])
     ptype = None if data.get("ptype") is None else _decode_ptype(data["ptype"])

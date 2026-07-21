@@ -121,6 +121,17 @@ class TestNaNRoundTrip:
         assert np.isnan(restored_est["a"])
 
 
+class TestNdarrayNonFiniteRoundTrip:
+    """A float ndarray holding NaN / +-inf serializes to valid JSON and round-trips."""
+
+    def test_encode_decode_preserves_non_finite(self) -> None:
+        arr = np.array([[1.0, np.nan], [np.inf, -np.inf]])
+        text = json.dumps(serialization._encode(arr), allow_nan=False)  # valid JSON
+        restored = serialization._decode(json.loads(text))
+        np.testing.assert_array_equal(restored, arr)
+        assert restored.dtype == arr.dtype
+
+
 class _HeavyStep(Step):
     """A throwaway step that retains a fit-only artifact and drops it in minimize()."""
 
@@ -184,13 +195,18 @@ class TestMinimizeStrips:
 class TestBackCompatDefaults:
     """A payload missing a newer field loads without error (class default kept)."""
 
-    def test_missing_field_uses_new_instance_state(self) -> None:
+    def test_missing_field_falls_back_to_class_default(self) -> None:
         df = pd.DataFrame({"a": [1.0, 2.0, 3.0]})
         rec = Recipe().add(StepNormalize(["a"])).fit(df)
         payload = rec.to_dict()
-        # Simulate an older payload that predates the ``output_role`` field.
-        del payload["steps"][0]["state"]["output_role"]
+        # Simulate an older payload that predates a field carrying a class-level
+        # default. ``_empty_selection`` is such a field (``Step._empty_selection
+        # = False``); a genuinely optional new field is expected to declare one
+        # the same way, which is what lets ``from_state`` recover it.
+        del payload["steps"][0]["state"]["_empty_selection"]
         restored = FittedRecipe.from_dict(payload)
+        # The dropped field reads back as its class default, not AttributeError.
+        assert restored.steps[0]._empty_selection is False  # type: ignore[attr-defined]
         # Reconstruction still succeeds and transforms identically.
         pt.assert_frame_equal(restored.transform(df), rec.transform(df))
 
