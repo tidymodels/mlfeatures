@@ -224,6 +224,45 @@ class Step(ABC):
         """Third-party packages required to run this step. Defaults to none."""
         return []
 
+    def to_state(self) -> dict[str, object]:
+        """Serialize this step's fields to a diffable, JSON-safe ``dict``.
+
+        Every hyperparameter and learned statistic already lives as a plain
+        instance attribute, so the default encodes ``self.__dict__`` through the
+        shared value codec -- no per-step boilerplate. The step class itself is
+        recorded separately (by qualified name) by `shoez.serialization`. See
+        ``design/serialization.md``.
+        """
+        from shoez.serialization import _encode  # pyright: ignore[reportPrivateUsage]
+
+        return {k: _encode(v) for k, v in self.__dict__.items()}
+
+    @classmethod
+    def from_state(cls, state: dict[str, object]) -> "Self":
+        """Reconstruct a step from the ``dict`` produced by `to_state`.
+
+        Bypasses ``__init__`` and restores the decoded fields directly. Any
+        attribute missing from ``state`` (e.g. a field added in a newer version)
+        keeps whatever a bare instance would carry, so within a major version an
+        older payload loads cleanly without per-field shims.
+        """
+        from shoez.serialization import _decode  # pyright: ignore[reportPrivateUsage]
+
+        step = cls.__new__(cls)
+        for key, value in state.items():
+            setattr(step, key, _decode(value))
+        return step
+
+    def minimize(self) -> "Self":
+        """Return a copy of this step with fit-only artifacts stripped.
+
+        The default is a no-op: it returns ``self`` unchanged. Steps that retain
+        training artifacts only needed at fit time (e.g. a future KNN imputer's
+        neighbor matrix) override this to return a lighter copy that still
+        transforms identically. See ``recipe.minimize`` / ``design/serialization.md``.
+        """
+        return self
+
     def _describe_selection(self) -> str:
         """A short description of what columns this step acts on, for printing.
 
