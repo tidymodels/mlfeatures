@@ -7,6 +7,7 @@ from shoez.ptype import Ptype
 from shoez.recipe import FittedRecipe, Recipe
 from shoez.schema import ColumnNode, Schema
 from shoez.selectors import Selectors
+from shoez.serialization import from_dict, from_json, minimize, to_dict, to_json
 from shoez.step import RowOp, Step, StepError
 from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop_corr import StepDropCorr
@@ -74,4 +75,9 @@ __all__ = [
     "DataFrame",
     "Frame",
     "Selectors",
+    "to_dict",
+    "from_dict",
+    "to_json",
+    "from_json",
+    "minimize",
 ]

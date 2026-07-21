@@ -37,6 +37,11 @@ __all__ = ["apply_filter", "StepFilter"]
 Predicate = Callable[[Frame], Any]
 
 
+def _keep_all_rows(frame: Frame) -> bool:
+    """A predicate that keeps every row; the inert default a deserialized filter carries."""
+    return True
+
+
 def apply_filter(features: Frame, predicate: Predicate) -> Frame:
     """Keep only the rows for which ``predicate`` evaluates to ``True``.
 
@@ -122,6 +127,29 @@ class StepFilter(RowOp):
         # Populated by ``fit()``. A filter changes no columns, so ``schema_in``
         # and ``schema_out`` are the same frame schema.
         self._schema: ColSchema | None = None
+
+    def to_state(self) -> dict[str, object]:
+        """Serialize, omitting the row predicate.
+
+        ``StepFilter`` is a `RowOp`: its ``transform`` is a no-op on new data,
+        so the predicate is never exercised once fitted. It is a user-supplied
+        callable (not plain data), so it is dropped from the JSON payload rather
+        than trying to serialize a closure. A recipe reloaded from JSON filters
+        no rows at ``transform`` -- which is already the `RowOp` contract.
+        """
+        from shoez.serialization import _encode  # pyright: ignore[reportPrivateUsage]
+
+        return {k: _encode(v) for k, v in self.__dict__.items() if k != "predicate"}
+
+    @classmethod
+    def from_state(cls, state: dict[str, object]) -> "Self":
+        """Reconstruct a transform-only filter; the dropped predicate is inert."""
+        step = super().from_state(state)
+        if not hasattr(step, "predicate"):
+            # A RowOp never runs transform() on new data, so this no-op predicate
+            # is never invoked; it exists only so attribute access stays defined.
+            step.predicate = _keep_all_rows
+        return step
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the (unchanged) column schema. Estimates nothing."""

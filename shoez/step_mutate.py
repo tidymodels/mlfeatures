@@ -142,6 +142,21 @@ class StepMutate(Step):
         self._schema_out: ColSchema | None = None
         self._output_parents: dict[str, list[str]] | None = None
 
+    def to_state(self) -> dict[str, object]:
+        """Not supported: ``step_mutate`` carries user callables it needs at transform.
+
+        Unlike a `RowOp` (whose code is inert after fit), ``StepMutate`` applies
+        its mutation callables to *new* data at ``transform`` time, so they are
+        load-bearing code that JSON cannot represent. Serializing would silently
+        drop them and produce a recipe that no longer computes the mutations, so
+        it fails loudly instead. Use ``pickle`` for recipes containing
+        ``step_mutate``.
+        """
+        raise TypeError(
+            "step_mutate carries user-supplied callables and cannot be "
+            "serialized to JSON; pickle the recipe instead"
+        )
+
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Apply the mutations once to read off which columns are new."""
         in_cols = _frame.columns(training_data)

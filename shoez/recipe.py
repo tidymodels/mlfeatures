@@ -423,6 +423,38 @@ class FittedRecipe:
             prepped=True, roles=self.roles, steps=self.steps, n_columns=n_columns
         )
 
+    def to_dict(self) -> dict[str, object]:
+        """Serialize to a diffable, JSON-safe ``dict``. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.to_dict(self)
+
+    def to_json(self, *, indent: int = 2) -> str:
+        """Serialize to a diffable JSON string. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.to_json(self, indent=indent)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, object]) -> "FittedRecipe":
+        """Reconstruct a fitted recipe from `to_dict` output. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.from_dict(data)
+
+    @classmethod
+    def from_json(cls, text: str) -> "FittedRecipe":
+        """Reconstruct a fitted recipe from `to_json` output. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.from_json(text)
+
+    def minimize(self) -> "FittedRecipe":
+        """Return a copy with fit-only artifacts stripped. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.minimize(self)
+
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Re-fitting an already-fitted recipe is a no-op: returns ``self``.
 

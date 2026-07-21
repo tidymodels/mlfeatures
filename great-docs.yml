@@ -99,6 +99,11 @@ reference:
         members: false
       - FittedRecipe.transform
       - FittedRecipe.summary
+      - FittedRecipe.to_json
+      - FittedRecipe.from_json
+      - FittedRecipe.to_dict
+      - FittedRecipe.from_dict
+      - FittedRecipe.minimize
       - name: Ptype
         members: false
       - Ptype.check
@@ -178,6 +183,17 @@ reference:
       - Schema.ancestors
       - name: ColumnNode
         members: false
+
+  - title: Serialization
+    desc: >-
+      Save a fitted recipe to a diffable JSON format and reload it, or strip
+      fit-only artifacts with minimize(). See design/serialization.md.
+    contents:
+      - name: to_dict
+      - name: from_dict
+      - name: to_json
+      - name: from_json
+      - name: minimize
 
   - title: Interop
     desc: >-

@@ -141,3 +141,18 @@ class TestSparseContract:
     def test_produces_sparse_is_bool(self) -> None:
         fitted, _ = _fitted()
         assert isinstance(fitted.steps[0].produces_sparse, bool)
+
+
+class TestJsonRoundTrip:
+    """A fitted step serializes to diffable JSON and reloads to identical
+    transform() output.
+
+    This doubles as the no-closure guarantee (``design/serialization.md``): a
+    closure cannot be JSON-encoded, so a passing round-trip proves the step and
+    its selectors captured only plain data, no environment or globals."""
+
+    def test_json_preserves_transform_output(self) -> None:
+        fitted, train = _fitted()
+        before = fitted.transform(train)
+        restored = fitted.from_json(fitted.to_json())
+        pd.testing.assert_frame_equal(restored.transform(train), before)
