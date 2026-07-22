@@ -74,6 +74,46 @@ class TestFullRecipeRoundTrip:
         assert isinstance(payload["shoez_version"], str)
 
 
+class TestYamlRoundTrip:
+    """YAML is a second encoding over the same dict; it round-trips like JSON."""
+
+    def test_transform_matches_after_yaml_roundtrip(self) -> None:
+        rec, df = _multi_step()
+        restored = FittedRecipe.from_yaml(rec.to_yaml())
+        pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+
+    def test_yaml_and_json_decode_to_same_dict(self) -> None:
+        rec, _ = _multi_step()
+        assert FittedRecipe.from_yaml(rec.to_yaml()).to_dict() == rec.to_dict()
+
+    def test_yaml_is_block_style_and_diffable(self) -> None:
+        rec, _ = _multi_step()
+        text = rec.to_yaml()
+        # block style spreads entries across lines (one key/list item per line)
+        # so it diffs cleanly, rather than a single flow-style `{...}` blob.
+        assert "format_version:" in text
+        assert text.count("\n") > 10
+
+    def test_missing_pyyaml_raises_clear_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name: str, *args: object, **kwargs: object) -> object:
+            if name == "yaml":
+                raise ImportError("no yaml")
+            return real_import(name, *args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        rec, _ = _multi_step()
+        with pytest.raises(ImportError, match="pyyaml"):
+            rec.to_yaml()
+        with pytest.raises(ImportError, match="pyyaml"):
+            FittedRecipe.from_yaml("format_version: 1")
+
+
 class TestNoClosures:
     """A fitted recipe serializes to JSON with no closures/environments captured.
 
