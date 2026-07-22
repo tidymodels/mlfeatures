@@ -101,6 +101,8 @@ reference:
       - FittedRecipe.summary
       - FittedRecipe.to_json
       - FittedRecipe.from_json
+      - FittedRecipe.to_yaml
+      - FittedRecipe.from_yaml
       - FittedRecipe.to_dict
       - FittedRecipe.from_dict
       - FittedRecipe.minimize
@@ -186,13 +188,15 @@ reference:
 
   - title: Serialization
     desc: >-
-      Save a fitted recipe to a diffable JSON format and reload it, or strip
-      fit-only artifacts with minimize(). See design/serialization.md.
+      Save a fitted recipe to a diffable JSON or YAML format and reload it, or
+      strip fit-only artifacts with minimize(). See design/serialization.md.
     contents:
       - name: to_dict
       - name: from_dict
       - name: to_json
       - name: from_json
+      - name: to_yaml
+      - name: from_yaml
       - name: minimize
 
   - title: Interop

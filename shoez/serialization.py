@@ -1,7 +1,7 @@
-"""Diffable JSON serialization for fitted recipes (``design/serialization.md``).
+"""Diffable JSON/YAML serialization for fitted recipes (``design/serialization.md``).
 
 A `FittedRecipe` is serialized to a plain, human-readable ``dict`` (and from
-there to JSON) that captures every step's **hyperparameters and learned
+there to JSON or YAML) that captures every step's **hyperparameters and learned
 statistics** plus the recipe-level role, ptype, and lineage state. The format is
 stable and diffable so a prepped recipe can be reviewed in a pull request, saved
 alongside a model, and reloaded in another process for inference.
@@ -13,10 +13,13 @@ no-closure conformance test relies on -- a closure cannot be JSON-encoded, so a
 passing round-trip *is* the guarantee.
 
 The public surface is a small module API -- `to_dict`, `from_dict`, `to_json`,
-`from_json`, and `minimize` -- mirrored by thin delegating methods on
-`FittedRecipe` (``fitted.to_json()``, ``FittedRecipe.from_json(text)``, ...).
+`from_json`, `to_yaml`, `from_yaml`, and `minimize` -- mirrored by thin
+delegating methods on `FittedRecipe` (``fitted.to_json()``,
+`FittedRecipe.from_json(text)``, ...).
 
-Only JSON ships today; YAML is a thin follow-up over the same ``dict`` format.
+JSON and YAML are two thin encodings over the same JSON-safe ``dict`` format, so
+both round-trip identically. YAML support needs the optional ``pyyaml`` package;
+`to_yaml` / `from_yaml` raise a clear ``ImportError`` when it is missing.
 
 Known limitations
 -----------------
@@ -53,7 +56,15 @@ import numpy as np
 if TYPE_CHECKING:
     from shoez.recipe import FittedRecipe
 
-__all__ = ["to_dict", "from_dict", "to_json", "from_json", "minimize"]
+__all__ = [
+    "to_dict",
+    "from_dict",
+    "to_json",
+    "from_json",
+    "to_yaml",
+    "from_yaml",
+    "minimize",
+]
 
 #: Bumped when the on-disk layout changes incompatibly within a major version.
 FORMAT_VERSION = 1
@@ -555,6 +566,38 @@ def to_json(recipe: FittedRecipe, *, indent: int = 2) -> str:
 def from_json(text: str) -> FittedRecipe:
     """Reconstruct a `FittedRecipe` from the JSON produced by `to_json`."""
     return from_dict(json.loads(text))
+
+
+def _require_yaml() -> Any:
+    """Import ``pyyaml`` or raise a clear, actionable ``ImportError``."""
+    try:
+        import yaml
+    except ImportError as exc:
+        raise ImportError(
+            "YAML serialization needs the optional 'pyyaml' package; "
+            "install it with 'pip install pyyaml' (or 'pip install shoez[yaml]')"
+        ) from exc
+    return yaml
+
+
+def to_yaml(recipe: FittedRecipe) -> str:
+    """Serialize a `FittedRecipe` to a diffable YAML string.
+
+    A thin encoding over the same JSON-safe ``dict`` as `to_json`, so the two
+    formats round-trip identically. ``sort_keys=False`` preserves the payload's
+    stable key order and ``default_flow_style=False`` keeps the block layout that
+    diffs cleanly in review. Needs the optional ``pyyaml`` package.
+    """
+    yaml = _require_yaml()
+    return str(
+        yaml.safe_dump(to_dict(recipe), sort_keys=False, default_flow_style=False)
+    )
+
+
+def from_yaml(text: str) -> FittedRecipe:
+    """Reconstruct a `FittedRecipe` from the YAML produced by `to_yaml`."""
+    yaml = _require_yaml()
+    return from_dict(yaml.safe_load(text))
 
 
 def minimize(recipe: FittedRecipe) -> FittedRecipe:
