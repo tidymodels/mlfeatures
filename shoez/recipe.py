@@ -435,6 +435,12 @@ class FittedRecipe:
 
         return serialization.to_json(self, indent=indent)
 
+    def to_yaml(self) -> str:
+        """Serialize to a diffable YAML string. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.to_yaml(self)
+
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "FittedRecipe":
         """Reconstruct a fitted recipe from `to_dict` output. See `shoez.serialization`."""
@@ -448,6 +454,13 @@ class FittedRecipe:
         from shoez import serialization
 
         return serialization.from_json(text)
+
+    @classmethod
+    def from_yaml(cls, text: str) -> "FittedRecipe":
+        """Reconstruct a fitted recipe from `to_yaml` output. See `shoez.serialization`."""
+        from shoez import serialization
+
+        return serialization.from_yaml(text)
 
     def minimize(self) -> "FittedRecipe":
         """Return a copy with fit-only artifacts stripped. See `shoez.serialization`."""
