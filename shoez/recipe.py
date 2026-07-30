@@ -79,17 +79,24 @@ class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
     Steps are first-class `Step` objects (Option A in
-    ``design/interfaces.md``). Assemble a recipe by passing them at construction:
+    ``design/interfaces.md``). Assemble a recipe with the immutable `add()`
+    builder, which returns a new recipe each call (preserving the purity
+    guarantee in ``design/lifecycle.md``):
 
     ```python
-    Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+    from shoez import Selectors as s
+
+    recipe = (
+        Recipe()
+        .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+        .add(StepNormalize(s.numeric_predictors()))
+    )
     ```
 
-    or with the immutable `add()` builder, which returns a new recipe each
-    call (preserving the purity guarantee in ``design/lifecycle.md``):
+    Steps may also be passed at construction, which is equivalent:
 
     ```python
-    Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
+    Recipe(steps=[StepDropCorr(s.numeric_predictors(), threshold=0.9)])
     ```
 
     A prototype ``data`` frame may be supplied to capture the column names used
