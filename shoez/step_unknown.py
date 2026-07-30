@@ -137,13 +137,15 @@ class StepUnknown(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepUnknown
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame(
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
-    Recipe().add(StepUnknown(["city"])).fit(df).transform(df)
+    recipe = Recipe().add(StepUnknown(s.nominal_predictors()))
+    recipe.fit(df).transform(df)
     ```
     """
 

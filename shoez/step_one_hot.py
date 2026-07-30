@@ -96,11 +96,13 @@ class StepOneHot(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepOneHot
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-    Recipe().add(StepOneHot(["color"])).fit(df).transform(df)
+    recipe = Recipe().add(StepOneHot(s.nominal_predictors()))
+    recipe.fit(df).transform(df)
     ```
     """
 

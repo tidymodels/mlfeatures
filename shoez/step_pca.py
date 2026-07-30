@@ -200,13 +200,15 @@ class StepPca(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepPca
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame(
         {"x": [1.0, 2.0, 3.0, 4.0], "y": [2.1, 3.9, 6.1, 8.0]}
     )
-    Recipe().add(StepPca(["x", "y"], num_comp=2)).fit(df).transform(df)
+    recipe = Recipe().add(StepPca(s.numeric_predictors(), num_comp=2))
+    recipe.fit(df).transform(df)
     ```
     """
 

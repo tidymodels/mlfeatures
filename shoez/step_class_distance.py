@@ -399,6 +399,7 @@ class StepClassDistance(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepClassDistance
+    from shoez import Selectors as s
     ```
 
     ```{python}
@@ -409,8 +410,12 @@ class StepClassDistance(Step):
             "label": ["a", "a", "b", "b"],
         }
     )
-    step = StepClassDistance(["x", "y"], outcome="label", log_distance=False)
-    Recipe().add(step).fit(df).transform(df)
+    recipe = Recipe().add(
+        StepClassDistance(
+            s.numeric_predictors(), outcome="label", log_distance=False
+        )
+    )
+    recipe.fit(df).transform(df)
     ```
     """
 

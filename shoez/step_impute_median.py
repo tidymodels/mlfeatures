@@ -137,11 +137,13 @@ class StepImputeMedian(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepImputeMedian
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, None, 4.0]})
-    Recipe().add(StepImputeMedian(["x"])).fit(df).transform(df)
+    recipe = Recipe().add(StepImputeMedian(s.numeric_predictors()))
+    recipe.fit(df).transform(df)
     ```
     """
 

@@ -87,7 +87,8 @@ class StepIntercept(Step):
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0]})
-    Recipe().add(StepIntercept()).fit(df).transform(df)
+    recipe = Recipe().add(StepIntercept())
+    recipe.fit(df).transform(df)
     ```
     """
 

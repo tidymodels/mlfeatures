@@ -146,13 +146,15 @@ class StepImputeMode(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepImputeMode
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame(
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
-    Recipe().add(StepImputeMode(["city"])).fit(df).transform(df)
+    recipe = Recipe().add(StepImputeMode(s.nominal_predictors()))
+    recipe.fit(df).transform(df)
     ```
     """
 

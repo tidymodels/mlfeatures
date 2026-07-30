@@ -84,9 +84,13 @@ class Ptype:
     ```{python}
     import pandas as pd
     from shoez import Recipe, StepNormalize
+    from shoez import Selectors as s
 
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "y": [0, 1, 0]})
-    rec = Recipe(outcome="y", predictors="x").add(StepNormalize(["x"])).fit(df)
+    rec = Recipe(outcome="y", predictors="x").add(
+        StepNormalize(s.numeric_predictors())
+    )
+    rec = rec.fit(df)
     rec.ptype.schema.names()
     ```
     """

@@ -363,11 +363,13 @@ class StepPolynomial(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepPolynomial
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
-    Recipe().add(StepPolynomial(["x"], degree=2)).fit(df).transform(df)
+    recipe = Recipe().add(StepPolynomial(s.numeric_predictors(), degree=2))
+    recipe.fit(df).transform(df)
     ```
     """
 

@@ -177,6 +177,7 @@ class StepDropCorr(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepDropCorr
+    from shoez import Selectors as s
     ```
 
     ```{python}
@@ -187,7 +188,8 @@ class StepDropCorr(Step):
             "c": [4.0, 1.0, 3.0, 2.0],
         }
     )
-    Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9)).fit(df).transform(df)
+    recipe = Recipe().add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+    recipe.fit(df).transform(df)
     ```
     """
 

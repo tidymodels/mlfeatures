@@ -171,10 +171,15 @@ class Recipe:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
         ```
 
         ```{python}
-        Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"]))
+        (
+            Recipe()
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
+        )
         ```
         """
         new = self._clone()
@@ -266,13 +271,19 @@ class Recipe:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
         ```
 
         ```{python}
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
-        Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"])).fit(df)
+        (
+            Recipe()
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
+            .fit(df)
+        )
         ```
         """
         current = _frame.from_native(data)
@@ -375,6 +386,7 @@ class Recipe:
         ```{python}
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {
@@ -385,8 +397,8 @@ class Recipe:
         )
         rec = (
             Recipe(data=df, outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(["age"]))
-            .add(StepDummy(["city"]))
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
         )
         rec.summary()
         ```
@@ -503,6 +515,7 @@ class FittedRecipe:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
         ```
 
         ```{python}
@@ -510,7 +523,10 @@ class FittedRecipe:
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
         fitted = (
-            Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"])).fit(df)
+            Recipe()
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
+            .fit(df)
         )
         fitted.transform(df)
         ```
@@ -542,6 +558,7 @@ class FittedRecipe:
         ```{python}
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {
@@ -552,8 +569,8 @@ class FittedRecipe:
         )
         fitted = (
             Recipe(data=df, outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(["age"]))
-            .add(StepDummy(["city"]))
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
             .fit(df)
         )
         fitted.summary()

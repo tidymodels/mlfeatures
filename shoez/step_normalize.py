@@ -146,11 +146,13 @@ class StepNormalize(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepNormalize
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
-    Recipe().add(StepNormalize(["x"])).fit(df).transform(df)
+    recipe = Recipe().add(StepNormalize(s.numeric_predictors()))
+    recipe.fit(df).transform(df)
     ```
     """
 
