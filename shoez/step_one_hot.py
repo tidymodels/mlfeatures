@@ -101,7 +101,33 @@ class StepOneHot(Step):
 
     ```{python}
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepOneHot(s.nominal_predictors()))
+    recipe
+    ```
+
+    `fit()` records the levels of each selected column:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` replaces the column with one indicator per level:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    ``keep_original_cols`` keeps the source column alongside them:
+
+    ```{python}
+    recipe = Recipe().add(StepOneHot(s.nominal_predictors(), keep_original_cols=True))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```

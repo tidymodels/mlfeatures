@@ -83,8 +83,26 @@ class StepDropZeroVariance(Step):
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "const": [5.0, 5.0, 5.0]})
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepDropZeroVariance(s.numeric_predictors()))
+    recipe
+    ```
+
+    `fit()` counts the unique values in each column:
+
+    ```{python}
     fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` drops the constant one:
+
+    ```{python}
     fitted.transform(df)
     ```
     """

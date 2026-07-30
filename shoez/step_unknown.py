@@ -144,7 +144,33 @@ class StepUnknown(Step):
     df = pd.DataFrame(
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepUnknown(s.nominal_predictors()))
+    recipe
+    ```
+
+    `fit()` records the level to add to each column:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` recodes the nulls in place:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    ``new_level`` names the added level:
+
+    ```{python}
+    recipe = Recipe().add(StepUnknown(s.nominal_predictors(), new_level="missing"))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```

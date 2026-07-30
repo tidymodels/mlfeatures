@@ -188,7 +188,33 @@ class StepDropCorr(Step):
             "c": [4.0, 1.0, 3.0, 2.0],
         }
     )
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+    recipe
+    ```
+
+    `fit()` computes the correlation matrix and picks the columns to drop:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` drops them:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    A ``threshold`` above their correlation keeps both:
+
+    ```{python}
+    recipe = Recipe().add(StepDropCorr(s.numeric_predictors(), threshold=0.9999))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```

@@ -410,10 +410,39 @@ class StepClassDistance(Step):
             "label": ["a", "a", "b", "b"],
         }
     )
+    df
+    ```
+
+    Specifying the step touches no data, so the recipe reports itself as
+    unprepped:
+
+    ```{python}
     recipe = Recipe().add(
         StepClassDistance(
             s.numeric_predictors(), outcome="label", log_distance=False
         )
+    )
+    recipe
+    ```
+
+    `fit()` learns one centroid per class label and returns a prepped recipe:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` then appends one ``distance_<class>`` column per label:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    ``log_distance`` (the default) compresses the raw distances:
+
+    ```{python}
+    recipe = Recipe().add(
+        StepClassDistance(s.numeric_predictors(), outcome="label")
     )
     fitted = recipe.fit(df)
     fitted.transform(df)

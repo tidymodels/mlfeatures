@@ -142,8 +142,26 @@ class StepImputeMedian(Step):
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, None, 4.0]})
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepImputeMedian(s.numeric_predictors()))
+    recipe
+    ```
+
+    `fit()` computes the median of the observed values:
+
+    ```{python}
     fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` fills the nulls in place:
+
+    ```{python}
     fitted.transform(df)
     ```
     """

@@ -151,8 +151,26 @@ class StepNormalize(Step):
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepNormalize(s.numeric_predictors()))
+    recipe
+    ```
+
+    `fit()` learns each column's mean and standard deviation:
+
+    ```{python}
     fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` applies them in place:
+
+    ```{python}
     fitted.transform(df)
     ```
     """

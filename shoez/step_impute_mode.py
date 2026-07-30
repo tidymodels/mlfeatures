@@ -153,8 +153,26 @@ class StepImputeMode(Step):
     df = pd.DataFrame(
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
     recipe = Recipe().add(StepImputeMode(s.nominal_predictors()))
+    recipe
+    ```
+
+    `fit()` finds the most frequent observed level:
+
+    ```{python}
     fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` fills the nulls in place:
+
+    ```{python}
     fitted.transform(df)
     ```
     """
