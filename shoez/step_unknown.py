@@ -145,7 +145,8 @@ class StepUnknown(Step):
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
     recipe = Recipe().add(StepUnknown(s.nominal_predictors()))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

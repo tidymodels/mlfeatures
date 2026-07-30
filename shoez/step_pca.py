@@ -208,7 +208,8 @@ class StepPca(Step):
         {"x": [1.0, 2.0, 3.0, 4.0], "y": [2.1, 3.9, 6.1, 8.0]}
     )
     recipe = Recipe().add(StepPca(s.numeric_predictors(), num_comp=2))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

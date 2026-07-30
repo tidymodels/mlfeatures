@@ -154,7 +154,8 @@ class StepImputeMode(Step):
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
     recipe = Recipe().add(StepImputeMode(s.nominal_predictors()))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

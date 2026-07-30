@@ -143,7 +143,8 @@ class StepImputeMedian(Step):
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, None, 4.0]})
     recipe = Recipe().add(StepImputeMedian(s.numeric_predictors()))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

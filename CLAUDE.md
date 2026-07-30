@@ -66,4 +66,12 @@ These conventions apply to every example we write: docstring `Examples` cells, [
   )
   ```
 
+- **Keep the three lifecycle phases on their own lines.** Bind each one rather than chaining them together, so specify, fit, and transform read as the distinct phases they are:
+
+  ```python
+  recipe = Recipe().add(StepNormalize(s.numeric_predictors()))
+  fitted = recipe.fit(df)
+  fitted.transform(df)
+  ```
+
 - **End on the real result.** The final expression should display the actual output (a bare `result`), not `.shape`, `.agg(...)`, or another summary standing in for it, and it needs no trailing comment explaining what the reader is about to see.

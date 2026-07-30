@@ -137,7 +137,8 @@ class StepImputeMean(Step):
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, None, 4.0]})
     recipe = Recipe().add(StepImputeMean(s.numeric_predictors()))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

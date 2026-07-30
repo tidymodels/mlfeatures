@@ -93,14 +93,15 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         .add(StepNormalize(s.numeric_predictors()))
         .add(StepDummy(s.nominal_predictors()))
     )
-    RecipeTransformer(rec).fit(X).transform(X)
+    fitted = RecipeTransformer(rec).fit(X)
+    fitted.transform(X)
     ```
 
     `get_feature_names_out()` reports the produced feature names, so the
     transformer composes inside a `sklearn.compose.ColumnTransformer`:
 
     ```{python}
-    RecipeTransformer(rec).fit(X).get_feature_names_out()
+    fitted.get_feature_names_out()
     ```
     """
 

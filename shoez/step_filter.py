@@ -103,7 +103,8 @@ class StepFilter(RowOp):
     ```{python}
     df = pd.DataFrame({"age": [25, 41, 33, 52]})
     recipe = Recipe().add(StepFilter(lambda df: df["age"] > 30))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

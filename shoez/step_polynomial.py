@@ -369,7 +369,8 @@ class StepPolynomial(Step):
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
     recipe = Recipe().add(StepPolynomial(s.numeric_predictors(), degree=2))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

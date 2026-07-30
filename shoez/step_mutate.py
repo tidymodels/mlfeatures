@@ -111,7 +111,8 @@ class StepMutate(Step):
     recipe = Recipe().add(
         StepMutate({"x_sq": lambda df: df["x"] ** 2, "x": lambda df: df["x"] + 1})
     )
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

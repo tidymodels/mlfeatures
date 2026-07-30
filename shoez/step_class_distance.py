@@ -415,7 +415,8 @@ class StepClassDistance(Step):
             s.numeric_predictors(), outcome="label", log_distance=False
         )
     )
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

@@ -369,8 +369,9 @@ class Selectors:
     df = pd.DataFrame(
         {"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "y": [7.0, 8.0, 9.0]}
     )
-    step = StepNormalize(s.starts_with("x"))
-    Recipe().add(step).fit(df).transform(df)
+    recipe = Recipe().add(StepNormalize(s.starts_with("x")))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

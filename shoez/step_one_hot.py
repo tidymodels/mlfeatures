@@ -102,7 +102,8 @@ class StepOneHot(Step):
     ```{python}
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
     recipe = Recipe().add(StepOneHot(s.nominal_predictors()))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

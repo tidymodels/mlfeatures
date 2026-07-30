@@ -189,7 +189,8 @@ class StepDropCorr(Step):
         }
     )
     recipe = Recipe().add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

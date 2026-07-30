@@ -241,7 +241,8 @@ class StepDummy(Step):
     ```{python}
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
     recipe = Recipe().add(StepDummy(s.nominal_predictors()))
-    recipe.fit(df).transform(df)
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 
