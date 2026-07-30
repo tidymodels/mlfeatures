@@ -24,7 +24,8 @@ pipelines — a Python port of the R
 
 ``` python
 import pandas as pd
-from shoez import Recipe, StepDropCorr
+from shoez import Recipe, StepDropCorr, StepNormalize
+from shoez import Selectors as s
 
 df = pd.DataFrame(
     {
@@ -35,17 +36,38 @@ df = pd.DataFrame(
 )
 
 # specify -> fit -> transform
-recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+recipe = (
+    Recipe()
+    .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+    .add(StepNormalize(s.numeric_predictors()))
+)
 fitted = recipe.fit(df)
 result = fitted.transform(df)
-
-# `c` is uncorrelated and always kept; exactly one of the correlated pair
-# `a`/`b` is dropped. Which member is dropped is an implementation detail,
-# so we show the resulting shape rather than pinning the exact columns.
-result.shape
+result
 ```
 
-    (5, 2)
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+&#10;    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+&#10;    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+
+|     | b         | c         |
+|-----|-----------|-----------|
+| 0   | -1.264911 | 0.301511  |
+| 1   | -0.632456 | -0.904534 |
+| 2   | 0.000000  | 0.000000  |
+| 3   | 0.632456  | -0.904534 |
+| 4   | 1.264911  | 1.507557  |
+
+</div>
 
 See
 [`design/README.md`](https://github.com/tidymodels/shoez/blob/main/design/README.md)

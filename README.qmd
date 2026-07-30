@@ -21,7 +21,8 @@ A framework for declaring, estimating, and applying feature-engineering pipeline
 
 ```{python}
 import pandas as pd
-from shoez import Recipe, StepDropCorr
+from shoez import Recipe, StepDropCorr, StepNormalize
+from shoez import Selectors as s
 
 df = pd.DataFrame(
     {
@@ -32,14 +33,14 @@ df = pd.DataFrame(
 )
 
 # specify -> fit -> transform
-recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+recipe = (
+    Recipe()
+    .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+    .add(StepNormalize(s.numeric_predictors()))
+)
 fitted = recipe.fit(df)
 result = fitted.transform(df)
-
-# `c` is uncorrelated and always kept; exactly one of the correlated pair
-# `a`/`b` is dropped. Which member is dropped is an implementation detail,
-# so we show the resulting shape rather than pinning the exact columns.
-result.shape
+result
 ```
 
 See [`design/README.md`](https://github.com/tidymodels/shoez/blob/main/design/README.md) for the full design.
