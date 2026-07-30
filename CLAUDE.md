@@ -49,3 +49,21 @@ uv run great-docs preview    # build and serve at localhost:3000
 `great-docs` is in the `docs` dependency group and requires Python ≥3.11 (the package itself still supports ≥3.10). On push to `main`, [`.github/workflows/docs.yml`](.github/workflows/docs.yml) builds and deploys to GitHub Pages.
 
 Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy.
+
+### Example style
+
+These conventions apply to every example we write: docstring `Examples` cells, [`README.qmd`](README.qmd), and the snippets in `design/`.
+
+- **Import selectors as `s`**: `from shoez import Selectors as s`, then `s.numeric_predictors()`. This is the house style everywhere, and it keeps the shoez namespace clear of `cs`, the conventional alias for `polars.selectors`. Prose cross-references to the API still use the real name (`Selectors.wrap`).
+- **Select columns with selectors, not literal names.** Pass `s.numeric_predictors()` rather than a hardcoded list like `["a", "b", "c"]`; the selector says what the step is for, and the example keeps working when the frame changes.
+- **Build recipes by chaining `.add()`** inside a parenthesized expression, one step per line, rather than `Recipe(steps=[...])`. Show at least two steps so the chained shape is the thing being demonstrated:
+
+  ```python
+  recipe = (
+      Recipe()
+      .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+      .add(StepNormalize(s.numeric_predictors()))
+  )
+  ```
+
+- **End on the real result.** The final expression should display the actual output (a bare `result`), not `.shape`, `.agg(...)`, or another summary standing in for it, and it needs no trailing comment explaining what the reader is about to see.
