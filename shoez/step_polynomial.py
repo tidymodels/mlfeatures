@@ -363,11 +363,40 @@ class StepPolynomial(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepPolynomial
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
-    Recipe().add(StepPolynomial(["x"], degree=2)).fit(df).transform(df)
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepPolynomial(s.numeric_predictors(), degree=2))
+    recipe
+    ```
+
+    `fit()` learns the orthogonal basis for each column:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` replaces the column with its polynomial terms:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    A higher ``degree`` produces more terms:
+
+    ```{python}
+    recipe = Recipe().add(StepPolynomial(s.numeric_predictors(), degree=3))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

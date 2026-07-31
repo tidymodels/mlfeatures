@@ -1,12 +1,12 @@
 """Role-, type-, name-, and provenance-aware column selectors.
 
-Import as ``from shoez import Selectors as cs`` and pass the result of a
+Import as ``from shoez import Selectors as s`` and pass the result of a
 factory call directly to any step:
 
 ```python
-StepDropCorr(Selectors.numeric_predictors())
-StepPCA(Selectors.starts_with("x") & Selectors.predictors())
-StepPCA(Selectors.has_source(step_type=StepDummy))
+StepDropCorr(s.numeric_predictors())
+StepPCA(s.starts_with("x") & s.predictors())
+StepPCA(s.has_source(step_type=StepDummy))
 ```
 
 Selectors are resolved to a list of column names **at fit time**, when the
@@ -361,15 +361,17 @@ class Selectors:
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepNormalize, Selectors
+    from shoez import Recipe, StepNormalize
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame(
         {"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "y": [7.0, 8.0, 9.0]}
     )
-    step = StepNormalize(Selectors.starts_with("x"))
-    Recipe().add(step).fit(df).transform(df)
+    recipe = Recipe().add(StepNormalize(s.starts_with("x")))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 
@@ -385,8 +387,8 @@ class Selectors:
         ``all_of``); use `col` when absence should be a no-op.
 
         ```python
-        Selectors.col("x1")
-        Selectors.col("x1", "x2")
+        s.col("x1")
+        s.col("x1", "x2")
         ```
         """
         label = f"col({', '.join(repr(n) for n in names)})"
@@ -420,7 +422,7 @@ class Selectors:
         """Columns named ``f"{prefix}{i}"`` for ``i`` in ``rng`` (e.g. x1..x5).
 
         ```python
-        Selectors.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
+        s.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
         ```
         """
         rng = list(rng)
@@ -574,8 +576,8 @@ class Selectors:
         step *anywhere* in their ancestry, use `has_ancestor`.
 
         ```python
-        Selectors.has_source("dummy_abc123")
-        Selectors.has_source(step_type=StepDummy)
+        s.has_source("dummy_abc123")
+        s.has_source(step_type=StepDummy)
         ```
         """
         return _SourceSelector(step=step, step_type=step_type, ancestral=False)
@@ -605,7 +607,9 @@ class Selectors:
 
         ```python
         import polars.selectors as cs
-        Selectors.wrap(cs.starts_with("x_")) & Selectors.predictors()
+        from shoez import Selectors as s
+
+        s.wrap(cs.starts_with("x_")) & s.predictors()
         ```
         """
         return _coerce(selector)

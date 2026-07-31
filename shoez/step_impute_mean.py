@@ -131,11 +131,32 @@ class StepImputeMean(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepImputeMean
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, None, 4.0]})
-    Recipe().add(StepImputeMean(["x"])).fit(df).transform(df)
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepImputeMean(s.numeric_predictors()))
+    recipe
+    ```
+
+    `fit()` computes the mean of the observed values:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` fills the nulls in place:
+
+    ```{python}
+    fitted.transform(df)
     ```
     """
 

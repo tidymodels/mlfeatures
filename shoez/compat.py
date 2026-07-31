@@ -80,6 +80,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepNormalize, StepDummy
+    from shoez import Selectors as s
     from shoez.compat import RecipeTransformer
     ```
 
@@ -87,15 +88,20 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     X = pd.DataFrame(
         {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
     )
-    rec = Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"]))
-    RecipeTransformer(rec).fit(X).transform(X)
+    rec = (
+        Recipe()
+        .add(StepNormalize(s.numeric_predictors()))
+        .add(StepDummy(s.nominal_predictors()))
+    )
+    fitted = RecipeTransformer(rec).fit(X)
+    fitted.transform(X)
     ```
 
     `get_feature_names_out()` reports the produced feature names, so the
     transformer composes inside a `sklearn.compose.ColumnTransformer`:
 
     ```{python}
-    RecipeTransformer(rec).fit(X).get_feature_names_out()
+    fitted.get_feature_names_out()
     ```
     """
 

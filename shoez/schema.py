@@ -73,9 +73,10 @@ class ColumnNode:
     ```{python}
     import pandas as pd
     from shoez import Recipe, StepDummy
+    from shoez import Selectors as s
 
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-    node = Recipe().add(StepDummy(["color"])).fit(df).schema["color_red"]
+    node = Recipe().add(StepDummy(s.nominal_predictors())).fit(df).schema["color_red"]
     node.name, node.source, node.parent_cols
     ```
     """
@@ -112,6 +113,7 @@ class Schema:
     ```{python}
     import pandas as pd
     from shoez import Recipe, StepImputeMean, StepNormalize, StepDummy
+    from shoez import Selectors as s
 
     df = pd.DataFrame(
         {
@@ -122,9 +124,9 @@ class Schema:
     )
     schema = (
         Recipe()
-        .add(StepImputeMean(["income"]))
-        .add(StepNormalize(["age", "income"]))
-        .add(StepDummy(["city"]))
+        .add(StepImputeMean(s.numeric_predictors()))
+        .add(StepNormalize(s.numeric_predictors()))
+        .add(StepDummy(s.nominal_predictors()))
         .fit(df)
         .schema
     )
@@ -354,14 +356,15 @@ class Schema:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
         schema = (
             Recipe()
-            .add(StepNormalize(["age"]))
-            .add(StepDummy(["city"]))
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
             .fit(df)
             .schema
         )
@@ -398,14 +401,15 @@ class Schema:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
         schema = (
             Recipe()
-            .add(StepNormalize(["age"]))
-            .add(StepDummy(["city"]))
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
             .fit(df)
             .schema
         )
@@ -436,9 +440,10 @@ class Schema:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe().add(StepDummy(["color"])).fit(df).schema
+        schema = Recipe().add(StepDummy(s.nominal_predictors())).fit(df).schema
         ```
 
         Each indicator's immediate parent is the column it was encoded from:
@@ -472,6 +477,7 @@ class Schema:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepClassDistance, StepPolynomial
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {
@@ -482,8 +488,12 @@ class Schema:
         )
         schema = (
             Recipe()
-            .add(StepClassDistance(["x", "y"], outcome="cls"))
-            .add(StepPolynomial(["distance_0"], degree=2))
+            .add(
+                StepClassDistance(
+                    s.numeric_predictors() - s.col("cls"), outcome="cls"
+                )
+            )
+            .add(StepPolynomial(s.col("distance_0"), degree=2))
             .fit(df)
             .schema
         )

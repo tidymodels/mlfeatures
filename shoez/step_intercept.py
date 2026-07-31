@@ -87,7 +87,35 @@ class StepIntercept(Step):
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0]})
-    Recipe().add(StepIntercept()).fit(df).transform(df)
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepIntercept())
+    recipe
+    ```
+
+    `fit()` has nothing to estimate; the step is constant:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` appends the column:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    ``value`` and ``name`` control what is appended:
+
+    ```{python}
+    recipe = Recipe().add(StepIntercept(value=0.0, name="bias"))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

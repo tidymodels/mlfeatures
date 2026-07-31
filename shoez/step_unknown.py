@@ -137,13 +137,42 @@ class StepUnknown(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepUnknown
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame(
         {"city": pd.Series(["NYC", "LA", "NYC", None], dtype="category")}
     )
-    Recipe().add(StepUnknown(["city"])).fit(df).transform(df)
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepUnknown(s.nominal_predictors()))
+    recipe
+    ```
+
+    `fit()` records the level to add to each column:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` recodes the nulls in place:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    ``new_level`` names the added level:
+
+    ```{python}
+    recipe = Recipe().add(StepUnknown(s.nominal_predictors(), new_level="missing"))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

@@ -200,13 +200,42 @@ class StepPca(Step):
     #| output: false
     import pandas as pd
     from shoez import Recipe, StepPca
+    from shoez import Selectors as s
     ```
 
     ```{python}
     df = pd.DataFrame(
         {"x": [1.0, 2.0, 3.0, 4.0], "y": [2.1, 3.9, 6.1, 8.0]}
     )
-    Recipe().add(StepPca(["x", "y"], num_comp=2)).fit(df).transform(df)
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepPca(s.numeric_predictors(), num_comp=2))
+    recipe
+    ```
+
+    `fit()` learns the component loadings:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` replaces the columns with their scores:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    ``num_comp`` caps how many components are kept:
+
+    ```{python}
+    recipe = Recipe().add(StepPca(s.numeric_predictors(), num_comp=1))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
     ```
     """
 

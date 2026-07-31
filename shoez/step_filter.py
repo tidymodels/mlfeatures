@@ -102,7 +102,28 @@ class StepFilter(RowOp):
 
     ```{python}
     df = pd.DataFrame({"age": [25, 41, 33, 52]})
-    Recipe().add(StepFilter(lambda df: df["age"] > 30)).fit(df).transform(df)
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepFilter(lambda df: df["age"] > 30))
+    recipe
+    ```
+
+    `fit()` applies the predicate to the training data:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` leaves new data untouched; a `RowOp` never filters what it
+    is scoring:
+
+    ```{python}
+    fitted.transform(df)
     ```
     """
 

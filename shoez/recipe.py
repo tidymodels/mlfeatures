@@ -79,17 +79,24 @@ class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
     Steps are first-class `Step` objects (Option A in
-    ``design/interfaces.md``). Assemble a recipe by passing them at construction:
+    ``design/interfaces.md``). Assemble a recipe with the immutable `add()`
+    builder, which returns a new recipe each call (preserving the purity
+    guarantee in ``design/lifecycle.md``):
 
     ```python
-    Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)])
+    from shoez import Selectors as s
+
+    recipe = (
+        Recipe()
+        .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+        .add(StepNormalize(s.numeric_predictors()))
+    )
     ```
 
-    or with the immutable `add()` builder, which returns a new recipe each
-    call (preserving the purity guarantee in ``design/lifecycle.md``):
+    Steps may also be passed at construction, which is equivalent:
 
     ```python
-    Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
+    Recipe(steps=[StepDropCorr(s.numeric_predictors(), threshold=0.9)])
     ```
 
     A prototype ``data`` frame may be supplied to capture the column names used
@@ -164,10 +171,15 @@ class Recipe:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
         ```
 
         ```{python}
-        Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"]))
+        (
+            Recipe()
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
+        )
         ```
         """
         new = self._clone()
@@ -259,13 +271,19 @@ class Recipe:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
         ```
 
         ```{python}
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
-        Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"])).fit(df)
+        (
+            Recipe()
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
+            .fit(df)
+        )
         ```
         """
         current = _frame.from_native(data)
@@ -368,6 +386,7 @@ class Recipe:
         ```{python}
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {
@@ -378,8 +397,8 @@ class Recipe:
         )
         rec = (
             Recipe(data=df, outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(["age"]))
-            .add(StepDummy(["city"]))
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
         )
         rec.summary()
         ```
@@ -496,6 +515,7 @@ class FittedRecipe:
         #| output: false
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
         ```
 
         ```{python}
@@ -503,7 +523,10 @@ class FittedRecipe:
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
         fitted = (
-            Recipe().add(StepNormalize(["age"])).add(StepDummy(["city"])).fit(df)
+            Recipe()
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
+            .fit(df)
         )
         fitted.transform(df)
         ```
@@ -535,6 +558,7 @@ class FittedRecipe:
         ```{python}
         import pandas as pd
         from shoez import Recipe, StepNormalize, StepDummy
+        from shoez import Selectors as s
 
         df = pd.DataFrame(
             {
@@ -545,8 +569,8 @@ class FittedRecipe:
         )
         fitted = (
             Recipe(data=df, outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(["age"]))
-            .add(StepDummy(["city"]))
+            .add(StepNormalize(s.numeric_predictors()))
+            .add(StepDummy(s.nominal_predictors()))
             .fit(df)
         )
         fitted.summary()

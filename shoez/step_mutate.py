@@ -108,9 +108,29 @@ class StepMutate(Step):
 
     ```{python}
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0]})
-    Recipe().add(
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(
         StepMutate({"x_sq": lambda df: df["x"] ** 2, "x": lambda df: df["x"] + 1})
-    ).fit(df).transform(df)
+    )
+    recipe
+    ```
+
+    `fit()` has nothing to estimate; the expressions run at apply time:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` evaluates them in order:
+
+    ```{python}
+    fitted.transform(df)
     ```
     """
 
