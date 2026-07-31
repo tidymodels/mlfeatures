@@ -43,31 +43,15 @@ recipe = (
 )
 fitted = recipe.fit(df)
 result = fitted.transform(df)
-result
+print(result)
 ```
 
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-&#10;    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-&#10;    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-
-|     | b         | c         |
-|-----|-----------|-----------|
-| 0   | -1.264911 | 0.301511  |
-| 1   | -0.632456 | -0.904534 |
-| 2   | 0.000000  | 0.000000  |
-| 3   | 0.632456  | -0.904534 |
-| 4   | 1.264911  | 1.507557  |
-
-</div>
+              b         c
+    0 -1.264911  0.301511
+    1 -0.632456 -0.904534
+    2  0.000000  0.000000
+    3  0.632456 -0.904534
+    4  1.264911  1.507557
 
 See
 [`design/README.md`](https://github.com/tidymodels/shoez/blob/main/design/README.md)

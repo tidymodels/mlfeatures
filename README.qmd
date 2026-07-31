@@ -40,7 +40,7 @@ recipe = (
 )
 fitted = recipe.fit(df)
 result = fitted.transform(df)
-result
+print(result)
 ```
 
 See [`design/README.md`](https://github.com/tidymodels/shoez/blob/main/design/README.md) for the full design.

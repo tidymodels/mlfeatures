@@ -74,6 +74,6 @@ These conventions apply to every example we write: docstring `Examples` cells, [
   fitted.transform(df)
   ```
 
-- **One `{python}` cell per output.** A cell auto-displays only its last expression, so a value you want rendered (the input frame, the unprepped recipe, the fitted recipe) needs its own cell with a line of prose between. Don't reach for `print()` or `display()` to force intermediate output; splitting the cell keeps the rich rendering and the copy-pasteable code.
+- **One `{python}` cell per output.** A cell auto-displays only its last expression, so a value you want rendered (the input frame, the unprepped recipe, the fitted recipe) needs its own cell with a line of prose between. Don't reach for `print()` or `display()` to force intermediate output; splitting the cell keeps the rich rendering and the copy-pasteable code. [`README.qmd`](README.qmd) is the exception: it renders to GitHub-flavored Markdown, where a DataFrame's `_repr_html_` drags a raw `<style>` block into `README.md`, so `print()` the frame there.
 - **Show arguments that change behavior.** After the walkthrough, add a cell per argument whose effect is visible in the output (`keep_original_cols`, `num_comp`, `threshold`, `degree`), each with at most one line of prose. Arguments that only rename or re-role columns don't need one.
 - **End on the real result.** The final expression should display the actual output (a bare `result`), not `.shape`, `.agg(...)`, or another summary standing in for it, and it needs no trailing comment explaining what the reader is about to see.
