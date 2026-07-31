@@ -12,7 +12,11 @@ import pickle
 import pandas as pd
 
 from shoez import Recipe, StepPolynomial
-from tests._conformance import assert_backend_parity, fit_transform_isolated
+from tests._conformance import (
+    assert_backend_parity,
+    fit_isolated,
+    fit_transform_isolated,
+)
 
 
 def _fitted() -> tuple[Recipe, pd.DataFrame]:
@@ -77,14 +81,13 @@ class TestStableId:
 
 
 class TestEstimatesLifecycle:
-    """`_estimates` is None before fit() and populated after (generic fitted-state contract)."""
+    """`_estimates` is None on a fresh step and populated by fit() (step-contract convention)."""
 
     def test_estimates_populated_after_fit(self) -> None:
         train = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
         step = StepPolynomial(["a"], degree=2)
         assert step._estimates is None
-        Recipe(steps=[step]).fit(train)
-        assert step._estimates is not None
+        assert fit_isolated(step, train)._estimates is not None
 
 
 class TestLineage:

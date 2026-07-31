@@ -151,11 +151,10 @@ class TestEndToEnd:
         # Whitebox check: the StepPolynomial actually carries the training
         # mean on its fitted result, so we know the centering can't drift.
         train = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
-        step = StepPolynomial(["a"], degree=2)
-        Recipe(steps=[step]).fit(train)
+        fitted = Recipe(steps=[StepPolynomial(["a"], degree=2)]).fit(train)
         # ``_estimates`` is private but exists post-fit; using it for the
         # invariant check is the most direct way to assert pinning.
-        fit_result = step._estimates
+        fit_result = fitted.steps[0]._estimates
         assert fit_result is not None
         assert fit_result["a"].mean == pytest.approx(3.0)
 

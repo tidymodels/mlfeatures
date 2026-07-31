@@ -12,7 +12,11 @@ import pickle
 import pandas as pd
 
 from shoez import Recipe, StepPca
-from tests._conformance import assert_backend_parity, fit_transform_isolated
+from tests._conformance import (
+    assert_backend_parity,
+    fit_isolated,
+    fit_transform_isolated,
+)
 
 
 def _data() -> dict[str, list[float]]:
@@ -81,14 +85,13 @@ class TestStableId:
 
 
 class TestEstimatesLifecycle:
-    """`_estimates` is None before fit() and populated after (generic fitted-state contract)."""
+    """`_estimates` is None on a fresh step and populated by fit() (step-contract convention)."""
 
     def test_estimates_populated_after_fit(self) -> None:
         train = pd.DataFrame(_data())
         step = StepPca(["x", "y"], num_comp=2)
         assert step._estimates is None
-        Recipe(steps=[step]).fit(train)
-        assert step._estimates is not None
+        assert fit_isolated(step, train)._estimates is not None
 
 
 class TestLineage:

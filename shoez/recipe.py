@@ -17,6 +17,8 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 
 from __future__ import annotations
 
+import copy
+
 from shoez import _frame
 from shoez.ptype import (
     _NON_CONFIGURABLE_ROLES,  # pyright: ignore[reportPrivateUsage]
@@ -260,6 +262,10 @@ class Recipe:
         training frame every later step then fits on — but never run during
         ``transform()`` on new data, which the framework enforces structurally.
 
+        Each fit works on *copies* of the steps, so the recipe is left unchanged
+        and refittable, and a `FittedRecipe` never shares fitted state with the
+        recipe or with another fit of it.
+
         Examples
         --------
         ``fit()`` estimates each step's statistics on the training data and
@@ -287,6 +293,13 @@ class Recipe:
         ```
         """
         current = _frame.from_native(data)
+        # Fit *copies* of the steps, never the recipe's own: fitting writes
+        # estimates, ``trained``, and ``_empty_selection`` onto a step, so
+        # sharing them would let a later fit overwrite an earlier
+        # FittedRecipe's state. Deep, so a step whose ``fit()`` mutates its
+        # state in place is isolated too — the guarantee must not depend on how
+        # a step author wrote ``fit()``.
+        steps = [copy.deepcopy(step) for step in self.steps]
         live_roles = self.roles.copy()
         if not live_roles.columns_with_role("predictor"):
             reserved = {
@@ -309,7 +322,7 @@ class Recipe:
         # empty-selection steps make no schema change and are skipped below.
         schema = Schema.from_frame(current, live_roles)
         fitted_steps: list[Step] = []
-        for step in self.steps:
+        for step in steps:
             info = SchemaInfo.from_frame(current)
             info.roles = live_roles
             # Hand the live lineage DAG and the id→step map to selector
@@ -325,9 +338,7 @@ class Recipe:
             # ``RowOp``; ``StepMutate``, the ``UNCONSTRAINED`` escape hatch) are
             # exempt — they have no ``columns`` to resolve and must always run.
             # They are detected structurally by the absence of a ``columns``
-            # attribute rather than by enumerating their types. The marker is
-            # reset each fit so re-fitting with a selection that now matches
-            # columns is not stuck in identity mode.
+            # attribute rather than by enumerating their types.
             has_selector = hasattr(step, "columns")
             selected = step.resolve_selection(current, info) if has_selector else []
             empty = has_selector and selected == []
