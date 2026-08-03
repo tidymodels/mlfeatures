@@ -11,7 +11,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Recipe, SchemaInfo, StepDropCorr
+from shoez import Recipe, SchemaInfo, StepDropCorr, StepNormalize
 
 
 def _data() -> dict[str, list[float]]:
@@ -83,6 +83,35 @@ class TestEndToEnd:
         refitted = fitted.fit(df)
         assert refitted is fitted
         assert refitted.steps is fitted.steps
+
+    def test_refitting_does_not_corrupt_earlier_fit(self) -> None:
+        recipe = Recipe(steps=[StepNormalize(["x"])])
+        a = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        b = pd.DataFrame({"x": [100.0, 200.0, 300.0, 400.0, 500.0]})
+        fitted_a = recipe.fit(a)
+        before = fitted_a.transform(a)
+        recipe.fit(b)
+        pd.testing.assert_frame_equal(fitted_a.transform(a), before)
+
+    def test_each_fit_owns_its_steps(self) -> None:
+        df = pd.DataFrame(_data())
+        recipe = Recipe(steps=[StepDropCorr(["a", "b", "c"])])
+        first, second = recipe.fit(df), recipe.fit(df)
+        assert first.steps[0] is not second.steps[0]
+
+    def test_fit_leaves_the_recipes_own_steps_unfitted(self) -> None:
+        df = pd.DataFrame(_data())
+        step = StepDropCorr(["a", "b", "c"])
+        recipe = Recipe(steps=[step])
+        recipe.fit(df)
+        assert recipe.steps[0] is step
+        assert not recipe.steps[0].trained
+        assert recipe.steps[0]._estimates is None
+
+    def test_fitted_recipes_steps_carry_the_estimates(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(steps=[StepDropCorr(["a", "b", "c"])]).fit(df)
+        assert fitted.steps[0]._estimates is not None
 
     def test_extra_columns_outside_selection_are_preserved(self) -> None:
         df = pd.DataFrame(_data())

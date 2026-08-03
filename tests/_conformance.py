@@ -95,14 +95,22 @@ def assert_backend_parity(
         _assert_columns_equal(name, pd_cols[name], pl_cols[name])
 
 
-def fit_transform_isolated(step: Step, data: DataFrame) -> DataFrame:
-    """Fit and transform a single step against a stubbed ``SchemaInfo``.
+def fit_isolated(step: Step, data: DataFrame) -> Step:
+    """Fit a single step against a stubbed ``SchemaInfo``, returning the fitted step.
 
     Exercises the step contract with no ``Recipe`` in the loop: the info is a
     bare ``SchemaInfo.from_frame`` snapshot (no lineage DAG, no role overrides),
-    which is all a step reads for its own logic. Returns the native output frame
-    so callers can compare its columns against the recipe-driven path.
+    which is all a step reads for its own logic.
     """
     frame = _frame.from_native(data)
-    info = SchemaInfo.from_frame(frame)
-    return _frame.to_native(step.fit(frame, info).transform(frame))
+    return step.fit(frame, SchemaInfo.from_frame(frame))
+
+
+def fit_transform_isolated(step: Step, data: DataFrame) -> DataFrame:
+    """Fit and transform a single step against a stubbed ``SchemaInfo``.
+
+    Returns the native output frame so callers can compare its columns against
+    the recipe-driven path. See `fit_isolated` for the no-``Recipe`` rationale.
+    """
+    frame = _frame.from_native(data)
+    return _frame.to_native(fit_isolated(step, data).transform(frame))
