@@ -95,17 +95,6 @@ reference:
       - Recipe.set_roles
       - Recipe.update_role_requirements
       - Recipe.summary
-      - name: FittedRecipe
-        members: false
-      - FittedRecipe.transform
-      - FittedRecipe.summary
-      - FittedRecipe.to_json
-      - FittedRecipe.from_json
-      - FittedRecipe.to_yaml
-      - FittedRecipe.from_yaml
-      - FittedRecipe.to_dict
-      - FittedRecipe.from_dict
-      - FittedRecipe.minimize
       - name: Ptype
         members: false
       - Ptype.check
@@ -149,6 +138,17 @@ reference:
         members: false
       - name: StepUnknown
         members: false
+
+  - title: Fitted recipes
+    desc: >-
+      What Recipe.fit() returns: an immutable, fitted pipeline you can apply to
+      new data. Serialization methods are listed under Serialization below.
+    # Same flattening pattern as Recipes.
+    contents:
+      - name: FittedRecipe
+        members: false
+      - FittedRecipe.transform
+      - FittedRecipe.summary
 
   - title: Developing
     desc: >-
@@ -198,6 +198,13 @@ reference:
       - name: to_yaml
       - name: from_yaml
       - name: minimize
+      - FittedRecipe.to_dict
+      - FittedRecipe.from_dict
+      - FittedRecipe.to_json
+      - FittedRecipe.from_json
+      - FittedRecipe.to_yaml
+      - FittedRecipe.from_yaml
+      - FittedRecipe.minimize
 
   - title: Interop
     desc: >-
