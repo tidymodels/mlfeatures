@@ -81,7 +81,6 @@ class StepOneHot(Step):
     null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
     since pandas' ``Int8`` cannot hold the missing values. Unlike
     `StepDummy`, no reference level is dropped.
-    Transform logic is shared via `apply_dummy()`.
 
     Examples
     --------

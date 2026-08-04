@@ -360,10 +360,6 @@ class StepClassDistance(Step):
     columns themselves are passed through untouched. The new
     ``distance_<class>`` columns are appended at the end of the frame.
 
-    Wraps `fit_class_distance()` and `apply_class_distance()` into the
-    `Step` lifecycle, parallel to
-    `StepNormalize`.
-
     Parameters
     ----------
     columns

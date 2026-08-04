@@ -119,11 +119,8 @@ def apply_impute_mode(
 class StepImputeMode(Step):
     """Impute missing values with the column mode (most frequent value).
 
-    Each selected column has its nulls filled in place with that column's
-    mode, estimated at fit time. The work is done by
-    `fit_impute_mode()` and `apply_impute_mode()`; this class
-    wraps them in the `Step` lifecycle so a
-    `Recipe` can fit and apply it.
+    Each selected column has its nulls filled in place with that column's mode,
+    estimated at fit time and reused unchanged at transform time.
 
     Mode imputation is for categorical columns (it accepts
     ``Categorical``/``Enum``/``String``, not numeric dtypes) and is

@@ -124,14 +124,11 @@ class StepNormalize(Step):
 
     Each selected numeric column ``x`` is replaced in place by
     ``(x - mean) / std``, with the mean and standard deviation estimated at fit
-    time. The statistical work is done by `fit_normalize()`
-    and `apply_normalize()`; this class wraps them in the
-    `Step` lifecycle so a `Recipe` can
-    fit and apply it.
+    time and reused unchanged at transform time.
 
     Constant (zero-variance) columns among the selection cannot be scaled to
-    unit variance; `fit_normalize()` drops them from the normalization (with
-    a warning), and they pass through ``transform`` untouched.
+    unit variance; they are dropped from the normalization (with a warning) and
+    pass through ``transform`` untouched.
 
     Examples
     --------

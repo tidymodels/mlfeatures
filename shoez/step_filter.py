@@ -72,9 +72,7 @@ class StepFilter(RowOp):
     A ``ROW_OP`` step: it changes the number of rows but never the column
     schema. Because it is a `RowOp`, it only takes effect on the training frame
     during ``fit()``; the framework skips it at ``transform()`` time so rows are
-    never dropped from data being scored. The row selection is performed by
-    `apply_filter()`; this class wraps it in the `RowOp` lifecycle so a `Recipe`
-    can fit and apply it.
+    never dropped from data being scored.
 
     Being a row operation, it consumes no *named* columns and produces none, so
     there is nothing to estimate: ``fit()`` only records the (unchanged) schema.

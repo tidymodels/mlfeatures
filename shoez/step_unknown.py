@@ -118,10 +118,7 @@ class StepUnknown(Step):
     """Recode missing categorical levels to an explicit ``"unknown"`` level.
 
     Each selected categorical column has its nulls replaced in place by
-    ``new_level``. The work is done by `fit_unknown()`
-    and `apply_unknown()`; this class wraps them in the
-    `Step` lifecycle so a `Recipe` can
-    fit and apply it.
+    ``new_level``. The set of columns to recode is fixed at fit time.
 
     Examples
     --------

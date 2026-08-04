@@ -115,10 +115,8 @@ class StepImputeMedian(Step):
     """Impute missing numeric values with the column median.
 
     Each selected numeric column has its nulls filled in place with that
-    column's median, estimated at fit time. The work is done by
-    `fit_impute_median()` and `apply_impute_median()`; this class
-    wraps them in the `Step` lifecycle so a
-    `Recipe` can fit and apply it.
+    column's median, estimated at fit time and reused unchanged at transform
+    time.
 
     A column that is entirely null at fit time has no median to impute with; it
     is left unchanged (not dropped) with a warning, and passes through

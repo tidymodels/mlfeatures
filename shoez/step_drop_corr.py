@@ -157,9 +157,8 @@ class StepDropCorr(Step):
     """Remove numeric columns whose pairwise absolute correlation is too high.
 
     A ``REMOVING`` step: the selected columns that exceed ``threshold`` are
-    dropped, and no new columns are produced. The statistical decision is made by
-    `fit_drop_corr()`; this class wraps it in the `Step`
-    lifecycle so a `Recipe` can fit and apply it.
+    dropped, and no new columns are produced. Which columns to drop is decided
+    at fit time and reused unchanged at transform time.
 
     The columns to consider may be given as a single name, an explicit list of
     names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a

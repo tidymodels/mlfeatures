@@ -218,9 +218,7 @@ class StepDummy(Step):
     ``fit()``. Indicators are ``nw.Int8`` (0/1); a column that contains
     null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
     since pandas' ``Int8`` cannot hold the missing values. The first level in
-    ascending sort order is the reference level and is dropped. Statistical
-    logic lives in `fit_dummy()`; transform logic is shared via
-    `apply_dummy()`.
+    ascending sort order is the reference level and is dropped.
 
     Examples
     --------

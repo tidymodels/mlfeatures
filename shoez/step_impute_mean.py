@@ -109,10 +109,7 @@ class StepImputeMean(Step):
     """Impute missing numeric values with the column mean.
 
     Each selected numeric column has its nulls filled in place with that
-    column's mean, estimated at fit time. The work is done by
-    `fit_impute_mean()` and `apply_impute_mean()`; this class
-    wraps them in the `Step` lifecycle so a
-    `Recipe` can fit and apply it.
+    column's mean, estimated at fit time and reused unchanged at transform time.
 
     A column that is entirely null at fit time has no mean to impute with; it is
     left unchanged (not dropped) with a warning, and passes through ``transform``

@@ -326,9 +326,6 @@ class StepPolynomial(Step):
     ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``. The orthogonal basis (centering
     mean + QR transform matrix) is **learned at fit time on the training data
     and reused unchanged at transform time** — no re-estimation on new data.
-    The math lives in `fit_polynomial()` and `apply_polynomial()`;
-    this class wraps the in the `Step` lifecycle so a
-    `Recipe` can fit and apply it.
 
     The effective degree per column is capped at ``n_unique_non_null - 1`` — a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
