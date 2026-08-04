@@ -95,86 +95,71 @@ reference:
       - Recipe.set_roles
       - Recipe.update_role_requirements
       - Recipe.summary
-      - name: FittedRecipe
-        members: false
-      - FittedRecipe.transform
-      - FittedRecipe.summary
-      - FittedRecipe.to_json
-      - FittedRecipe.from_json
-      - FittedRecipe.to_yaml
-      - FittedRecipe.from_yaml
-      - FittedRecipe.to_dict
-      - FittedRecipe.from_dict
-      - FittedRecipe.minimize
-      - name: Ptype
-        members: false
-      - Ptype.check
 
   - title: Steps
     desc: >-
-      Feature-engineering operations. Each step's page documents the class
-      itself.
+      Feature-engineering operations, grouped by what they do to the data:
+      imputation, categorical encoding, numeric transformation, column
+      screening, then general row and column expressions. Each step's page
+      documents the class itself.
+    # Ordered by task group (see desc), not alphabetically; keep new steps with
+    # their group rather than appending to the end.
+    #
     # `members: false` keeps each step page to the class docstring only (no
     # method docs). great-docs forwards this per-item as `members: []` to
     # quartodoc; a section-level `options:` is NOT forwarded, so it must be
     # set on each entry.
     contents:
-      - name: StepClassDistance
-        members: false
-      - name: StepDropCorr
-        members: false
-      - name: StepDropZeroVariance
-        members: false
-      - name: StepDummy
-        members: false
-      - name: StepFilter
-        members: false
-      - name: StepMutate
-        members: false
-      - name: StepPca
-        members: false
+      # Imputation: fill in missing values.
       - name: StepImputeMean
         members: false
       - name: StepImputeMedian
         members: false
       - name: StepImputeMode
         members: false
-      - name: StepIntercept
+      - name: StepUnknown
         members: false
+      # Categorical encoding: turn nominal columns into numeric ones.
+      - name: StepDummy
+        members: false
+      - name: StepOneHot
+        members: false
+      # Numeric transformation: rescale, expand, or derive new numeric columns.
       - name: StepNormalize
         members: false
       - name: StepPolynomial
         members: false
-      - name: StepOneHot
+      - name: StepPca
         members: false
-      - name: StepUnknown
+      - name: StepClassDistance
+        members: false
+      - name: StepIntercept
+        members: false
+      # Column screening: drop columns that carry little or redundant signal.
+      - name: StepDropZeroVariance
+        members: false
+      - name: StepDropCorr
+        members: false
+      # General expressions: arbitrary row filters and column computations.
+      - name: StepFilter
+        members: false
+      - name: StepMutate
         members: false
 
-  - title: Developing
+  - title: Fitted recipes
     desc: >-
-      The abstract Step base class and its lifecycle methods, for authoring new
-      steps. Flattened so each method appears on the reference index.
-    # Same pattern as Recipes: Step is `members: false` (class docstring only on
-    # its own page) and its methods are enumerated by hand so they render as
-    # their own rows in this section's index table.
+      What Recipe.fit() returns: an immutable, fitted pipeline you can apply to
+      new data. Serialization methods are listed under Serialization below.
+    # Same flattening pattern as Recipes.
     contents:
-      - name: Step
+      - name: FittedRecipe
         members: false
-      - Step.fit
-      - Step.transform
-      - Step.schema_in
-      - Step.schema_out
-      - Step.output_parents
-      - Step.accepts_dtypes
-      - Step.required_pkgs
-      - name: RowOp
-        members: false
-      - name: StepError
-        members: false
+      - FittedRecipe.transform
+      - FittedRecipe.summary
 
   - title: Schema
     desc: >-
-      The column-lineage DAG a fitted recipe maintains — per-column provenance
+      The column-lineage DAG a fitted recipe maintains: per-column provenance
       and dtype history, plus the queries that back has_source.
     contents:
       - name: Schema
@@ -198,6 +183,13 @@ reference:
       - name: to_yaml
       - name: from_yaml
       - name: minimize
+      - FittedRecipe.to_dict
+      - FittedRecipe.from_dict
+      - FittedRecipe.to_json
+      - FittedRecipe.from_json
+      - FittedRecipe.to_yaml
+      - FittedRecipe.from_yaml
+      - FittedRecipe.minimize
 
   - title: Interop
     desc: >-
@@ -221,10 +213,35 @@ reference:
         members: false
       - name: Mode
         members: false
+      - name: Ptype
+        members: false
+      - Ptype.check
       - DataFrame
       - Frame
       - ANY_DTYPE
       - NUMERIC_DTYPES
+
+  - title: Developing
+    desc: >-
+      The abstract Step base class and its lifecycle methods, for authoring new
+      steps. Flattened so each method appears on the reference index.
+    # Same pattern as Recipes: Step is `members: false` (class docstring only on
+    # its own page) and its methods are enumerated by hand so they render as
+    # their own rows in this section's index table.
+    contents:
+      - name: Step
+        members: false
+      - Step.fit
+      - Step.transform
+      - Step.schema_in
+      - Step.schema_out
+      - Step.output_parents
+      - Step.accepts_dtypes
+      - Step.required_pkgs
+      - name: RowOp
+        members: false
+      - name: StepError
+        members: false
 
 # Site URL
 # --------
