@@ -96,21 +96,29 @@ reference:
       - Recipe.update_role_requirements
       - Recipe.summary
 
-  - title: Steps
-    desc: >-
-      Feature-engineering operations, grouped by what they do to the data:
-      imputation, categorical encoding, numeric transformation, column
-      screening, then general row and column expressions. Each step's page
-      documents the class itself.
-    # Ordered by task group (see desc), not alphabetically; keep new steps with
-    # their group rather than appending to the end.
-    #
-    # `members: false` keeps each step page to the class docstring only (no
-    # method docs). great-docs forwards this per-item as `members: []` to
-    # quartodoc; a section-level `options:` is NOT forwarded, so it must be
-    # set on each entry.
+  - title: "Steps: numeric features"
+    desc: Rescale, expand, or derive new numeric columns.
     contents:
-      # Imputation: fill in missing values.
+      - name: StepNormalize
+        members: false
+      - name: StepPolynomial
+        members: false
+      - name: StepClassDistance
+        members: false
+      - name: StepIntercept
+        members: false
+
+  - title: "Steps: categorical features"
+    desc: Encode nominal columns as numeric ones.
+    contents:
+      - name: StepDummy
+        members: false
+      - name: StepOneHot
+        members: false
+
+  - title: "Steps: missing data"
+    desc: Impute missing values, or give them an explicit level.
+    contents:
       - name: StepImputeMean
         members: false
       - name: StepImputeMedian
@@ -119,28 +127,22 @@ reference:
         members: false
       - name: StepUnknown
         members: false
-      # Categorical encoding: turn nominal columns into numeric ones.
-      - name: StepDummy
-        members: false
-      - name: StepOneHot
-        members: false
-      # Numeric transformation: rescale, expand, or derive new numeric columns.
-      - name: StepNormalize
-        members: false
-      - name: StepPolynomial
+
+  - title: "Steps: dimensionality reduction"
+    desc: Reduce dimensionality, or filter columns that carry no signal.
+    contents:
+      - name: StepDropZeroVariance
         members: false
       - name: StepPca
         members: false
-      - name: StepClassDistance
-        members: false
-      - name: StepIntercept
-        members: false
-      # Column screening: drop columns that carry little or redundant signal.
-      - name: StepDropZeroVariance
-        members: false
       - name: StepDropCorr
         members: false
-      # General expressions: arbitrary row filters and column computations.
+
+  - title: "Steps: general expressions"
+    desc: >-
+      Arbitrary row filters and column computations; escape hatches rather than
+      a named feature-engineering method.
+    contents:
       - name: StepFilter
         members: false
       - name: StepMutate
