@@ -222,9 +222,6 @@ class StepDummy(Step):
     logic lives in `fit_dummy()`; transform logic is shared via
     `apply_dummy()`.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Examples
     --------
     Each categorical column is replaced by *k−1* indicators; the first level in

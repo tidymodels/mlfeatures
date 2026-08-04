@@ -125,9 +125,6 @@ class StepImputeMedian(Step):
     is left unchanged (not dropped) with a warning, and passes through
     ``transform`` untouched.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Examples
     --------
     The null is filled in place with the column median of the observed values:

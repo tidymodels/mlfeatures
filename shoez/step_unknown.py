@@ -124,9 +124,6 @@ class StepUnknown(Step):
     `Step` lifecycle so a `Recipe` can
     fit and apply it.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Examples
     --------
     Nulls in the selected column are recoded in place to an explicit

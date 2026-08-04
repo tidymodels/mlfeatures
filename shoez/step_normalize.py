@@ -133,9 +133,6 @@ class StepNormalize(Step):
     unit variance; `fit_normalize()` drops them from the normalization (with
     a warning), and they pass through ``transform`` untouched.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Examples
     --------
     Each selected column is replaced in place by its centered, unit-variance

@@ -83,9 +83,6 @@ class StepOneHot(Step):
     `StepDummy`, no reference level is dropped.
     Transform logic is shared via `apply_dummy()`.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Examples
     --------
     Each categorical column is replaced by one indicator per level, with no

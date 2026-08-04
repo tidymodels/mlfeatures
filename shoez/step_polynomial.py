@@ -337,9 +337,6 @@ class StepPolynomial(Step):
     `UserWarning`. The caller can chain a zero-variance drop step to
     clean them up.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Parameters
     ----------
     columns
