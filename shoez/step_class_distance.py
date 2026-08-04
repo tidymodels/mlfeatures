@@ -355,10 +355,10 @@ def _is_nan(value: Any) -> bool:
 class StepClassDistance(Step):
     """Append per-row distances to each class centroid as new columns.
 
-    An ``ADDING`` step: the predictor columns are read at fit time to learn
-    centroids and again at transform time to compute distances, but the
-    columns themselves are passed through untouched. The new
-    ``distance_<class>`` columns are appended at the end of the frame.
+    The predictor columns are read at fit time to learn centroids and again at
+    transform time to compute distances, but the columns themselves are passed
+    through untouched. The new ``distance_<class>`` columns are appended at the
+    end of the frame.
 
     Parameters
     ----------

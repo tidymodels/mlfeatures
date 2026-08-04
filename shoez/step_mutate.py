@@ -71,11 +71,11 @@ def apply_mutate(features: Frame, mutations: Mapping[str, Mutation]) -> Frame:
 class StepMutate(Step):
     """Apply arbitrary column expressions — the escape hatch.
 
-    An ``UNCONSTRAINED`` step: each supplied mutation either adds a new column or
-    overwrites an existing one, so the exact column change is only known after
-    the mutations run on the training frame. `fit()` applies them once to read
-    off which columns were *added* (and their dtypes) versus modified in place,
-    then re-applies the same expressions at transform time.
+    Each supplied mutation either adds a new column or overwrites an existing
+    one, so the exact column change is only known after the mutations run on
+    the training frame. `fit()` applies them once to read off which columns
+    were *added* (and their dtypes) versus modified in place, then re-applies
+    the same expressions at transform time.
 
     New columns are attributed to no declared parents (``output_parents`` maps
     each to ``[]``): the expressions are opaque callables, so shoez does not try

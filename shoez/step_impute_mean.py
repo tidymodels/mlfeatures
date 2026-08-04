@@ -6,8 +6,9 @@ exercised on its own. `StepImputeMean` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-Each selected numeric column has its null values filled with that column's mean, estimated at fit time
-and reused unchanged at transform time. Ports R ``recipes``' ``step_impute_mean``.
+Each selected numeric column has its null values filled with that column's
+mean, estimated at fit time and reused unchanged at transform time. Ports R
+``recipes``' ``step_impute_mean``.
 
 Because the mean is a float and ``fill_null`` unifies dtypes, imputed columns
 are returned as ``Float64`` (an integer column with imputed values is promoted).

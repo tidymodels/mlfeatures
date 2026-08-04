@@ -60,10 +60,9 @@ def fit_drop_zero_variance(features: Frame) -> list[str]:
 class StepDropZeroVariance(Step):
     """Remove columns that have a single unique value (zero variance).
 
-    A ``REMOVING`` step: the selected columns whose observed values are all the
-    same — or all missing — are dropped, and no new columns are produced. Which
-    columns to drop is decided at fit time and reused unchanged at transform
-    time.
+    The selected columns whose observed values are all the same — or all
+    missing — are dropped, and no new columns are produced. Which columns to
+    drop is decided at fit time and reused unchanged at transform time.
 
     Examples
     --------

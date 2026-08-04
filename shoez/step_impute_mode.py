@@ -6,9 +6,10 @@ exercised on its own. `StepImputeMode` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-Each selected categorical column has its null values filled with that column's most frequent
-level, estimated at fit time and reused unchanged at transform time. Ports R
-``recipes``' ``step_impute_mode``, which likewise targets nominal variables.
+Each selected categorical column has its null values filled with that column's
+most frequent level, estimated at fit time and reused unchanged at transform
+time. Ports R ``recipes``' ``step_impute_mode``, which likewise targets nominal
+variables.
 
 Mode imputation is for **categorical** columns only — the most frequent observed
 level. (The mean/median steps cover numeric columns; the mode of a continuous

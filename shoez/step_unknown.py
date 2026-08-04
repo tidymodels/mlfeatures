@@ -6,9 +6,9 @@ exercised on its own. `StepUnknown` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-Each selected categorical column has its null values recoded to a single explicit level so
-that "missing" becomes a value a model can learn from rather than a gap. Ports
-R ``recipes``' ``step_unknown``.
+Each selected categorical column has its null values recoded to a single
+explicit level so that "missing" becomes a value a model can learn from rather
+than a gap. Ports R ``recipes``' ``step_unknown``.
 
 Deviation from R (for now): recoded columns are returned as ``String`` rather
 than as a categorical with an added level. Preserving the categorical dtype and

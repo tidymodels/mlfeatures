@@ -67,11 +67,8 @@ def add_intercept(
 class StepIntercept(Step):
     """Add a constant column with a fixed value.
 
-    An ``ADDING`` step: it consumes no input columns and appends a single
-    constant column (default a column of ones named ``"intercept"``). The column
-    is produced by `add_intercept()`; this class wraps it in the
-    `Step` lifecycle so a `Recipe` can
-    fit and apply it.
+    The step consumes no input columns and appends a single constant column
+    (default a column of ones named ``"intercept"``).
 
     Because it adds rather than transforms existing columns, there is nothing to
     estimate: ``fit()`` only records the produced schema.

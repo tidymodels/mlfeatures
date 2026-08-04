@@ -6,10 +6,10 @@ be exercised on its own. `StepImputeMedian` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-Each selected numeric column has its null values filled with that column's median, estimated at fit
-time and reused unchanged at transform time. Ports R ``recipes``'
-``step_impute_median``. The median is robust to outliers, so it is often
-preferred over the mean for skewed columns.
+Each selected numeric column has its null values filled with that column's
+median, estimated at fit time and reused unchanged at transform time. Ports R
+``recipes``' ``step_impute_median``. The median is robust to outliers, so it is
+often preferred over the mean for skewed columns.
 
 Because the median is a float and ``fill_null`` unifies dtypes, imputed columns
 are returned as ``Float64`` (an integer column with imputed values is promoted).

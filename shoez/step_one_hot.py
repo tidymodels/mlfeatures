@@ -75,12 +75,11 @@ def fit_one_hot(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
 class StepOneHot(Step):
     """Expand discrete columns into *k* binary indicator columns.
 
-    A ``ONE_TO_MANY`` step: each selected column is replaced by *k* indicator
-    columns where *k* is the number of unique non-null levels seen during
-    ``fit()``. Indicators are ``nw.Int8`` (0/1); a column that contains
-    null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
-    since pandas' ``Int8`` cannot hold the missing values. Unlike
-    `StepDummy`, no reference level is dropped.
+    Each selected column is replaced by *k* indicator columns where *k* is the
+    number of unique non-null levels seen during ``fit()``. Indicators are
+    ``nw.Int8`` (0/1); a column that contains null-source or unseen-level rows
+    is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
+    the missing values. Unlike `StepDummy`, no reference level is dropped.
 
     Examples
     --------

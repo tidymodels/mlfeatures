@@ -168,11 +168,11 @@ def apply_pca(data: Frame, fit: PcaFit, prefix: str) -> Frame:
 class StepPca(Step):
     """Project numeric columns onto their principal components.
 
-    A ``MANY_TO_MANY`` step: the selected numeric columns are dropped and
-    replaced by ``num_comp`` principal-component columns ``{prefix}1 ...
-    {prefix}{num_comp}``, each descending from the *whole* input set. The
-    centering mean and loadings are **learned at fit time on the training data
-    and reused unchanged at transform time** — no re-estimation on new data.
+    The selected numeric columns are dropped and replaced by ``num_comp``
+    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``, each
+    descending from the *whole* input set. The centering mean and loadings are
+    **learned at fit time on the training data and reused unchanged at
+    transform time** — no re-estimation on new data.
 
     The number of components is capped at the number of input columns (and at
     the number of complete rows), so requesting more than that yields fewer.
