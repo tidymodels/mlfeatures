@@ -6,8 +6,7 @@ be exercised on its own. `StepImputeMedian` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected numeric
-column has its null values filled with that column's median, estimated at fit
+Each selected numeric column has its null values filled with that column's median, estimated at fit
 time and reused unchanged at transform time. Ports R ``recipes``'
 ``step_impute_median``. The median is robust to outliers, so it is often
 preferred over the mean for skewed columns.
@@ -115,8 +114,8 @@ def apply_impute_median(
 class StepImputeMedian(Step):
     """Impute missing numeric values with the column median.
 
-    A ``ONE_TO_ONE`` step: each selected numeric column has its nulls filled in
-    place with that column's median, estimated at fit time. The work is done by
+    Each selected numeric column has its nulls filled in place with that
+    column's median, estimated at fit time. The work is done by
     `fit_impute_median()` and `apply_impute_median()`; this class
     wraps them in the `Step` lifecycle so a
     `Recipe` can fit and apply it.

@@ -6,8 +6,7 @@ exercised on its own. `StepImputeMode` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected
-categorical column has its null values filled with that column's most frequent
+Each selected categorical column has its null values filled with that column's most frequent
 level, estimated at fit time and reused unchanged at transform time. Ports R
 ``recipes``' ``step_impute_mode``, which likewise targets nominal variables.
 
@@ -120,8 +119,8 @@ def apply_impute_mode(
 class StepImputeMode(Step):
     """Impute missing values with the column mode (most frequent value).
 
-    A ``ONE_TO_ONE`` step: each selected column has its nulls filled in place
-    with that column's mode, estimated at fit time. The work is done by
+    Each selected column has its nulls filled in place with that column's
+    mode, estimated at fit time. The work is done by
     `fit_impute_mode()` and `apply_impute_mode()`; this class
     wraps them in the `Step` lifecycle so a
     `Recipe` can fit and apply it.

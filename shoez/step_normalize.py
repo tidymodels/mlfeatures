@@ -122,9 +122,9 @@ def apply_normalize(
 class StepNormalize(Step):
     """Center and scale numeric columns to zero mean and unit variance.
 
-    A ``ONE_TO_ONE`` step: each selected numeric column ``x`` is replaced in
-    place by ``(x - mean) / std``, with the mean and standard deviation
-    estimated at fit time. The statistical work is done by `fit_normalize()`
+    Each selected numeric column ``x`` is replaced in place by
+    ``(x - mean) / std``, with the mean and standard deviation estimated at fit
+    time. The statistical work is done by `fit_normalize()`
     and `apply_normalize()`; this class wraps them in the
     `Step` lifecycle so a `Recipe` can
     fit and apply it.

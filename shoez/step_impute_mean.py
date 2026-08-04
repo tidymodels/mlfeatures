@@ -6,8 +6,7 @@ exercised on its own. `StepImputeMean` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected numeric
-column has its null values filled with that column's mean, estimated at fit time
+Each selected numeric column has its null values filled with that column's mean, estimated at fit time
 and reused unchanged at transform time. Ports R ``recipes``' ``step_impute_mean``.
 
 Because the mean is a float and ``fill_null`` unifies dtypes, imputed columns
@@ -109,8 +108,8 @@ def apply_impute_mean(
 class StepImputeMean(Step):
     """Impute missing numeric values with the column mean.
 
-    A ``ONE_TO_ONE`` step: each selected numeric column has its nulls filled in
-    place with that column's mean, estimated at fit time. The work is done by
+    Each selected numeric column has its nulls filled in place with that
+    column's mean, estimated at fit time. The work is done by
     `fit_impute_mean()` and `apply_impute_mean()`; this class
     wraps them in the `Step` lifecycle so a
     `Recipe` can fit and apply it.

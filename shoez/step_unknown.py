@@ -6,8 +6,7 @@ exercised on its own. `StepUnknown` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected
-categorical column has its null values recoded to a single explicit level so
+Each selected categorical column has its null values recoded to a single explicit level so
 that "missing" becomes a value a model can learn from rather than a gap. Ports
 R ``recipes``' ``step_unknown``.
 
@@ -118,8 +117,8 @@ def apply_unknown(
 class StepUnknown(Step):
     """Recode missing categorical levels to an explicit ``"unknown"`` level.
 
-    A ``ONE_TO_ONE`` step: each selected categorical column has its nulls
-    replaced in place by ``new_level``. The work is done by `fit_unknown()`
+    Each selected categorical column has its nulls replaced in place by
+    ``new_level``. The work is done by `fit_unknown()`
     and `apply_unknown()`; this class wraps them in the
     `Step` lifecycle so a `Recipe` can
     fit and apply it.
