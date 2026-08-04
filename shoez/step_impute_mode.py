@@ -130,6 +130,13 @@ class StepImputeMode(Step):
     A column that is entirely null at fit time has no mode; it is left unchanged
     (not dropped) with a warning, and passes through ``transform`` untouched.
 
+    Parameters
+    ----------
+    columns
+        Selector for the categorical columns to impute.
+    id
+        Stable step identifier. Default ``"impute_mode"``.
+
     Examples
     --------
     The null is filled in place with the column mode (the most frequent

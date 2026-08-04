@@ -170,6 +170,18 @@ class StepDropCorr(Step):
     frame's schema at fit time, regardless of backend. See
     ``design/selectors.md``.
 
+    Parameters
+    ----------
+    columns
+        Selector for the numeric columns to consider for removal.
+    threshold
+        Pairs whose absolute correlation is strictly above this value trigger a
+        removal. Default ``0.9``.
+    method
+        Correlation method: ``"pearson"`` (default) or ``"spearman"``.
+    id
+        Stable step identifier. Default ``"corr"``.
+
     Examples
     --------
     ``a`` and ``b`` are almost perfectly correlated, so one of them is dropped;

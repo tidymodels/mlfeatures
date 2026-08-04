@@ -130,6 +130,13 @@ class StepNormalize(Step):
     unit variance; they are dropped from the normalization (with a warning) and
     pass through ``transform`` untouched.
 
+    Parameters
+    ----------
+    columns
+        Selector for the numeric columns to normalize.
+    id
+        Stable step identifier. Default ``"normalize"``.
+
     Examples
     --------
     Each selected column is replaced in place by its centered, unit-variance

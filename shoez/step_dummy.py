@@ -220,6 +220,19 @@ class StepDummy(Step):
     the missing values. The first level in ascending sort order is the
     reference level and is dropped.
 
+    Parameters
+    ----------
+    columns
+        Selector for the discrete columns to expand.
+    name_fn
+        Callable mapping ``(source_column, level_as_str)`` to the indicator
+        column's name. Default ``None``, which names them ``"{column}_{level}"``.
+    keep_original_cols
+        If ``True``, the source columns are kept alongside the indicators
+        instead of being dropped. Default ``False``.
+    id
+        Stable step identifier. Default ``"dummy"``.
+
     Examples
     --------
     Each categorical column is replaced by *k−1* indicators; the first level in

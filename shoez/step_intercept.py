@@ -73,6 +73,19 @@ class StepIntercept(Step):
     Because it adds rather than transforms existing columns, there is nothing to
     estimate: ``fit()`` only records the produced schema.
 
+    Parameters
+    ----------
+    value
+        The constant to fill the new column with. Default ``1.0``. The column's
+        dtype follows the literal, so an ``int`` gives an integer column.
+    name
+        Name of the new column. Default ``"intercept"``. A `Recipe` rejects the
+        step if the frame already has a column of this name.
+    role
+        Role intended for the new column. Default ``"predictor"``.
+    id
+        Stable step identifier. Default ``"intercept"``.
+
     Examples
     --------
     A constant ``intercept`` column of ones is appended; the input columns pass

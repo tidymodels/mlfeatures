@@ -116,6 +116,13 @@ class StepImputeMean(Step):
     left unchanged (not dropped) with a warning, and passes through ``transform``
     untouched.
 
+    Parameters
+    ----------
+    columns
+        Selector for the numeric columns to impute.
+    id
+        Stable step identifier. Default ``"impute_mean"``.
+
     Examples
     --------
     The null is filled in place with the column mean of the observed values:

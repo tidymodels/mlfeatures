@@ -120,6 +120,17 @@ class StepUnknown(Step):
     Each selected categorical column has its nulls replaced in place by
     ``new_level``. The set of columns to recode is fixed at fit time.
 
+    Parameters
+    ----------
+    columns
+        Selector for the categorical columns to recode.
+    new_level
+        The level that replaces nulls. Default ``"unknown"``. A `UserWarning` is
+        emitted if a selected column already contains this level, since the
+        recoded rows then become indistinguishable from real ones.
+    id
+        Stable step identifier. Default ``"unknown"``.
+
     Examples
     --------
     Nulls in the selected column are recoded in place to an explicit

@@ -64,6 +64,13 @@ class StepDropZeroVariance(Step):
     missing — are dropped, and no new columns are produced. Which columns to
     drop is decided at fit time and reused unchanged at transform time.
 
+    Parameters
+    ----------
+    columns
+        Selector for the columns to consider for removal. Any dtype is accepted.
+    id
+        Stable step identifier. Default ``"zv"``.
+
     Examples
     --------
     ``const`` has a single unique value, so it is dropped; ``x`` is kept:

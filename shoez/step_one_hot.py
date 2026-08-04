@@ -81,6 +81,19 @@ class StepOneHot(Step):
     is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
     the missing values. Unlike `StepDummy`, no reference level is dropped.
 
+    Parameters
+    ----------
+    columns
+        Selector for the discrete columns to expand.
+    name_fn
+        Callable mapping ``(source_column, level_as_str)`` to the indicator
+        column's name. Default ``None``, which names them ``"{column}_{level}"``.
+    keep_original_cols
+        If ``True``, the source columns are kept alongside the indicators
+        instead of being dropped. Default ``False``.
+    id
+        Stable step identifier. Default ``"one_hot"``.
+
     Examples
     --------
     Each categorical column is replaced by one indicator per level, with no

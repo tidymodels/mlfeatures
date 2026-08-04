@@ -122,6 +122,13 @@ class StepImputeMedian(Step):
     is left unchanged (not dropped) with a warning, and passes through
     ``transform`` untouched.
 
+    Parameters
+    ----------
+    columns
+        Selector for the numeric columns to impute.
+    id
+        Stable step identifier. Default ``"impute_median"``.
+
     Examples
     --------
     The null is filled in place with the column median of the observed values:
