@@ -339,8 +339,8 @@ class StepPolynomial(Step):
     columns
         Names of the columns to expand.
     degree
-        Maximum polynomial degree. Must be a positive integer. Each column's
-        effective degree is the smaller of ``degree`` and
+        Maximum polynomial degree. Must be a positive integer. Default ``2``.
+        Each column's effective degree is the smaller of ``degree`` and
         ``n_unique_non_null - 1``.
     role
         Role assigned to the new polynomial columns. Default ``"predictor"``.

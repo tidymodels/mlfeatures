@@ -52,7 +52,10 @@ def fit_drop_corr(
 
     Returns
     -------
-    list[str] — column names to drop.  Empty list if nothing exceeds the threshold.
+    list[str] — column names to drop.  Empty list if nothing exceeds the
+    threshold and every column has a usable correlation.  Columns whose
+    correlations are all missing (constant or all-null columns) are always
+    included, even when no pair exceeds the threshold.
 
     Notes
     -----
@@ -157,7 +160,8 @@ class StepDropCorr(Step):
     """Remove numeric columns whose pairwise absolute correlation is too high.
 
     A ``REMOVING`` step: the selected columns that exceed ``threshold`` are
-    dropped, and no new columns are produced. Which columns to drop is decided
+    dropped, as are columns with no usable correlation at all (constant or
+    all-null), and no new columns are produced. Which columns to drop is decided
     at fit time and reused unchanged at transform time.
 
     The columns to consider may be given as a single name, an explicit list of

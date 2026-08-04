@@ -62,7 +62,7 @@ class PcaFit:
         principal axis. New scores are ``(X - mean) @ loadings``.
     num_comp
         Number of components actually produced (``loadings.shape[1]``), capped
-        at the number of input columns and the SVD rank.
+        at the number of input columns and the number of complete rows.
     """
 
     columns: list[str]
@@ -78,7 +78,9 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
 
     Rows with any missing value are dropped before the SVD, so the basis is
     estimated on complete cases only. The number of components is capped at the
-    number of input columns and the SVD rank.
+    number of input columns and the number of complete rows. The cap is a shape,
+    not the numeric rank: on rank-deficient data the trailing components are
+    retained and carry only numerical noise.
 
     Parameters
     ----------
@@ -117,7 +119,7 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
     mean = complete.mean(axis=0)
     xc = complete - mean
     # full_matrices=False keeps Vt at shape (rank, n_features); its rows are the
-    # principal axes. Cap the kept components at what the SVD can supply.
+    # principal axes. Cap the kept components at the number of rows returned.
     _, _, vt_raw = np.linalg.svd(xc, full_matrices=False)
     vt = cast("np.ndarray[Any, Any]", vt_raw)
     eff = min(num_comp, vt.shape[0])
@@ -172,8 +174,8 @@ class StepPca(Step):
     centering mean and loadings are **learned at fit time on the training data
     and reused unchanged at transform time** — no re-estimation on new data.
 
-    The number of components is capped at the number of input columns (and the
-    SVD rank), so requesting more than the data can supply yields fewer.
+    The number of components is capped at the number of input columns (and at
+    the number of complete rows), so requesting more than that yields fewer.
 
     Parameters
     ----------

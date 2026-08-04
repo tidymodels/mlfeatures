@@ -342,7 +342,7 @@ def _compute_distances(
 
 
 def _is_nan(value: Any) -> bool:
-    """``True`` iff ``value`` is a floating-point NaN (and only that)."""
+    """``True`` for a floating-point NaN, and for any value unequal to itself."""
     # ``math.isnan`` raises on non-numeric types; pandas' ``isna`` would work
     # too but pulls in pandas as a runtime dep. The pattern ``v != v`` is the
     # classic NaN check (NaN is the only value not equal to itself).
@@ -363,8 +363,7 @@ class StepClassDistance(Step):
     Parameters
     ----------
     columns
-        Names of the predictor columns to use. Selectors aren't implemented yet
-        so this is a plain list.
+        Selector for the predictor columns to use.
     outcome
         Name of the column in the training frame that holds the class labels.
         Read at fit time only; the column is *not* declared as an input

@@ -87,7 +87,7 @@ class StepMutate(Step):
     mutations
         Mapping from output column name to a callable taking the frame and
         returning that column's value (a narwhals expression or series). Must be
-        a non-empty mapping of ``str`` names to callables.
+        a non-empty ``dict`` of ``str`` names to callables.
     role
         Role assigned to any *new* columns the mutations create. Columns
         overwritten in place keep their existing role. Default ``"predictor"``.
@@ -120,14 +120,16 @@ class StepMutate(Step):
     recipe
     ```
 
-    `fit()` has nothing to estimate; the expressions run at apply time:
+    `fit()` runs the mutations once on the training frame to read off which
+    columns they add and with what dtypes:
 
     ```{python}
     fitted = recipe.fit(df)
     fitted
     ```
 
-    `transform()` evaluates them in order:
+    `transform()` applies them together, so every mutation sees the original
+    frame; ``x_sq`` squares the incoming ``x``, not the overwritten one:
 
     ```{python}
     fitted.transform(df)
@@ -170,7 +172,9 @@ class StepMutate(Step):
         load-bearing code that JSON cannot represent. Serializing would silently
         drop them and produce a recipe that no longer computes the mutations, so
         it fails loudly instead. Use ``pickle`` for recipes containing
-        ``step_mutate``.
+        ``step_mutate``, which requires the mutations to be picklable: define
+        them as module-level functions, since ``pickle`` cannot handle a
+        ``lambda``.
         """
         raise TypeError(
             "step_mutate carries user-supplied callables and cannot be "

@@ -6,7 +6,7 @@ as a plain function so the logic can be exercised on its own;
 lifecycle so a `Recipe` can fit and apply it.
 
 The *apply* half (dropping the named columns) is `shoez._frame.apply_drop()`,
-shared with every REMOVING-mode step (``step_drop_zv``, ``step_drop_corr``, ...).
+which skips names that are absent from the frame.
 """
 
 from __future__ import annotations

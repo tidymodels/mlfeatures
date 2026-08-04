@@ -354,7 +354,7 @@ class StepDummy(Step):
         return list(self.schema_out().columns)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
-        """Accepts discrete columns; rejects float and decimal."""
+        """Accepts discrete columns only (see ``DISCRETE_DTYPES``)."""
         return set(DISCRETE_DTYPES)
 
     def update_roles(self, roles: Roles) -> None:
