@@ -125,7 +125,7 @@ The mode labels below are a shorthand for the *shape* of the input/output relati
 
 ### Declaring per-output provenance: `output_parents()`
 
-The mode is a coarse shape; it does not say *which* input produced *which* output, and that distinction is real and mode-dependent. Each `step_dummy` indicator descends from a single source column (`a1, a2 ← a`), whereas every `step_pca` component descends from the whole input set (`pc1, pc2 ← {a, b, c}`). Even within `ADDING`, `step_intercept` has no parents while `step_class_distance`'s outputs derive from the feature columns. So every step that *creates* columns declares the exact mapping:
+The mode is a coarse shape; it does not say *which* input produced *which* output, and that distinction is real and mode-dependent. Each `step_dummy` indicator descends from a single source column (`a1, a2 ← a`), whereas every `step_pca` component descends from the whole input set (`pc1, pc2 ← {a, b, c}`), and an `ADDING` step like `step_intercept` has no parents at all. So every step that *creates* columns declares the exact mapping:
 
 ```python
 def output_parents(self) -> dict[str, list[str]]:
