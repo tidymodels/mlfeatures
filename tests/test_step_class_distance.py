@@ -190,32 +190,29 @@ class TestFitNullOutcome:
 
 
 class TestApplyShape:
-    """The output has all original columns plus exactly `c` new columns."""
+    """The fitted input columns are replaced by exactly `c` new columns."""
 
-    def test_appends_c_new_columns(self) -> None:
+    def test_replaces_inputs_with_c_new_columns(self) -> None:
         features = _df(SMALL_FEATURES)
         fit = fit_class_distance(features, _series(SMALL_OUTCOME))
         out = apply_class_distance(features, fit)
-        # Original 2 columns + 2 class-distance columns.
-        assert out.shape == (4, 4)
+        # The 2 input columns are gone; 2 class-distance columns take their place.
+        assert out.shape == (4, 2)
 
-    def test_original_columns_preserved_in_place(self) -> None:
+    def test_input_columns_dropped(self) -> None:
         features = _df(SMALL_FEATURES)
         fit = fit_class_distance(features, _series(SMALL_OUTCOME))
         out = apply_class_distance(features, fit)
-        # Original column order is preserved; the new columns are appended.
-        assert out.columns[:2] == ["x", "y"]
+        assert set(out.columns) == {"distance_0", "distance_1"}
 
-    def test_original_values_unchanged(self) -> None:
-        features = _df(SMALL_FEATURES)
+    def test_unselected_columns_pass_through_unchanged(self) -> None:
+        data = _df({**SMALL_FEATURES, "z": [7.0, 8.0, 9.0, 10.0]})
+        features = data.select(["x", "y"])
         fit = fit_class_distance(features, _series(SMALL_OUTCOME))
-        out = apply_class_distance(features, fit)
-        # Original values bit-for-bit unchanged.
+        out = apply_class_distance(data, fit)
+        assert "z" in out.columns
         np.testing.assert_array_equal(
-            out["x"].to_numpy(), np.asarray(SMALL_FEATURES["x"])
-        )
-        np.testing.assert_array_equal(
-            out["y"].to_numpy(), np.asarray(SMALL_FEATURES["y"])
+            out["z"].to_numpy(), np.asarray([7.0, 8.0, 9.0, 10.0])
         )
 
     def test_row_count_matches_input(self) -> None:

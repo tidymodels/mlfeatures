@@ -33,7 +33,7 @@ def _data() -> dict[str, list[float] | list[str]]:
 
 
 class TestEndToEnd:
-    def test_pandas_appends_distance_columns(self) -> None:
+    def test_pandas_replaces_selected_columns(self) -> None:
         df = pd.DataFrame(_data())
         recipe = Recipe(
             steps=[
@@ -43,17 +43,16 @@ class TestEndToEnd:
         out = recipe.fit(df).transform(df)
 
         assert isinstance(out, pd.DataFrame)
-        # Original four columns are preserved in order; two new ones appended.
-        assert list(out.columns) == [
-            "x",
-            "y",
+        # The selected columns are gone; the unselected ones pass through and
+        # the two distance columns take the selection's place.
+        assert set(out.columns) == {
             "passthrough",
             "label",
             "distance_a",
             "distance_b",
-        ]
+        }
 
-    def test_polars_appends_distance_columns(self) -> None:
+    def test_polars_produces_distance_columns(self) -> None:
         df = pl.DataFrame(_data())
         recipe = Recipe().add(
             StepClassDistance(["x", "y"], outcome="label", log_distance=False)
@@ -117,6 +116,15 @@ class TestEndToEnd:
         for col in ("distance_a", "distance_b"):
             assert out[col].notna().all()
 
+    def test_source_columns_lose_roles(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(steps=[StepClassDistance(["x", "y"], outcome="label")]).fit(df)
+        assert fitted.roles.of("x") == set()
+        assert fitted.roles.of("y") == set()
+        # The outcome column is read but not consumed, so it keeps its role.
+        assert fitted.roles.of("label") != set()
+        assert "predictor" in fitted.roles.of("distance_a")
+
     def test_trained_flag_set_by_recipe(self) -> None:
         fitted = Recipe(steps=[StepClassDistance(["x", "y"], outcome="label")]).fit(
             pd.DataFrame(_data())
@@ -142,8 +150,7 @@ class TestEndToEnd:
             steps=[StepClassDistance(["x", "y"], outcome="label", log_distance=False)]
         )
         out = recipe.fit(df).transform(df)
-        # Original rows preserved (no NaN introduced) and indices kept.
-        assert out["x"].notna().all()
+        # Rows preserved (no NaN introduced) and indices kept.
         assert out["distance_a"].notna().all()
         assert out["distance_b"].notna().all()
         assert list(out.index) == [100, 200, 300, 400, 500, 600]
@@ -155,9 +162,9 @@ class TestEndToEnd:
 
 
 class TestStepClassDistanceUnit:
-    def test_mode_is_adding(self) -> None:
+    def test_mode_is_many_to_many(self) -> None:
         step = StepClassDistance(["x", "y"], outcome="label")
-        assert step.mode is Mode.ADDING
+        assert step.mode is Mode.MANY_TO_MANY
 
     def test_default_id(self) -> None:
         assert StepClassDistance(["x"], outcome="label").id == "class_distance"
