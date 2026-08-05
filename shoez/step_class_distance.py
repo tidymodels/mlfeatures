@@ -78,7 +78,7 @@ class ClassDistanceFit:
         for class ``classes[j]``. This matches the orientation
         ``p predictors × c classes`` requested by the original spec.
     metric
-        Distance function to apply (see `Metric`).
+        Distance function to apply: ``"euclidean"`` or ``"manhattan"``.
     log_distance
         Whether `apply_class_distance()` should return
         ``log(distance + eps)`` rather than the raw distance.
@@ -369,7 +369,7 @@ class StepClassDistance(Step):
         Read at fit time only; the column is *not* declared as an input
         feature in `schema_in()`.
     metric
-        Distance function (see `Metric`). Default ``"euclidean"``.
+        Distance function: ``"euclidean"`` (default) or ``"manhattan"``.
     log_distance
         Whether to return ``log(distance + eps)`` instead of raw distances.
         Default ``True``.
