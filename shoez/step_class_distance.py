@@ -78,7 +78,7 @@ class ClassDistanceFit:
         for class ``classes[j]``. This matches the orientation
         ``p predictors × c classes`` requested by the original spec.
     metric
-        Distance function to apply (see `Metric`).
+        Distance function to apply: ``"euclidean"`` or ``"manhattan"``.
     log_distance
         Whether `apply_class_distance()` should return
         ``log(distance + eps)`` rather than the raw distance.
@@ -342,7 +342,7 @@ def _compute_distances(
 
 
 def _is_nan(value: Any) -> bool:
-    """``True`` iff ``value`` is a floating-point NaN (and only that)."""
+    """``True`` for a floating-point NaN, and for any value unequal to itself."""
     # ``math.isnan`` raises on non-numeric types; pandas' ``isna`` would work
     # too but pulls in pandas as a runtime dep. The pattern ``v != v`` is the
     # classic NaN check (NaN is the only value not equal to itself).
@@ -355,26 +355,27 @@ def _is_nan(value: Any) -> bool:
 class StepClassDistance(Step):
     """Append per-row distances to each class centroid as new columns.
 
-    An ``ADDING`` step: the predictor columns are read at fit time to learn
-    centroids and again at transform time to compute distances, but the
-    columns themselves are passed through untouched. The new
-    ``distance_<class>`` columns are appended at the end of the frame.
-
-    Wraps `fit_class_distance()` and `apply_class_distance()` into the
-    `Step` lifecycle, parallel to
-    `StepNormalize`.
+    The predictor columns are read to learn one centroid per outcome class,
+    then read again to compute each row's distance to those centroids; the
+    columns themselves are passed through untouched. One
+    ``distance_<class>`` column is added per class.
 
     Parameters
     ----------
     columns
-        Names of the predictor columns to use. Selectors aren't implemented yet
-        so this is a plain list.
+        Columns to measure distances over. Accepts a single column name, a list
+        of names, a shoez selector such as ``Selectors.numeric_predictors()``
+        (see `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     outcome
         Name of the column in the training frame that holds the class labels.
         Read at fit time only; the column is *not* declared as an input
         feature in `schema_in()`.
     metric
-        Distance function (see `Metric`). Default ``"euclidean"``.
+        Distance function: ``"euclidean"`` (default) or ``"manhattan"``.
     log_distance
         Whether to return ``log(distance + eps)`` instead of raw distances.
         Default ``True``.

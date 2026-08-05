@@ -46,7 +46,8 @@ def add_intercept(
         wrapped via `shoez._frame.from_native()` at the recipe boundary.
     value
         The constant to fill the new column with. Default ``1.0`` — a column of
-        ones, the classic regression intercept.
+        ones, the classic regression intercept. The column's dtype follows the
+        literal, so an ``int`` ``value`` gives an integer column.
     name
         Name of the new column. Default ``"intercept"``.
 
@@ -56,7 +57,9 @@ def add_intercept(
         ``features`` with one extra column appended. The literal broadcasts
         across every row, so 0-row and 1-row frames still produce a
         schema-correct constant column. An existing column of the same name is
-        overwritten.
+        overwritten in place; note that reaching this function through
+        `StepIntercept` in a `Recipe` cannot happen, since the recipe rejects a
+        step that produces an already-present column name.
     """
     return features.with_columns(nw.lit(value).alias(name))
 
@@ -64,14 +67,21 @@ def add_intercept(
 class StepIntercept(Step):
     """Add a constant column with a fixed value.
 
-    An ``ADDING`` step: it consumes no input columns and appends a single
-    constant column (default a column of ones named ``"intercept"``). The column
-    is produced by `add_intercept()`; this class wraps it in the
-    `Step` lifecycle so a `Recipe` can
-    fit and apply it.
+    A single constant column is added, by default a column of ones named
+    ``"intercept"``.
 
-    Because it adds rather than transforms existing columns, there is nothing to
-    estimate: ``fit()`` only records the produced schema.
+    Parameters
+    ----------
+    value
+        The constant to fill the new column with. Default ``1.0``. The column's
+        dtype follows the literal, so an ``int`` gives an integer column.
+    name
+        Name of the new column. Default ``"intercept"``. A `Recipe` rejects the
+        step if the frame already has a column of this name.
+    role
+        Role intended for the new column. Default ``"predictor"``.
+    id
+        Stable step identifier. Default ``"intercept"``.
 
     Examples
     --------

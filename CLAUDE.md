@@ -50,6 +50,31 @@ uv run great-docs preview    # build and serve at localhost:3000
 
 Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy.
 
+### Step docstrings
+
+A step's class docstring is its reference page, so it is written for someone using the step, not for someone maintaining it. Module docstrings and the `fit_*`/`apply_*` helper docstrings are read from the source instead, so they may talk about internals freely.
+
+- **Only cross-reference names in `shoez.__all__`.** great-docs makes pages from the public API, so a single-backtick reference to anything else (the unexported `fit_*`/`apply_*` helpers, a type alias like `Metric`) renders as inert code text pointing nowhere. Spell the values out instead: "Distance function: ``"euclidean"`` (default) or ``"manhattan"``".
+- **No framework vocabulary.** Don't name `Mode` members (`ONE_TO_ONE`, `ONE_TO_MANY`, `MANY_TO_MANY`, `REMOVING`, `ROW_OP`, `ADDING`, `UNCONSTRAINED`) or base classes like `RowOp` in a step's docstring; describe what the step does to the data. This is a rule about step docstrings only: `Mode` is a public export with its own reference page, and the Mode-keyed tables in `design/` are how the design docs are meant to read.
+- **Universal contracts live once on `Step`, and steps don't restate them.** Three currently do: everything a step needs is computed at fit time and `transform()` only applies stored state; a `columns` selector is resolved once at fit time, and a selection matching nothing makes the step the identity transform; a step guarantees *which* columns exist and what they are named, not where they sit. A new invariant that holds for every step belongs there too.
+- **Don't promise column positions.** Say what columns a step adds or removes, never that they are "appended at the end" or replaced "in the same positional slot".
+- **Give every step a `Parameters` section** listing exactly its constructor parameters, in signature order, each with its default.
+- **Describe `columns` with the shared wording**, varying only the verb, the example selector, and the dtype sentence:
+
+  ```
+  columns
+      Columns to project. Accepts a single column name, a list of names, a
+      shoez selector such as ``Selectors.numeric_predictors()`` (see
+      `Selectors` for the full set), or a narwhals or polars selector
+      (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+      Selectors are resolved against the frame's schema when the recipe is
+      fitted, so the same selector works on any backend. Only numeric columns
+      are meaningful here.
+  ```
+
+- **Say which dtypes are meaningful, not that others are rejected.** `accepts_dtypes()` is declared per step but nothing calls it, so a wrong dtype surfaces as a backend error rather than a shoez one. Until that is wired up, docstrings must not claim validation.
+- **Leave out what the reader can already see.** A filter not touching columns, or a constant column having nothing to estimate, does not need a paragraph.
+
 ### Example style
 
 These conventions apply to every example we write: docstring `Examples` cells, [`README.qmd`](README.qmd), and the snippets in `design/`.

@@ -6,7 +6,7 @@ as a plain function so the logic can be exercised on its own;
 lifecycle so a `Recipe` can fit and apply it.
 
 The *apply* half (dropping the named columns) is `shoez._frame.apply_drop()`,
-shared with every REMOVING-mode step (``step_drop_zv``, ``step_drop_corr``, ...).
+which skips names that are absent from the frame.
 """
 
 from __future__ import annotations
@@ -60,14 +60,21 @@ def fit_drop_zero_variance(features: Frame) -> list[str]:
 class StepDropZeroVariance(Step):
     """Remove columns that have a single unique value (zero variance).
 
-    A ``REMOVING`` step: the selected columns whose observed values are all the
-    same — or all missing — are dropped, and no new columns are produced. The
-    decision is made by `fit_drop_zero_variance()`; this class wraps it in
-    the `Step` lifecycle so a `Recipe`
-    can fit and apply it.
+    The selected columns whose observed values are all the same — or all
+    missing — are dropped, and no new columns are produced.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    Parameters
+    ----------
+    columns
+        Columns to consider for removal. Accepts a single column name, a list
+        of names, a shoez selector such as ``Selectors.predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Any dtype is
+        accepted.
+    id
+        Stable step identifier. Default ``"zv"``.
 
     Examples
     --------

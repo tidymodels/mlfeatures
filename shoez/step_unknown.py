@@ -6,10 +6,9 @@ exercised on its own. `StepUnknown` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected
-categorical column has its null values recoded to a single explicit level so
-that "missing" becomes a value a model can learn from rather than a gap. Ports
-R ``recipes``' ``step_unknown``.
+Each selected categorical column has its null values recoded to a single
+explicit level so that "missing" becomes a value a model can learn from rather
+than a gap. Ports R ``recipes``' ``step_unknown``.
 
 Deviation from R (for now): recoded columns are returned as ``String`` rather
 than as a categorical with an added level. Preserving the categorical dtype and
@@ -118,14 +117,25 @@ def apply_unknown(
 class StepUnknown(Step):
     """Recode missing categorical levels to an explicit ``"unknown"`` level.
 
-    A ``ONE_TO_ONE`` step: each selected categorical column has its nulls
-    replaced in place by ``new_level``. The work is done by `fit_unknown()`
-    and `apply_unknown()`; this class wraps them in the
-    `Step` lifecycle so a `Recipe` can
-    fit and apply it.
+    Each selected categorical column has its nulls replaced in place by
+    ``new_level``.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    Parameters
+    ----------
+    columns
+        Columns to recode. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.string()``, ``polars.selectors.string()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only categorical
+        columns are meaningful here.
+    new_level
+        The level that replaces nulls. Default ``"unknown"``. A `UserWarning` is
+        emitted if a selected column already contains this level, since the
+        recoded rows then become indistinguishable from real ones.
+    id
+        Stable step identifier. Default ``"unknown"``.
 
     Examples
     --------

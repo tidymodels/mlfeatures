@@ -71,11 +71,11 @@ def apply_mutate(features: Frame, mutations: Mapping[str, Mutation]) -> Frame:
 class StepMutate(Step):
     """Apply arbitrary column expressions — the escape hatch.
 
-    An ``UNCONSTRAINED`` step: each supplied mutation either adds a new column or
-    overwrites an existing one, so the exact column change is only known after
-    the mutations run on the training frame. `fit()` applies them once to read
-    off which columns were *added* (and their dtypes) versus modified in place;
-    `apply_mutate()` re-applies the same expressions at transform time.
+    Each supplied mutation either adds a new column or overwrites an existing
+    one, so the exact column change is only known after the mutations run on
+    the training frame. `fit()` applies them once to read off which columns
+    were *added* (and their dtypes) versus modified in place, then re-applies
+    the same expressions at transform time.
 
     New columns are attributed to no declared parents (``output_parents`` maps
     each to ``[]``): the expressions are opaque callables, so shoez does not try
@@ -87,7 +87,7 @@ class StepMutate(Step):
     mutations
         Mapping from output column name to a callable taking the frame and
         returning that column's value (a narwhals expression or series). Must be
-        a non-empty mapping of ``str`` names to callables.
+        a non-empty ``dict`` of ``str`` names to callables.
     role
         Role assigned to any *new* columns the mutations create. Columns
         overwritten in place keep their existing role. Default ``"predictor"``.
@@ -120,14 +120,16 @@ class StepMutate(Step):
     recipe
     ```
 
-    `fit()` has nothing to estimate; the expressions run at apply time:
+    `fit()` runs the mutations once on the training frame to read off which
+    columns they add and with what dtypes:
 
     ```{python}
     fitted = recipe.fit(df)
     fitted
     ```
 
-    `transform()` evaluates them in order:
+    `transform()` applies them together, so every mutation sees the original
+    frame; ``x_sq`` squares the incoming ``x``, not the overwritten one:
 
     ```{python}
     fitted.transform(df)
@@ -165,12 +167,13 @@ class StepMutate(Step):
     def to_state(self) -> dict[str, object]:
         """Not supported: ``step_mutate`` carries user callables it needs at transform.
 
-        Unlike a `RowOp` (whose code is inert after fit), ``StepMutate`` applies
-        its mutation callables to *new* data at ``transform`` time, so they are
-        load-bearing code that JSON cannot represent. Serializing would silently
-        drop them and produce a recipe that no longer computes the mutations, so
-        it fails loudly instead. Use ``pickle`` for recipes containing
-        ``step_mutate``.
+        Unlike `StepFilter`, whose predicate is inert once fitted, ``StepMutate``
+        applies its callables to *new* data at ``transform`` time, so they are
+        load-bearing code that JSON cannot represent. Serializing would silently drop
+        them and produce a recipe that no longer computes the mutations, so it fails
+        loudly instead. Use ``pickle`` for recipes containing ``step_mutate``, which
+        requires the mutations to be picklable: define them as module-level functions,
+        since ``pickle`` cannot handle a ``lambda``.
         """
         raise TypeError(
             "step_mutate carries user-supplied callables and cannot be "

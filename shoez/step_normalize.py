@@ -122,19 +122,25 @@ def apply_normalize(
 class StepNormalize(Step):
     """Center and scale numeric columns to zero mean and unit variance.
 
-    A ``ONE_TO_ONE`` step: each selected numeric column ``x`` is replaced in
-    place by ``(x - mean) / std``, with the mean and standard deviation
-    estimated at fit time. The statistical work is done by `fit_normalize()`
-    and `apply_normalize()`; this class wraps them in the
-    `Step` lifecycle so a `Recipe` can
-    fit and apply it.
+    Each selected numeric column ``x`` is replaced in place by
+    ``(x - mean) / std``, using the column's mean and standard deviation.
 
     Constant (zero-variance) columns among the selection cannot be scaled to
-    unit variance; `fit_normalize()` drops them from the normalization (with
-    a warning), and they pass through ``transform`` untouched.
+    unit variance; they are dropped from the normalization (with a warning) and
+    pass through ``transform`` untouched.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    Parameters
+    ----------
+    columns
+        Columns to normalize. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
+    id
+        Stable step identifier. Default ``"normalize"``.
 
     Examples
     --------

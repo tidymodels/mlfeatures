@@ -83,10 +83,29 @@ class Step(ABC):
     """Abstract base class for a feature-engineering step.
 
     A step is constructed declaratively, fitted against training data to estimate
-    and store statistics, and then applied to new data. ``Step`` subclasses always
-    run at transform time; `RowOp` subclasses never run on new data. There
-    is intentionally no ``skip`` flag — whether a step runs at transform time is
-    determined structurally by its type.
+    and store statistics, and then applied to new data.
+
+    **Everything a step needs is computed at fit time.** Whatever a step has to
+    learn from data — statistics, level sets, a basis, the list of columns to
+    drop — is estimated once from the training frame and stored on the step.
+    ``transform()`` only applies that stored state; it never re-estimates
+    anything, however different the new data looks. This is what makes a fitted
+    recipe reproducible and free of train-to-serve skew, and it holds for every
+    step, so individual steps do not restate it.
+
+    A step's ``columns`` selector is resolved once, against the training
+    frame's schema, when the recipe is fitted. A selector that matches nothing
+    is not an error: the step is kept in the fitted recipe for inspection but
+    never fitted and never run, making it the identity transform.
+
+    What a step promises about the frame it returns is *which* columns are
+    present and what they are named, not where they sit. Column position is an
+    implementation detail that may differ between steps and backends, so
+    downstream code should select columns by name rather than by position.
+
+    ``Step`` subclasses always run at transform time; `RowOp` subclasses never
+    run on new data. There is intentionally no ``skip`` flag — whether a step
+    runs at transform time is determined structurally by its type.
     """
 
     #: Stable, content-derived identifier (user-overridable). All inspection and

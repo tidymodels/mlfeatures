@@ -6,10 +6,9 @@ exercised on its own. `StepImputeMode` wraps them in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-A ``ONE_TO_ONE`` step (see ``design/steps-catalog.md``): each selected
-categorical column has its null values filled with that column's most frequent
-level, estimated at fit time and reused unchanged at transform time. Ports R
-``recipes``' ``step_impute_mode``, which likewise targets nominal variables.
+Each selected categorical column has its null values filled with that column's
+most frequent level. Ports R ``recipes``' ``step_impute_mode``, which likewise
+targets nominal variables.
 
 Mode imputation is for **categorical** columns only — the most frequent observed
 level. (The mean/median steps cover numeric columns; the mode of a continuous
@@ -120,11 +119,8 @@ def apply_impute_mode(
 class StepImputeMode(Step):
     """Impute missing values with the column mode (most frequent value).
 
-    A ``ONE_TO_ONE`` step: each selected column has its nulls filled in place
-    with that column's mode, estimated at fit time. The work is done by
-    `fit_impute_mode()` and `apply_impute_mode()`; this class
-    wraps them in the `Step` lifecycle so a
-    `Recipe` can fit and apply it.
+    Each selected column has its nulls filled in place with that column's
+    mode.
 
     Mode imputation is for categorical columns (it accepts
     ``Categorical``/``Enum``/``String``, not numeric dtypes) and is
@@ -133,8 +129,18 @@ class StepImputeMode(Step):
     A column that is entirely null at fit time has no mode; it is left unchanged
     (not dropped) with a warning, and passes through ``transform`` untouched.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    Parameters
+    ----------
+    columns
+        Columns to impute. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.string()``, ``polars.selectors.string()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only categorical
+        columns are meaningful here.
+    id
+        Stable step identifier. Default ``"impute_mode"``.
 
     Examples
     --------

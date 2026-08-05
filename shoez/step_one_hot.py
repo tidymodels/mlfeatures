@@ -75,16 +75,30 @@ def fit_one_hot(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
 class StepOneHot(Step):
     """Expand discrete columns into *k* binary indicator columns.
 
-    A ``ONE_TO_MANY`` step: each selected column is replaced by *k* indicator
-    columns where *k* is the number of unique non-null levels seen during
-    ``fit()``. Indicators are ``nw.Int8`` (0/1); a column that contains
-    null-source or unseen-level rows is ``nw.Float64`` instead (0.0/1.0/NaN),
-    since pandas' ``Int8`` cannot hold the missing values. Unlike
-    `StepDummy`, no reference level is dropped.
-    Transform logic is shared via `apply_dummy()`.
+    Each selected column is replaced by *k* indicator columns where *k* is the
+    number of unique non-null levels seen during ``fit()``. Indicators are
+    ``nw.Int8`` (0/1); a column that contains null-source or unseen-level rows
+    is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
+    the missing values. Unlike `StepDummy`, no reference level is dropped.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
+    Parameters
+    ----------
+    columns
+        Columns to expand. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.string()``, ``polars.selectors.string()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only discrete
+        columns are meaningful here.
+    name_fn
+        Callable mapping ``(source_column, level_as_str)`` to the indicator
+        column's name. Default ``None``, which names them ``"{column}_{level}"``.
+    keep_original_cols
+        If ``True``, the source columns are kept alongside the indicators
+        instead of being dropped. Default ``False``.
+    id
+        Stable step identifier. Default ``"one_hot"``.
 
     Examples
     --------
@@ -208,7 +222,7 @@ class StepOneHot(Step):
         return list(self.schema_out().columns)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
-        """Accepts discrete columns; rejects float and decimal."""
+        """Accepts discrete columns only (see ``DISCRETE_DTYPES``)."""
         return set(DISCRETE_DTYPES)
 
     def update_roles(self, roles: Roles) -> None:

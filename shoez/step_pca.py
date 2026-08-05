@@ -62,7 +62,7 @@ class PcaFit:
         principal axis. New scores are ``(X - mean) @ loadings``.
     num_comp
         Number of components actually produced (``loadings.shape[1]``), capped
-        at the number of input columns and the SVD rank.
+        at the number of input columns and the number of complete rows.
     """
 
     columns: list[str]
@@ -78,7 +78,9 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
 
     Rows with any missing value are dropped before the SVD, so the basis is
     estimated on complete cases only. The number of components is capped at the
-    number of input columns and the SVD rank.
+    number of input columns and the number of complete rows. The cap is a shape,
+    not the numeric rank: on rank-deficient data the trailing components are
+    retained and carry only numerical noise.
 
     Parameters
     ----------
@@ -117,7 +119,7 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
     mean = complete.mean(axis=0)
     xc = complete - mean
     # full_matrices=False keeps Vt at shape (rank, n_features); its rows are the
-    # principal axes. Cap the kept components at what the SVD can supply.
+    # principal axes. Cap the kept components at the number of rows returned.
     _, _, vt_raw = np.linalg.svd(xc, full_matrices=False)
     vt = cast("np.ndarray[Any, Any]", vt_raw)
     eff = min(num_comp, vt.shape[0])
@@ -166,21 +168,29 @@ def apply_pca(data: Frame, fit: PcaFit, prefix: str) -> Frame:
 class StepPca(Step):
     """Project numeric columns onto their principal components.
 
-    A ``MANY_TO_MANY`` step: the selected numeric columns are dropped and
-    replaced by ``num_comp`` principal-component columns ``{prefix}1 ...
-    {prefix}{num_comp}``, each descending from the *whole* input set. The
-    centering mean and loadings are **learned at fit time on the training data
-    and reused unchanged at transform time** — no re-estimation on new data. The
-    math lives in `fit_pca()` and `apply_pca()`; this class wraps them in the
-    `Step` lifecycle so a `Recipe` can fit and apply it.
+    The selected numeric columns are dropped and replaced by ``num_comp``
+    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``. Each
+    component is a linear combination of all the input columns, so no single
+    component belongs to any one of them. Asking for more components than there
+    are input columns yields fewer.
 
-    The number of components is capped at the number of input columns (and the
-    SVD rank), so requesting more than the data can supply yields fewer.
+    The columns are centered but not scaled, so a column measured on a larger
+    numeric range contributes more to the components; normalize first if that is
+    not what you want.
+
+    Rows with a missing value are excluded when the components are computed, and
+    such a row gets ``NaN`` for every component.
 
     Parameters
     ----------
     columns
-        Names of the numeric columns to project.
+        Columns to project. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     num_comp
         Number of principal components to keep. Must be a positive integer.
         Default ``5``.

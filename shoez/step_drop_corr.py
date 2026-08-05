@@ -52,7 +52,10 @@ def fit_drop_corr(
 
     Returns
     -------
-    list[str] — column names to drop.  Empty list if nothing exceeds the threshold.
+    list[str] — column names to drop.  Empty list if nothing exceeds the
+    threshold and every column has a usable correlation.  Columns whose
+    correlations are all missing (constant or all-null columns) are always
+    included, even when no pair exceeds the threshold.
 
     Notes
     -----
@@ -156,16 +159,27 @@ def fit_drop_corr(
 class StepDropCorr(Step):
     """Remove numeric columns whose pairwise absolute correlation is too high.
 
-    A ``REMOVING`` step: the selected columns that exceed ``threshold`` are
-    dropped, and no new columns are produced. The statistical decision is made by
-    `fit_drop_corr()`; this class wraps it in the `Step`
-    lifecycle so a `Recipe` can fit and apply it.
+    The selected columns that exceed ``threshold`` are dropped, as are columns
+    with no usable correlation at all (constant or all-null), and no new
+    columns are produced.
 
-    The columns to consider may be given as a single name, an explicit list of
-    names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a
-    polars selector (``polars.selectors``). Any selector is resolved against the
-    frame's schema at fit time, regardless of backend. See
-    ``design/selectors.md``.
+    Parameters
+    ----------
+    columns
+        Columns to consider for removal. Accepts a single column name, a list
+        of names, a shoez selector such as ``Selectors.numeric_predictors()``
+        (see `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
+    threshold
+        Pairs whose absolute correlation is strictly above this value trigger a
+        removal. Default ``0.9``.
+    method
+        Correlation method: ``"pearson"`` (default) or ``"spearman"``.
+    id
+        Stable step identifier. Default ``"corr"``.
 
     Examples
     --------

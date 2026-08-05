@@ -321,14 +321,9 @@ def _apply_ortho_poly(
 class StepPolynomial(Step):
     """Replace numeric columns with their orthogonal polynomial expansion.
 
-    A ``ONE_TO_MANY`` step: each selected numeric column ``x`` is replaced in
-    its positional slot by up to ``degree`` orthogonal polynomial columns
-    ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``. The orthogonal basis (centering
-    mean + QR transform matrix) is **learned at fit time on the training data
-    and reused unchanged at transform time** — no re-estimation on new data.
-    The math lives in `fit_polynomial()` and `apply_polynomial()`;
-    this class wraps the in the `Step` lifecycle so a
-    `Recipe` can fit and apply it.
+    Each selected numeric column ``x`` is replaced by up to ``degree``
+    orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``.
+    The orthogonal basis is a centering mean plus a QR transform matrix.
 
     The effective degree per column is capped at ``n_unique_non_null - 1`` — a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
@@ -337,16 +332,19 @@ class StepPolynomial(Step):
     `UserWarning`. The caller can chain a zero-variance drop step to
     clean them up.
 
-    Selectors are not yet implemented, so the columns to consider are passed
-    explicitly as a list of names.
-
     Parameters
     ----------
     columns
-        Names of the columns to expand.
+        Columns to expand. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     degree
-        Maximum polynomial degree. Must be a positive integer. Each column's
-        effective degree is the smaller of ``degree`` and
+        Maximum polynomial degree. Must be a positive integer. Default ``2``.
+        Each column's effective degree is the smaller of ``degree`` and
         ``n_unique_non_null - 1``.
     role
         Role assigned to the new polynomial columns. Default ``"predictor"``.
