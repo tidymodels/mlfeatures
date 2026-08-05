@@ -10,6 +10,7 @@ from __future__ import annotations
 import pickle
 
 import pandas as pd
+import pytest
 
 from shoez import Recipe, StepPolynomial
 from tests._conformance import (
@@ -19,9 +20,10 @@ from tests._conformance import (
 )
 
 
-def _fitted() -> tuple[Recipe, pd.DataFrame]:
+def _fitted(keep_original_cols: bool = False) -> tuple[Recipe, pd.DataFrame]:
     train = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
-    return Recipe(steps=[StepPolynomial(["a"], degree=2)]).fit(train), train
+    step = StepPolynomial(["a"], degree=2, keep_original_cols=keep_original_cols)
+    return Recipe(steps=[step]).fit(train), train
 
 
 class TestEmptySelection:
@@ -55,8 +57,9 @@ class TestRowCountEdges:
 class TestPickleRoundTrip:
     """A pickled fitted step reproduces the same transform() output."""
 
-    def test_pickle_preserves_transform_output(self) -> None:
-        fitted, train = _fitted()
+    @pytest.mark.parametrize("keep_original_cols", [False, True])
+    def test_pickle_preserves_transform_output(self, keep_original_cols: bool) -> None:
+        fitted, train = _fitted(keep_original_cols)
         before = fitted.transform(train)
         restored = pickle.loads(pickle.dumps(fitted))
         pd.testing.assert_frame_equal(restored.transform(train), before)
@@ -108,9 +111,16 @@ class TestLineage:
 class TestBackendParity:
     """fit + transform yields identical narwhals output (schema and values) on pandas and polars."""
 
-    def test_pandas_and_polars_output_match(self) -> None:
+    @pytest.mark.parametrize("keep_original_cols", [False, True])
+    def test_pandas_and_polars_output_match(self, keep_original_cols: bool) -> None:
         assert_backend_parity(
-            lambda: Recipe(steps=[StepPolynomial(["a"], degree=2)]),
+            lambda: Recipe(
+                steps=[
+                    StepPolynomial(
+                        ["a"], degree=2, keep_original_cols=keep_original_cols
+                    )
+                ]
+            ),
             {"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]},
         )
 
@@ -150,8 +160,9 @@ class TestJsonRoundTrip:
     closure cannot be JSON-encoded, so a passing round-trip proves the step and
     its selectors captured only plain data, no environment or globals."""
 
-    def test_json_preserves_transform_output(self) -> None:
-        fitted, train = _fitted()
+    @pytest.mark.parametrize("keep_original_cols", [False, True])
+    def test_json_preserves_transform_output(self, keep_original_cols: bool) -> None:
+        fitted, train = _fitted(keep_original_cols)
         before = fitted.transform(train)
         restored = fitted.from_json(fitted.to_json())
         pd.testing.assert_frame_equal(restored.transform(train), before)

@@ -152,10 +152,19 @@ class ShzNamespace:
         *,
         num_comp: int = 5,
         prefix: str = "PC",
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
     ) -> pl.DataFrame:
         """Project numeric columns onto principal components. See `StepPca`."""
-        return self.apply(StepPca(columns, num_comp=num_comp, prefix=prefix, role=role))
+        return self.apply(
+            StepPca(
+                columns,
+                num_comp=num_comp,
+                prefix=prefix,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
 
     def step_class_distance(
         self,
@@ -166,6 +175,7 @@ class ShzNamespace:
         log_distance: bool = True,
         eps: float = 0.001,
         prefix: str = "distance",
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
     ) -> pl.DataFrame:
         """Per-class distance features. See `StepClassDistance`."""
@@ -177,6 +187,7 @@ class ShzNamespace:
                 log_distance=log_distance,
                 eps=eps,
                 prefix=prefix,
+                keep_original_cols=keep_original_cols,
                 role=role,
             )
         )
@@ -198,10 +209,18 @@ class ShzNamespace:
         columns: Selector,
         *,
         degree: int = 2,
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
     ) -> pl.DataFrame:
         """Expand columns into a polynomial basis. See `StepPolynomial`."""
-        return self.apply(StepPolynomial(columns, degree=degree, role=role))
+        return self.apply(
+            StepPolynomial(
+                columns,
+                degree=degree,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
 
     def step_unknown(
         self,

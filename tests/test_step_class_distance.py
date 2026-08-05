@@ -438,6 +438,23 @@ class TestRoundTrip:
         assert float(out["distance_b"][1]) == pytest.approx(0.0)
         assert float(out["distance_c"][2]) == pytest.approx(0.0)
 
+    def test_keep_original_cols_retains_inputs(self) -> None:
+        features = _df(SMALL_FEATURES)
+        fit = fit_class_distance(features, _series(SMALL_OUTCOME), log_distance=False)
+        out = apply_class_distance(features, fit, keep_original_cols=True)
+        assert set(out.columns) == set(SMALL_FEATURES) | {"distance_0", "distance_1"}
+        for name, values in SMALL_FEATURES.items():
+            np.testing.assert_array_equal(out[name].to_numpy(), np.asarray(values))
+
+    def test_keep_original_cols_does_not_change_the_distances(self) -> None:
+        features = _df(SMALL_FEATURES)
+        fit = fit_class_distance(features, _series(SMALL_OUTCOME), log_distance=False)
+        dropped = apply_class_distance(features, fit)
+        kept = apply_class_distance(features, fit, keep_original_cols=True)
+        np.testing.assert_allclose(
+            kept["distance_0"].to_numpy(), dropped["distance_0"].to_numpy()
+        )
+
     def test_extra_passthrough_column_kept(self) -> None:
         # An unrelated column on ``data`` should survive apply unchanged.
         features = _df(SMALL_FEATURES)

@@ -370,6 +370,22 @@ class TestApplyColumnLayout:
         out = apply_polynomial(frame, fit)
         assert out.columns == ["a", "b_1", "b_2", "c"]
 
+    def test_keep_original_cols_retains_source_before_its_terms(self) -> None:
+        frame = _df({"a": [10.0, 20.0, 30.0, 40.0], "b": [1.0, 2.0, 3.0, 4.0]})
+        fit = fit_polynomial(frame.select(["b"]), degree=2)
+        out = apply_polynomial(frame, fit, keep_original_cols=True)
+        assert out.columns == ["a", "b", "b_1", "b_2"]
+        np.testing.assert_array_equal(
+            out["b"].to_numpy(), np.array([1.0, 2.0, 3.0, 4.0])
+        )
+
+    def test_keep_original_cols_does_not_change_the_terms(self) -> None:
+        frame = _df({"x": [1.0, 2.0, 3.0, 4.0]})
+        fit = fit_polynomial(frame, degree=2)
+        dropped = apply_polynomial(frame, fit)
+        kept = apply_polynomial(frame, fit, keep_original_cols=True)
+        np.testing.assert_allclose(kept["x_1"].to_numpy(), dropped["x_1"].to_numpy())
+
     def test_columns_not_in_fit_result_pass_through_unchanged(self) -> None:
         """Untouched columns retain their values exactly."""
         frame = _df({"a": [10.0, 20.0, 30.0], "b": [1.0, 2.0, 3.0]})
@@ -418,6 +434,15 @@ class TestApplyDegreeZero:
         # Column name is preserved, values are unchanged.
         assert out.columns == ["x"]
         np.testing.assert_array_equal(out["x"].to_numpy(), np.array([7.0, 7.0, 7.0]))
+
+    def test_degree_zero_column_is_not_duplicated_when_keeping_originals(self) -> None:
+        """The pass-through branch already keeps the column; it must appear once."""
+        frame = _df({"x": [7.0, 7.0, 7.0]})
+        with pytest.warns(UserWarning):
+            out = apply_polynomial(
+                frame, fit_polynomial(frame, degree=2), keep_original_cols=True
+            )
+        assert out.columns == ["x"]
 
     def test_warning_names_offending_column(self, snapshot: SnapshotAssertion) -> None:
         frame = _df({"weird_name": [1.0, 1.0, 1.0]})

@@ -152,7 +152,7 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 - **Feature provenance.** The lineage DAG records which input columns produced which output columns. Tracing PCA components or dummy columns back to their source is possible programmatically. This is the core problem identified in [tidymodels/recipes#1158](https://github.com/tidymodels/recipes/issues/1158).
 - **`has_source()` selector.** Users can select all columns produced by a given step or step type — e.g. `has_source(step_type=step_dummy)`. See [selectors.md](selectors.md).
 - **Naming contract enforcement.** The framework validates that generated column names are unique — both against the existing schema and within the step — before each step runs, via `produced_columns()` and `Schema.check_additions`. Steps do not self-check.
-- **`keep_original_cols` applicability.** Only meaningful for `ONE_TO_ONE` and `ONE_TO_MANY` modes — the framework ignores it for others.
+- **`keep_original_cols` applicability.** Every `ONE_TO_MANY` and `MANY_TO_MANY` step exposes `keep_original_cols` as a constructor argument defaulting to `False`, since keeping the source columns beside the derived ones is a legitimate thing to want. Steps in the other modes fix the value in `__init__`: `ONE_TO_ONE` and `REMOVING` steps to `False`, `ADDING`, `ROW_OP`, and `UNCONSTRAINED` steps to `True`.
 
 ---
 
