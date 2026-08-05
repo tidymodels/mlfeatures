@@ -128,14 +128,16 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
     return PcaFit(columns=columns, mean=mean, loadings=loadings, num_comp=eff)
 
 
-def apply_pca(data: Frame, fit: PcaFit, prefix: str) -> Frame:
+def apply_pca(
+    data: Frame, fit: PcaFit, prefix: str, keep_original_cols: bool = False
+) -> Frame:
     """Replace the fitted input columns with their principal-component scores.
 
-    The input columns named in ``fit`` are dropped and ``fit.num_comp`` score
-    columns named ``{prefix}1 ... {prefix}{num_comp}`` are appended, computed as
-    ``(X - fit.mean) @ fit.loadings``. Rows with a missing input value yield
-    ``NaN`` scores. The basis comes from ``fit`` — it is not recomputed from
-    ``data``.
+    The input columns named in ``fit`` are dropped (unless ``keep_original_cols``)
+    and ``fit.num_comp`` score columns named ``{prefix}1 ... {prefix}{num_comp}``
+    are appended, computed as ``(X - fit.mean) @ fit.loadings``. Rows with a
+    missing input value yield ``NaN`` scores. The basis comes from ``fit`` — it
+    is not recomputed from ``data``.
 
     Parameters
     ----------
@@ -145,6 +147,9 @@ def apply_pca(data: Frame, fit: PcaFit, prefix: str) -> Frame:
         Output of `fit_pca()`: the centering mean and loadings.
     prefix
         Prefix for the produced component column names.
+    keep_original_cols
+        When ``True``, the input columns are left in place alongside the
+        components instead of being dropped.
 
     Returns
     -------
@@ -162,14 +167,17 @@ def apply_pca(data: Frame, fit: PcaFit, prefix: str) -> Frame:
         )
         for i in range(fit.num_comp)
     ]
-    return data.drop(fit.columns).with_columns(*new_series)
+    if not keep_original_cols:
+        data = data.drop(fit.columns)
+    return data.with_columns(*new_series)
 
 
 class StepPca(Step):
     """Project numeric columns onto their principal components.
 
-    The selected numeric columns are dropped and replaced by ``num_comp``
-    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``. Each
+    The selected numeric columns are replaced by ``num_comp``
+    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``, or kept
+    alongside them when ``keep_original_cols`` is ``True``. Each
     component is a linear combination of all the input columns, so no single
     component belongs to any one of them. Asking for more components than there
     are input columns yields fewer.
@@ -196,6 +204,9 @@ class StepPca(Step):
         Default ``5``.
     prefix
         Prefix for the produced component column names. Default ``"PC"``.
+    keep_original_cols
+        If ``True``, the source columns are kept alongside the components
+        instead of being dropped. Default ``False``.
     role
         Role assigned to the new component columns. Default ``"predictor"``.
     id
@@ -247,6 +258,16 @@ class StepPca(Step):
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
+
+    ``keep_original_cols`` keeps the source columns alongside the components:
+
+    ```{python}
+    recipe = Recipe().add(
+        StepPca(s.numeric_predictors(), num_comp=2, keep_original_cols=True)
+    )
+    fitted = recipe.fit(df)
+    fitted.transform(df)
+    ```
     """
 
     mode = Mode.MANY_TO_MANY
@@ -257,6 +278,7 @@ class StepPca(Step):
         *,
         num_comp: int = 5,
         prefix: str = "PC",
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
         id: str | None = None,
     ) -> None:
@@ -265,9 +287,7 @@ class StepPca(Step):
         self.prefix = prefix
         self.id = id if id is not None else "pca"
         self.trained = False
-        # MANY_TO_MANY replaces the source columns with the components; there is
-        # no apply-level toggle to keep the originals, so this stays False.
-        self.keep_original_cols = False
+        self.keep_original_cols = keep_original_cols
         self.output_role = role
         # Populated by ``fit()``.
         self._estimates: PcaFit | None = None
@@ -295,7 +315,9 @@ class StepPca(Step):
         """Project the selected columns onto the fitted components."""
         if self._estimates is None:
             raise RuntimeError("StepPca.transform() called before fit()")
-        return apply_pca(new_data, self._estimates, self.prefix)
+        return apply_pca(
+            new_data, self._estimates, self.prefix, self.keep_original_cols
+        )
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
@@ -321,8 +343,8 @@ class StepPca(Step):
 
     def update_roles(self, roles: Roles) -> None:
         # The source columns are dropped; strip their roles so they do not
-        # linger in the live role map.
-        if self._schema_in is not None:
+        # linger in the live role map. When they are kept, their roles stand.
+        if self._schema_in is not None and not self.keep_original_cols:
             for col in self._schema_in.columns:
                 for role in list(roles.of(col)):
                     roles.remove(col, role)

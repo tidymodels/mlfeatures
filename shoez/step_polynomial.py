@@ -181,7 +181,11 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
     return fit_result
 
 
-def apply_polynomial(data: Frame, fit_result: dict[str, PolynomialFit]) -> Frame:
+def apply_polynomial(
+    data: Frame,
+    fit_result: dict[str, PolynomialFit],
+    keep_original_cols: bool = False,
+) -> Frame:
     """Replace columns in ``data`` with their fitted orthogonal polynomial expansions.
 
     For each column in ``data``, in input order:
@@ -191,7 +195,8 @@ def apply_polynomial(data: Frame, fit_result: dict[str, PolynomialFit]) -> Frame
       in place (same positional slot) with ``d`` orthogonal polynomial
       columns named ``{column}_1``, ``{column}_2``, ..., ``{column}_d``,
       using the fit-time mean and transform matrix — the basis is **not
-      recomputed** from ``data``.
+      recomputed** from ``data``. With ``keep_original_cols`` the source
+      column stays in its slot and the expansion follows it.
     - If its effective degree is ``0``, keep the original column and emit a
       `UserWarning` naming the column. The caller can chain a
       zero-variance drop step to remove such columns.
@@ -207,6 +212,9 @@ def apply_polynomial(data: Frame, fit_result: dict[str, PolynomialFit]) -> Frame
     fit_result
         Output of `fit_polynomial()`: per-column `PolynomialFit`
         objects carrying the training-set mean and basis transform matrix.
+    keep_original_cols
+        When ``True``, each expanded source column is left in place alongside
+        its polynomial terms instead of being dropped.
 
     Returns
     -------
@@ -248,7 +256,10 @@ def apply_polynomial(data: Frame, fit_result: dict[str, PolynomialFit]) -> Frame
             final_order.append(col_name)
             continue
         expand_specs.append((col_name, fit))
-        to_drop.append(col_name)
+        if keep_original_cols:
+            final_order.append(col_name)
+        else:
+            to_drop.append(col_name)
         final_order.extend(f"{col_name}_{i}" for i in range(1, fit.degree + 1))
 
     new_series: list[nw.Series[Any]] = []
@@ -322,8 +333,9 @@ class StepPolynomial(Step):
     """Replace numeric columns with their orthogonal polynomial expansion.
 
     Each selected numeric column ``x`` is replaced by up to ``degree``
-    orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``.
-    The orthogonal basis is a centering mean plus a QR transform matrix.
+    orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``, or
+    kept alongside them when ``keep_original_cols`` is ``True``. The orthogonal
+    basis is a centering mean plus a QR transform matrix.
 
     The effective degree per column is capped at ``n_unique_non_null - 1`` — a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
@@ -346,6 +358,9 @@ class StepPolynomial(Step):
         Maximum polynomial degree. Must be a positive integer. Default ``2``.
         Each column's effective degree is the smaller of ``degree`` and
         ``n_unique_non_null - 1``.
+    keep_original_cols
+        If ``True``, the source columns are kept alongside their polynomial
+        terms instead of being dropped. Default ``False``.
     role
         Role assigned to the new polynomial columns. Default ``"predictor"``.
     id
@@ -396,6 +411,16 @@ class StepPolynomial(Step):
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
+
+    ``keep_original_cols`` keeps the source column alongside its terms:
+
+    ```{python}
+    recipe = Recipe().add(
+        StepPolynomial(s.numeric_predictors(), degree=2, keep_original_cols=True)
+    )
+    fitted = recipe.fit(df)
+    fitted.transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_MANY
@@ -405,6 +430,7 @@ class StepPolynomial(Step):
         columns: Selector,
         *,
         degree: int = 2,
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
         id: str | None = None,
     ) -> None:
@@ -412,9 +438,7 @@ class StepPolynomial(Step):
         self.degree = degree
         self.id = id if id is not None else "polynomial"
         self.trained = False
-        # ONE_TO_MANY replaces source columns with their expansion. There is
-        # no apply-level toggle to keep the originals, so this stays False.
-        self.keep_original_cols = False
+        self.keep_original_cols = keep_original_cols
         self.output_role = role
         # Populated by ``fit()``: per-column fitted basis + schemas.
         self._estimates: dict[str, PolynomialFit] | None = None
@@ -459,7 +483,7 @@ class StepPolynomial(Step):
         """Replace each selected column with its polynomial expansion."""
         if self._estimates is None:
             raise RuntimeError("StepPolynomial.transform() called before fit()")
-        return apply_polynomial(new_data, self._estimates)
+        return apply_polynomial(new_data, self._estimates, self.keep_original_cols)
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""
