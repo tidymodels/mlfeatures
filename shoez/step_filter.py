@@ -69,13 +69,12 @@ def apply_filter(features: Frame, predicate: Predicate) -> Frame:
 class StepFilter(RowOp):
     """Remove rows that do not match a predicate.
 
-    It changes the number of rows but never the column schema. Because it is a
-    `RowOp`, it only takes effect on the training frame during ``fit()``; the
-    framework skips it at ``transform()`` time so rows are never dropped from
-    data being scored.
+    Rows for which ``predicate`` is not ``True`` are dropped.
 
-    Being a row operation, it consumes no *named* columns and produces none, so
-    there is nothing to estimate: ``fit()`` only records the (unchanged) schema.
+    Filtering applies to the training data only. Fitting a recipe drops the
+    non-matching training rows, but transforming new data returns every row
+    given to it, because dropping rows from data being scored would silently
+    lose predictions. So a recipe that filters is not a way to filter new data.
 
     Parameters
     ----------
@@ -87,9 +86,8 @@ class StepFilter(RowOp):
 
     Examples
     --------
-    Rows where ``age`` is 30 or below are dropped at fit time; ``transform()``
-    on new data leaves every row in place (a `RowOp` never filters what it is
-    scoring):
+    Rows where ``age`` is 30 or below are dropped when the recipe is fitted,
+    while ``transform()`` leaves every row in place:
 
     ```{python}
     #| echo: false
@@ -117,8 +115,7 @@ class StepFilter(RowOp):
     fitted
     ```
 
-    `transform()` leaves new data untouched; a `RowOp` never filters what it
-    is scoring:
+    `transform()` leaves new data untouched, so all four rows come back:
 
     ```{python}
     fitted.transform(df)
@@ -150,11 +147,12 @@ class StepFilter(RowOp):
     def to_state(self) -> dict[str, object]:
         """Serialize, omitting the row predicate.
 
-        ``StepFilter`` is a `RowOp`: its ``transform`` is a no-op on new data,
-        so the predicate is never exercised once fitted. It is a user-supplied
-        callable (not plain data), so it is dropped from the JSON payload rather
-        than trying to serialize a closure. A recipe reloaded from JSON filters
-        no rows at ``transform`` -- which is already the `RowOp` contract.
+        Because filtering never applies to new data, the predicate is never
+        exercised once the recipe is fitted. It is a user-supplied callable
+        rather than plain data, so it is dropped from the JSON payload instead
+        of trying to serialize a closure. A recipe reloaded from JSON therefore
+        behaves exactly as one that was never serialized: it filters no rows at
+        ``transform`` time.
         """
         from shoez.serialization import _encode  # pyright: ignore[reportPrivateUsage]
 
@@ -179,8 +177,8 @@ class StepFilter(RowOp):
     def transform(self, new_data: Frame) -> Frame:
         """Keep only the rows matching the predicate.
 
-        The framework never calls this on new data (``StepFilter`` is a
-        `RowOp`); it runs only on the training frame at fit time.
+        The framework calls this only on the training frame while fitting;
+        transforming new data never filters rows.
         """
         if self._schema is None:
             raise RuntimeError("StepFilter.transform() called before fit()")

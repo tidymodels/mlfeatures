@@ -167,14 +167,13 @@ class StepMutate(Step):
     def to_state(self) -> dict[str, object]:
         """Not supported: ``step_mutate`` carries user callables it needs at transform.
 
-        Unlike a `RowOp` (whose code is inert after fit), ``StepMutate`` applies
-        its mutation callables to *new* data at ``transform`` time, so they are
-        load-bearing code that JSON cannot represent. Serializing would silently
-        drop them and produce a recipe that no longer computes the mutations, so
-        it fails loudly instead. Use ``pickle`` for recipes containing
-        ``step_mutate``, which requires the mutations to be picklable: define
-        them as module-level functions, since ``pickle`` cannot handle a
-        ``lambda``.
+        Unlike `StepFilter`, whose predicate is inert once fitted, ``StepMutate``
+        applies its callables to *new* data at ``transform`` time, so they are
+        load-bearing code that JSON cannot represent. Serializing would silently drop
+        them and produce a recipe that no longer computes the mutations, so it fails
+        loudly instead. Use ``pickle`` for recipes containing ``step_mutate``, which
+        requires the mutations to be picklable: define them as module-level functions,
+        since ``pickle`` cannot handle a ``lambda``.
         """
         raise TypeError(
             "step_mutate carries user-supplied callables and cannot be "
