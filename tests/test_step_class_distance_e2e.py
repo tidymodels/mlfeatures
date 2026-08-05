@@ -125,6 +125,57 @@ class TestEndToEnd:
         assert fitted.roles.of("label") != set()
         assert "predictor" in fitted.roles.of("distance_a")
 
+    def test_keep_original_cols_retains_sources(self) -> None:
+        df = pd.DataFrame(_data())
+        out = (
+            Recipe()
+            .add(
+                StepClassDistance(
+                    ["x", "y"],
+                    outcome="label",
+                    log_distance=False,
+                    keep_original_cols=True,
+                )
+            )
+            .fit(df)
+            .transform(df)
+        )
+        assert set(out.columns) == {
+            "x",
+            "y",
+            "passthrough",
+            "label",
+            "distance_a",
+            "distance_b",
+        }
+        assert out["x"].tolist() == [0.0, 2.0, 10.0, 12.0]
+
+    def test_keep_original_cols_retains_source_roles(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(
+            steps=[
+                StepClassDistance(["x", "y"], outcome="label", keep_original_cols=True)
+            ]
+        ).fit(df)
+        assert "predictor" in fitted.roles.of("x")
+        assert "predictor" in fitted.roles.of("distance_a")
+
+    def test_keep_original_cols_leaves_produced_columns_alone(self) -> None:
+        # The flag governs the source columns only; what the step *produces* is
+        # unchanged.
+        df = pd.DataFrame(_data())
+        fitted = Recipe(
+            steps=[
+                StepClassDistance(["x", "y"], outcome="label", keep_original_cols=True)
+            ]
+        ).fit(df)
+        step = fitted.steps[0]
+        assert step.schema_out().columns == ["distance_a", "distance_b"]
+        assert step.output_parents() == {
+            "distance_a": ["x", "y"],
+            "distance_b": ["x", "y"],
+        }
+
     def test_trained_flag_set_by_recipe(self) -> None:
         fitted = Recipe(steps=[StepClassDistance(["x", "y"], outcome="label")]).fit(
             pd.DataFrame(_data())
@@ -172,6 +223,13 @@ class TestStepClassDistanceUnit:
     def test_explicit_id(self) -> None:
         step = StepClassDistance(["x"], outcome="label", id="my_dist")
         assert step.id == "my_dist"
+
+    def test_keep_original_cols_default_false(self) -> None:
+        assert StepClassDistance(["x"], outcome="label").keep_original_cols is False
+
+    def test_keep_original_cols_is_settable(self) -> None:
+        step = StepClassDistance(["x"], outcome="label", keep_original_cols=True)
+        assert step.keep_original_cols is True
 
     def test_fit_returns_self(self) -> None:
         step = StepClassDistance(["x", "y"], outcome="label")

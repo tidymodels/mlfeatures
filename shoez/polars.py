@@ -175,6 +175,7 @@ class ShzNamespace:
         log_distance: bool = True,
         eps: float = 0.001,
         prefix: str = "distance",
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
     ) -> pl.DataFrame:
         """Per-class distance features. See `StepClassDistance`."""
@@ -186,6 +187,7 @@ class ShzNamespace:
                 log_distance=log_distance,
                 eps=eps,
                 prefix=prefix,
+                keep_original_cols=keep_original_cols,
                 role=role,
             )
         )

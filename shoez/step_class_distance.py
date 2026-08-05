@@ -205,14 +205,16 @@ def apply_class_distance(
     fit_result: ClassDistanceFit,
     *,
     prefix: str = "distance",
+    keep_original_cols: bool = False,
 ) -> Frame:
     """Replace the fitted input columns with per-row distances to each centroid.
 
     For every class ``k`` in ``fit_result.classes``, computes the distance
     from each row of ``data`` (restricted to ``fit_result.columns``) to the
     centroid for ``k`` and produces a column named ``f"{prefix}_{k}"``. The
-    input columns named in ``fit_result`` are dropped; every other column of
-    ``data`` passes through unchanged.
+    input columns named in ``fit_result`` are dropped unless
+    ``keep_original_cols``; every other column of ``data`` passes through
+    unchanged.
 
     Parameters
     ----------
@@ -225,6 +227,9 @@ def apply_class_distance(
     prefix
         Prefix for the new column names. Default ``"distance"`` produces
         ``distance_<class>``; override with e.g. ``"dist"`` for shorter names.
+    keep_original_cols
+        When ``True``, the input columns are left in place alongside the
+        distance columns instead of being dropped.
 
     Returns
     -------
@@ -276,7 +281,9 @@ def apply_class_distance(
         )
         for j, cls in enumerate(fit_result.classes)
     ]
-    return data.drop(fit_result.columns).with_columns(*new_series)
+    if not keep_original_cols:
+        data = data.drop(fit_result.columns)
+    return data.with_columns(*new_series)
 
 
 # --- Private helpers --------------------------------------------------------
@@ -357,10 +364,10 @@ class StepClassDistance(Step):
     """Replace numeric columns with per-row distances to each class centroid.
 
     The selected columns are read to learn one centroid per outcome class, then
-    dropped and replaced by one ``distance_<class>`` column per class holding
-    each row's distance to that class's centroid. Each distance is computed from
-    all the selected columns at once, so no distance column belongs to any one of
-    them.
+    replaced by one ``distance_<class>`` column per class holding each row's
+    distance to that class's centroid, or kept alongside them when
+    ``keep_original_cols`` is ``True``. Each distance is computed from all the
+    selected columns at once, so no distance column belongs to any one of them.
 
     Parameters
     ----------
@@ -387,6 +394,9 @@ class StepClassDistance(Step):
     prefix
         Prefix for the new column names. Default ``"distance"`` gives
         ``distance_<class>``.
+    keep_original_cols
+        If ``True``, the source columns are kept alongside the distance columns
+        instead of being dropped. Default ``False``.
     role
         Role assigned to the new distance columns. Default ``"predictor"``.
     id
@@ -451,6 +461,18 @@ class StepClassDistance(Step):
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
+
+    ``keep_original_cols`` keeps the source columns alongside the distances:
+
+    ```{python}
+    recipe = Recipe().add(
+        StepClassDistance(
+            s.numeric_predictors(), outcome="label", keep_original_cols=True
+        )
+    )
+    fitted = recipe.fit(df)
+    fitted.transform(df)
+    ```
     """
 
     mode = Mode.MANY_TO_MANY
@@ -464,6 +486,7 @@ class StepClassDistance(Step):
         log_distance: bool = True,
         eps: float = 0.001,
         prefix: str = "distance",
+        keep_original_cols: bool = False,
         role: str | None = "predictor",
         id: str | None = None,
     ):
@@ -478,10 +501,7 @@ class StepClassDistance(Step):
         self.prefix = prefix
         self.id = id if id is not None else "class_distance"
         self.trained = False
-        # MANY_TO_MANY replaces the source columns with the distances; there is
-        # no apply-level toggle to keep the originals, so this stays False
-        # (mirrors StepPca).
-        self.keep_original_cols = False
+        self.keep_original_cols = keep_original_cols
         self.output_role = role
         # Populated by ``fit()`` — both schemas plus the fitted statistics.
         self._estimates: ClassDistanceFit | None = None
@@ -523,7 +543,12 @@ class StepClassDistance(Step):
         """Append the distance columns to ``new_data``. Never re-estimates."""
         if self._estimates is None:
             raise RuntimeError("StepClassDistance.transform() called before fit()")
-        return apply_class_distance(new_data, self._estimates, prefix=self.prefix)
+        return apply_class_distance(
+            new_data,
+            self._estimates,
+            prefix=self.prefix,
+            keep_original_cols=self.keep_original_cols,
+        )
 
     def schema_in(self) -> ColSchema:
         """Schema of the predictor columns consumed at fit time."""
@@ -549,8 +574,9 @@ class StepClassDistance(Step):
 
     def update_roles(self, roles: Roles) -> None:
         # The source columns are dropped; strip their roles so they do not
-        # linger in the live role map. The outcome column is untouched.
-        if self._schema_in is not None:
+        # linger in the live role map. The outcome column is untouched, and
+        # when the sources are kept their roles stand.
+        if self._schema_in is not None and not self.keep_original_cols:
             for col in self._schema_in.columns:
                 for role in list(roles.of(col)):
                     roles.remove(col, role)
