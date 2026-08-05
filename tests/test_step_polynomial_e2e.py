@@ -14,7 +14,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, Recipe, SchemaInfo, StepPolynomial
+from shoez import Mode, Recipe, SchemaInfo, StepNormalize, StepPolynomial
 
 
 def _data() -> dict[str, list[float]]:
@@ -99,6 +99,52 @@ class TestEndToEnd:
         new = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
         out = fitted.transform(new)
         assert list(out.columns) == ["a_1", "a_2"]
+
+    def test_keep_original_cols_retains_sources(self) -> None:
+        df = pd.DataFrame(_data())
+        out = (
+            Recipe()
+            .add(StepPolynomial(["a"], degree=2, keep_original_cols=True))
+            .fit(df)
+            .transform(df)
+        )
+        assert list(out.columns) == ["a", "a_1", "a_2", "const", "b"]
+        assert out["a"].tolist() == [1.0, 2.0, 3.0, 4.0, 5.0]
+
+    def test_keep_original_cols_retains_source_roles(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(
+            steps=[StepPolynomial(["a"], degree=2, keep_original_cols=True)]
+        ).fit(df)
+        assert "predictor" in fitted.roles.of("a")
+        assert "predictor" in fitted.roles.of("a_1")
+
+    def test_source_loses_roles_when_not_kept(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(steps=[StepPolynomial(["a"], degree=2)]).fit(df)
+        assert fitted.roles.of("a") == set()
+
+    def test_keep_original_cols_leaves_produced_columns_alone(self) -> None:
+        # The flag governs the source columns only; what the step *produces* is
+        # unchanged.
+        df = pd.DataFrame(_data())
+        fitted = Recipe(
+            steps=[StepPolynomial(["a"], degree=2, keep_original_cols=True)]
+        ).fit(df)
+        step = fitted.steps[0]
+        assert step.schema_out().columns == ["a_1", "a_2"]
+        assert step.output_parents() == {"a_1": ["a"], "a_2": ["a"]}
+
+    def test_retained_sources_are_selectable_downstream(self) -> None:
+        df = pd.DataFrame(_data())
+        out = (
+            Recipe()
+            .add(StepPolynomial(["a"], degree=2, keep_original_cols=True))
+            .add(StepNormalize(["a"]))
+            .fit(df)
+            .transform(df)
+        )
+        assert out["a"].mean() == pytest.approx(0.0, abs=1e-12)
 
     def test_transform_is_idempotent(self) -> None:
         df = pd.DataFrame(_data())
@@ -198,6 +244,10 @@ class TestStepPolynomialUnit:
 
     def test_keep_original_cols_default_false(self) -> None:
         assert StepPolynomial(["a"]).keep_original_cols is False
+
+    def test_keep_original_cols_is_settable(self) -> None:
+        step = StepPolynomial(["a"], keep_original_cols=True)
+        assert step.keep_original_cols is True
 
     def test_fit_returns_self(self) -> None:
         step = StepPolynomial(["a"], degree=2)

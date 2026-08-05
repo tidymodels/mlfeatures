@@ -74,6 +74,18 @@ class TestApplyPca:
         result = apply_pca(_sample(), fit, prefix="comp")
         assert result.columns == ["comp1", "comp2"]
 
+    def test_keep_original_cols_retains_inputs(self) -> None:
+        fit = fit_pca(_sample(), num_comp=2)
+        result = apply_pca(_sample(), fit, prefix="PC", keep_original_cols=True)
+        assert set(result.columns) == {"x", "y", "PC1", "PC2"}
+        assert result["x"].to_list() == [1.0, 2.0, 3.0, 4.0]
+
+    def test_keep_original_cols_does_not_change_components(self) -> None:
+        fit = fit_pca(_sample(), num_comp=2)
+        dropped = apply_pca(_sample(), fit, prefix="PC")
+        kept = apply_pca(_sample(), fit, prefix="PC", keep_original_cols=True)
+        assert kept["PC1"].to_list() == pytest.approx(dropped["PC1"].to_list())
+
 
 class TestBackends:
     def test_polars_in_polars_out(self) -> None:
@@ -103,3 +115,9 @@ class TestConstructor:
 
     def test_default_output_role_is_predictor(self) -> None:
         assert StepPca(["x", "y"]).output_role == "predictor"
+
+    def test_keep_original_cols_defaults_to_false(self) -> None:
+        assert StepPca(["x", "y"]).keep_original_cols is False
+
+    def test_keep_original_cols_is_settable(self) -> None:
+        assert StepPca(["x", "y"], keep_original_cols=True).keep_original_cols is True

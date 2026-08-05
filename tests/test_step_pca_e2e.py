@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pytest
 
-from shoez import Mode, Recipe, StepPca
+from shoez import Mode, Recipe, StepNormalize, StepPca
 
 
 def _data() -> dict[str, list[float]]:
@@ -61,6 +62,47 @@ class TestEndToEnd:
         fitted = Recipe(steps=[StepPca(["x", "y"], num_comp=2)]).fit(df)
         assert fitted.roles.of("x") == set()
         assert "predictor" in fitted.roles.of("PC1")
+
+    def test_keep_original_cols_retains_sources(self) -> None:
+        df = pd.DataFrame(_data())
+        out = (
+            Recipe()
+            .add(StepPca(["x", "y"], num_comp=2, keep_original_cols=True))
+            .fit(df)
+            .transform(df)
+        )
+        assert set(out.columns) == {"id", "x", "y", "PC1", "PC2"}
+        assert out["x"].tolist() == [1.0, 2.0, 3.0, 4.0]
+
+    def test_keep_original_cols_retains_source_roles(self) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(
+            steps=[StepPca(["x", "y"], num_comp=2, keep_original_cols=True)]
+        ).fit(df)
+        assert "predictor" in fitted.roles.of("x")
+        assert "predictor" in fitted.roles.of("PC1")
+
+    def test_keep_original_cols_leaves_produced_columns_alone(self) -> None:
+        # The flag governs the source columns only; what the step *produces* is
+        # unchanged.
+        df = pd.DataFrame(_data())
+        fitted = Recipe(
+            steps=[StepPca(["x", "y"], num_comp=2, keep_original_cols=True)]
+        ).fit(df)
+        step = fitted.steps[0]
+        assert step.schema_out().columns == ["PC1", "PC2"]
+        assert step.output_parents() == {"PC1": ["x", "y"], "PC2": ["x", "y"]}
+
+    def test_retained_sources_are_selectable_downstream(self) -> None:
+        df = pd.DataFrame(_data())
+        out = (
+            Recipe()
+            .add(StepPca(["x", "y"], num_comp=2, keep_original_cols=True))
+            .add(StepNormalize(["x"]))
+            .fit(df)
+            .transform(df)
+        )
+        assert out["x"].mean() == pytest.approx(0.0, abs=1e-12)
 
     def test_transform_is_idempotent(self) -> None:
         df = pd.DataFrame(_data())
