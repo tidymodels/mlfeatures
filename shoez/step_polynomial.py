@@ -28,6 +28,7 @@ from shoez.types import (
     ColSchema,
     Frame,
     Mode,
+    Roles,
     SchemaInfo,
     Selector,
 )
@@ -506,6 +507,25 @@ class StepPolynomial(Step):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Orthogonal polynomial expansion is only meaningful on numeric columns."""
         return set(NUMERIC_DTYPES)
+
+    def update_roles(self, roles: Roles) -> None:
+        if self._output_parents is None:
+            return
+        if self.output_role is not None:
+            for col in self._output_parents:
+                roles.add(col, self.output_role)
+        if self.keep_original_cols:
+            # The sources are still in the frame, so their roles stand.
+            return
+        # Strip the roles of the expanded sources only. A degree-0 column was
+        # passed through unchanged (it has no entry in ``_output_parents``) and
+        # keeps its roles.
+        expanded = {
+            parent for parents in self._output_parents.values() for parent in parents
+        }
+        for col in expanded:
+            for role in list(roles.of(col)):
+                roles.remove(col, role)
 
     @property
     def produces_sparse(self) -> bool:
