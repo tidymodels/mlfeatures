@@ -7,7 +7,7 @@ be exercised on its own. `StepImputeMedian` wraps them in the
 and apply it.
 
 Each selected numeric column has its null values filled with that column's
-median, estimated at fit time and reused unchanged at transform time. Ports R
+median. Ports R
 ``recipes``' ``step_impute_median``. The median is robust to outliers, so it is
 often preferred over the mean for skewed columns.
 
@@ -115,8 +115,7 @@ class StepImputeMedian(Step):
     """Impute missing numeric values with the column median.
 
     Each selected numeric column has its nulls filled in place with that
-    column's median, estimated at fit time and reused unchanged at transform
-    time.
+    column's median.
 
     A column that is entirely null at fit time has no median to impute with; it
     is left unchanged (not dropped) with a warning, and passes through

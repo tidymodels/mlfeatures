@@ -61,8 +61,7 @@ class StepDropZeroVariance(Step):
     """Remove columns that have a single unique value (zero variance).
 
     The selected columns whose observed values are all the same — or all
-    missing — are dropped, and no new columns are produced. Which columns to
-    drop is decided at fit time and reused unchanged at transform time.
+    missing — are dropped, and no new columns are produced.
 
     Parameters
     ----------

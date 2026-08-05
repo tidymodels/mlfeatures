@@ -7,9 +7,8 @@ exercised on its own. `StepImputeMode` wraps them in the
 and apply it.
 
 Each selected categorical column has its null values filled with that column's
-most frequent level, estimated at fit time and reused unchanged at transform
-time. Ports R ``recipes``' ``step_impute_mode``, which likewise targets nominal
-variables.
+most frequent level. Ports R ``recipes``' ``step_impute_mode``, which likewise
+targets nominal variables.
 
 Mode imputation is for **categorical** columns only — the most frequent observed
 level. (The mean/median steps cover numeric columns; the mode of a continuous
@@ -120,8 +119,8 @@ def apply_impute_mode(
 class StepImputeMode(Step):
     """Impute missing values with the column mode (most frequent value).
 
-    Each selected column has its nulls filled in place with that column's mode,
-    estimated at fit time and reused unchanged at transform time.
+    Each selected column has its nulls filled in place with that column's
+    mode.
 
     Mode imputation is for categorical columns (it accepts
     ``Categorical``/``Enum``/``String``, not numeric dtypes) and is

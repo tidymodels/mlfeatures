@@ -161,8 +161,7 @@ class StepDropCorr(Step):
 
     The selected columns that exceed ``threshold`` are dropped, as are columns
     with no usable correlation at all (constant or all-null), and no new
-    columns are produced. Which columns to drop is decided at fit time and
-    reused unchanged at transform time.
+    columns are produced.
 
     The columns to consider may be given as a single name, an explicit list of
     names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a

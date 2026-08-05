@@ -170,9 +170,8 @@ class StepPca(Step):
 
     The selected numeric columns are dropped and replaced by ``num_comp``
     principal-component columns ``{prefix}1 ... {prefix}{num_comp}``, each
-    descending from the *whole* input set. The centering mean and loadings are
-    **learned at fit time on the training data and reused unchanged at
-    transform time** — no re-estimation on new data.
+    descending from the *whole* input set. The projection uses the centering
+    mean and loadings of the training data.
 
     The number of components is capped at the number of input columns (and at
     the number of complete rows), so requesting more than that yields fewer.
