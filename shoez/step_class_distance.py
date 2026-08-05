@@ -357,8 +357,8 @@ class StepClassDistance(Step):
 
     The predictor columns are read to learn one centroid per outcome class,
     then read again to compute each row's distance to those centroids; the
-    columns themselves are passed through untouched. The new
-    ``distance_<class>`` columns are appended at the end of the frame.
+    columns themselves are passed through untouched. One
+    ``distance_<class>`` column is added per class.
 
     Parameters
     ----------

@@ -321,10 +321,9 @@ def _apply_ortho_poly(
 class StepPolynomial(Step):
     """Replace numeric columns with their orthogonal polynomial expansion.
 
-    Each selected numeric column ``x`` is replaced in its positional slot by up
-    to ``degree`` orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ...,
-    ``{x}_degree``. The orthogonal basis is a centering mean plus a QR
-    transform matrix.
+    Each selected numeric column ``x`` is replaced by up to ``degree``
+    orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``.
+    The orthogonal basis is a centering mean plus a QR transform matrix.
 
     The effective degree per column is capped at ``n_unique_non_null - 1`` — a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
