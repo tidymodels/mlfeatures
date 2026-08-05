@@ -169,12 +169,17 @@ class StepPca(Step):
     """Project numeric columns onto their principal components.
 
     The selected numeric columns are dropped and replaced by ``num_comp``
-    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``, each
-    descending from the *whole* input set. The projection uses the centering
-    mean and loadings of the training data.
+    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``. Each
+    component is a linear combination of all the input columns, so no single
+    component belongs to any one of them. Asking for more components than there
+    are input columns yields fewer.
 
-    The number of components is capped at the number of input columns (and at
-    the number of complete rows), so requesting more than that yields fewer.
+    The columns are centered but not scaled, so a column measured on a larger
+    numeric range contributes more to the components; normalize first if that is
+    not what you want.
+
+    Rows with a missing value are excluded when the components are computed, and
+    such a row gets ``NaN`` for every component.
 
     Parameters
     ----------
