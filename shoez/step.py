@@ -166,9 +166,9 @@ class Step(ABC):
         (in-place ``ONE_TO_ONE`` such as ``step_normalize``; ``REMOVING``;
         ``ROW_OP``). Steps that add columns override this to declare per-output
         provenance: ``ONE_TO_MANY`` (each ``a1, a2 ← a``), ``MANY_TO_MANY`` (every
-        output ← the whole input set), and ``ADDING`` steps whose outputs derive
-        from inputs (``step_class_distance``) or from nothing (``step_intercept``,
-        whose column maps to ``[]``).
+        output ← the whole input set, as in ``step_pca`` and
+        ``step_class_distance``), and ``ADDING`` (``step_intercept``, whose column
+        has no parents and so maps to ``[]``).
         """
         return {}
 
