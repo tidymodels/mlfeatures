@@ -123,7 +123,13 @@ class StepUnknown(Step):
     Parameters
     ----------
     columns
-        Selector for the categorical columns to recode.
+        Columns to recode. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.string()``, ``polars.selectors.string()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only categorical
+        columns are meaningful here.
     new_level
         The level that replaces nulls. Default ``"unknown"``. A `UserWarning` is
         emitted if a selected column already contains this level, since the

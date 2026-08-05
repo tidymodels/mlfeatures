@@ -179,7 +179,13 @@ class StepPca(Step):
     Parameters
     ----------
     columns
-        Names of the numeric columns to project.
+        Columns to project. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     num_comp
         Number of principal components to keep. Must be a positive integer.
         Default ``5``.

@@ -163,16 +163,16 @@ class StepDropCorr(Step):
     with no usable correlation at all (constant or all-null), and no new
     columns are produced.
 
-    The columns to consider may be given as a single name, an explicit list of
-    names, a narwhals selector (e.g. ``narwhals.selectors.numeric()``), or a
-    polars selector (``polars.selectors``). Any selector is resolved against the
-    frame's schema at fit time, regardless of backend. See
-    ``design/selectors.md``.
-
     Parameters
     ----------
     columns
-        Selector for the numeric columns to consider for removal.
+        Columns to consider for removal. Accepts a single column name, a list
+        of names, a shoez selector such as ``Selectors.numeric_predictors()``
+        (see `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     threshold
         Pairs whose absolute correlation is strictly above this value trigger a
         removal. Default ``0.9``.

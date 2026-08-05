@@ -363,7 +363,13 @@ class StepClassDistance(Step):
     Parameters
     ----------
     columns
-        Selector for the predictor columns to use.
+        Columns to measure distances over. Accepts a single column name, a list
+        of names, a shoez selector such as ``Selectors.numeric_predictors()``
+        (see `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     outcome
         Name of the column in the training frame that holds the class labels.
         Read at fit time only; the column is *not* declared as an input

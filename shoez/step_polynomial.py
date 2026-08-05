@@ -335,7 +335,13 @@ class StepPolynomial(Step):
     Parameters
     ----------
     columns
-        Names of the columns to expand.
+        Columns to expand. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     degree
         Maximum polynomial degree. Must be a positive integer. Default ``2``.
         Each column's effective degree is the smaller of ``degree`` and

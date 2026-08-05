@@ -93,6 +93,11 @@ class Step(ABC):
     recipe reproducible and free of train-to-serve skew, and it holds for every
     step, so individual steps do not restate it.
 
+    A step's ``columns`` selector is resolved once, against the training
+    frame's schema, when the recipe is fitted. A selector that matches nothing
+    is not an error: the step is kept in the fitted recipe for inspection but
+    never fitted and never run, making it the identity transform.
+
     What a step promises about the frame it returns is *which* columns are
     present and what they are named, not where they sit. Column position is an
     implementation detail that may differ between steps and backends, so

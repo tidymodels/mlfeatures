@@ -132,7 +132,13 @@ class StepNormalize(Step):
     Parameters
     ----------
     columns
-        Selector for the numeric columns to normalize.
+        Columns to normalize. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
     id
         Stable step identifier. Default ``"normalize"``.
 

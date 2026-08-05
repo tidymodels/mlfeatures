@@ -66,7 +66,13 @@ class StepDropZeroVariance(Step):
     Parameters
     ----------
     columns
-        Selector for the columns to consider for removal. Any dtype is accepted.
+        Columns to consider for removal. Accepts a single column name, a list
+        of names, a shoez selector such as ``Selectors.predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Any dtype is
+        accepted.
     id
         Stable step identifier. Default ``"zv"``.
 

@@ -132,7 +132,13 @@ class StepImputeMode(Step):
     Parameters
     ----------
     columns
-        Selector for the categorical columns to impute.
+        Columns to impute. Accepts a single column name, a list of names, a
+        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.string()``, ``polars.selectors.string()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only categorical
+        columns are meaningful here.
     id
         Stable step identifier. Default ``"impute_mode"``.
 
