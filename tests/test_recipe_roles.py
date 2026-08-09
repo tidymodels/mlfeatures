@@ -48,6 +48,13 @@ class TestRoles:
         clone.add("a", "group")
         assert roles.of("a") == {"predictor"}
 
+    def test_rejected_add_leaves_no_trace(self) -> None:
+        roles = Roles({"a": {"outcome"}, "c": {"predictor"}})
+        with pytest.raises(ValueError, match="incompatible roles"):
+            roles.add("a", "predictor")
+        assert roles.of("a") == {"outcome"}
+        assert roles.all_columns() == ["a", "c"]
+
     def test_equality(self) -> None:
         assert Roles({"a": {"predictor"}}) == Roles({"a": {"predictor"}})
         assert Roles({"a": {"predictor"}}) != Roles({"a": {"outcome"}})
