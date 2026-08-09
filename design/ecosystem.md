@@ -55,7 +55,7 @@ Sparse output format: `scipy.sparse`, mirroring `sparsevctrs` in R.
 
 ## Sklearn adapter
 
-A prepped `Recipe` exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
+A trained `Recipe` exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
 
 ```python
 from shoez.compat import RecipeTransformer

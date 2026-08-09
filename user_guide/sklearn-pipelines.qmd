@@ -63,7 +63,7 @@ pipe.score(X, y)
 ```
 
 Displaying the fitted pipeline renders scikit-learn's diagram. The recipe shows
-up as a labelled `RecipeTransformer (prepped)` block that expands to the recipe
+up as a labelled `RecipeTransformer (trained)` block that expands to the recipe
 and its steps:
 
 ```{python}

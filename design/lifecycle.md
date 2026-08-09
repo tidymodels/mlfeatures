@@ -19,10 +19,10 @@ rec = (
     .add(Normalize(all_numeric_predictors()))
 )
 
-prepped = rec.fit(df_train)        # fits statistics
-X_train = prepped.transform(df_train)    # applies to training data
-X_test  = prepped.transform(df_test)     # applies to held-out data
-X_new   = prepped.transform(df_new, all_predictors())  # selector at transform time
+trained = rec.fit(df_train)        # fits statistics
+X_train = trained.transform(df_train)    # applies to training data
+X_test  = trained.transform(df_test)     # applies to held-out data
+X_new   = trained.transform(df_new, all_predictors())  # selector at transform time
 ```
 
 ---
@@ -31,12 +31,12 @@ X_new   = prepped.transform(df_new, all_predictors())  # selector at transform t
 
 - `Recipe(...)` takes explicit role assignment from a sample dataframe (used only for schema, not for fitting). There is **one canonical constructor**: roles are assigned explicitly via constructor kwargs or `set_roles`. **We have decided not to ship a formula interface.** It was originally planned as syntactic sugar over role assignment (simple `"y ~ ."` / `"y ~ x1 + x2"` splits only), but we removed it: it adds a parsing surface and a second way to do one thing, while explicit role assignment covers every case it could. Anything beyond basic column selection must be expressed as a step regardless.
 - Steps are pure: `.add(Step(...))` returns a new `Recipe` with the step appended; it does **not** touch data.
-- `fit()` runs each step's fit on the **training** data, in order. The baked output of step *i* becomes the input to step *i+1*'s fit.
-- `transform()` runs each step's transform on **new** data using stored statistics. Bake **never re-estimates**.
+- `fit()` runs each step's fit on the **training** data, in order. The transformed output of step *i* becomes the input to step *i+1*'s fit.
+- `transform()` runs each step's transform on **new** data using stored statistics. `transform()` **never re-estimates**.
 - `transform()` accepts an optional selector (see [selectors.md](selectors.md)) to subset returned columns.
 - `transform()` always requires data to be passed in explicitly. There is no argument-free shorthand — callers are responsible for passing the dataframe they want transformed.
 - `fit()` and `transform()` are idempotent given the same inputs.
-- A prepped recipe must support `recipe.minimize()` to strip training artifacts. See [serialization.md](serialization.md).
+- A trained recipe must support `recipe.minimize()` to strip training artifacts. See [serialization.md](serialization.md).
 
 ---
 

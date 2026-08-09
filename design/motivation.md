@@ -127,9 +127,9 @@ rec = (
     .add(Normalize(all_numeric_predictors()))
 )
 
-prepped = rec.fit(df_train)
-X_train = prepped.transform(df_train)
-X_test  = prepped.transform(df_test)
+trained = rec.fit(df_train)
+X_train = trained.transform(df_train)
+X_test  = trained.transform(df_test)
 ```
 
 - Selectors are a **live query over a schema that updates after every step** — the
