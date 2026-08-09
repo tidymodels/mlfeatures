@@ -50,6 +50,10 @@ uv run great-docs preview    # build and serve at localhost:3000
 
 Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy.
 
+### Vocabulary
+
+Describe a recipe's two states as **untrained** and **trained**, never as "prepped"/"unprepped" or "prepared". Those are inherited from R `recipes`' cooking analogy, which shoez does not use; the repr headers (`Recipe (untrained)` / `Recipe (trained)`) and the per-step `[untrained]` / `[trained]` markers are the wording to match. For the same reason, call the second lifecycle phase `transform()` rather than "bake". The one exception is when citing R `recipes`' actual function names (its `prep()` and `bake()`), as `shoez/step_normalize.py` does.
+
 ### Step docstrings
 
 A step's class docstring is its reference page, so it is written for someone using the step, not for someone maintaining it. Module docstrings and the `fit_*`/`apply_*` helper docstrings are read from the source instead, so they may talk about internals freely.
@@ -99,6 +103,6 @@ These conventions apply to every example we write: docstring `Examples` cells, [
   fitted.transform(df)
   ```
 
-- **One `{python}` cell per output.** A cell auto-displays only its last expression, so a value you want rendered (the input frame, the unprepped recipe, the fitted recipe) needs its own cell with a line of prose between. Don't reach for `print()` or `display()` to force intermediate output; splitting the cell keeps the rich rendering and the copy-pasteable code. [`README.qmd`](README.qmd) is the exception: it renders to GitHub-flavored Markdown, where a DataFrame's `_repr_html_` drags a raw `<style>` block into `README.md`, so `print()` the frame there.
+- **One `{python}` cell per output.** A cell auto-displays only its last expression, so a value you want rendered (the input frame, the untrained recipe, the fitted recipe) needs its own cell with a line of prose between. Don't reach for `print()` or `display()` to force intermediate output; splitting the cell keeps the rich rendering and the copy-pasteable code. [`README.qmd`](README.qmd) is the exception: it renders to GitHub-flavored Markdown, where a DataFrame's `_repr_html_` drags a raw `<style>` block into `README.md`, so `print()` the frame there.
 - **Show arguments that change behavior.** After the walkthrough, add a cell per argument whose effect is visible in the output (`keep_original_cols`, `num_comp`, `threshold`, `degree`), each with at most one line of prose. Arguments that only rename or re-role columns don't need one.
 - **End on the real result.** The final expression should display the actual output (a bare `result`), not `.shape`, `.agg(...)`, or another summary standing in for it, and it needs no trailing comment explaining what the reader is about to see.
