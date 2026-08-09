@@ -119,9 +119,9 @@ class TestMotivationPipeline:
         df_train = ctor(_housing())
         df_test = ctor(_housing_test())
 
-        prepped = _recipe(df_train).fit(df_train)
-        x_train = prepped.transform(df_train)
-        x_test = prepped.transform(df_test)
+        trained = _recipe(df_train).fit(df_train)
+        x_train = trained.transform(df_train)
+        x_test = trained.transform(df_test)
 
         assert isinstance(x_train, ctor)
         assert isinstance(x_test, ctor)
@@ -155,8 +155,8 @@ class TestMotivationPipeline:
         # selector; at fit time it must resolve to the plain numerics *and* the
         # PCA components that did not exist when the recipe was declared.
         df = pd.DataFrame(_housing())
-        prepped = _recipe(df).fit(df)
-        normalize = prepped.steps[-1]
+        trained = _recipe(df).fit(df)
+        normalize = trained.steps[-1]
         captured = set(normalize.schema_in().columns)
         assert set(PLAIN_NUMERIC) <= captured
         assert {f"PC{i + 1}" for i in range(NUM_COMP)} <= captured

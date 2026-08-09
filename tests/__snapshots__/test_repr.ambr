@@ -1,24 +1,24 @@
 # serializer version: 1
-# name: TestFittedRecipeRepr.test_prepped_header_and_trained_markers
+# name: TestFittedRecipeRepr.test_resolved_columns_shown
   '''
-  Recipe (prepped)
+  Recipe (trained)
+    Inputs: 3 columns — 1 outcome, 2 predictors
+    Steps:
+      step_normalize(age)  [trained]
+  '''
+# ---
+# name: TestFittedRecipeRepr.test_trained_header_and_step_markers
+  '''
+  Recipe (trained)
     Inputs: 4 columns — 1 outcome, 3 predictors
     Steps:
       step_normalize(age)                   [trained]
       step_dummy(city → city_NYC, city_SF)  [trained]
   '''
 # ---
-# name: TestFittedRecipeRepr.test_resolved_columns_shown
-  '''
-  Recipe (prepped)
-    Inputs: 3 columns — 1 outcome, 2 predictors
-    Steps:
-      step_normalize(age)  [trained]
-  '''
-# ---
 # name: TestRecipeRepr.test_empty_recipe
   '''
-  Recipe (unprepped)
+  Recipe (untrained)
     Inputs: no roles assigned
     Steps:
       <none>
@@ -26,7 +26,7 @@
 # ---
 # name: TestRecipeRepr.test_no_prototype_omits_column_count
   '''
-  Recipe (unprepped)
+  Recipe (untrained)
     Inputs: no roles assigned
     Steps:
       step_normalize(['age'])  [untrained]
@@ -34,7 +34,7 @@
 # ---
 # name: TestRecipeRepr.test_roles_and_column_count
   '''
-  Recipe (unprepped)
+  Recipe (untrained)
     Inputs: 3 columns — 1 outcome, 2 predictors
     Steps:
       <none>
@@ -42,7 +42,7 @@
 # ---
 # name: TestRecipeRepr.test_steps_listed_untrained
   '''
-  Recipe (unprepped)
+  Recipe (untrained)
     Inputs: 3 columns — 1 outcome, 2 predictors
     Steps:
       step_normalize(['age'])  [untrained]

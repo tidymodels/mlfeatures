@@ -9,7 +9,7 @@
 
 ## Requirements
 
-A prepped recipe must serialize so it can be:
+A trained recipe must serialize so it can be:
 - Saved alongside a model.
 - Loaded in a different process for inference.
 - Diffed and reviewed in code review (stable JSON/YAML format covering hyperparameters and learned stats).

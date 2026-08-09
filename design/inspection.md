@@ -13,7 +13,7 @@ Shows different information depending on training status:
 
 **Before fit** (unresolved):
 ```
-Recipe (unprepped)
+Recipe (untrained)
   Inputs: 12 columns — 1 outcome, 11 predictors
   Steps:
     step_impute_knn(all_predictors())              [untrained]
@@ -23,7 +23,7 @@ Recipe (unprepped)
 
 **After fit** (resolved):
 ```
-Recipe (prepped)
+Recipe (trained)
   Inputs: 12 columns — 1 outcome, 11 predictors
   Steps:
     step_impute_knn [x1, x2, x4, x7]              [trained]

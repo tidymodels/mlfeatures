@@ -1,6 +1,6 @@
 """scikit-learn interoperability.
 
-Per ``design/ecosystem.md`` §"Sklearn adapter", a prepped recipe should drop into
+Per ``design/ecosystem.md`` §"Sklearn adapter", a trained recipe should drop into
 `sklearn.pipeline.Pipeline` as a single transformer. `RecipeTransformer`
 is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
 without re-implementing it.
@@ -113,8 +113,8 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     def _display_recipe(self) -> Recipe | FittedRecipe:
         """The recipe to show when printing: the fitted one once available.
 
-        Before ``fit`` only the unprepped ``recipe`` exists; after ``fit`` the
-        prepped ``fitted_`` is the more informative view (resolved columns,
+        Before ``fit`` only the untrained ``recipe`` exists; after ``fit`` the
+        trained ``fitted_`` is the more informative view (resolved columns,
         ``[trained]`` markers), so prefer it.
         """
         fitted = getattr(self, "fitted_", None)
@@ -125,7 +125,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
 
         sklearn's default estimator ``repr`` would inline the recipe's multi-line
         ``repr`` as a constructor argument, which reads poorly. We show the recipe
-        block as-is instead (the prepped view once fitted). Note this is only used
+        block as-is instead (the trained view once fitted). Note this is only used
         when printing the transformer directly; inside a ``Pipeline`` the text
         ``repr`` is produced by sklearn's pretty-printer, which we cannot override
         (use the HTML/diagram view there — see ``_sk_visual_block_``).
@@ -150,7 +150,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         if visual_block is None:  # pragma: no cover - unknown sklearn layout
             return cast(Any, super())._sk_visual_block_()
 
-        state = "prepped" if getattr(self, "fitted_", None) is not None else "unprepped"
+        state = "trained" if getattr(self, "fitted_", None) is not None else "untrained"
         return visual_block(
             "single",
             self,

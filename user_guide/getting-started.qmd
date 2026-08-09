@@ -41,8 +41,9 @@ each call:
 recipe = Recipe().add(StepDropCorr(["a", "b", "c"], threshold=0.9))
 ```
 
-Printing a recipe shows its steps and their state. Before fitting it is
-*unprepped*: the step's selector is shown unresolved and tagged `[untrained]`.
+Printing a recipe shows its steps and their state. Before fitting, the recipe
+and each of its steps are tagged `[untrained]`, and the step's selector is shown
+unresolved.
 
 ```{python}
 recipe
@@ -55,7 +56,7 @@ recipe
 fitted = recipe.fit(df)
 ```
 
-The fitted recipe prints as *prepped*: each step now reports the concrete
+The fitted recipe prints as trained: each step now reports the concrete
 columns its selector resolved to, tagged `[trained]`.
 
 ```{python}
