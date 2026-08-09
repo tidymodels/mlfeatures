@@ -3,7 +3,7 @@
 A `FittedRecipe` is serialized to a plain, human-readable ``dict`` (and from
 there to JSON or YAML) that captures every step's **hyperparameters and learned
 statistics** plus the recipe-level role, ptype, and lineage state. The format is
-stable and diffable so a prepped recipe can be reviewed in a pull request, saved
+stable and diffable so a trained recipe can be reviewed in a pull request, saved
 alongside a model, and reloaded in another process for inference.
 
 Nothing in the payload is a closure, environment, or pickled object: step state

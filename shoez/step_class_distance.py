@@ -427,7 +427,7 @@ class StepClassDistance(Step):
     ```
 
     Specifying the step touches no data, so the recipe reports itself as
-    unprepped:
+    untrained:
 
     ```{python}
     recipe = Recipe().add(
@@ -438,7 +438,7 @@ class StepClassDistance(Step):
     recipe
     ```
 
-    `fit()` learns one centroid per class label and returns a prepped recipe:
+    `fit()` learns one centroid per class label and returns a trained recipe:
 
     ```{python}
     fitted = recipe.fit(df)

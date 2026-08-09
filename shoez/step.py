@@ -290,7 +290,7 @@ class Step(ABC):
         fit time, mirroring the resolved/unresolved distinction in
         ``design/inspection.md``. A column-adding step additionally shows the
         columns it produced (``city → city_LA, city_NYC``) so the expansion is
-        visible in the prepped view. A trained identity step (empty selection)
+        visible once fitted. A trained identity step (empty selection)
         and a step that consumes no columns (e.g. ``step_intercept``) describe
         themselves explicitly rather than showing an empty list.
         """

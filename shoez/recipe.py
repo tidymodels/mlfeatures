@@ -39,7 +39,7 @@ __all__ = ["Recipe", "FittedRecipe"]
 
 
 def _format_recipe(
-    *, prepped: bool, roles: Roles, steps: list[Step], n_columns: int | None
+    *, trained: bool, roles: Roles, steps: list[Step], n_columns: int | None
 ) -> str:
     """Render the shared ``repr`` block for `Recipe` / `FittedRecipe`.
 
@@ -47,7 +47,7 @@ def _format_recipe(
     training state, an ``Inputs`` line summarising column roles, and the steps
     aligned so their ``[trained]`` / ``[untrained]`` markers line up.
     """
-    header = f"Recipe ({'prepped' if prepped else 'unprepped'})"
+    header = f"Recipe ({'trained' if trained else 'untrained'})"
 
     labels = roles.role_labels()
     if labels:
@@ -135,13 +135,13 @@ class Recipe:
         )
 
     def __repr__(self) -> str:
-        """A human-readable, unprepped view of the pipeline (``design/inspection.md``).
+        """A human-readable, untrained view of the pipeline (``design/inspection.md``).
 
         Shows the declared role assignments and the steps with their unresolved
         selectors, each tagged ``[untrained]``. Column counts come from the
         prototype frame when one was supplied; otherwise only the explicitly
         assigned roles are summarised. ``FittedRecipe`` has its own ``repr`` that
-        shows resolved columns and the ``prepped`` state instead.
+        shows resolved columns and the ``trained`` state instead.
         """
         n_columns = (
             len(_frame.columns(self._prototype_frame))
@@ -149,7 +149,7 @@ class Recipe:
             else None
         )
         return _format_recipe(
-            prepped=False, roles=self.roles, steps=self.steps, n_columns=n_columns
+            trained=False, roles=self.roles, steps=self.steps, n_columns=n_columns
         )
 
     def _clone(self) -> "Recipe":
@@ -442,7 +442,7 @@ class FittedRecipe:
         self.ptype = ptype
 
     def __repr__(self) -> str:
-        """A human-readable, prepped view of the fitted pipeline (``design/inspection.md``).
+        """A human-readable, trained view of the fitted pipeline (``design/inspection.md``).
 
         Shows the post-fit role assignments and each step with the concrete
         columns its selector resolved to at fit time, tagged ``[trained]``. This
@@ -450,7 +450,7 @@ class FittedRecipe:
         """
         n_columns = len(self.roles.all_columns()) if self.roles.all_columns() else None
         return _format_recipe(
-            prepped=True, roles=self.roles, steps=self.steps, n_columns=n_columns
+            trained=True, roles=self.roles, steps=self.steps, n_columns=n_columns
         )
 
     def to_dict(self) -> dict[str, object]:
