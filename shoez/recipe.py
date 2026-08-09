@@ -200,10 +200,84 @@ class Recipe:
 
         Standard roles have dedicated keyword arguments; arbitrary custom roles
         may be passed as additional keywords. Each value is a column name or a
-        list of names. Incompatible combinations (e.g. outcome + predictor on
-        one column) are rejected.
+        list of names. Assignments are *added* to any roles the recipe already
+        carries, so a column may end up with several roles at once; incompatible
+        combinations (e.g. outcome + predictor on one column) are rejected. When
+        the recipe was built with a prototype ``data`` frame, every name is
+        checked against it; without a prototype there is nothing to check
+        against, so any name is accepted and typos surface later, when the
+        recipe is fitted.
+
+        Parameters
+        ----------
+        outcome
+            Column(s) to assign the ``"outcome"`` role. Default ``None``.
+        predictor
+            Column(s) to assign the ``"predictor"`` role. Default ``None``.
+        case_weights
+            Column(s) to assign the ``"case_weights"`` role. Default ``None``.
+        **custom
+            Any further keywords assign arbitrary custom roles, the keyword
+            being the role name (e.g. ``group="city"``). The constructor's
+            plural ``predictors=`` is rejected here rather than silently
+            becoming a custom role.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from shoez import Recipe
+        ```
+
+        Start from a frame whose columns need roles:
+
+        ```{python}
+        df = pd.DataFrame(
+            {
+                "price": [1.0, 2.0, 3.0],
+                "sqft": [4.0, 5.0, 6.0],
+                "city": ["a", "b", "a"],
+            }
+        )
+        df
+        ```
+
+        Assigning roles returns a new recipe, leaving the original untouched:
+
+        ```{python}
+        recipe = Recipe(data=df).set_roles(outcome="price", predictor=["sqft", "city"])
+        recipe
+        ```
+
+        Custom roles are just extra keywords, and stack with the roles a column
+        already has:
+
+        ```{python}
+        recipe.set_roles(group="city").roles.of("city")
+        ```
         """
-        raise NotImplementedError("set_roles is not yet implemented")
+        # ``**custom`` swallows any keyword, so the constructor's plural
+        # spelling would otherwise create a bogus 'predictors' role in silence.
+        if "predictors" in custom:
+            raise ValueError(
+                "set_roles() takes 'predictor', not 'predictors'; "
+                "the plural spelling is the Recipe() constructor's"
+            )
+
+        new = self._clone()
+        _apply_role_assignments(
+            new.roles,
+            {
+                "outcome": outcome,
+                "predictor": predictor,
+                "case_weights": case_weights,
+                **custom,
+            },
+            check_col=new._check_column_exists,
+        )
+        return new
 
     def update_role_requirements(
         self,
