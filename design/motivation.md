@@ -139,3 +139,44 @@ X_test  = prepped.transform(df_test)
   `year_built` match neither and flow past PCA untouched.
 - Linear top-to-bottom order; no nesting, no parallel branches to reconcile.
 - Provenance survives — `repr(rec)` shows `step_dummy [roof → roof_tile, ...]`.
+
+## Selectors vs. hardcoded names
+
+The single biggest source of quiet breakage in a preprocessing pipeline is a literal
+list of column names. A hardcoded list is a claim about the data that nothing checks
+and nothing updates, and it is wrong in four ways that a selector is not.
+
+**It is a copy of the schema that drifts.** `numeric_plain = ["sqft", "lot_size",
+"year_built"]` is correct until someone adds `garage_sqft` to the source table. Then
+the new column is silently not imputed and not normalized: no error, no warning, just
+a model fit on a column the pipeline never touched. `all_numeric_predictors()` is a
+question asked against the schema at fit time, so it has no stale copy to drift from.
+
+**It cannot name columns that do not exist yet.** Steps create columns. One-hot
+encoding turns `roof` into however many indicators the training split happens to
+contain; PCA emits `PC1 … PC10`. Writing the next step against literal names means
+knowing the output of the previous step, which means having already run it on this
+exact data. Under cross-validation or a fresh data pull that assumption fails, and it
+fails per-resample: a rare `roof` level present in fold 1 and absent in fold 2 gives
+you a pipeline that works four times out of five. A selector is evaluated after each
+step against the schema as it then stands, so `all_numeric_predictors()` in the final
+`Normalize` picks up the PCA components without anyone writing `PC1` anywhere.
+
+**It cannot express "whatever survived".** Filter steps are defined by the columns
+they remove: drop zero-variance columns, drop one of each correlated pair. Which
+columns those are is a property of the data, not of the code, and it differs between
+resamples by construction. There is no literal list that is correct for every split;
+there is only the query "the predictors still numeric at this point".
+
+**It says how, not why.** `["geo_lat", "geo_lon", "geo_elevation"]` and
+`starts_with("geo_")` select the same three columns today, but only the second records
+the intent. A reader (and a reviewer) can see that the step is about geographic
+features, and a fourth `geo_*` column joins the group automatically instead of
+requiring a search for every list that ought to have mentioned it.
+
+The cost is real and worth stating: a selector defers to fit time what a list settles
+at authoring time, so a typo'd or over-broad selector surfaces later than a typo'd
+name would, and reading the code no longer tells you exactly which columns a step
+touched. That is what the schema and the fitted recipe's `repr` are for: after
+`fit()`, every step reports the concrete columns it resolved to. The selector
+describes the rule; the fitted recipe records the answer.
