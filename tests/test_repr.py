@@ -1,7 +1,7 @@
 """Printing methods for recipes, fitted recipes, steps, and selectors.
 
 Covers the ``repr`` layout described in ``design/inspection.md``: the
-unprepped/prepped distinction, the role-summary line, aligned step markers, and
+untrained/trained distinction, the role-summary line, aligned step markers, and
 the resolved-vs-unresolved selector display.
 
 The exact rendered output is pinned with syrupy snapshots (run
@@ -83,7 +83,7 @@ class TestStepRepr:
 
     def test_trained_shows_produced_columns(self, snapshot: SnapshotAssertion) -> None:
         # A column-adding step renders ``consumed → produced`` so the expansion
-        # is visible in the prepped view (design/inspection.md).
+        # is visible in the trained view (design/inspection.md).
         rec = (
             Recipe(data=_df(), outcome="price", predictors=["age", "city"])
             .add(StepDummy(["city"]))
@@ -106,7 +106,7 @@ class TestStepRepr:
 
 
 class TestRecipeRepr:
-    """The unprepped recipe view."""
+    """The untrained recipe view."""
 
     def test_empty_recipe(self, snapshot: SnapshotAssertion) -> None:
         assert repr(Recipe()) == snapshot
@@ -145,11 +145,9 @@ class TestRecipeRepr:
 
 
 class TestFittedRecipeRepr:
-    """The prepped recipe view."""
+    """The trained recipe view."""
 
-    def test_prepped_header_and_trained_markers(
-        self, snapshot: SnapshotAssertion
-    ) -> None:
+    def test_trained_header_and_step_markers(self, snapshot: SnapshotAssertion) -> None:
         fitted = (
             Recipe(data=_df(), outcome="price", predictors=["age", "city"])
             .add(StepNormalize(["age"]))
