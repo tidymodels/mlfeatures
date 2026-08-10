@@ -67,4 +67,12 @@ def required_pkgs(self) -> list[str]:
     return ["scikit-learn>=1.3"]
 ```
 
-A clear error is raised at step construction if a declared package is missing.
+Each entry is a requirement string: a bare package name, or one carrying a version constraint. A name that differs from its importable module (`scikit-learn` → `sklearn`) is mapped; otherwise dashes become underscores.
+
+`Step.check_required_pkgs()` turns the declaration into a check. The recipe calls it at the two points where a step actually runs: `Recipe.fit()` and `FittedRecipe.transform()`. Building a recipe, inspecting it, and serializing it never need the package, so they are not gated; and checking at both ends means a recipe deserialized somewhere the original environment's packages are absent still fails with the actionable error rather than an `ImportError` from inside a step. A missing package raises `MissingDependencyError` naming the step, the package, and the `pip install` that fixes it:
+
+```
+`shoez_woe` is required by step 'woe_1' (step_woe) but is not installed; install with `pip install shoez_woe`.
+```
+
+Version constraints are reported in the hint but not enforced: shoez does not vendor a version parser, and a wrong-version library fails at the call site anyway. See [dependencies.md](dependencies.md) for the lazy-import tools a step's body uses to reach those packages.

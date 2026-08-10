@@ -240,8 +240,33 @@ class Step(ABC):
         """
 
     def required_pkgs(self) -> list[str]:
-        """Third-party packages required to run this step. Defaults to none."""
+        """Third-party packages required to run this step. Defaults to none.
+
+        Each entry is a requirement string, either a bare name (``"numpy"``) or
+        one carrying a version constraint (``"scikit-learn>=1.3"``). The recipe
+        checks the declared packages with `check_required_pkgs` when it is
+        fitted and when a fitted recipe transforms data, so a missing optional
+        dependency is reported as an actionable install hint instead of an
+        ``ImportError`` from somewhere inside the step. Only running a step needs
+        the package; building, inspecting, and serializing a recipe do not.
+        """
         return []
+
+    def check_required_pkgs(self) -> None:
+        """Raise if any package this step declares in `required_pkgs` is missing.
+
+        The error names the step and the missing package(s) and suggests the
+        ``pip install`` that fixes it. Version constraints in a requirement are
+        reported but not enforced.
+        """
+        from shoez._dependencies import require_packages
+
+        requirements = self.required_pkgs()
+        if requirements:
+            require_packages(
+                requirements,
+                purpose=f"by step {self.id!r} ({_step_type_label(self)})",
+            )
 
     def to_state(self) -> dict[str, object]:
         """Serialize this step's fields to a diffable, JSON-safe ``dict``.

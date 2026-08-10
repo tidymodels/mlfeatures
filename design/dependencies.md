@@ -118,6 +118,10 @@ real runtime-backend import greppable as `import_optional("polars"...)` /
 unreachable because the surrounding type check only matches when the backend is
 already loaded; the call is kept uniform anyway, with a comment saying so.)
 
+## Declaring what a step needs
+
+Reaching for a library lazily keeps `import shoez` cheap, but it means a user only learns the library is missing once the step runs. A step therefore also *declares* its heavy dependencies via `required_pkgs()`, and the recipe checks them up front (at `fit()` and at `transform()`) so the failure arrives before any work happens. See [extensibility.md](extensibility.md#required_pkgs) for the declaration format and the error it produces; the two mechanisms are complementary, and a step using an optional library should do both.
+
 ## Type annotations
 
 `from __future__ import annotations` makes all annotations strings, so they are

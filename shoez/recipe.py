@@ -366,6 +366,12 @@ class Recipe:
         )
         ```
         """
+        # Optional dependencies are only needed to run a step, so they are
+        # checked here (and in ``FittedRecipe.transform()``) rather than when a
+        # step is added: building, inspecting, and serializing a recipe stay
+        # possible in an environment that lacks them.
+        for step in self.steps:
+            step.check_required_pkgs()
         current = _frame.from_native(data)
         # Fit *copies* of the steps, never the recipe's own: fitting writes
         # estimates, ``trained``, and ``_empty_selection`` onto a step, so
@@ -616,6 +622,10 @@ class FittedRecipe:
         fitted.transform(df)
         ```
         """
+        # A deserialized recipe may be transformed in an environment that lacks
+        # a package the one it was fitted in had.
+        for step in self.steps:
+            step.check_required_pkgs()
         current = _frame.from_native(data)
         if self.ptype is not None:
             self.ptype.check(current, context="transform")

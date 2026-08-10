@@ -240,6 +240,7 @@ reference:
       - Step.output_parents
       - Step.accepts_dtypes
       - Step.required_pkgs
+      - Step.check_required_pkgs
       - name: RowOp
         members: false
       - name: StepError

@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import re
 import sys
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
@@ -61,6 +62,7 @@ __all__ = [
     "import_optional",
     "module_available",
     "numpy",
+    "require_packages",
 ]
 
 # Top-level module name -> the shoez extra that provides it, for install hints.
@@ -83,15 +85,25 @@ class MissingDependencyError(ModuleNotFoundError):
     """
 
 
-def _install_hint(module_name: str) -> str:
-    """A ``pip install`` suggestion for a (possibly dotted) module name."""
+def _install_command(module_name: str, *, dist_name: str | None = None) -> str:
+    """The ``pip install`` invocation(s) that provide a (possibly dotted) module.
+
+    ``dist_name`` overrides what is passed to ``pip`` for the few packages whose
+    distribution name differs from their module (``sklearn`` is imported, but
+    ``scikit-learn`` is what gets installed); the extra is still looked up under
+    the module name.
+    """
     top = module_name.split(".")[0]
+    install = dist_name if dist_name is not None else top
     extra = _EXTRAS.get(top)
     if extra is not None:
-        return (
-            f"install it with `pip install 'shoez[{extra}]'` (or `pip install {top}`)"
-        )
-    return f"install it with `pip install {top}`"
+        return f"`pip install 'shoez[{extra}]'` (or `pip install {install}`)"
+    return f"`pip install {install}`"
+
+
+def _install_hint(module_name: str) -> str:
+    """A ``pip install`` suggestion for a (possibly dotted) module name."""
+    return f"install it with {_install_command(module_name)}"
 
 
 def _missing_error(
@@ -165,6 +177,88 @@ class _LazyModule(ModuleType):
 def _lazy_import(module_name: str) -> ModuleType:
     """Return a lazy proxy for ``module_name`` (see `_LazyModule`)."""
     return _LazyModule(module_name)
+
+
+# Distribution name -> importable top-level module, for the few packages whose
+# names differ. A requirement may be written either way.
+_DIST_TO_MODULE: dict[str, str] = {
+    "scikit-learn": "sklearn",
+    "pyyaml": "yaml",
+}
+
+_REQUIREMENT_NAME = re.compile(r"^\s*([A-Za-z0-9._-]+)")
+_NAME_SEPARATORS = re.compile(r"[-_.]+")
+
+
+def _requirement_name(requirement: str) -> str:
+    """The bare package name in a requirement string (``'numpy>=1.24'`` -> ``'numpy'``)."""
+    match = _REQUIREMENT_NAME.match(requirement)
+    if match is None:
+        return requirement.strip()
+    return match.group(1)
+
+
+def _canonical_name(name: str) -> str:
+    """The PEP 503 canonical form of a distribution name.
+
+    Runs of ``-``, ``_``, and ``.`` all mean the same thing to an installer, so
+    ``Scikit_Learn`` and ``scikit-learn`` name one distribution and must hit the
+    same entry of `_DIST_TO_MODULE`.
+    """
+    return _NAME_SEPARATORS.sub("-", name).lower()
+
+
+def _requirement_module(requirement: str) -> str:
+    """The top-level module imported by ``requirement``'s package."""
+    name = _requirement_name(requirement)
+    return _DIST_TO_MODULE.get(_canonical_name(name), name.replace("-", "_"))
+
+
+def _requirement_available(requirement: str) -> bool:
+    """Whether the package named by ``requirement`` can be imported.
+
+    Version specifiers are parsed off but not enforced: shoez does not vendor a
+    version parser, and a wrong-version library fails loudly at the call site
+    anyway. The specifier is still carried into the error message, so the
+    install hint names the version the step actually wants.
+    """
+    return module_available(_requirement_module(requirement))
+
+
+def _requirement_hint(requirement: str) -> str:
+    """A ``pip install`` suggestion for one declared requirement.
+
+    Routed through `_install_command` either way, so a requirement carrying a
+    version constraint still gets the shoez extra that provides it; the
+    constraint survives by being quoted as written.
+    """
+    requirement = requirement.strip()
+    name = _requirement_name(requirement)
+    install = name if name == requirement else f"'{requirement}'"
+    return _install_command(_requirement_module(requirement), dist_name=install)
+
+
+def require_packages(requirements: list[str], *, purpose: str) -> None:
+    """Raise `MissingDependencyError` if any of ``requirements`` is missing.
+
+    Parameters
+    ----------
+    requirements
+        Requirement strings as declared by ``Step.required_pkgs()``, e.g.
+        ``["numpy", "scikit-learn>=1.3"]``.
+    purpose
+        Sentence fragment naming what needs them, e.g. ``"by step 'pca_1'"``.
+    """
+    missing = [req for req in requirements if not _requirement_available(req)]
+    if not missing:
+        return
+    names = ", ".join(f"`{_requirement_name(req)}`" for req in missing)
+    hint = " and ".join(_requirement_hint(req) for req in missing)
+    verb = "is" if len(missing) == 1 else "are"
+    raise MissingDependencyError(
+        f"{names} {verb} required {purpose} but {verb} not installed; "
+        f"install with {hint}."
+    )
 
 
 if not TYPE_CHECKING:
