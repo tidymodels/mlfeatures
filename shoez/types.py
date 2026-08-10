@@ -205,15 +205,18 @@ class Roles:
 
     def add(self, column: str, role: str) -> None:
         """Assign ``role`` to ``column``, rejecting incompatible combinations."""
-        current = self._roles.setdefault(column, set())
-        candidate = current | {role}
+        # Validate before touching ``_roles`` so a rejected add cannot register
+        # the column at all. Today the check can only fire for a column that is
+        # already present, but registering first would leave an empty role set
+        # behind the moment ``_INCOMPATIBLE`` grows a single-role entry.
+        candidate = self._roles.get(column, set()) | {role}
         for pair in self._INCOMPATIBLE:
             if pair <= candidate:
                 conflicting = ", ".join(sorted(pair))
                 raise ValueError(
                     f"column {column!r} cannot hold incompatible roles: {conflicting}"
                 )
-        current.add(role)
+        self._roles.setdefault(column, set()).add(role)
 
     def remove(self, column: str, role: str) -> None:
         """Remove ``role`` from ``column``. No-op if the column or role is absent."""
