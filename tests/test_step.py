@@ -10,6 +10,7 @@ import narwhals.stable.v2 as nw
 import pytest
 
 from shoez import ANY_DTYPE, ColSchema, Mode, RowOp, SchemaInfo, Step
+from shoez._dependencies import MissingDependencyError
 from shoez.types import AcceptedDtypes, _AnyDtype
 
 
@@ -92,6 +93,41 @@ def test_concrete_rowop_can_be_instantiated() -> None:
 
 def test_required_pkgs_defaults_to_empty() -> None:
     assert _ConcreteStep().required_pkgs() == []
+
+
+class _MissingPkgStep(_ConcreteStep):
+    """A step declaring a package that is guaranteed not to be installed."""
+
+    id = "needs_zzz"
+
+    def required_pkgs(self) -> list[str]:
+        return ["shoez_no_such_dependency_zzz"]
+
+
+def test_check_required_pkgs_passes_when_nothing_is_declared() -> None:
+    _ConcreteStep().check_required_pkgs()
+
+
+def test_check_required_pkgs_reports_the_step_and_the_package() -> None:
+    with pytest.raises(MissingDependencyError) as excinfo:
+        _MissingPkgStep().check_required_pkgs()
+    message = str(excinfo.value)
+    assert "shoez_no_such_dependency_zzz" in message
+    assert "needs_zzz" in message
+    assert "pip install" in message
+
+
+class _InstalledPkgStep(_ConcreteStep):
+    """A step declaring an installed package, with a version constraint."""
+
+    id = "needs_numpy"
+
+    def required_pkgs(self) -> list[str]:
+        return ["numpy>=1.0"]
+
+
+def test_check_required_pkgs_passes_for_an_installed_declaration() -> None:
+    _InstalledPkgStep().check_required_pkgs()
 
 
 def test_any_dtype_contains_everything() -> None:

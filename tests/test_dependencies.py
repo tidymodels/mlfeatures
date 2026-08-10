@@ -21,6 +21,7 @@ from shoez._dependencies import (
     _LazyModule,
     import_optional,
     module_available,
+    require_packages,
 )
 
 
@@ -110,6 +111,119 @@ class TestLazyModuleProxy:
         assert "dumps" not in vars(proxy)  # not yet imported
         assert proxy.dumps is importlib.import_module("json").dumps
         assert "dumps" in vars(proxy)  # now memoized on the proxy itself
+
+
+class TestRequirePackages:
+    def test_no_error_when_all_present(self) -> None:
+        require_packages(["json", "numpy>=1.24"], purpose="by step 'x'")
+
+    def test_raises_naming_package_purpose_and_hint(self) -> None:
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(
+                ["shoez_no_such_dependency_zzz"], purpose="by step 'x' (step_x)"
+            )
+        message = str(excinfo.value)
+        assert "shoez_no_such_dependency_zzz" in message
+        assert "by step 'x' (step_x)" in message
+        assert "pip install shoez_no_such_dependency_zzz" in message
+
+    def test_lists_every_missing_package(self) -> None:
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(
+                ["shoez_no_such_a_zzz", "numpy", "shoez_no_such_b_zzz"],
+                purpose="by step 'x'",
+            )
+        message = str(excinfo.value)
+        assert "shoez_no_such_a_zzz" in message
+        assert "shoez_no_such_b_zzz" in message
+        assert "numpy" not in message  # installed; not reported
+        # The two install commands read as a list, not run together.
+        assert (
+            "`pip install shoez_no_such_a_zzz` and `pip install shoez_no_such_b_zzz`"
+            in message
+        )
+
+    def test_version_constraint_is_kept_in_the_hint(self) -> None:
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(["shoez_no_such_dependency_zzz>=1.3"], purpose="by step")
+        assert "pip install 'shoez_no_such_dependency_zzz>=1.3'" in str(excinfo.value)
+
+    def test_known_extra_is_used_for_a_bare_name(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            _dependencies, "module_available", lambda name: name != "numpy"
+        )
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(["numpy"], purpose="by step 'x'")
+        assert "shoez[numpy]" in str(excinfo.value)
+
+    def test_distribution_name_maps_to_its_module(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ``scikit-learn`` is the requirement name; ``sklearn`` is what imports.
+        seen: list[str] = []
+
+        def fake_available(name: str) -> bool:
+            seen.append(name)
+            return True
+
+        monkeypatch.setattr(_dependencies, "module_available", fake_available)
+        require_packages(["scikit-learn>=1.3"], purpose="by step 'x'")
+        assert seen == ["sklearn"]
+
+    def test_hint_installs_the_distribution_not_the_module(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ``pip install sklearn`` is a deprecated stub, so the hint must name
+        # the distribution even though ``sklearn`` is what gets imported.
+        monkeypatch.setattr(_dependencies, "module_available", lambda name: False)
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(["scikit-learn"], purpose="by step 'x'")
+        message = str(excinfo.value)
+        assert "shoez[sklearn]" in message  # extra is keyed by module name
+        assert "pip install scikit-learn" in message
+        assert "pip install sklearn" not in message
+
+    def test_known_extra_survives_a_version_constraint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            _dependencies, "module_available", lambda name: name != "numpy"
+        )
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(["numpy>=1.24"], purpose="by step 'x'")
+        message = str(excinfo.value)
+        assert "shoez[numpy]" in message
+        assert "pip install 'numpy>=1.24'" in message
+
+    def test_distribution_name_is_canonicalized(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ``-``, ``_``, and ``.`` are interchangeable in a distribution name
+        # (PEP 503), so every spelling must find the same module.
+        seen: list[str] = []
+
+        def fake_available(name: str) -> bool:
+            seen.append(name)
+            return True
+
+        monkeypatch.setattr(_dependencies, "module_available", fake_available)
+        require_packages(["Scikit_Learn>=1.3"], purpose="by step 'x'")
+        assert seen == ["sklearn"]
+
+    def test_dashes_become_underscores_for_unknown_names(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: list[str] = []
+
+        def fake_available(name: str) -> bool:
+            seen.append(name)
+            return True
+
+        monkeypatch.setattr(_dependencies, "module_available", fake_available)
+        require_packages(["some-plugin"], purpose="by step 'x'")
+        assert seen == ["some_plugin"]
 
 
 # Block ``polars`` (and submodules) from importing, then import the opt-in
