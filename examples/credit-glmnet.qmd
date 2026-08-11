@@ -32,9 +32,8 @@ PARITY NOTES:
 originals export these datasets from R's modeldata at first run.*
 :::
 
+## Specify
 ```{python}
-# --- Specification --------------------------------------------------------
-
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LogisticRegression
@@ -85,18 +84,16 @@ lambdas = np.logspace(-5, -1, 20)
 param_grid = {"model__C": 1.0 / (credit_train.height * lambdas)}
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=4943)
 ```
+## Fit
 ```{python}
-# --- Fitting --------------------------------------------------------------
-
 X_train = credit_train.drop("Status")
 y_train = credit_train["Status"]
 search = GridSearchCV(pipe, param_grid, cv=cv, scoring="roc_auc", refit=True)
 search.fit(X_train, y_train)
 fitted = credit_rec.fit(credit_train)     # the recipe alone
 ```
+## Report
 ```{python}
-# --- Reporting ------------------------------------------------------------
-
 print(f"--- best C: {search.best_params_['model__C']:.3g} "
       f"(cv roc_auc {search.best_score_:.3f}) ---")
 print("\n--- transformed training head (imputed, encoded, scaled) ---")

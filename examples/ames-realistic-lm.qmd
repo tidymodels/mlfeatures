@@ -27,10 +27,9 @@ PARITY NOTES:
 originals export these datasets from R's modeldata at first run.*
 :::
 
+## Specify
 ```{python}
 #| warning: false
-# --- Specification --------------------------------------------------------
-
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LinearRegression
@@ -76,10 +75,9 @@ lm_wflow = Pipeline([
     ("model", LinearRegression()),
 ])
 ```
+## Fit
 ```{python}
 #| warning: false
-# --- Fitting --------------------------------------------------------------
-
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
 
@@ -95,9 +93,8 @@ print(f"--- 5-fold CV rmse: {cv_rmse.mean():.4f} (+/- {cv_rmse.std():.4f}) ---")
 lm_wflow.fit(X_train, y_train)
 fitted = ames_rec.fit(ames_train)
 ```
+## Report
 ```{python}
-# --- Reporting ------------------------------------------------------------
-
 print("\n--- transformed test head ---")
 print(fitted.transform(ames_test).head())
 

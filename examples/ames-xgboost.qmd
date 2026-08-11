@@ -31,9 +31,8 @@ PARITY NOTES (differences from example.R that are structural, not bugs):
 originals export these datasets from R's modeldata at first run.*
 :::
 
+## Specify
 ```{python}
-# --- Specification --------------------------------------------------------
-
 import numpy as np
 import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
@@ -85,9 +84,8 @@ param_grid = {
 }
 cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 ```
+## Fit
 ```{python}
-# --- Fitting --------------------------------------------------------------
-
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
 
@@ -100,9 +98,8 @@ search.fit(X_train, y_train)
 
 fitted = xgboost_recipe.fit(ames_train)   # the recipe alone
 ```
+## Report
 ```{python}
-# --- Reporting ------------------------------------------------------------
-
 results = (
     pl.DataFrame({
         "trees": search.cv_results_["param_model__n_estimators"],

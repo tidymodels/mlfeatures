@@ -27,9 +27,8 @@ PARITY NOTES:
 originals export these datasets from R's modeldata at first run.*
 :::
 
+## Specify
 ```{python}
-# --- Specification --------------------------------------------------------
-
 import polars as pl
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
@@ -61,9 +60,8 @@ bean_rec = (
     .add(StepNormalize(s.numeric_predictors()))
 )
 ```
+## Fit
 ```{python}
-# --- Fitting --------------------------------------------------------------
-
 # fit() ~ prep(); transform() ~ bake() — the chapter doubles as the book's
 # prep/bake tutorial, and this file doubles as shoez's fit/transform one.
 fitted = bean_rec.fit(bean_train)
@@ -74,9 +72,8 @@ num_cols = [c for c in bean_val_processed.columns if c != "class"]
 pca = PCA(n_components=4, random_state=1601)
 pca.fit(fitted.transform(bean_train).select(num_cols))
 ```
+## Report
 ```{python}
-# --- Reporting ------------------------------------------------------------
-
 print("--- transformed validation head (zv -> normalize) ---")
 print(bean_val_processed.head())
 

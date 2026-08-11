@@ -26,9 +26,8 @@ PARITY NOTES:
 originals export these datasets from R's modeldata at first run.*
 :::
 
+## Specify
 ```{python}
-# --- Specification --------------------------------------------------------
-
 import numpy as np
 import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
@@ -82,9 +81,8 @@ param_grid = {
 }
 cv = KFold(n_splits=5, shuffle=True, random_state=1502)
 ```
+## Fit
 ```{python}
-# --- Fitting --------------------------------------------------------------
-
 X_train = concrete_train.drop("compressive_strength")
 y_train = concrete_train["compressive_strength"]
 search = GridSearchCV(pipe, param_grid, cv=cv,
@@ -92,9 +90,8 @@ search = GridSearchCV(pipe, param_grid, cv=cv,
 search.fit(X_train, y_train)
 fitted = normalized_rec.fit(concrete_train)   # the recipe alone
 ```
+## Report
 ```{python}
-# --- Reporting ------------------------------------------------------------
-
 print("--- best CV config ---")
 print(search.best_params_, f"cv rmse: {-search.best_score_:.2f}")
 print("\n--- transformed test head (z-scored ingredients) ---")

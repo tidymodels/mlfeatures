@@ -24,9 +24,8 @@ PARITY NOTES:
 originals export these datasets from R's modeldata at first run.*
 :::
 
+## Specify
 ```{python}
-# --- Specification --------------------------------------------------------
-
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LinearRegression
@@ -69,17 +68,15 @@ lm_wflow = Pipeline([
     ("model", LinearRegression()),
 ])
 ```
+## Fit
 ```{python}
-# --- Fitting --------------------------------------------------------------
-
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
 lm_wflow.fit(X_train, y_train)            # the sklearn pipeline
 fitted = simple_ames.fit(ames_train)      # the recipe alone
 ```
+## Report
 ```{python}
-# --- Reporting ------------------------------------------------------------
-
 print("--- transformed test head ---")
 print(fitted.transform(ames_test).head())
 
