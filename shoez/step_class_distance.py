@@ -398,7 +398,8 @@ class StepClassDistance(Step):
         If ``True``, the source columns are kept alongside the distance columns
         instead of being dropped. Default ``False``.
     role
-        Role assigned to the new distance columns. Default ``"predictor"``.
+        Role assigned to the new distance columns (see `Roles`). Default
+        ``"predictor"``.
     id
         Stable step identifier. Default ``"class_distance"``.
 

@@ -79,7 +79,7 @@ class StepIntercept(Step):
         Name of the new column. Default ``"intercept"``. A `Recipe` rejects the
         step if the frame already has a column of this name.
     role
-        Role intended for the new column. Default ``"predictor"``.
+        Role assigned to the new column (see `Roles`). Default ``"predictor"``.
     id
         Stable step identifier. Default ``"intercept"``.
 

@@ -89,8 +89,9 @@ class StepMutate(Step):
         returning that column's value (a narwhals expression or series). Must be
         a non-empty ``dict`` of ``str`` names to callables.
     role
-        Role assigned to any *new* columns the mutations create. Columns
-        overwritten in place keep their existing role. Default ``"predictor"``.
+        Role assigned to any *new* columns the mutations create (see `Roles`).
+        Columns overwritten in place keep their existing role. Default
+        ``"predictor"``.
     id
         Stable step identifier. Default ``"mutate"``.
 

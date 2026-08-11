@@ -363,7 +363,8 @@ class StepPolynomial(Step):
         If ``True``, the source columns are kept alongside their polynomial
         terms instead of being dropped. Default ``False``.
     role
-        Role assigned to the new polynomial columns. Default ``"predictor"``.
+        Role assigned to the new polynomial columns (see `Roles`). Default
+        ``"predictor"``.
     id
         Stable step identifier. Default ``"polynomial"``.
 
