@@ -25,3 +25,4 @@ htmlcov/
 # great-docs (ephemeral build output)
 great-docs/
 .quarto/
+_freeze/
