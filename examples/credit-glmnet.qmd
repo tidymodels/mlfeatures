@@ -33,6 +33,8 @@ originals export these datasets from R's modeldata at first run.*
 :::
 
 ```{python}
+# --- Specification --------------------------------------------------------
+
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LogisticRegression
@@ -43,9 +45,8 @@ from sklearn.pipeline import Pipeline
 from shoez import (Recipe, RecipeTransformer, StepDropZeroVariance, StepDummy,
                    StepImputeMedian, StepImputeMode, StepNormalize)
 from shoez import Selectors as s
-```
-```{python}
-# --- Data + split -----------------------------------------------------------
+
+# ── Data + split
 
 credit = pl.read_parquet("data/credit.parquet")  # 4,454 x 14, NAs
 credit = credit.with_columns(
@@ -56,9 +57,8 @@ credit_train, credit_test = train_test_split(
     credit, train_size=0.75, stratify=credit["Status"],
     random_state=55
 )
-```
-```{python}
-# --- Recipe: impute -> (other GAP) -> dummy -> filter -> normalize ----------
+
+# ── Recipe: impute -> (other GAP) -> dummy -> filter -> normalize
 
 credit_rec = (
     Recipe(data=credit_train, outcome="Status")
@@ -71,9 +71,8 @@ credit_rec = (
     .add(StepDropZeroVariance(s.predictors()))
     .add(StepNormalize(s.numeric_predictors()))
 )
-```
-```{python}
-# --- Model + workflow + penalty tuning --------------------------------------
+
+# ── Model + workflow + penalty tuning
 
 pipe = Pipeline([
     ("recipe", RecipeTransformer(credit_rec)),
@@ -85,23 +84,25 @@ pipe = Pipeline([
 lambdas = np.logspace(-5, -1, 20)
 param_grid = {"model__C": 1.0 / (credit_train.height * lambdas)}
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=4943)
+```
+```{python}
+# --- Fitting --------------------------------------------------------------
 
 X_train = credit_train.drop("Status")
 y_train = credit_train["Status"]
 search = GridSearchCV(pipe, param_grid, cv=cv, scoring="roc_auc", refit=True)
 search.fit(X_train, y_train)
+fitted = credit_rec.fit(credit_train)     # the recipe alone
+```
+```{python}
+# --- Reporting ------------------------------------------------------------
+
 print(f"--- best C: {search.best_params_['model__C']:.3g} "
       f"(cv roc_auc {search.best_score_:.3f}) ---")
-```
-```{python}
-# --- Proof the recipe works: transformed training head ----------------------
-
-fitted = credit_rec.fit(credit_train)
 print("\n--- transformed training head (imputed, encoded, scaled) ---")
 print(fitted.transform(credit_train).head())
-```
-```{python}
-# --- Holdout metrics --------------------------------------------------------
+
+# ── Holdout metrics
 
 X_test = credit_test.drop("Status")
 y_test = credit_test["Status"]

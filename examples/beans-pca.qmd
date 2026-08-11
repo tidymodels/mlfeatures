@@ -28,20 +28,20 @@ originals export these datasets from R's modeldata at first run.*
 :::
 
 ```{python}
+# --- Specification --------------------------------------------------------
+
 import polars as pl
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 
 from shoez import Recipe, StepDropZeroVariance, StepNormalize
 from shoez import Selectors as s
-```
-```{python}
-# --- Data -------------------------------------------------------------------
+
+# ── Data
 
 beans = pl.read_parquet("data/beans.parquet")  # 13,611 x 17
-```
-```{python}
-# --- 3-way split (75 / 12.5 / 12.5, stratified by class) --------------------
+
+# ── 3-way split (75 / 12.5 / 12.5, stratified by class)
 
 bean_train, rest = train_test_split(
     beans, train_size=0.75, stratify=beans["class"],
@@ -51,9 +51,8 @@ bean_validation, bean_test = train_test_split(
     rest, train_size=0.50, stratify=rest["class"],
     random_state=1601
 )
-```
-```{python}
-# --- Base recipe: zv -> (orderNorm GAP) -> normalize ------------------------
+
+# ── Base recipe: zv -> (orderNorm GAP) -> normalize
 
 bean_rec = (
     Recipe(data=bean_train, outcome="class")
@@ -61,21 +60,25 @@ bean_rec = (
     # .add(StepOrderNorm(s.numeric_predictors()))   # 🧪 GAP: no analog at all
     .add(StepNormalize(s.numeric_predictors()))
 )
+```
+```{python}
+# --- Fitting --------------------------------------------------------------
 
 # fit() ~ prep(); transform() ~ bake() — the chapter doubles as the book's
 # prep/bake tutorial, and this file doubles as shoez's fit/transform one.
 fitted = bean_rec.fit(bean_train)
-
 bean_val_processed = fitted.transform(bean_validation)
-print("--- transformed validation head (zv -> normalize) ---")
-print(bean_val_processed.head())
-```
-```{python}
-# --- PCA (sklearn stopgap for the unbuilt StepPCA) --------------------------
 
+# PCA (the sklearn stopgap for the unbuilt StepPCA), estimated on TRAINING:
 num_cols = [c for c in bean_val_processed.columns if c != "class"]
 pca = PCA(n_components=4, random_state=1601)
-pca.fit(fitted.transform(bean_train).select(num_cols))    # estimated on TRAINING
+pca.fit(fitted.transform(bean_train).select(num_cols))
+```
+```{python}
+# --- Reporting ------------------------------------------------------------
+
+print("--- transformed validation head (zv -> normalize) ---")
+print(bean_val_processed.head())
 
 scores = pl.DataFrame(
     pca.transform(bean_val_processed.select(num_cols)),
@@ -83,9 +86,8 @@ scores = pl.DataFrame(
 ).with_columns(bean_val_processed["class"])               # kept for coloring
 print("\n--- validation-set PC scores (plot-ready) ---")
 print(scores.head())
-```
-```{python}
-# --- Loadings + variance (what tidy(id = "pca") gives in R) -----------------
+
+# ── Loadings + variance (what tidy(id = "pca") gives in R)
 
 loadings = pl.DataFrame({"term": num_cols}).with_columns([
     pl.Series(f"PC{i+1}", pca.components_[i]) for i in range(4)

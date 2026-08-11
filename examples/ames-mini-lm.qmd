@@ -25,6 +25,8 @@ originals export these datasets from R's modeldata at first run.*
 :::
 
 ```{python}
+# --- Specification --------------------------------------------------------
+
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LinearRegression
@@ -33,9 +35,8 @@ from sklearn.pipeline import Pipeline
 
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s
-```
-```{python}
-# --- Data + outcome transform (outside the recipe, per TMwR Ch. 5) ----------
+
+# ── Data + outcome transform (outside the recipe, per TMwR Ch. 5)
 
 ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
@@ -46,44 +47,43 @@ ames = ames.with_columns(
     # no transform step yet, so it happens here, outside the replay boundary.
     pl.col("Gr_Liv_Area").log(base=10),
 )
-```
-```{python}
-# --- Split (stratified 80/20 by outcome quartile, mirroring initial_split) --
+
+# ── Split (stratified 80/20 by outcome quartile, mirroring initial_split)
 
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
-```
-```{python}
-# --- Recipe (what remains of simple_ames after the log moved out) -----------
+
+# ── Recipe (what remains of simple_ames after the log moved out)
 
 simple_ames = (
     Recipe(data=ames_train, outcome="Sale_Price")
     .add(StepDummy(s.nominal_predictors()))
 )
-```
-```{python}
-# --- Model + workflow (sklearn Pipeline via RecipeTransformer) --------------
+
+# ── Model + workflow (sklearn Pipeline via RecipeTransformer)
 
 lm_wflow = Pipeline([
     ("recipe", RecipeTransformer(simple_ames)),
     ("model", LinearRegression()),
 ])
+```
+```{python}
+# --- Fitting --------------------------------------------------------------
 
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
-lm_wflow.fit(X_train, y_train)
+lm_wflow.fit(X_train, y_train)            # the sklearn pipeline
+fitted = simple_ames.fit(ames_train)      # the recipe alone
 ```
 ```{python}
-# --- Proof the recipe works: transformed head of the test set ---------------
+# --- Reporting ------------------------------------------------------------
 
-fitted = simple_ames.fit(ames_train)
 print("--- transformed test head ---")
 print(fitted.transform(ames_test).head())
-```
-```{python}
-# --- Holdout metrics --------------------------------------------------------
+
+# ── Holdout metrics
 
 X_test = ames_test.drop("Sale_Price")
 y_test = ames_test["Sale_Price"]

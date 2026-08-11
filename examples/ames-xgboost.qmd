@@ -32,6 +32,8 @@ originals export these datasets from R's modeldata at first run.*
 :::
 
 ```{python}
+# --- Specification --------------------------------------------------------
+
 import numpy as np
 import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
@@ -40,9 +42,8 @@ from xgboost import XGBRegressor
 
 from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
 from shoez import Selectors as s
-```
-```{python}
-# --- Data + outcome transform (outside the recipe, per TMwR Ch. 5) ----------
+
+# ── Data + outcome transform (outside the recipe, per TMwR Ch. 5)
 
 PREDICTORS = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
               "Latitude", "Longitude"]
@@ -50,17 +51,15 @@ PREDICTORS = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
 ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(PREDICTORS + ["Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
-```
-```{python}
-# --- Split (stratified 80/20 by outcome quartile, mirroring initial_split) --
+
+# ── Split (stratified 80/20 by outcome quartile, mirroring initial_split)
 
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
-```
-```{python}
-# --- Recipe (shoez port of the usemodels::use_xgboost() recipe) -------------
+
+# ── Recipe (shoez port of the usemodels::use_xgboost() recipe)
 
 # R:  step_novel(all_nominal_predictors()) %>%        <- GAP, omitted (see header)
 #     step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
@@ -70,23 +69,24 @@ xgboost_recipe = (
     .add(StepOneHot(s.nominal_predictors()))
     .add(StepDropZeroVariance(s.predictors()))
 )
-```
-```{python}
-# --- Model spec + workflow (sklearn Pipeline via RecipeTransformer) ---------
+
+# ── Model spec + workflow (sklearn Pipeline via RecipeTransformer)
 
 pipe = Pipeline([
     ("recipe", RecipeTransformer(xgboost_recipe)),
     ("model", XGBRegressor(objective="reg:squarederror", random_state=69305)),
 ])
-```
-```{python}
-# --- Small regular grid: 2 x 3 = 6 candidates (as in example.R) -------------
+
+# ── Small regular grid: 2 x 3 = 6 candidates (as in example.R)
 
 param_grid = {
     "model__n_estimators": [500, 1000],        # trees
     "model__learning_rate": [0.01, 0.05, 0.1], # learn_rate
 }
 cv = KFold(n_splits=5, shuffle=True, random_state=1001)
+```
+```{python}
+# --- Fitting --------------------------------------------------------------
 
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
@@ -97,9 +97,11 @@ search = GridSearchCV(
     refit=True, n_jobs=1,
 )
 search.fit(X_train, y_train)
+
+fitted = xgboost_recipe.fit(ames_train)   # the recipe alone
 ```
 ```{python}
-# --- Tuning results + final test metrics ------------------------------------
+# --- Reporting ------------------------------------------------------------
 
 results = (
     pl.DataFrame({
@@ -121,11 +123,8 @@ rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
             .select(pl.corr("y", "pred")).item() ** 2)
 print(f"\n--- test metrics (best: {search.best_params_}) ---")
 print(f"rmse: {rmse:.4f}   rsq: {rsq:.3f}")
-```
-```{python}
-# --- Baked head (proof the recipe works standalone, sans sklearn) -----------
 
-fitted = xgboost_recipe.fit(ames_train)
+# Baked head: proof the recipe works standalone, sans sklearn.
 print("\n--- transformed training head (shoez fit/transform, no pipeline) ---")
 print(fitted.transform(ames_train).head())
 print("\n--- lineage: columns the one-hot step produced ---")
