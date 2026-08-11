@@ -86,9 +86,13 @@ cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 ```
 ## Fit
 ```{python}
+#| warning: false
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
 
+# CV folds warn: rare Neighborhood levels (e.g. 'Landmark') land in held-out
+# folds unseen at fit; the one-hot emits nulls for them, and xgboost handles
+# nulls natively — exactly why boosting's recipe can skip the novel guard.
 search = GridSearchCV(
     pipe, param_grid, cv=cv,
     scoring="neg_root_mean_squared_error",

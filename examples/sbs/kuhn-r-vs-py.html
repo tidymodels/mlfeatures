@@ -104,6 +104,7 @@ credit_rec &lt;-
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
+<span class="cm">#</span>
 
 glmnet_spec &lt;-
   logistic_reg(penalty = tune(), mixture = 1) %&gt;%
@@ -184,6 +185,7 @@ credit_rec = (
 
 <span class="bn"># Model + penalty tuning ---------------------------------------------------</span>
 <span class="cm"># Lasso-penalized logistic; tune the penalty on stratified 5-fold CV.</span>
+<span class="df"># DIFF: sklearn 1.8+ speaks glmnet: l1_ratio IS mixture (1.0 = lasso).</span>
 <span class="df"># DIFF: the glmnet mapping is C = 1/(n*lambda), NOT 1/lambda — glmnet</span>
 <span class="df"># minimizes MEAN loss + lambda*penalty, sklearn C*TOTAL loss + penalty.</span>
 <span class="df"># A first draft used 1/lambda; the giveaway was best-C pinning to the</span>
@@ -191,7 +193,7 @@ credit_rec = (
 
 pipe = Pipeline([
     (&quot;recipe&quot;, RecipeTransformer(credit_rec)),
-    (&quot;model&quot;, LogisticRegression(penalty=&quot;l1&quot;, solver=&quot;liblinear&quot;,
+    (&quot;model&quot;, LogisticRegression(l1_ratio=1.0, solver=&quot;liblinear&quot;,
                                  max_iter=5000)),
 ])
 

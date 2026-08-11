@@ -21,7 +21,7 @@ PARITY NOTES:
    dataset's whole point is its NAs, and polars would read them as the
    string "NA" (pandas auto-parses them; polars does not).
  - Model mapping: logistic_reg(penalty = tune(), mixture = 1) + glmnet ->
-   LogisticRegression(penalty="l1", solver="liblinear") with C = 1/(n*lambda):
+   LogisticRegression(l1_ratio=1.0, solver="liblinear") with C = 1/(n*lambda):
    glmnet minimizes MEAN loss + lambda*penalty; sklearn minimizes
    C*TOTAL loss + penalty. (A first draft used C = 1/lambda — off by a
    factor of n; the giveaway was best-C pinning to the grid edge.)
@@ -75,7 +75,9 @@ credit_rec = (
 
 pipe = Pipeline([
     ("recipe", RecipeTransformer(credit_rec)),
-    ("model", LogisticRegression(penalty="l1", solver="liblinear",
+    # sklearn 1.8+ adopted glmnet's own vocabulary: l1_ratio IS mixture
+    # (mixture = 1 -> l1_ratio = 1.0, pure lasso)
+    ("model", LogisticRegression(l1_ratio=1.0, solver="liblinear",
                                  max_iter=5000)),
 ])
 
