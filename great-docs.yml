@@ -246,6 +246,14 @@ reference:
       - name: StepError
         members: false
 
+# Custom Sections
+# ---------------
+# Extra navbar sections beyond the user guide and API reference.
+sections:
+  - title: Examples
+    dir: examples
+    navbar_after: User Guide
+
 # Site URL
 # --------
 # Canonical address of the deployed documentation site.

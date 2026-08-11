@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TMWR-03: R vs Python, line-matched</title>
+<style>
+:root {
+  --paper:#FBFAF6; --ink:#26241F; --muted:#6E695E; --line:#E2DFD4; --card:#F3F1E9;
+  --accent:#A05E12; --blue:#41628A; --gap:#8A2F1D;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --serif:"Iowan Old Style",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --paper:#16171A; --ink:#E8E6DF; --muted:#9B978C; --line:#2D2F35; --card:#1E2025;
+  --accent:#D89A4E; --blue:#83A7CF; --gap:#E09383;
+} }
+html { background:var(--paper); }
+body { font-family:var(--sans); color:var(--ink); margin:0; padding:2rem 1.25rem 4rem; }
+.wrap { max-width:110rem; margin:0 auto; }
+h1 { font-family:var(--serif); font-size:1.5rem; font-weight:600; margin:0 0 .2rem; }
+.lede { color:var(--muted); font-size:.85rem; margin:0 0 1.2rem; }
+.nav { font-size:.78rem; font-family:var(--mono); margin:0 0 .8rem; }
+.nav a { color:var(--blue); text-decoration:none; margin-right:.7rem; }
+.nav a.here { color:var(--accent); font-weight:700; }
+.cols { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.pane h2 { font-family:var(--mono); font-size:.8rem; margin:0 0 .4rem; }
+.pane.r h2 { color:var(--accent); }
+.pane.py h2 { color:var(--blue); }
+pre { background:var(--card); border:1px solid var(--line); border-radius:8px; margin:0;
+      padding:.8rem 1rem; overflow-x:auto; font-family:var(--mono);
+      font-size:.72rem; line-height:1.5; }
+.bn { font-weight:700; }
+.cm { color:var(--muted); }
+.df { color:var(--accent); }
+.gp { color:var(--gap); font-weight:600; }
+ul.idx { line-height:1.9; }
+@media (max-width: 70rem) { .cols { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>TMWR-03 · ames realistic + lm — R vs Python, line-matched</h1>
+<p class="nav"><a href="sbs-index.html">index</a> · <a href="tmwr01-r-vs-py.html">TMWR-01</a> <a class="here" href="tmwr03-r-vs-py.html">TMWR-03</a> <a href="tmwr11-r-vs-py.html">TMWR-11</a> <a href="tmwr14-r-vs-py.html">TMWR-14</a> <a href="tmwr16-r-vs-py.html">TMWR-16</a> <a href="kuhn-r-vs-py.html">KUHN</a></p>
+<p class="lede">Identical section banners and shared descriptions in both scripts;
+<span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
+explain what changes; <span style="color:var(--gap)">red = shoez gap</span>.
+Lightly condensed from <code>candidates/</code> — R: CV rmse 0.0791 · Python ran: test 0.0825, CV = nan — unseen fold-levels nulled predictions; the gaps broke CV itself (see py-run-results.md).</p>
+<div class="cols">
+<div class="pane r"><h2>example.R — tidymodels (run)</h2>
+<pre><span class="bn"># Setup --------------------------------------------------------------------</span>
+<span class="cm"># Load the modeling stack.</span>
+<span class="cm">#</span>
+
+library(tidymodels)
+tidymodels_prefer()
+
+
+
+
+
+
+<span class="bn"># Data + outcome transform -------------------------------------------------</span>
+<span class="cm"># Six predictors now (adds Latitude/Longitude); log10 the outcome pre-split.</span>
+<span class="cm">#</span>
+
+data(ames, package = &quot;modeldata&quot;)
+ames &lt;- ames %&gt;% mutate(Sale_Price = log10(Sale_Price))
+
+
+
+
+<span class="bn"># Split --------------------------------------------------------------------</span>
+<span class="cm"># Stratified 80/20 split on the outcome (same as TMWR-01).</span>
+
+set.seed(502)
+ames_split &lt;- initial_split(ames, prop = 0.80, strata = Sale_Price)
+ames_train &lt;- training(ames_split)
+ames_test  &lt;- testing(ames_split)
+
+<span class="bn"># Recipe -------------------------------------------------------------------</span>
+<span class="cm"># The canonical recipe. Ordering is load-bearing twice: other pools rare</span>
+<span class="cm"># levels BEFORE dummy; interact targets the GENERATED Bldg_Type_* columns.</span>
+<span class="cm">#</span>
+<span class="cm">#</span>
+<span class="cm">#</span>
+<span class="cm">#</span>
+<span class="cm">#</span>
+
+ames_rec &lt;-
+  recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built +
+           Bldg_Type + Latitude + Longitude, data = ames_train) %&gt;%
+  step_log(Gr_Liv_Area, base = 10) %&gt;%
+  step_other(Neighborhood, threshold = 0.01) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_interact( ~ Gr_Liv_Area:starts_with(&quot;Bldg_Type_&quot;) ) %&gt;%
+  step_ns(Latitude, Longitude, deg_free = 20)
+
+
+
+<span class="bn"># Resampled performance ----------------------------------------------------</span>
+<span class="cm"># 5-fold CV estimate of the whole pipeline (recipe re-fit per fold).</span>
+<span class="cm">#</span>
+<span class="cm">#</span>
+
+set.seed(1001)
+ames_folds &lt;- vfold_cv(ames_train, v = 5)
+
+lm_res &lt;- fit_resamples(lm_wflow, resamples = ames_folds)
+collect_metrics(lm_res)
+<span class="cm"># run result: CV rmse 0.0791, rsq 0.798</span>
+
+
+<span class="bn"># Final fit + proof + metrics ----------------------------------------------</span>
+<span class="cm"># Fit on all of training; transform the test set; score once.</span>
+
+lm_fit &lt;- fit(lm_wflow, ames_train)
+
+extract_recipe(lm_fit, estimated = TRUE) %&gt;%
+  bake(new_data = ames_test) %&gt;% head()
+
+predict(lm_fit, ames_test) %&gt;%
+  bind_cols(ames_test %&gt;% select(Sale_Price)) %&gt;%
+  reg_metrics(truth = Sale_Price, estimate = .pred)
+</pre></div>
+<div class="pane py"><h2>example.py — shoez + sklearn (run)</h2>
+<pre><span class="bn"># Setup --------------------------------------------------------------------</span>
+<span class="cm"># Load the modeling stack.</span>
+<span class="df"># DIFF: adds cross-validation imports; otherwise as TMWR-01.</span>
+
+import numpy as np
+import polars as pl
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from shoez import Recipe, RecipeTransformer, StepDummy
+from shoez import Selectors as s
+
+<span class="bn"># Data + outcome transform -------------------------------------------------</span>
+<span class="cm"># Six predictors now (adds Latitude/Longitude); log10 the outcome pre-split.</span>
+<span class="gp"># DIFF (GAP): step_log again worked around pre-recipe (see TMWR-01).</span>
+
+ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
+ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Year_Built&quot;, &quot;Bldg_Type&quot;,
+                    &quot;Latitude&quot;, &quot;Longitude&quot;, &quot;Sale_Price&quot;])
+ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10),
+                         pl.col(&quot;Gr_Liv_Area&quot;).log(base=10))  # was step_log
+
+<span class="bn"># Split --------------------------------------------------------------------</span>
+<span class="cm"># Stratified 80/20 split on the outcome (same as TMWR-01).</span>
+
+strata = ames[&quot;Sale_Price&quot;].qcut(4, labels=[&quot;q1&quot;,&quot;q2&quot;,&quot;q3&quot;,&quot;q4&quot;])
+ames_train, ames_test = train_test_split(
+    ames, train_size=0.80, stratify=strata, random_state=502
+)
+
+<span class="bn"># Recipe -------------------------------------------------------------------</span>
+<span class="cm"># The canonical recipe. Ordering is load-bearing twice: other pools rare</span>
+<span class="cm"># levels BEFORE dummy; interact targets the GENERATED Bldg_Type_* columns.</span>
+<span class="gp"># DIFF (GAP): step_other unbuilt — rare Neighborhoods keep their own dummies,</span>
+<span class="gp"># so the design matrix is wider and sparser than R&#x27;s.</span>
+<span class="gp"># DIFF (GAP): step_interact unbuilt — interactions over generated columns is</span>
+<span class="gp"># exactly shoez&#x27;s has_source pitch; target form shown in place.</span>
+<span class="gp"># DIFF (GAP): step_ns unbuilt — no spline steps at all.</span>
+
+ames_rec = (
+    Recipe(data=ames_train, outcome=&quot;Sale_Price&quot;)
+
+    # .add(StepOther(s.col(&quot;Neighborhood&quot;), threshold=0.01))   # GAP
+    .add(StepDummy(s.nominal_predictors()))
+    # .add(StepInteract(s.col(&quot;Gr_Liv_Area&quot;)
+    #                   * s.starts_with(&quot;Bldg_Type_&quot;)))         # GAP
+    # .add(StepSplineNatural(s.col(&quot;Latitude&quot;, &quot;Longitude&quot;),
+    #                        deg_free=20))                      # GAP
+)
+
+<span class="bn"># Resampled performance ----------------------------------------------------</span>
+<span class="cm"># 5-fold CV estimate of the whole pipeline (recipe re-fit per fold).</span>
+<span class="df"># DIFF: fit_resamples -&gt; cross_val_score over the Pipeline — both re-estimate</span>
+<span class="df"># the recipe inside each fold, so there&#x27;s no leakage in either language.</span>
+
+cv = KFold(n_splits=5, shuffle=True, random_state=1001)
+
+cv_rmse = -cross_val_score(lm_wflow, X_train, y_train, cv=cv,
+                           scoring=&quot;neg_root_mean_squared_error&quot;)
+print(cv_rmse.mean())
+<span class="cm"># ran: nan! unseen fold-level (&#x27;Landmark&#x27;) nulled predictions — the</span>
+<span class="cm"># missing step_other doesn&#x27;t just cost accuracy, it breaks CV</span>
+
+<span class="bn"># Final fit + proof + metrics ----------------------------------------------</span>
+<span class="cm"># Fit on all of training; transform the test set; score once.</span>
+
+lm_wflow.fit(X_train, y_train)
+
+ames_rec.fit(ames_train).transform(ames_test).head()
+
+pred = lm_wflow.predict(X_test)
+rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
+rsq  = float(pl.DataFrame({&quot;y&quot;: y_test, &quot;pred&quot;: pred})
+             .select(pl.corr(&quot;y&quot;, &quot;pred&quot;)).item() ** 2)
+</pre></div>
+</div>
+</div>
+</body>
+</html>

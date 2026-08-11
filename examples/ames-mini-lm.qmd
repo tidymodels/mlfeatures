@@ -1,0 +1,90 @@
+---
+title: "Ames mini: a first linear regression"
+---
+
+The book's first recipe — the R formula's implicit preprocessing made explicit and sequential. Deliberately tiny: the end-to-end arc is the lesson. Ported from [Tidy Modeling with R, ch. 8](https://www.tmwr.org/recipes).
+
+**Compare with R:** [side-by-side R ↔ Python](sbs/tmwr01-r-vs-py.html){target="_blank"} · R original: test rmse 0.0764, rsq 0.824 (log10 units).
+
+::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
+```
+PARITY NOTES:
+ - GAP: step_log(Gr_Liv_Area, base = 10) has no shoez analog (no individual-
+   transform steps yet; StepMutate is backlog priority 1). Worked around
+   PRE-recipe in polars — safe here because log is static (nothing learned),
+   but it means the transform is NOT replayed by the fitted recipe: new
+   frames must arrive already-logged. That trade *is* the escape-hatch lesson.
+ - StepDummy = step_dummy (k-1 indicators, first level as reference).
+ - Seeds don't transfer across languages; stratified 80/20 design matches.
+ - Ames exported from R on first run (no PyPI package): data/ames.csv.
+   polars gotcha: null_values="NA" is required — polars does not auto-parse
+   R's "NA" strings as nulls (pandas does).
+```
+*Docs version loads vendored parquet from `examples/data/`; the research
+originals export these datasets from R's modeldata at first run.*
+:::
+
+```{python}
+import numpy as np
+import polars as pl
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+
+from shoez import Recipe, RecipeTransformer, StepDummy
+from shoez import Selectors as s
+```
+## Data + outcome transform (outside the recipe, per TMwR Ch. 5)
+```{python}
+ames = pl.read_parquet("data/ames.parquet")
+ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
+                    "Sale_Price"])
+ames = ames.with_columns(
+    pl.col("Sale_Price").log(base=10),
+    # GAP workaround: R does this inside the recipe as step_log(); shoez has
+    # no transform step yet, so it happens here, outside the replay boundary.
+    pl.col("Gr_Liv_Area").log(base=10),
+)
+```
+## Split (stratified 80/20 by outcome quartile, mirroring initial_split)
+```{python}
+strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
+ames_train, ames_test = train_test_split(
+    ames, train_size=0.80, stratify=strata, random_state=502
+)
+```
+## Recipe (what remains of simple_ames after the log moved out)
+```{python}
+simple_ames = (
+    Recipe(data=ames_train, outcome="Sale_Price")
+    .add(StepDummy(s.nominal_predictors()))
+)
+```
+## Model + workflow (sklearn Pipeline via RecipeTransformer)
+```{python}
+lm_wflow = Pipeline([
+    ("recipe", RecipeTransformer(simple_ames)),
+    ("model", LinearRegression()),
+])
+
+X_train = ames_train.drop("Sale_Price")
+y_train = ames_train["Sale_Price"]
+lm_wflow.fit(X_train, y_train)
+```
+## Proof the recipe works: transformed head of the test set
+```{python}
+fitted = simple_ames.fit(ames_train)
+print("--- transformed test head ---")
+print(fitted.transform(ames_test).head())
+```
+## Holdout metrics
+```{python}
+X_test = ames_test.drop("Sale_Price")
+y_test = ames_test["Sale_Price"]
+pred = lm_wflow.predict(X_test)
+rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
+rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
+            .select(pl.corr("y", "pred")).item() ** 2)
+print(f"\nrmse: {rmse:.4f}   rsq: {rsq:.3f}")
+# R run result for comparison: rmse 0.0764, rsq 0.824 (log10 units)
+```

@@ -1,0 +1,97 @@
+---
+title: "Beans PCA: a recipe with no model"
+---
+
+The recipe is the product — extraction estimated on training data, judged on the validation set. No estimator anywhere. Ported from [Tidy Modeling with R, ch. 16](https://www.tmwr.org/dimensionality).
+
+**Compare with R:** [side-by-side R ↔ Python](sbs/tmwr16-r-vs-py.html){target="_blank"} · R original: PC1–PC4 variance 59.4 / 24.4 / … (with orderNorm).
+
+::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
+```
+The recipe IS the product: preprocessing estimated on training data, judged
+visually on the validation set. No estimator anywhere.
+
+PARITY NOTES:
+ - GAP (blocking): step_pca -> StepPCA is designed-but-unbuilt (backlog
+   priority 2). Stopgap: shoez does zv -> normalize, then sklearn's PCA
+   consumes fitted.transform(validation) OUTSIDE the recipe. When StepPCA
+   lands, the sklearn block collapses into .add(StepPCA(..., num_comp=4)).
+ - GAP: step_orderNorm (bestNormalize's ORQ transform) has no shoez analog
+   at all. Omitted: skewed shape features stay skewed; first run measured
+   the effect — PC1-4 variance 55.4/26.5/8.0/5.1%.
+ - R composes by piping MORE steps onto an already-prep()ed recipe and
+   re-prepping; shoez has no incremental fit — declared whole, fit once.
+ - beans exported from R on first run: data/beans.csv.
+```
+*Docs version loads vendored parquet from `examples/data/`; the research
+originals export these datasets from R's modeldata at first run.*
+:::
+
+```{python}
+import polars as pl
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+
+from shoez import Recipe, StepDropZeroVariance, StepNormalize
+from shoez import Selectors as s
+```
+## Data
+```{python}
+beans = pl.read_parquet("data/beans.parquet")  # 13,611 x 17
+```
+## 3-way split (75 / 12.5 / 12.5, stratified by class)
+```{python}
+bean_train, rest = train_test_split(
+    beans, train_size=0.75, stratify=beans["class"],
+    random_state=1601
+)
+bean_validation, bean_test = train_test_split(
+    rest, train_size=0.50, stratify=rest["class"],
+    random_state=1601
+)
+```
+## Base recipe: zv -> (orderNorm GAP) -> normalize
+```{python}
+bean_rec = (
+    Recipe(data=bean_train, outcome="class")
+    .add(StepDropZeroVariance(s.numeric_predictors()))
+    # .add(StepOrderNorm(s.numeric_predictors()))   # 🧪 GAP: no analog at all
+    .add(StepNormalize(s.numeric_predictors()))
+)
+
+# fit() ~ prep(); transform() ~ bake() — the chapter doubles as the book's
+# prep/bake tutorial, and this file doubles as shoez's fit/transform one.
+fitted = bean_rec.fit(bean_train)
+
+bean_val_processed = fitted.transform(bean_validation)
+print("--- transformed validation head (zv -> normalize) ---")
+print(bean_val_processed.head())
+```
+## PCA (sklearn stopgap for the unbuilt StepPCA)
+```{python}
+num_cols = [c for c in bean_val_processed.columns if c != "class"]
+pca = PCA(n_components=4, random_state=1601)
+pca.fit(fitted.transform(bean_train).select(num_cols))    # estimated on TRAINING
+
+scores = pl.DataFrame(
+    pca.transform(bean_val_processed.select(num_cols)),
+    schema=[f"PC{i+1}" for i in range(4)],
+).with_columns(bean_val_processed["class"])               # kept for coloring
+print("\n--- validation-set PC scores (plot-ready) ---")
+print(scores.head())
+```
+## Loadings + variance (what tidy(id = "pca") gives in R)
+```{python}
+loadings = pl.DataFrame({"term": num_cols}).with_columns([
+    pl.Series(f"PC{i+1}", pca.components_[i]) for i in range(4)
+])
+top = (loadings.unpivot(index="term", variable_name="component")
+       .with_columns(pl.col("value").abs().alias("abs_value"))
+       .sort(["component", "abs_value"], descending=[False, True])
+       .group_by("component", maintain_order=True).head(5))
+print("\n--- top 5 loadings per component ---")
+print(top)
+
+print("\n--- percent variance explained, PC1-PC4 ---")
+print((pca.explained_variance_ratio_ * 100).round(2))
+```
