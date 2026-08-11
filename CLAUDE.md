@@ -8,7 +8,7 @@ The full design specification lives in [`design/README.md`](design/README.md). R
 
 ## Development
 
-Tooling is managed with [`uv`](https://docs.astral.sh/uv/); always invoke tools via `uv run` so they use the project venv. Run these checks after writing or changing code — they mirror the CI pipeline in [`.github/workflows/ci.yml`](.github/workflows/ci.yml), so passing them locally means CI should pass:
+Tooling is managed with [`uv`](https://docs.astral.sh/uv/); always invoke tools via `uv run` so they use the project venv. The first `uv run` on a fresh clone creates `.venv` and installs the project plus all dev tooling from the committed `uv.lock` — no setup step or extra flags needed. Run these checks after writing or changing code — they mirror the CI pipeline in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (CI runs the same commands with `UV_LOCKED=1`, so it fails if the lockfile is stale), so passing them locally means CI should pass:
 
 ```bash
 uv run pytest                  # tests (add --cov --cov-report=term-missing for coverage)
@@ -25,6 +25,14 @@ Both type-checkers run in strict mode over `shoez/` and `extras/` (tests are exc
 When adding a new step, also add its `tests/test_step_x_infrastructure.py` subclassing `shoez.testing.StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass the contract before merging. The subclass supplies only `make_step()` and `training_data`; the checks themselves are written once in [`shoez/testing.py`](shoez/testing.py).
 
 When adding a new step, also add a matching `step_*` wrapper method to the `ShzNamespace` in [`shoez/polars.py`](shoez/polars.py) so the step is reachable through the `df.shz` accessor. Mirror the step's constructor signature and keep the one-line docstring pointing at the step class (e.g. `See \`StepDummy\`.`); without a wrapper the step is only reachable via the generic `df.shz.apply(...)`. The `TestWrapperStepParity` tests in [`tests/test_polars_accessor.py`](tests/test_polars_accessor.py) enforce this both ways: CI fails if a public step has no wrapper, or if a wrapper points at a step that no longer exists, so the accessor can never silently drift out of sync.
+
+### Dependencies
+
+Dependency versions are governed by [`uv.lock`](uv.lock). Never edit the lockfile by hand: change `pyproject.toml` via `uv add`/`uv remove` (or edit it directly and run `uv lock`), and commit `pyproject.toml` and `uv.lock` together. Runtime dependencies are declared as floors and float within their ranges; the linter and type-checkers are pinned exactly in the `dev` group so that lock refreshes never move the toolchain as a side effect. To upgrade a tool deliberately, bump its pin and re-lock, or for unpinned packages:
+
+```bash
+uv lock --upgrade-package narwhals   # reviewable diff; CI fails if the lock is stale
+```
 
 ## Error and warning messages
 

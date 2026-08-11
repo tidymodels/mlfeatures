@@ -120,7 +120,9 @@ def fit_pca(selected: Frame, num_comp: int) -> PcaFit:
     xc = complete - mean
     # full_matrices=False keeps Vt at shape (rank, n_features); its rows are the
     # principal axes. Cap the kept components at the number of rows returned.
-    _, _, vt_raw = np.linalg.svd(xc, full_matrices=False)
+    # The numpy 2.2 stubs (the newest available on Python 3.10) leave the
+    # `svd` result partially unknown to pyright; the cast below pins it.
+    _, _, vt_raw = np.linalg.svd(xc, full_matrices=False)  # pyright: ignore[reportUnknownVariableType]
     vt = cast("np.ndarray[Any, Any]", vt_raw)
     eff = min(num_comp, vt.shape[0])
     top = cast("np.ndarray[Any, Any]", vt[:eff])

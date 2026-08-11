@@ -169,7 +169,10 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
         # We precompute `transform = inv(R) @ diag(sign(diag(R)))` here so
         # apply_polynomial only has to do a single matmul.
         _, r = np.linalg.qr(vander)
-        diag_r = cast("np.ndarray[Any, Any]", np.diag(r))  # type: ignore[redundant-cast]
+        # The cast pins `diag`'s partially-unknown overloads for pyright. mypy
+        # finds it redundant under the numpy 2.4 stubs but not under the 2.2
+        # stubs (the newest available on Python 3.10), hence `unused-ignore`.
+        diag_r = cast("np.ndarray[Any, Any]", np.diag(r))  # type: ignore[redundant-cast,unused-ignore]
         sign_diag = np.sign(diag_r)
         # `solve(R, I)` is numerically preferable to `inv(R)` and just as cheap
         # here since R is small (degree + 1 square).
