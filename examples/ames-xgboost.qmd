@@ -41,8 +41,9 @@ from xgboost import XGBRegressor
 from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
 from shoez import Selectors as s
 ```
-## Data + outcome transform (outside the recipe, per TMwR Ch. 5)
 ```{python}
+# --- Data + outcome transform (outside the recipe, per TMwR Ch. 5) ----------
+
 PREDICTORS = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
               "Latitude", "Longitude"]
 
@@ -50,15 +51,17 @@ ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(PREDICTORS + ["Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
 ```
-## Split (stratified 80/20 by outcome quartile, mirroring initial_split)
 ```{python}
+# --- Split (stratified 80/20 by outcome quartile, mirroring initial_split) --
+
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
 ```
-## Recipe (shoez port of the usemodels::use_xgboost() recipe)
 ```{python}
+# --- Recipe (shoez port of the usemodels::use_xgboost() recipe) -------------
+
 # R:  step_novel(all_nominal_predictors()) %>%        <- GAP, omitted (see header)
 #     step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
 #     step_zv(all_predictors())
@@ -68,15 +71,17 @@ xgboost_recipe = (
     .add(StepDropZeroVariance(s.predictors()))
 )
 ```
-## Model spec + workflow (sklearn Pipeline via RecipeTransformer)
 ```{python}
+# --- Model spec + workflow (sklearn Pipeline via RecipeTransformer) ---------
+
 pipe = Pipeline([
     ("recipe", RecipeTransformer(xgboost_recipe)),
     ("model", XGBRegressor(objective="reg:squarederror", random_state=69305)),
 ])
 ```
-## Small regular grid: 2 x 3 = 6 candidates (as in example.R)
 ```{python}
+# --- Small regular grid: 2 x 3 = 6 candidates (as in example.R) -------------
+
 param_grid = {
     "model__n_estimators": [500, 1000],        # trees
     "model__learning_rate": [0.01, 0.05, 0.1], # learn_rate
@@ -93,8 +98,9 @@ search = GridSearchCV(
 )
 search.fit(X_train, y_train)
 ```
-## Tuning results + final test metrics
 ```{python}
+# --- Tuning results + final test metrics ------------------------------------
+
 results = (
     pl.DataFrame({
         "trees": search.cv_results_["param_model__n_estimators"],
@@ -116,8 +122,9 @@ rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
 print(f"\n--- test metrics (best: {search.best_params_}) ---")
 print(f"rmse: {rmse:.4f}   rsq: {rsq:.3f}")
 ```
-## Baked head (proof the recipe works standalone, sans sklearn)
 ```{python}
+# --- Baked head (proof the recipe works standalone, sans sklearn) -----------
+
 fitted = xgboost_recipe.fit(ames_train)
 print("\n--- transformed training head (shoez fit/transform, no pipeline) ---")
 print(fitted.transform(ames_train).head())

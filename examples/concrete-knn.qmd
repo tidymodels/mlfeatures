@@ -36,8 +36,9 @@ from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepNormalize
 from shoez import Selectors as s
 ```
-## Data + the leakage beat (pre-recipe, matching the book)
 ```{python}
+# --- Data + the leakage beat (pre-recipe, matching the book) ----------------
+
 concrete = pl.read_parquet("data/concrete.parquet")
 # Replicate mixtures averaged BEFORE splitting so one mixture can't appear in
 # both train and test. 1,030 rows -> 992.
@@ -47,16 +48,18 @@ concrete = (concrete.group_by(ingredients)
                     .sort(ingredients))  # group_by output is unordered —
                                          # sort makes the split deterministic
 ```
-## Split (stratified by outcome quartile, mirroring initial_split)
 ```{python}
+# --- Split (stratified by outcome quartile, mirroring initial_split) --------
+
 strata = (concrete["compressive_strength"]
           .qcut(4, labels=["q1", "q2", "q3", "q4"]))
 concrete_train, concrete_test = train_test_split(
     concrete, train_size=0.75, stratify=strata, random_state=1501
 )
 ```
-## Recipe (ports 1:1 — the whole story for KNN is the shared scale)
 ```{python}
+# --- Recipe (ports 1:1 — the whole story for KNN is the shared scale) -------
+
 normalized_rec = (
     Recipe(data=concrete_train, outcome="compressive_strength")
     .add(StepNormalize(s.predictors()))
@@ -66,8 +69,9 @@ normalized_rec = (
 # poly_recipe = normalized_rec.add(StepPolynomial(s.predictors(), degree=2))
 #     # .add(StepInteract(s.predictors() * s.predictors()))   # 🧪 GAP: all-pairs
 ```
-## Model + workflow + tune
 ```{python}
+# --- Model + workflow + tune ------------------------------------------------
+
 pipe = Pipeline([
     ("recipe", RecipeTransformer(normalized_rec)),
     ("model", KNeighborsRegressor()),
@@ -88,8 +92,9 @@ search.fit(X_train, y_train)
 print("--- best CV config ---")
 print(search.best_params_, f"cv rmse: {-search.best_score_:.2f}")
 ```
-## Proof the recipe works + holdout metrics
 ```{python}
+# --- Proof the recipe works + holdout metrics -------------------------------
+
 fitted = normalized_rec.fit(concrete_train)
 print("\n--- transformed test head (z-scored ingredients) ---")
 print(fitted.transform(concrete_test).head())

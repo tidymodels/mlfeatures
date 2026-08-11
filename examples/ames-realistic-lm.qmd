@@ -28,6 +28,7 @@ originals export these datasets from R's modeldata at first run.*
 :::
 
 ```{python}
+#| warning: false
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LinearRegression
@@ -37,8 +38,9 @@ from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s
 ```
-## Data + outcome transform (outside the recipe, per TMwR Ch. 5)
 ```{python}
+# --- Data + outcome transform (outside the recipe, per TMwR Ch. 5) ----------
+
 ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Latitude", "Longitude", "Sale_Price"])
@@ -47,15 +49,17 @@ ames = ames.with_columns(
     pl.col("Gr_Liv_Area").log(base=10),   # GAP workaround (step_log)
 )
 ```
-## Split (stratified 80/20 by outcome quartile)
 ```{python}
+# --- Split (stratified 80/20 by outcome quartile) ---------------------------
+
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
 ```
-## Recipe (the runnable subset of ames_rec; gaps marked in place)
 ```{python}
+# --- Recipe (the runnable subset of ames_rec; gaps marked in place) ---------
+
 ames_rec = (
     Recipe(data=ames_train, outcome="Sale_Price")
     # .add(StepOther(s.col("Neighborhood"), threshold=0.01))          # 🧪 GAP
@@ -66,8 +70,9 @@ ames_rec = (
     #                                       # 🧪 GAP — no spline steps yet
 )
 ```
-## Model + workflow
 ```{python}
+# --- Model + workflow -------------------------------------------------------
+
 lm_wflow = Pipeline([
     ("recipe", RecipeTransformer(ames_rec)),
     ("model", LinearRegression()),
@@ -76,8 +81,10 @@ lm_wflow = Pipeline([
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
 ```
-## Resampled performance (5-fold, mirroring fit_resamples)
 ```{python}
+#| warning: false
+# --- Resampled performance (5-fold, mirroring fit_resamples) ----------------
+
 cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 cv_rmse = -cross_val_score(lm_wflow, X_train, y_train, cv=cv,
                            scoring="neg_root_mean_squared_error")
@@ -85,15 +92,17 @@ print(f"--- 5-fold CV rmse: {cv_rmse.mean():.4f} (+/- {cv_rmse.std():.4f}) ---")
 # First run: nan — unseen fold-level ('Landmark') nulled predictions.
 # R avoids this precisely because step_other pools rare levels first.
 ```
-## Final fit + proof the recipe works
 ```{python}
+# --- Final fit + proof the recipe works -------------------------------------
+
 lm_wflow.fit(X_train, y_train)
 fitted = ames_rec.fit(ames_train)
 print("\n--- transformed test head ---")
 print(fitted.transform(ames_test).head())
 ```
-## Holdout metrics
 ```{python}
+# --- Holdout metrics --------------------------------------------------------
+
 X_test = ames_test.drop("Sale_Price")
 y_test = ames_test["Sale_Price"]
 pred = lm_wflow.predict(X_test)

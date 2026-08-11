@@ -34,8 +34,9 @@ from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s
 ```
-## Data + outcome transform (outside the recipe, per TMwR Ch. 5)
 ```{python}
+# --- Data + outcome transform (outside the recipe, per TMwR Ch. 5) ----------
+
 ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Sale_Price"])
@@ -46,22 +47,25 @@ ames = ames.with_columns(
     pl.col("Gr_Liv_Area").log(base=10),
 )
 ```
-## Split (stratified 80/20 by outcome quartile, mirroring initial_split)
 ```{python}
+# --- Split (stratified 80/20 by outcome quartile, mirroring initial_split) --
+
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
 ```
-## Recipe (what remains of simple_ames after the log moved out)
 ```{python}
+# --- Recipe (what remains of simple_ames after the log moved out) -----------
+
 simple_ames = (
     Recipe(data=ames_train, outcome="Sale_Price")
     .add(StepDummy(s.nominal_predictors()))
 )
 ```
-## Model + workflow (sklearn Pipeline via RecipeTransformer)
 ```{python}
+# --- Model + workflow (sklearn Pipeline via RecipeTransformer) --------------
+
 lm_wflow = Pipeline([
     ("recipe", RecipeTransformer(simple_ames)),
     ("model", LinearRegression()),
@@ -71,14 +75,16 @@ X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
 lm_wflow.fit(X_train, y_train)
 ```
-## Proof the recipe works: transformed head of the test set
 ```{python}
+# --- Proof the recipe works: transformed head of the test set ---------------
+
 fitted = simple_ames.fit(ames_train)
 print("--- transformed test head ---")
 print(fitted.transform(ames_test).head())
 ```
-## Holdout metrics
 ```{python}
+# --- Holdout metrics --------------------------------------------------------
+
 X_test = ames_test.drop("Sale_Price")
 y_test = ames_test["Sale_Price"]
 pred = lm_wflow.predict(X_test)

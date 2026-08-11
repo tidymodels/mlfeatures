@@ -44,8 +44,9 @@ from shoez import (Recipe, RecipeTransformer, StepDropZeroVariance, StepDummy,
                    StepImputeMedian, StepImputeMode, StepNormalize)
 from shoez import Selectors as s
 ```
-## Data + split
 ```{python}
+# --- Data + split -----------------------------------------------------------
+
 credit = pl.read_parquet("data/credit.parquet")  # 4,454 x 14, NAs
 credit = credit.with_columns(
     (pl.col("Status") == "bad").cast(pl.Int8).alias("Status")  # event = bad
@@ -56,8 +57,9 @@ credit_train, credit_test = train_test_split(
     random_state=55
 )
 ```
-## Recipe: impute -> (other GAP) -> dummy -> filter -> normalize
 ```{python}
+# --- Recipe: impute -> (other GAP) -> dummy -> filter -> normalize ----------
+
 credit_rec = (
     Recipe(data=credit_train, outcome="Status")
     .add(StepImputeMedian(s.numeric_predictors()))
@@ -70,8 +72,9 @@ credit_rec = (
     .add(StepNormalize(s.numeric_predictors()))
 )
 ```
-## Model + workflow + penalty tuning
 ```{python}
+# --- Model + workflow + penalty tuning --------------------------------------
+
 pipe = Pipeline([
     ("recipe", RecipeTransformer(credit_rec)),
     ("model", LogisticRegression(penalty="l1", solver="liblinear",
@@ -90,14 +93,16 @@ search.fit(X_train, y_train)
 print(f"--- best C: {search.best_params_['model__C']:.3g} "
       f"(cv roc_auc {search.best_score_:.3f}) ---")
 ```
-## Proof the recipe works: transformed training head
 ```{python}
+# --- Proof the recipe works: transformed training head ----------------------
+
 fitted = credit_rec.fit(credit_train)
 print("\n--- transformed training head (imputed, encoded, scaled) ---")
 print(fitted.transform(credit_train).head())
 ```
-## Holdout metrics
 ```{python}
+# --- Holdout metrics --------------------------------------------------------
+
 X_test = credit_test.drop("Status")
 y_test = credit_test["Status"]
 prob = search.predict_proba(X_test)[:, 1]
