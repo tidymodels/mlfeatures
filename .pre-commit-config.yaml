@@ -7,24 +7,40 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
+        # uv.lock is ~620KB and legitimately committed.
+        args: [--maxkb=1024]
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+  # Regenerates uv.lock when pyproject.toml changes, so a stale lockfile
+  # cannot be committed and CI's UV_LOCKED=1 never fails spuriously.
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.3
     hooks:
+      - id: uv-lock
+
+  # ruff and mypy run out of the project venv (`uv run`) rather than as
+  # pre-commit-managed repos, so the hook, the documented local command, and
+  # CI all resolve the same tool versions from uv.lock and cannot disagree.
+  - repo: local
+    hooks:
+      # `--force-exclude` makes ruff honor its `extend-exclude` (the vendored
+      # `shoez/_databackend.py`) even for filenames pre-commit passes
+      # explicitly; the managed ruff-pre-commit hook added it implicitly.
       - id: ruff
-        args: [--fix]
+        name: ruff (lint)
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types: [python]
       - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.0
-    hooks:
+        name: ruff (format)
+        entry: uv run ruff format --force-exclude
+        language: system
+        types: [python]
       - id: mypy
+        name: mypy --strict
+        entry: uv run mypy shoez
+        language: system
         files: ^shoez/
-        additional_dependencies:
-          - polars>=1.0
-          - pandas>=2.0
-          - numpy>=1.24
-          - scikit-learn>=1.3
+        pass_filenames: false
 
   - repo: local
     hooks:
