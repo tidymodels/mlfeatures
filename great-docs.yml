@@ -261,8 +261,8 @@ user_guide:
       - basics/recipe-specify-fit-transform.qmd
       - basics/selectors-and-roles.qmd
       - basics/four-stages-eight-steps.qmd
-      - basics/composing-steps.qmd
       - basics/ensure-robust-to-new-data.qmd
+      - basics/composing-steps.qmd
       - basics/fit-and-train.qmd
 
 # Custom Sections
