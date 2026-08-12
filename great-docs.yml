@@ -246,6 +246,24 @@ reference:
       - name: StepError
         members: false
 
+# User Guide
+# ----------
+# Explicit section ordering (auto-discovery can't place unsectioned pages
+# above a section, so both groups are named). Contents render in this order.
+user_guide:
+  - section: Getting started
+    contents:
+      - getting-started.qmd
+      - polars-extension.qmd
+      - sklearn-pipelines.qmd
+  - section: Basics
+    contents:
+      - basics/selectors-and-roles.qmd
+      - basics/composing-steps.qmd
+      - basics/four-stages-eight-steps.qmd
+      - basics/fit-and-train.qmd
+      - basics/ensure-robust-to-new-data.qmd
+
 # Custom Sections
 # ---------------
 # Extra navbar sections beyond the user guide and API reference.
