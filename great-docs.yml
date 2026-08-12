@@ -261,6 +261,7 @@ user_guide:
       - basics/recipe-specify-fit-transform.qmd
       - basics/selectors-and-roles.qmd
       - basics/four-stages-eight-steps.qmd
+      - basics/dropping-columns.qmd
       - basics/ensure-robust-to-new-data.qmd
       - basics/composing-steps.qmd
       - basics/fit-and-transform.qmd

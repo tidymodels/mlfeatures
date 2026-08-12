@@ -1,0 +1,5 @@
+---
+title: "Dropping columns"
+---
+
+*Stub — content to come.*
