@@ -1,5 +1,5 @@
 ---
-title: "Fit and train"
+title: "Fit and transform"
 ---
 
 *Stub — content to come.*

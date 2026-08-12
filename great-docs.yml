@@ -263,7 +263,7 @@ user_guide:
       - basics/four-stages-eight-steps.qmd
       - basics/ensure-robust-to-new-data.qmd
       - basics/composing-steps.qmd
-      - basics/fit-and-train.qmd
+      - basics/fit-and-transform.qmd
 
 # Custom Sections
 # ---------------
