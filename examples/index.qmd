@@ -3,40 +3,24 @@ title: "Examples"
 ---
 
 Six complete workflows, each ported from a canonical, citable R original and
-worked **backward from a realistic end model** — the model's requirements decide
-the recipe. Every page executes at build time, so the outputs shown are real.
+worked **backward from a realistic end model** — the model's requirements
+decide which of the [four stages](../user-guide/basics/four-stages-eight-steps.qmd)
+the recipe needs. Every report executes at build time; each example also links
+a line-matched R ↔ Python side-by-side.
 
-Each example links two views:
+| Example | End model | Missing | Make numeric | Model prep | Multivar |
+|---|---|---|---|---|---|
+| [Ames mini](ames-mini-lm.qmd) · [R↔Py](sbs/tmwr01-r-vs-py.html){target="_blank"} | lm | — | log\*, dummy | — | — |
+| [Ames realistic](ames-realistic-lm.qmd) · [R↔Py](sbs/tmwr03-r-vs-py.html){target="_blank"} | lm | — | log\*, other\*, dummy | interact\*, ns\* | — |
+| [Ames xgboost](ames-xgboost.qmd) · [R↔Py](sbs/tmwr11-r-vs-py.html){target="_blank"} | boosting | — | novel\*, one-hot, zv† | — | — |
+| [Concrete KNN](concrete-knn.qmd) · [R↔Py](sbs/tmwr14-r-vs-py.html){target="_blank"} | KNN | — | — | normalize | — |
+| [Beans PCA](beans-pca.qmd) · [R↔Py](sbs/tmwr16-r-vs-py.html){target="_blank"} | none | — | zv†, orderNorm\* | normalize | PCA |
+| [Credit glmnet](credit-glmnet.qmd) · [R↔Py](sbs/kuhn-r-vs-py.html){target="_blank"} | logistic | impute ×2 | other\*, dummy, zv† | normalize | — |
 
-- **Report** — the shoez/sklearn version, run top to bottom with live output.
-- **R ↔ Python** — the R original and the port side by side, line-matched, with
-  differences and remaining shoez gaps annotated in the code.
-
-**[Ames mini](ames-mini-lm.qmd)** — the simple intro · [R ↔ Py](sbs/tmwr01-r-vs-py.html){target="_blank"}
-: Linear regression. Recipe: encode.
-
-**[Ames realistic](ames-realistic-lm.qmd)** — the canonical lm recipe · [R ↔ Py](sbs/tmwr03-r-vs-py.html){target="_blank"}
-: Linear regression. Recipe: encode, interactions\*, splines\*.
-
-**[Ames + xgboost](ames-xgboost.qmd)** — the model flips the recipe · [R ↔ Py](sbs/tmwr11-r-vs-py.html){target="_blank"}
-: Gradient boosting, tuned. Recipe: one-hot, zero-variance filter.
-
-**[Concrete + KNN](concrete-knn.qmd)** — scale is the admission ticket · [R ↔ Py](sbs/tmwr14-r-vs-py.html){target="_blank"}
-: K-nearest neighbors, tuned. Recipe: normalize.
-
-**[Beans PCA](beans-pca.qmd)** — a recipe with no model · [R ↔ Py](sbs/tmwr16-r-vs-py.html){target="_blank"}
-: No estimator — the recipe is the product. Recipe: zero-variance filter, normalize, PCA.
-
-**[Credit + glmnet](credit-glmnet.qmd)** — the imputation example · [R ↔ Py](sbs/kuhn-r-vs-py.html){target="_blank"}
-: Regularized logistic, tuned. Recipe: impute, encode, filter, normalize.
-
-\* marked steps are not yet built in shoez; the reports run the buildable subset
-and the side-by-sides mark each gap in red where it occurs.
-
-The two Ames rows are deliberately a pair: same data, same predictors, different
-model — and the recipe transforms accordingly. There is also a
-[side-by-side index](sbs/sbs-index.html){target="_blank"} listing all six
-comparisons with their run results.
+\* not yet built in shoez — the reports run the buildable subset, and the
+side-by-sides mark each gap in red where it occurs.
+† zero-variance filter; filters sit beside the stages rather than in them,
+shown here where they run.
 
 ## Running the examples locally
 
