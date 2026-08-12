@@ -250,12 +250,9 @@ reference:
 # ---------------
 # Extra navbar sections beyond the user guide and API reference.
 sections:
-  - title: Basics
-    dir: basics
-    navbar_after: User Guide
   - title: Examples
     dir: examples
-    navbar_after: Basics
+    navbar_after: User Guide
 
 # Site URL
 # --------
