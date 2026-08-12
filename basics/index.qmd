@@ -1,0 +1,11 @@
+---
+title: "Basics"
+---
+
+The core ideas behind shoez recipes, in reading order:
+
+- [Selectors and roles](selectors-and-roles.qmd)
+- [Composing steps](composing-steps.qmd)
+- [Four stages, eight steps](four-stages-eight-steps.qmd)
+- [Fit and train](fit-and-train.qmd)
+- [Ensure robust to new data](ensure-robust-to-new-data.qmd)
