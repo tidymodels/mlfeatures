@@ -6,7 +6,7 @@ Six complete workflows, each ported from a canonical, citable R original and
 worked **backward from a realistic end model** — the model's requirements
 decide which of the [four stages](../user-guide/basics/four-stages-eight-steps.qmd)
 the recipe needs. Every report executes at build time; each example also links
-a line-matched R ↔ Python side-by-side.
+a line-matched [R ↔ Python side-by-side](sbs/sbs-index.html){target="_blank"}.
 
 | Example | End model | Missing | Make numeric | Model prep | Multivar |
 |---|---|---|---|---|---|
