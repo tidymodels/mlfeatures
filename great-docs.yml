@@ -258,11 +258,12 @@ user_guide:
       - sklearn-pipelines.qmd
   - section: Basics
     contents:
+      - basics/recipe-specify-fit-transform.qmd
       - basics/selectors-and-roles.qmd
-      - basics/composing-steps.qmd
       - basics/four-stages-eight-steps.qmd
-      - basics/fit-and-train.qmd
+      - basics/composing-steps.qmd
       - basics/ensure-robust-to-new-data.qmd
+      - basics/fit-and-train.qmd
 
 # Custom Sections
 # ---------------
