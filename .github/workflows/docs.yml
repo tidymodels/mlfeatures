@@ -33,12 +33,32 @@ jobs:
         uses: quarto-dev/quarto-actions/setup@v2
 
       - name: Build docs
+        id: build
+        # temporary debug scaffolding for the rendering-hang: cap the step so a
+        # hang can't eat the job, and fall through to a page-by-page render
+        timeout-minutes: 12
+        continue-on-error: true
         run: uv run great-docs build
         env:
           # quarto's mermaid-format:svg pre-render needs headless Chrome; point
           # it at the runner's preinstalled browser so it never tries to
           # download/launch its own (which hangs silently mid-render)
           QUARTO_CHROMIUM: /usr/bin/google-chrome
+
+      - name: Debug render (page-by-page, only if the build hung/failed)
+        if: steps.build.outcome != 'success'
+        timeout-minutes: 10
+        run: |
+          echo "== chrome on runner:"
+          which google-chrome && google-chrome --version || true
+          echo "== rerunning quarto directly in the staging dir:"
+          cd great-docs && uv run quarto render 2>&1
+        env:
+          QUARTO_CHROMIUM: /usr/bin/google-chrome
+
+      - name: Fail if build did not succeed
+        if: steps.build.outcome != 'success'
+        run: exit 1
 
       - name: Save docs artifact
         uses: actions/upload-artifact@v7
