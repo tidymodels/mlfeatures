@@ -34,6 +34,11 @@ jobs:
 
       - name: Build docs
         run: uv run great-docs build
+        env:
+          # quarto's mermaid-format:svg pre-render needs headless Chrome; point
+          # it at the runner's preinstalled browser so it never tries to
+          # download/launch its own (which hangs silently mid-render)
+          QUARTO_CHROMIUM: /usr/bin/google-chrome
 
       - name: Save docs artifact
         uses: actions/upload-artifact@v7
