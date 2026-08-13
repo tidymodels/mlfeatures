@@ -32,18 +32,13 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      # TEMPORARY (debugging the rendering hang): stage the site with
-      # great-docs but kill it before its opaque quarto step finishes, then run
-      # quarto directly so per-page render lines land in the log.
-      - name: Stage docs (great-docs, killed before/at its quarto render)
-        run: timeout 120 uv run great-docs build || true
-
-      - name: Render (direct quarto, page-by-page output)
+      - name: Build docs
+        # normal builds take ~4-5 min on the runner; the cap turns a rare
+        # render hang (seen once, 2026-08-13, unreproduced) into a fast
+        # failure instead of a stuck job. If it recurs, flip this step back
+        # to the direct-quarto debug mode in git history (014a53c).
         timeout-minutes: 15
-        run: |
-          echo "== chrome on runner:"
-          which google-chrome && google-chrome --version || true
-          cd great-docs && uv run quarto render
+        run: uv run great-docs build
 
       - name: Save docs artifact
         uses: actions/upload-artifact@v7
@@ -57,9 +52,6 @@ jobs:
         with:
           name: build-timings
           path: great-docs/_site/build-timings.json
-          # temporary: the direct-quarto debug render skips great-docs' post
-          # steps, so build-timings.json may not exist
-          if-no-files-found: ignore
 
   publish-docs:
     name: "Publish Docs"
