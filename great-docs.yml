@@ -265,6 +265,10 @@ user_guide:
       - basics/dropping-columns.qmd
       - basics/composing-steps.qmd
       - basics/fit-and-transform.qmd
+  - section: Extra
+    contents:
+      - extra/serializing-recipes.qmd
+      - extra/creating-a-new-step.qmd
 
 # Custom Sections
 # ---------------
