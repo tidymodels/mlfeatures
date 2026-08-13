@@ -1,0 +1,34 @@
+<!-- The thinking-in-recipes workflow diagram, included by
+     recipe-specify-fit-transform.qmd and four-stages-eight-steps.qmd via
+     {{< include ../_includes/workflow-diagram.qmd >}}. Including pages must set
+     `mermaid-format: svg` in their frontmatter (includes can't carry it). -->
+
+```{=html}
+<style>
+/* the pre-rendered diagram has a fixed pixel width; let it shrink on
+   narrower viewports instead of clipping */
+.cell-output-display svg, figure.figure svg { max-width: 100% !important; height: auto !important; }
+</style>
+```
+
+```{mermaid}
+%%| fig-width: 11
+%%| fig-height: 3
+%%| column: page-right
+%%{init: {"flowchart": {"defaultRenderer": "elk"}}}%%
+flowchart LR
+  B["1 · Assign<br/>roles"] --> D
+  subgraph D ["2 · Order the steps"]
+    direction LR
+    S1["handle missing&nbsp;<br/>values <small>(1)</small>"] --> S2["make numeric<br/><small>(2–5)</small>"]
+    S2 --> S3["model prep<br/><small>(6–7)</small>"] --> S4["multivariate&nbsp;<br/>transforms <small>(8)</small>&nbsp;"]
+  end
+  D -- "fit(train)" --> E["3 · Ensure robust<br/>to new data<br/><small><i>new data arrives</i></small>"]
+  E --> F["4 · Pass to the<br/>scikit-learn pipeline"]
+  E -. "surprise?<br/>add a guard" .-> D
+  style D fill:none
+  style S1 fill:none
+  style S2 fill:none
+  style S3 fill:none
+  style S4 fill:none
+```
