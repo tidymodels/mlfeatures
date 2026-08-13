@@ -1,5 +1,5 @@
 ---
-title: "Using recipes in scikit-learn pipelines"
+title: "With scikit-learn pipelines"
 toc: true
 ---
 
