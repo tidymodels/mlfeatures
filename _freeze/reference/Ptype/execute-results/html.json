@@ -1,0 +1,12 @@
+{
+  "hash": "4c30e76357a841655de4ad92a21440f4",
+  "result": {
+    "engine": "jupyter",
+    "markdown": "---\ntitle: \"[Ptype]{.doc-object-name .doc-class .doc-label .doc-label-dataclass}\"\nbody-classes: doc-api-page\npage-navigation: false\nhtml-table-processing: none\n---\n\n::: {.doc-subject}\n\nA structural snapshot of the training data used for boundary checks.\n:::\n\n::: {.doc-usage-source}\nUsage\n\n[Source](https://github.com/tidymodels/shoez/blob/examples-section/shoez/ptype.py#L60-L159){target=\"_blank\" rel=\"noopener\"}\n:::\n\n::: {.doc-signature .doc-Kind.CLASS}\n```python\nPtype(schema, roles, transform_required)\n```\n:::\n\n::: {.doc-text}\n\nCaptured at ``Recipe.fit()`` and exposed as ``FittedRecipe.ptype``. Holds the\ntraining :class:`narwhals.Schema` (column names and dtypes), the role\nassignments, and a precomputed per-column flag for whether each column is\nrequired at ``transform()`` time.\n:::\n\n## Attributes {.doc-attributes}\n\n::: {.doc-definition-items}\n<code>[schema]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [nw.Schema]{.doc-parameter-annotation}</code>\n\n:   The training frame's narwhals schema: an ordered name→dtype mapping.\n\n<code>[roles]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [Roles]{.doc-parameter-annotation}</code>\n\n:   Role assignments captured at fit (see ``design/roles.md``).\n\n<code>[transform_required]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict[str, bool]]{.doc-parameter-annotation}</code>\n\n:   Per-column flag: ``True`` if the column must be present in new data at\n    ``transform()`` time. Computed once at fit from role requirements and\n    any ``update_role_requirements`` overrides.\n:::\n\n## Examples {.doc-examples}\n\nThe ptype is built by the recipe; read it back from a fitted recipe:\n\n::: {#ec78e115 .cell execution_count=1}\n``` {.python .cell-code}\nimport pandas as pd\nfrom shoez import Recipe, StepNormalize\nfrom shoez import Selectors as s\n\ndf = pd.DataFrame({\"x\": [1.0, 2.0, 3.0], \"y\": [0, 1, 0]})\nrec = Recipe(outcome=\"y\", predictors=\"x\").add(\n    StepNormalize(s.numeric_predictors())\n)\nrec = rec.fit(df)\nrec.ptype.schema.names()\n```\n\n::: {.cell-output .cell-output-display execution_count=1}\n```\n['x', 'y']\n```\n:::\n:::\n\n\n",
+    "supporting": [
+      "Ptype_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}

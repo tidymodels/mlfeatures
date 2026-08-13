@@ -1,0 +1,12 @@
+{
+  "hash": "fc749411d6ca832022021f32e6210a3f",
+  "result": {
+    "engine": "jupyter",
+    "markdown": "---\ntitle: \"[Schema.columns_from_source()]{.doc-object-name .doc-function .doc-label .doc-label-method}\"\nbody-classes: doc-api-page\npage-navigation: false\nhtml-table-processing: none\n---\n\n::: {.doc-subject}\n\nLive columns produced by the step with ``id == step_id``.\n:::\n\n::: {.doc-usage-source}\nUsage\n\n[Source](https://github.com/tidymodels/shoez/blob/examples-section/shoez/schema.py#L391-L431){target=\"_blank\" rel=\"noopener\"}\n:::\n\n::: {.doc-signature .doc-Kind.FUNCTION}\n```python\nSchema.columns_from_source(step_id)\n```\n:::\n\n::: {.doc-text}\n\nThe primitive behind the ``has_source(step_id)`` selector (#20). Pass\n``\"original\"`` for the input columns that survive to the live schema.\n:::\n\n## Examples {.doc-examples}\n\n\n\nSelect every column a step produced — the dummy indicators:\n\n::: {#b1e2df71 .cell execution_count=2}\n``` {.python .cell-code}\nschema.columns_from_source(\"dummy\")\n```\n\n::: {.cell-output .cell-output-display execution_count=2}\n```\n['city_NYC', 'city_SF']\n```\n:::\n:::\n\n\n``\"original\"`` picks the inputs that survive to the output (``age`` is\nstill here; ``city`` was consumed by the dummy step):\n\n::: {#d0477623 .cell execution_count=3}\n``` {.python .cell-code}\nschema.columns_from_source(\"original\")\n```\n\n::: {.cell-output .cell-output-display execution_count=3}\n```\n['age']\n```\n:::\n:::\n\n\n",
+    "supporting": [
+      "Schema.columns_from_source_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}

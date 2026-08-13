@@ -1,0 +1,12 @@
+{
+  "hash": "6aabda179c3585f0bb1e316406a40e5b",
+  "result": {
+    "engine": "jupyter",
+    "markdown": "---\ntitle: \"[Mode]{.doc-object-name .doc-class .doc-label .doc-label-enum}\"\nbody-classes: doc-api-page\npage-navigation: false\nhtml-table-processing: none\n---\n\n::: {.doc-subject}\n\nShape of a step's input/output relationship.\n:::\n\n::: {.doc-usage-source}\nUsage\n\n[Source](https://github.com/tidymodels/shoez/blob/examples-section/shoez/types.py#L320-L347){target=\"_blank\" rel=\"noopener\"}\n:::\n\n::: {.doc-signature .doc-Kind.CLASS}\n```python\nMode()\n```\n:::\n\n::: {.doc-text}\n\nInforms how the framework records lineage. See ``design/step-contract.md``.\n:::\n\n## Examples {.doc-examples}\n\nEach step class declares its mode; for example `StepDummy` expands one\ncolumn into many:\n\n\n\n::: {#c5ca4ab3 .cell execution_count=2}\n``` {.python .cell-code}\nStepDummy.mode, [m.value for m in Mode]\n```\n\n::: {.cell-output .cell-output-display execution_count=2}\n```\n(<Mode.ONE_TO_MANY: 'one_to_many'>,\n ['one_to_one',\n  'one_to_many',\n  'many_to_many',\n  'removing',\n  'adding',\n  'row_op',\n  'unconstrained'])\n```\n:::\n:::\n\n\n",
+    "supporting": [
+      "Mode_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}

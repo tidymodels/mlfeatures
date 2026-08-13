@@ -1,0 +1,12 @@
+{
+  "hash": "a1e6e0a27e9939f552803758a096d729",
+  "result": {
+    "engine": "jupyter",
+    "markdown": "---\ntitle: \"[ColSchema]{.doc-object-name .doc-class .doc-label .doc-label-class}\"\nbody-classes: doc-api-page\npage-navigation: false\nhtml-table-processing: none\n---\n\n::: {.doc-subject}\n\nColumn schema: the names and dtypes a step reports for a column set.\n:::\n\n::: {.doc-usage-source}\nUsage\n\n[Source](https://github.com/tidymodels/shoez/blob/examples-section/shoez/types.py#L76-L108){target=\"_blank\" rel=\"noopener\"}\n:::\n\n::: {.doc-signature .doc-Kind.CLASS}\n```python\nColSchema(columns=None, dtypes=None)\n```\n:::\n\n::: {.doc-text}\n\nCarries the column names and their dtype names — enough for a step to\ndescribe what it consumed (``schema_in``) and produced (``schema_out``).\nThis is the lightweight step-facing report; the recipe-side column-lineage\nDAG that tracks roles, source, sparsity, and provenance is\n`shoez.schema.Schema` (``design/schema.md``).\n:::\n\n## Examples {.doc-examples}\n\n\n\n::: {#1aadd701 .cell execution_count=2}\n``` {.python .cell-code}\nschema = ColSchema(columns=[\"age\", \"city\"], dtypes={\"age\": \"Int64\", \"city\": \"String\"})\nschema.columns, schema.dtypes\n```\n\n::: {.cell-output .cell-output-display execution_count=2}\n```\n(['age', 'city'], {'age': 'Int64', 'city': 'String'})\n```\n:::\n:::\n\n\n",
+    "supporting": [
+      "ColSchema_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}

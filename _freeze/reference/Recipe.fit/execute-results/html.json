@@ -1,0 +1,12 @@
+{
+  "hash": "1b73f0bd3d95e4f7371ce5aa780e5ef0",
+  "result": {
+    "engine": "jupyter",
+    "markdown": "---\ntitle: \"[Recipe.fit()]{.doc-object-name .doc-function .doc-label .doc-label-method}\"\nbody-classes: doc-api-page\npage-navigation: false\nhtml-table-processing: none\n---\n\n::: {.doc-subject}\n\nFit each step in order on the training data.\n:::\n\n::: {.doc-usage-source}\nUsage\n\n[Source](https://github.com/tidymodels/shoez/blob/examples-section/shoez/recipe.py#L330-L462){target=\"_blank\" rel=\"noopener\"}\n:::\n\n::: {.doc-signature .doc-Kind.FUNCTION}\n```python\nRecipe.fit(data)\n```\n:::\n\n::: {.doc-text}\n\nThe transformed output of step *i* is the input to step *i+1*'s\n``fit()``, so later steps see the schema as modified by earlier ones.\n``RowOp`` steps *are* applied here — a row operation reshapes the\ntraining frame every later step then fits on — but never run during\n``transform()`` on new data, which the framework enforces structurally.\n\nEach fit works on *copies* of the steps, so the recipe is left unchanged\nand refittable, and a `FittedRecipe` never shares fitted state with the\nrecipe or with another fit of it.\n:::\n\n## Examples {.doc-examples}\n\n``fit()`` estimates each step's statistics on the training data and\nreturns a `FittedRecipe` with the selectors resolved to concrete\ncolumns:\n\n\n\n::: {#f1dc6f35 .cell execution_count=2}\n``` {.python .cell-code}\ndf = pd.DataFrame(\n    {\"age\": [25, 41, 33, 52], \"city\": [\"NYC\", \"LA\", \"NYC\", \"SF\"]}\n)\n(\n    Recipe()\n    .add(StepNormalize(s.numeric_predictors()))\n    .add(StepDummy(s.nominal_predictors()))\n    .fit(df)\n)\n```\n\n::: {.cell-output .cell-output-display execution_count=2}\n```\nRecipe (trained)\n  Inputs: 3 columns — 3 predictors\n  Steps:\n    step_normalize(age)                   [trained]\n    step_dummy(city → city_NYC, city_SF)  [trained]\n```\n:::\n:::\n\n\n",
+    "supporting": [
+      "Recipe.fit_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}
