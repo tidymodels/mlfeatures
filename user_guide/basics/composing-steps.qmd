@@ -2,4 +2,15 @@
 title: "Composing steps"
 ---
 
-*Stub — content to come.*
+* Steps operate on the output of the previous step.
+* There are some useful dynamics Emil mentioned.
+
+E.g.
+
+```python
+rec = (
+    Recipe(data=df, outcome="label", predictors=[...])
+    .add(StepDummy(s.nominal_predictors()))
+    .add(StepNormalize(s.has_source(step_type=StepDummy)))
+)
+```

@@ -2,4 +2,5 @@
 title: "Ensure robust to new data"
 ---
 
-*Stub — content to come.*
+* Discuss how training data is used to fit a pre-processing models that transform test data.
+* Common failure modes when transforming test data.

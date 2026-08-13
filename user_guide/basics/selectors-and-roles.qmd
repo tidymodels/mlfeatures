@@ -2,4 +2,5 @@
 title: "Selectors and roles"
 ---
 
-*Stub — content to come.*
+* Recipe steps operate on columns of data, which are specified using Polars selectors.
+* Roles add a new dimension for selection.
