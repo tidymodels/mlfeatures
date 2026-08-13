@@ -37,8 +37,6 @@ jobs:
       # quarto directly so per-page render lines land in the log.
       - name: Stage docs (great-docs, killed before/at its quarto render)
         run: timeout 120 uv run great-docs build || true
-        env:
-          QUARTO_CHROMIUM: /usr/bin/google-chrome
 
       - name: Render (direct quarto, page-by-page output)
         timeout-minutes: 15
@@ -46,8 +44,6 @@ jobs:
           echo "== chrome on runner:"
           which google-chrome && google-chrome --version || true
           cd great-docs && uv run quarto render
-        env:
-          QUARTO_CHROMIUM: /usr/bin/google-chrome
 
       - name: Save docs artifact
         uses: actions/upload-artifact@v7
