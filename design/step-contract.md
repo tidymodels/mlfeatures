@@ -192,17 +192,34 @@ Because the no-op lives in the recipe, individual steps' `fit()` code must **not
 
 ## `StepConformanceTest`
 
-Every step must pass this test suite before merging:
+Implemented as `shoez.testing.StepConformanceTest`. It ships **inside the package**, not under `tests/`, so a third-party step can be held to the same contract as a first-party one. Subclass it, supply `make_step()` and `training_data`, and pytest collects the whole contract:
+
+```python
+from shoez.testing import StepConformanceTest
+
+class TestMyStepConformance(StepConformanceTest):
+    training_data = {"a": [1.0, 2.0, 3.0], "g": ["x", "y", "x"]}
+
+    def make_step(self) -> StepMyThing:
+        return StepMyThing(["a"])
+```
+
+Every step must pass it before merging:
 
 - Empty selection returns empty output without error (handled structurally by the recipe — see [Empty selection ⇒ identity](#empty-selection--identity-structural); the step's own `fit()` is never called on an empty selection).
 - 0-row and 1-row `transform()` produce schema-correct output.
-- All declared constructor arguments are type-validated.
 - `fit()` is idempotent given the same training data.
-- `transform()` on training data after `fit()` reproduces `fit_transform()` output.
+- `transform()` never re-estimates: transforming a subset of the training frame equals transforming the whole frame and then taking the subset. Every other check runs against the training frame itself, where a step that recomputes its statistics is invisible because the recomputed values agree; this is the check that sees it.
 - Sparse-in → sparse-out (or explicit densification warning) where declared.
 - Pickle round-trip preserves `transform()` output.
+- JSON round-trip preserves `transform()` output, or — for a step carrying user callables it needs at transform time, like `step_mutate` — is refused loudly. Set `supports_json = False` to assert the refusal.
 - `id` is stable across sessions for the same hyperparameters.
-- Backend dtype parity: fitting and transforming the same data on a pandas frame and a polars frame produces identical narwhals output schemas (same column names, same dtypes). This guards against backend-divergence bugs like the `lit(None)` → `Object` footgun PR #74 fixed for `StepDummy`, where pandas emitted object-dtype indicators while polars stayed numeric. Checked via schema equality, not value-level comparison (which is fragile to float/repr differences across backends).
+- `output_parents()` declares exactly the columns the step adds, each with parents drawn from the input frame.
+- Backend parity: fitting and transforming the same data on a pandas frame and a polars frame produces identical narwhals output — same column names, same dtypes, and the same values (missing-aware, floats compared approximately). This guards against backend-divergence bugs like the `lit(None)` → `Object` footgun PR #74 fixed for `StepDummy`, where pandas emitted object-dtype indicators while polars stayed numeric, and against a step computing different numbers depending on the backend it fitted on.
+
+A check that genuinely does not apply is opted out of through a hook, never by omission, so "considered and not applicable" stays distinguishable from "forgotten": `make_empty_step()` returning `None` for a step with no column selector, and `estimates_attr = None` for a step that estimates nothing. Both then skip with an explicit reason.
+
+Not yet covered: constructor arguments are not type-validated by the suite.
 
 ---
 

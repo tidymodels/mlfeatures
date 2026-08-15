@@ -20,7 +20,7 @@ uv run pyright                 # type-check (strict)
 
 Both type-checkers run in strict mode over `shoez/` (tests are excluded). New code must be fully typed and pass both. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
 
-When adding a new step, also run its `StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass it before merging.
+When adding a new step, also add its `tests/test_step_x_infrastructure.py` subclassing `shoez.testing.StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass the contract before merging. The subclass supplies only `make_step()` and `training_data`; the checks themselves are written once in [`shoez/testing.py`](shoez/testing.py).
 
 When adding a new step, also add a matching `step_*` wrapper method to the `ShzNamespace` in [`shoez/polars.py`](shoez/polars.py) so the step is reachable through the `df.shz` accessor. Mirror the step's constructor signature and keep the one-line docstring pointing at the step class (e.g. `See \`StepDummy\`.`); without a wrapper the step is only reachable via the generic `df.shz.apply(...)`. The `TestWrapperStepParity` tests in [`tests/test_polars_accessor.py`](tests/test_polars_accessor.py) enforce this both ways: CI fails if a public step has no wrapper, or if a wrapper points at a step that no longer exists, so the accessor can never silently drift out of sync.
 
