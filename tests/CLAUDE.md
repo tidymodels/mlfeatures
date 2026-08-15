@@ -36,6 +36,19 @@ Each of these skips with an explicit reason, visible in `pytest -rs`, so "consid
 
 Because `shoez.testing` ships inside the package, third-party steps run this same contract; see `design/extensibility.md`.
 
+## The extensibility fixture
+
+`tests/_plugin_fixture.py` defines `StepScaleShift`, a stand-in for a third-party step, and `tests/test_extensibility.py` pushes it through every surface a plugin uses. It exists so that breaking the extensibility path fails CI here, rather than being discovered later by someone building against the package.
+
+The fixture is **not** a step shoez ships, and it must stay writable against `shoez.__all__` alone. `TestPublicApiOnly` parses the file and fails on any import from a private module that is not in `PRIVATE_IMPORT_ALLOWLIST`. That allowlist is a ratchet in both directions:
+
+- adding an entry means a plugin author now needs a private import too, so it must cite the issue tracking the gap;
+- removing the need for one is caught as well — `test_allowlist_is_still_needed` fails once an allowlisted name becomes public, so the list cannot rot.
+
+When changing the fixture, keep it honest: it should do what a plugin can do, not what shoez can do. If a change makes the fixture need something new from shoez, that is the finding, not an inconvenience to work around.
+
+The fixture shares an interpreter and source tree with shoez, so it cannot cover problems that only appear across a distribution boundary — packaging, editable installs, type-checker resolution, real entry-point discovery. Those still need an out-of-tree package.
+
 ## Input dtype coverage
 
 Steps that accept multiple input dtypes — like `step_normalize`, which accepts both floats and integers — must have unit tests verifying they work with each accepted dtype.
