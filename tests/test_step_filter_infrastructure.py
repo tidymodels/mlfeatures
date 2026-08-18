@@ -1,22 +1,14 @@
-"""Conformance/infrastructure tests for StepFilter.
+"""Conformance tests for StepFilter.
 
-Part of the per-step ``StepConformanceTest`` contract (see
-``design/step-contract.md``): the checks here are generic properties every step
-must satisfy, not step-specific behavior.
-
-``StepFilter`` is a `RowOp`: it takes effect only on the training frame at fit
-time and is skipped structurally at ``transform()`` time, so every check that
-drives data through ``transform()`` sees the frame pass through unchanged.
+The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+only supplies the step and the data to run it against. Behaviour specific to
+StepFilter belongs in ``test_step_filter.py`` and ``test_step_filter_e2e.py``.
 """
 
 from __future__ import annotations
 
-import pickle
-
-import pandas as pd
-
-from shoez import Recipe, StepFilter
-from tests._conformance import assert_backend_parity, fit_transform_isolated
+from shoez import StepFilter
+from shoez.testing import StepConformanceTest
 
 
 def _keep_over_one(df: object) -> object:
@@ -24,141 +16,16 @@ def _keep_over_one(df: object) -> object:
     return df["a"] > 1  # type: ignore[index]
 
 
-def _fitted() -> tuple[Recipe, pd.DataFrame]:
-    train = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
-    return Recipe(steps=[StepFilter(_keep_over_one)]).fit(train), train
+class TestFilterConformance(StepConformanceTest):
+    training_data = {"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]}
 
+    def make_step(self) -> StepFilter:
+        return StepFilter(_keep_over_one)
 
-class TestEmptySelection:
-    """Not applicable to StepFilter.
+    # StepFilter takes a row predicate, not a column selector, and stores no
+    # estimates: it only acts at fit time.
+    estimates_attr = None
 
-    StepFilter is a ``ROW_OP`` that takes no column selector — it filters rows
-    via a predicate, not a set of selected columns — so there is no "zero
-    features selected" state to exercise. The class is kept as a visible slot
-    (per ``tests/CLAUDE.md``) so the omission is documented rather than silently
-    missing.
-    """
-
-
-class TestRowCountEdges:
-    """transform() on 0-row and 1-row frames yields schema-correct output.
-
-    A RowOp is skipped at transform time, so the row count is preserved as-is."""
-
-    def test_zero_row_transform(self) -> None:
-        fitted, train = _fitted()
-        expected = list(fitted.transform(train).columns)
-        out = fitted.transform(train.head(0))
-        assert list(out.columns) == expected
-        assert out.shape[0] == 0
-
-    def test_one_row_transform(self) -> None:
-        fitted, train = _fitted()
-        expected = list(fitted.transform(train).columns)
-        out = fitted.transform(train.head(1))
-        assert list(out.columns) == expected
-        assert out.shape[0] == 1
-
-
-class TestPickleRoundTrip:
-    """A pickled fitted step reproduces the same transform() output."""
-
-    def test_pickle_preserves_transform_output(self) -> None:
-        fitted, train = _fitted()
-        before = fitted.transform(train)
-        restored = pickle.loads(pickle.dumps(fitted))
-        pd.testing.assert_frame_equal(restored.transform(train), before)
-
-
-class TestFitDeterminism:
-    """Fitting two independent recipes on the same data yields identical transform output."""
-
-    def test_fit_is_deterministic(self) -> None:
-        first, train = _fitted()
-        second, _ = _fitted()
-        pd.testing.assert_frame_equal(first.transform(train), second.transform(train))
-
-
-class TestStableId:
-    """The same step type with the same hyperparameters yields the same id."""
-
-    def test_id_is_stable(self) -> None:
-        first, _ = _fitted()
-        second, _ = _fitted()
-        assert first.steps[0].id == second.steps[0].id
-
-
-class TestEstimatesLifecycle:
-    """Not applicable: StepFilter estimates no statistics — the predicate is a
-    fixed constructor argument and ``fit()`` only records the (unchanged) column
-    schema, so there is no ``_estimates`` attribute. Slot kept visible per the
-    conformance contract."""
-
-
-class TestLineage:
-    """output_parents() declares exactly the columns the step adds, each with valid parents.
-
-    A RowOp adds no columns, so the mapping is empty."""
-
-    def test_output_parents_matches_added_columns(self) -> None:
-        fitted, train = _fitted()
-        step = fitted.steps[0]
-        pre = set(train.columns)
-        added = set(fitted.transform(train).columns) - pre
-        parents = step.output_parents()
-        assert set(parents) == added
-        assert all(
-            parent in pre for parents_of in parents.values() for parent in parents_of
-        )
-
-
-class TestBackendParity:
-    """fit + transform yields identical narwhals output (schema and values) on pandas and polars."""
-
-    def test_pandas_and_polars_output_match(self) -> None:
-        assert_backend_parity(
-            lambda: Recipe(steps=[StepFilter(_keep_over_one)]),
-            {"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]},
-        )
-
-
-class TestIsolatedFit:
-    """A step fits and transforms against a stubbed SchemaInfo, with no Recipe."""
-
-    def test_isolated_fit_matches_recipe(self) -> None:
-        fitted, train = _fitted()
-        expected = list(fitted.transform(train).columns)
-        out = fit_transform_isolated(StepFilter(_keep_over_one), train)
-        assert list(out.columns) == expected
-
-
-class TestTransformIdempotent:
-    """transform() is pure: re-transforming the same frame yields identical output."""
-
-    def test_transform_is_repeatable(self) -> None:
-        fitted, train = _fitted()
-        pd.testing.assert_frame_equal(fitted.transform(train), fitted.transform(train))
-
-
-class TestSparseContract:
-    """produces_sparse is a bool; no current step declares sparse output, so the
-    sparse-in/sparse-out path is a no-op until one does."""
-
-    def test_produces_sparse_is_bool(self) -> None:
-        fitted, _ = _fitted()
-        assert isinstance(fitted.steps[0].produces_sparse, bool)
-
-
-class TestJsonRoundTrip:
-    """A fitted step serializes to diffable JSON and reloads to identical
-    transform() output.
-
-    This doubles as the no-closure guarantee (``design/serialization.md``): a
-    closure cannot be JSON-encoded, so a passing round-trip proves the step and
-    its selectors captured only plain data, no environment or globals."""
-
-    def test_json_preserves_transform_output(self) -> None:
-        fitted, train = _fitted()
-        before = fitted.transform(train)
-        restored = fitted.from_json(fitted.to_json())
-        pd.testing.assert_frame_equal(restored.transform(train), before)
+    def make_empty_step(self) -> None:
+        """No column selector, so an empty selection cannot arise."""
+        return None

@@ -10,19 +10,31 @@ Each step function has its own series of test files. For a step `step_x`, there 
 
 ## Infrastructure test coverage
 
-Every `test_step_x_infrastructure.py` must contain the **same set** of infrastructure test classes — the set is uniform across all steps so the conformance contract is enforced identically everywhere. Each class name is `Test...` and its docstring states the property it checks.
+The conformance contract lives in `shoez.testing.StepConformanceTest` and is written **once**. A `test_step_x_infrastructure.py` file supplies only the step and its data:
 
-The canonical, up-to-date set is whatever the existing infrastructure files contain — read one (e.g. `test_step_impute_mean_infrastructure.py`) to see the current classes rather than relying on a list here. To check the set is uniform across files:
+```python
+from shoez import StepNormalize
+from shoez.testing import StepConformanceTest
 
-```bash
-grep -h "^class Test" tests/test_step_*_infrastructure.py | sort | uniq -c
+
+class TestNormalizeConformance(StepConformanceTest):
+    training_data = {"a": [1.0, 2.0, 3.0], "g": ["x", "y", "x"]}
+
+    def make_step(self) -> StepNormalize:
+        return StepNormalize(["a"])
 ```
 
-Every count should equal the number of step infrastructure files.
+Uniformity is now structural — every step inherits the same checks, so there is nothing to keep in sync by hand and no `grep` to run. Adding a check to the contract means editing `shoez/testing.py` once, and every step picks it up.
 
-If a class genuinely does not apply to a step, **still add the class** (or keep its slot visible) and write a comment explaining why instead of silently omitting it — so a reader can see the test was considered, not forgotten. For example, `TestEmptySelection` does not apply to `step_intercept` (an ADDING step with no column selector), so that file documents the omission in its module docstring rather than dropping the class without explanation.
+If a check genuinely does not apply to a step, opt out through a hook and say why in a comment — never by omitting anything, since there is nothing to omit:
 
-When a new infrastructure test class is added, add it to **all** step files — including a no-op-with-comment slot for any step it does not apply to.
+- `make_empty_step()` returning `None` — the step takes no column selector (`step_intercept`, `step_filter`, `step_mutate`).
+- `estimates_attr = None` — the step stores no fit-time estimates.
+- `supports_json = False` — the step refuses JSON serialization (`step_mutate`); the check then asserts the refusal.
+
+Each of these skips with an explicit reason, visible in `pytest -rs`, so "considered and not applicable" stays distinguishable from "forgotten".
+
+Because `shoez.testing` ships inside the package, third-party steps run this same contract; see `design/extensibility.md`.
 
 ## Input dtype coverage
 
