@@ -208,7 +208,8 @@ class StepPca(Step):
         If ``True``, the source columns are kept alongside the components
         instead of being dropped. Default ``False``.
     role
-        Role assigned to the new component columns. Default ``"predictor"``.
+        Role assigned to the new component columns (see `Roles`). Default
+        ``"predictor"``.
     id
         Stable step identifier. Default ``"pca"``.
 
