@@ -7,7 +7,7 @@
 > **Note:** Code examples in this document are illustrative and not final — API names, signatures, and patterns may change before implementation.
 
 
-Roles are a first-class concept and are what makes `shoez` different from a typical sklearn `Pipeline`. Every variable in the recipe carries **zero or more** role labels stored as a `set[str]`.
+Roles are a first-class concept and are what makes `shoez` different from a typical sklearn `Pipeline`. Every column in the recipe carries **zero or more** role names stored as a `set[str]`.
 
 ---
 
@@ -15,8 +15,8 @@ Roles are a first-class concept and are what makes `shoez` different from a typi
 
 | Role             | Meaning                                         |
 | ---------------- | ----------------------------------------------- |
-| `"feature"`    | Used as a model input feature                   |
-| `"target"`      | The target variable(s) to predict               |
+| `"feature"`    | Used as a model input                           |
+| `"target"`      | The column(s) to predict                        |
 | `"case_weights"` | Per-sample weights |
 
 Users may add arbitrary string roles (`"id"`, `"group"`, `"date_split"`, etc.). New roles register cheaply — no coordinated changes across packages required.
@@ -25,10 +25,10 @@ Users may add arbitrary string roles (`"id"`, `"group"`, `"date_split"`, etc.). 
 
 ## Multi-role variables
 
-A variable may carry multiple roles simultaneously. Validation **rejects nonsensical combinations** at assignment time — e.g. a variable cannot be both `"target"` and `"feature"`.
+A column may carry multiple roles simultaneously. Validation **rejects nonsensical combinations** at assignment time: a column cannot be both `"target"` and `"feature"`.
 
 ```python
-# A timestamp column used both as a feature feature and for time-based splitting
+# A timestamp column used both as a feature and for time-based splitting
 rec = Recipe(data=df).set_roles(
     target=["price"],
     feature=["sqft", "timestamp"],
@@ -47,7 +47,7 @@ rec = Recipe(data=df).set_roles(
 # surv_time and event each have role {"target"}
 ```
 
-A variable with no role is retained in the schema but is not selected by `s.features()` etc.
+A column with no role is retained in the schema but is not selected by `s.features()` etc.
 
 Targets are a structured object (or a role applied to multiple columns), not a single formula LHS. This generalizes cleanly to multi-output regression, survival, and multitask learning. See [goals.md § open questions](goals.md).
 

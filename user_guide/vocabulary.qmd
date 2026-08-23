@@ -37,7 +37,7 @@ A few words mean something different here than you might expect, so they are wor
 
 **`predictor` is not a column.** In scikit-learn, "predictor" means an *estimator* that implements `predict()`: `TreePredictor`, `make_predictor()`, `_linear_predictor`. It is never a name for an input column, which is exactly the opposite of R `recipes`, where `all_predictors()` selects input columns. shoez does not use the word at all.
 
-**`label` is not the target.** scikit-learn uses "label" as a synonym for the target, roughly as often as it uses "target" itself. shoez does not, because "label" would then collide with the class values of a categorical target and with the distinct concept below. Where a single class value of a target is meant, shoez says **class**.
+**`label` is not the target.** scikit-learn uses "label" as a synonym for the target, roughly as often as it uses "target" itself. shoez does not, because "label" would then collide with the class values of a categorical target and with the distinct concept below. Where a single class value of a categorical target is meant, shoez says **class**, or **class label** where the fuller phrase reads better. What it never does is use a bare "label" to mean the target column.
 
 **`level`, not `label`, for a category's values.** The distinct values of a categorical column are its **levels**, following R's factor terminology. `StepDummy` and `StepOneHot` learn a column's levels at fit time, and `StepUnknown` deals with missing ones. A level is a value *within* a column, which is a different thing from a role, which is a property *of* a column.
 
@@ -49,7 +49,7 @@ A few words mean something different here than you might expect, so they are wor
 | --- | --- | --- |
 | `Recipe` | The declared, not-yet-estimated pipeline | `recipe` |
 | step | One feature-engineering operation | `step_*()` |
-| role | A user-assigned label on a column, such as `"feature"` or `"target"` | role |
+| role | A user-assigned name on a column, such as `"feature"` or `"target"` | role |
 | selector | A description of *which* columns a step applies to, resolved at fit time | `all_predictors()` and friends |
 | untrained | A recipe whose steps have not estimated anything yet | unprepped |
 | trained | A recipe whose steps hold fitted state, ready to apply | prepped |

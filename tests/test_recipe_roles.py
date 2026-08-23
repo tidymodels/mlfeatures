@@ -324,7 +324,7 @@ class TestSetRolesIntegration:
             .add(StepNormalize(s.numeric_features()))
         )
         result = rec.fit(_df()).transform(_df())
-        # 'y' is an target, so normalization left it alone.
+        # 'y' is a target, so normalization left it alone.
         assert result["y"].tolist() == [1.0, 2.0, 3.0]
         assert result["x1"].mean() == pytest.approx(0.0)
 

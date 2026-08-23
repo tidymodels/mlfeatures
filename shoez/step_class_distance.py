@@ -148,7 +148,7 @@ def fit_class_distance(
     # zero-column selection and treats the step as the identity transform, so
     # ``fit`` is not called. See ``Recipe.fit`` / ``Step._empty_selection``.
     #
-    # Drop rows where the target is null: a null label isn't a class, so it
+    # Drop rows where the target is null: a null value isn't a class, so it
     # can't contribute to any centroid. Filtering on the target side keeps the
     # rest of the function dealing only with rows that have a real label.
     # We build a single-column frame so the standard ``drop_nulls()`` semantics

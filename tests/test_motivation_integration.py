@@ -160,7 +160,7 @@ class TestMotivationPipeline:
         captured = set(normalize.schema_in().columns)
         assert set(PLAIN_NUMERIC) <= captured
         assert {f"PC{i + 1}" for i in range(NUM_COMP)} <= captured
-        # price is an target, so a *_features selector must never catch it.
+        # price is a target, so a *_features selector must never catch it.
         assert "price" not in captured
 
     def test_transform_agrees_across_backends(self) -> None:

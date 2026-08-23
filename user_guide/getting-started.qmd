@@ -204,7 +204,7 @@ bridges the two — it wraps a recipe so it behaves like any scikit-learn
 transformer and drops straight into a `Pipeline`.
 
 One wrinkle: scikit-learn keeps the features `X` and target `y` apart, while
-`shoez` identifies the target by its **role**. So assign an target role on the
+`shoez` identifies the target by its **role**. So assign a target role on the
 recipe; the adapter re-joins `y` under that name at fit time and strips it back
 out, leaving `transform` to return the feature matrix only.
 
