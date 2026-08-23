@@ -61,7 +61,7 @@ class TestEndToEnd:
         df = pd.DataFrame(_data())
         fitted = Recipe(steps=[StepPca(["x", "y"], num_comp=2)]).fit(df)
         assert fitted.roles.of("x") == set()
-        assert "predictor" in fitted.roles.of("PC1")
+        assert "feature" in fitted.roles.of("PC1")
 
     def test_keep_original_cols_retains_sources(self) -> None:
         df = pd.DataFrame(_data())
@@ -79,8 +79,8 @@ class TestEndToEnd:
         fitted = Recipe(
             steps=[StepPca(["x", "y"], num_comp=2, keep_original_cols=True)]
         ).fit(df)
-        assert "predictor" in fitted.roles.of("x")
-        assert "predictor" in fitted.roles.of("PC1")
+        assert "feature" in fitted.roles.of("x")
+        assert "feature" in fitted.roles.of("PC1")
 
     def test_keep_original_cols_leaves_produced_columns_alone(self) -> None:
         # The flag governs the source columns only; what the step *produces* is

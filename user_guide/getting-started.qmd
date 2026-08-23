@@ -5,7 +5,7 @@ toc: true
 
 `shoez` separates feature engineering into three phases — **specify**, **fit**,
 and **transform**. This guide walks through all three on a single, end-to-end
-example: removing highly correlated predictors with `StepDropCorr`.
+example: removing highly correlated features with `StepDropCorr`.
 
 ## A complete example
 
@@ -204,7 +204,7 @@ bridges the two — it wraps a recipe so it behaves like any scikit-learn
 transformer and drops straight into a `Pipeline`.
 
 One wrinkle: scikit-learn keeps the features `X` and target `y` apart, while
-`shoez` identifies the outcome by its **role**. So assign an outcome role on the
+`shoez` identifies the target by its **role**. So assign an target role on the
 recipe; the adapter re-joins `y` under that name at fit time and strips it back
 out, leaving `transform` to return the feature matrix only.
 
@@ -218,7 +218,7 @@ from shoez import RecipeTransformer
 X, y = load_breast_cancer(return_X_y=True, as_frame=True)
 features = list(X.columns)
 
-recipe = Recipe(data=X.assign(target=y), outcome="target", predictors=features).add(
+recipe = Recipe(data=X.assign(target=y), target="target", features=features).add(
     StepNormalize(features)
 )
 

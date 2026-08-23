@@ -30,7 +30,7 @@ Raised exceptions and `warnings.warn` messages follow a uniform style so they re
 
 - **Lowercase first word**, unless it is an identifier that is naturally capitalized (e.g. a class name like `StepDummy` in the `called before fit()` guards).
 - **No trailing period.** Join what would be two sentences with `;` rather than `. ` so the message stays a single phrase.
-- **Single quotes** around parameter names, role names, and values (`'degree'`, `'outcome'`, `got 'kendall'`) — use `{value!r}` for interpolated values. Do not use backticks (a Markdown convention, not a runtime one).
+- **Single quotes** around parameter names, role names, and values (`'degree'`, `'target'`, `got 'kendall'`) — use `{value!r}` for interpolated values. Do not use backticks (a Markdown convention, not a runtime one).
 - **Numerals** for counts (`fewer than 2 unique levels`, not `two`).
 - **No em dashes** — use `;` or `:` instead.
 - Pluralize with the `(s)` form (`column(s)`, `name(s)`) and quote column lists as their repr (`['empty']`).
@@ -68,7 +68,7 @@ A step's class docstring is its reference page, so it is written for someone usi
   ```
   columns
       Columns to project. Accepts a single column name, a list of names, a
-      shoez selector such as ``Selectors.numeric_predictors()`` (see
+      shoez selector such as ``Selectors.numeric_features()`` (see
       `Selectors` for the full set), or a narwhals or polars selector
       (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
       Selectors are resolved against the frame's schema when the recipe is
@@ -83,22 +83,22 @@ A step's class docstring is its reference page, so it is written for someone usi
 
 These conventions apply to every example we write: docstring `Examples` cells, [`README.qmd`](README.qmd), and the snippets in `design/`.
 
-- **Import selectors as `s`**: `from shoez import Selectors as s`, then `s.numeric_predictors()`. This is the house style everywhere, and it keeps the shoez namespace clear of `cs`, the conventional alias for `polars.selectors`. Prose cross-references to the API still use the real name (`Selectors.wrap`).
-- **Select columns with selectors, not literal names.** Pass `s.numeric_predictors()` rather than a hardcoded list like `["a", "b", "c"]`; the selector says what the step is for, and the example keeps working when the frame changes.
-- **Build recipes by chaining `.add()`** rather than `Recipe(steps=[...])`, binding the recipe to a name and fitting on the next line. A single step stays on one line (`recipe = Recipe().add(StepNormalize(s.numeric_predictors()))`); a step's own docstring needs only that step. In overview examples (the README, `Recipe`) show at least two steps, one per line inside a parenthesized expression, so the chained shape is the thing being demonstrated:
+- **Import selectors as `s`**: `from shoez import Selectors as s`, then `s.numeric_features()`. This is the house style everywhere, and it keeps the shoez namespace clear of `cs`, the conventional alias for `polars.selectors`. Prose cross-references to the API still use the real name (`Selectors.wrap`).
+- **Select columns with selectors, not literal names.** Pass `s.numeric_features()` rather than a hardcoded list like `["a", "b", "c"]`; the selector says what the step is for, and the example keeps working when the frame changes.
+- **Build recipes by chaining `.add()`** rather than `Recipe(steps=[...])`, binding the recipe to a name and fitting on the next line. A single step stays on one line (`recipe = Recipe().add(StepNormalize(s.numeric_features()))`); a step's own docstring needs only that step. In overview examples (the README, `Recipe`) show at least two steps, one per line inside a parenthesized expression, so the chained shape is the thing being demonstrated:
 
   ```python
   recipe = (
       Recipe()
-      .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
-      .add(StepNormalize(s.numeric_predictors()))
+      .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+      .add(StepNormalize(s.numeric_features()))
   )
   ```
 
 - **Keep the three lifecycle phases on their own lines.** Bind each one rather than chaining them together, so specify, fit, and transform read as the distinct phases they are:
 
   ```python
-  recipe = Recipe().add(StepNormalize(s.numeric_predictors()))
+  recipe = Recipe().add(StepNormalize(s.numeric_features()))
   fitted = recipe.fit(df)
   fitted.transform(df)
   ```

@@ -34,8 +34,8 @@ def _frame_with_roles() -> tuple[Frame, Roles]:
     frame = _frame.from_native(df)
     roles = Roles()
     for col in ("x1", "x2", "count", "label"):
-        roles.add(col, "predictor")
-    roles.add("y", "outcome")
+        roles.add(col, "feature")
+    roles.add("y", "target")
     return frame, roles
 
 
@@ -45,8 +45,8 @@ def _typed_frame_with_roles() -> tuple[Frame, Roles]:
     pandas cannot represent a narwhals ``Date`` without pyarrow, so this fixture
     is polars-backed; the selector layer is backend-agnostic. Column order is
     fixed so ``resolve`` results can be asserted exactly. ``y`` (float) and
-    ``grp`` (categorical) are outcomes so the ``*_predictors`` compounds have a
-    same-typed non-predictor column to exclude.
+    ``grp`` (categorical) are targets so the ``*_features`` compounds have a
+    same-typed non-feature column to exclude.
     """
     df = pl.DataFrame(
         {
@@ -67,9 +67,9 @@ def _typed_frame_with_roles() -> tuple[Frame, Roles]:
     frame = _frame.from_native(df)
     roles = Roles()
     for col in ("fl", "i", "s", "cat", "enum", "flag", "d", "dt"):
-        roles.add(col, "predictor")
-    roles.add("y", "outcome")
-    roles.add("grp", "outcome")
+        roles.add(col, "feature")
+    roles.add("y", "target")
+    roles.add("grp", "target")
     return frame, roles
 
 
@@ -187,20 +187,20 @@ class TestByTypeFullDtypeRange:
 
 
 class TestByRole:
-    def test_predictors_and_outcomes(self) -> None:
+    def test_features_and_targets(self) -> None:
         frame, roles = _frame_with_roles()
-        assert _resolve(Selectors.predictors(), frame, roles) == [
+        assert _resolve(Selectors.features(), frame, roles) == [
             "x1",
             "x2",
             "count",
             "label",
         ]
-        assert _resolve(Selectors.outcomes(), frame, roles) == ["y"]
+        assert _resolve(Selectors.targets(), frame, roles) == ["y"]
 
     def test_has_role_and_compound(self) -> None:
         frame, roles = _frame_with_roles()
-        assert _resolve(Selectors.has_role("outcome"), frame, roles) == ["y"]
-        assert _resolve(Selectors.numeric_predictors(), frame, roles) == [
+        assert _resolve(Selectors.has_role("target"), frame, roles) == ["y"]
+        assert _resolve(Selectors.numeric_features(), frame, roles) == [
             "x1",
             "x2",
             "count",
@@ -212,34 +212,34 @@ class TestByRole:
         roles = Roles()
         roles.add("x1", "id")
         roles.add("count", "id")
-        roles.add("x2", "predictor")
+        roles.add("x2", "feature")
         assert _resolve(Selectors.has_role("id"), frame, roles) == ["x1", "count"]
 
 
-class TestCompoundPredictors:
-    """The ``*_predictors`` compounds = type selector intersected with predictors.
+class TestCompoundFeatures:
+    """The ``*_features`` compounds = type selector intersected with features.
 
-    ``y`` (float) and ``grp`` (categorical) are outcomes in the fixture, so
-    ``numeric_predictors`` / ``double_predictors`` exclude ``y`` and
-    ``categorical_predictors`` / ``nominal_predictors`` exclude ``grp`` — proving
+    ``y`` (float) and ``grp`` (categorical) are targets in the fixture, so
+    ``numeric_features`` / ``double_features`` exclude ``y`` and
+    ``categorical_features`` / ``nominal_features`` exclude ``grp`` — proving
     the role filter actually bites, not just the type filter.
     """
 
     @pytest.mark.parametrize(
         ("selector", "expected"),
         [
-            (Selectors.numeric_predictors(), ["fl", "i"]),
-            (Selectors.integer_predictors(), ["i"]),
-            (Selectors.double_predictors(), ["fl"]),
-            (Selectors.string_predictors(), ["s"]),
-            (Selectors.categorical_predictors(), ["cat", "enum"]),
-            (Selectors.nominal_predictors(), ["s", "cat", "enum"]),
-            (Selectors.boolean_predictors(), ["flag"]),
-            (Selectors.date_predictors(), ["d"]),
-            (Selectors.datetime_predictors(), ["dt"]),
+            (Selectors.numeric_features(), ["fl", "i"]),
+            (Selectors.integer_features(), ["i"]),
+            (Selectors.double_features(), ["fl"]),
+            (Selectors.string_features(), ["s"]),
+            (Selectors.categorical_features(), ["cat", "enum"]),
+            (Selectors.nominal_features(), ["s", "cat", "enum"]),
+            (Selectors.boolean_features(), ["flag"]),
+            (Selectors.date_features(), ["d"]),
+            (Selectors.datetime_features(), ["dt"]),
         ],
     )
-    def test_compound_predictor(self, selector: object, expected: list[str]) -> None:
+    def test_compound_feature(self, selector: object, expected: list[str]) -> None:
         frame, roles = _typed_frame_with_roles()
         assert _resolve(selector, frame, roles) == expected
 
@@ -266,25 +266,25 @@ class TestSetOps:
     def test_and_or_not_difference(self) -> None:
         frame, roles = _frame_with_roles()
         # intersection
-        assert _resolve(Selectors.numeric() & Selectors.predictors(), frame, roles) == [
+        assert _resolve(Selectors.numeric() & Selectors.features(), frame, roles) == [
             "x1",
             "x2",
             "count",
         ]
         # union
-        assert _resolve(Selectors.outcomes() | Selectors.string(), frame, roles) == [
+        assert _resolve(Selectors.targets() | Selectors.string(), frame, roles) == [
             "label",
             "y",
         ]
         # complement
-        assert _resolve(~Selectors.outcomes(), frame, roles) == [
+        assert _resolve(~Selectors.targets(), frame, roles) == [
             "x1",
             "x2",
             "count",
             "label",
         ]
         # difference
-        assert _resolve(Selectors.numeric() - Selectors.outcomes(), frame, roles) == [
+        assert _resolve(Selectors.numeric() - Selectors.targets(), frame, roles) == [
             "x1",
             "x2",
             "count",
@@ -314,13 +314,13 @@ class TestSetOps:
 
     def test_complement_of_composite(self) -> None:
         frame, roles = _frame_with_roles()
-        result = _resolve(~(Selectors.outcomes() | Selectors.string()), frame, roles)
+        result = _resolve(~(Selectors.targets() | Selectors.string()), frame, roles)
         assert result == ["x1", "x2", "count"]
 
     def test_three_operand_chain(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(
-            Selectors.numeric() & Selectors.predictors() & Selectors.starts_with("x"),
+            Selectors.numeric() & Selectors.features() & Selectors.starts_with("x"),
             frame,
             roles,
         )
@@ -330,7 +330,7 @@ class TestSetOps:
 class TestCrossFamily:
     def test_shoez_leads_coerces_polars(self) -> None:
         frame, roles = _frame_with_roles()
-        result = _resolve(Selectors.predictors() & cs.starts_with("x"), frame, roles)
+        result = _resolve(Selectors.features() & cs.starts_with("x"), frame, roles)
         assert result == ["x1", "x2"]
 
     def test_shoez_leads_coerces_list(self) -> None:
@@ -340,12 +340,12 @@ class TestCrossFamily:
 
     def test_shoez_leads_coerces_narwhals(self) -> None:
         frame, roles = _frame_with_roles()
-        result = _resolve(Selectors.predictors() & ncs.numeric(), frame, roles)
+        result = _resolve(Selectors.features() & ncs.numeric(), frame, roles)
         assert result == ["x1", "x2", "count"]
 
     def test_cross_family_union(self) -> None:
         frame, roles = _frame_with_roles()
-        result = _resolve(Selectors.outcomes() | cs.starts_with("x"), frame, roles)
+        result = _resolve(Selectors.targets() | cs.starts_with("x"), frame, roles)
         assert result == ["x1", "x2", "y"]
 
     def test_cross_family_difference(self) -> None:
@@ -356,7 +356,7 @@ class TestCrossFamily:
     def test_wrap_lets_polars_lead(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(
-            Selectors.wrap(cs.starts_with("x")) & Selectors.predictors(), frame, roles
+            Selectors.wrap(cs.starts_with("x")) & Selectors.features(), frame, roles
         )
         assert result == ["x1", "x2"]
 
@@ -382,7 +382,7 @@ class TestCrossFamily:
         # Documented limit: a polars selector on the left cannot see the shoez
         # operand and polars raises rather than composing.
         with pytest.raises(TypeError):
-            _ = cs.numeric() & Selectors.predictors()  # type: ignore[operator]
+            _ = cs.numeric() & Selectors.features()  # type: ignore[operator]
 
 
 def _dummy_data() -> pd.DataFrame:
@@ -516,13 +516,13 @@ class TestInRecipe:
             }
         )
 
-    def test_role_selector_only_touches_predictors(self) -> None:
+    def test_role_selector_only_touches_features(self) -> None:
         df = self._df()
-        recipe = Recipe(predictors=["x1", "x2"], outcome="y").add(
-            StepNormalize(Selectors.numeric_predictors())
+        recipe = Recipe(features=["x1", "x2"], target="y").add(
+            StepNormalize(Selectors.numeric_features())
         )
         out = recipe.fit(df).transform(df)
-        # predictors normalized (mean ~ 0); outcome left untouched.
+        # features normalized (mean ~ 0); target left untouched.
         assert abs(out["x1"].mean()) < 1e-9
         assert abs(out["x2"].mean()) < 1e-9
         assert out["y"].tolist() == [0.0, 10.0, 20.0]
@@ -542,8 +542,8 @@ class TestInRecipe:
 
     def test_set_op_selector_drives_step(self) -> None:
         df = self._df()
-        recipe = Recipe(predictors=["x1", "x2"], outcome="y").add(
-            StepNormalize(Selectors.numeric() & Selectors.predictors())
+        recipe = Recipe(features=["x1", "x2"], target="y").add(
+            StepNormalize(Selectors.numeric() & Selectors.features())
         )
         out = recipe.fit(df).transform(df)
         assert abs(out["x1"].mean()) < 1e-9

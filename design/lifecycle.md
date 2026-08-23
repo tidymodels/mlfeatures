@@ -10,19 +10,19 @@
 ## Minimum public surface
 
 ```python
-rec = Recipe(data=df_train).set_roles(outcome=["y"], predictor=["x1", "x2", ...])
+rec = Recipe(data=df_train).set_roles(target=["y"], feature=["x1", "x2", ...])
 
 rec = (
     rec
-    .add(ImputeKNN(all_predictors()))
-    .add(Dummy(all_nominal_predictors()))
-    .add(Normalize(all_numeric_predictors()))
+    .add(ImputeKNN(s.features()))
+    .add(Dummy(s.nominal_features()))
+    .add(Normalize(s.numeric_features()))
 )
 
 trained = rec.fit(df_train)        # fits statistics
 X_train = trained.transform(df_train)    # applies to training data
 X_test  = trained.transform(df_test)     # applies to held-out data
-X_new   = trained.transform(df_new, all_predictors())  # selector at transform time
+X_new   = trained.transform(df_new, s.features())  # selector at transform time
 ```
 
 ---
@@ -57,8 +57,8 @@ Whether a column must be present at `fit()` and `transform()` time is determined
 
 | Role             | Required at `fit()` | Required at `transform()` | Configurable? |
 | ---------------- | ------------------- | ------------------------- | ------------- |
-| `"outcome"`      | yes                 | **no** (hardcoded)        | no            |
-| `"predictor"`    | yes                 | **yes** (hardcoded)       | no            |
+| `"target"`      | yes                 | **no** (hardcoded)        | no            |
+| `"feature"`    | yes                 | **yes** (hardcoded)       | no            |
 | `"case_weights"` | yes                 | no (default)              | yes           |
 | no role (NA)     | yes                 | yes (default)             | yes           |
 | custom roles     | yes                 | yes (default)             | yes           |
@@ -172,7 +172,7 @@ Key points:
 ```python
 def transform(self, data, selector=None):
     # 1. validate input against the ptype captured at fit() — only columns
-    #    flagged required at transform time (predictors always; outcomes never;
+    #    flagged required at transform time (features always; targets never;
     #    others per role default / update_role_requirements) must be present.
     self.ptype.check(data, context="transform")
 

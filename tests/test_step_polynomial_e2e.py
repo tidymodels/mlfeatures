@@ -116,8 +116,8 @@ class TestEndToEnd:
         fitted = Recipe(
             steps=[StepPolynomial(["a"], degree=2, keep_original_cols=True)]
         ).fit(df)
-        assert "predictor" in fitted.roles.of("a")
-        assert "predictor" in fitted.roles.of("a_1")
+        assert "feature" in fitted.roles.of("a")
+        assert "feature" in fitted.roles.of("a_1")
 
     def test_source_loses_roles_when_not_kept(self) -> None:
         df = pd.DataFrame(_data())
@@ -239,8 +239,8 @@ class TestStepPolynomialUnit:
     def test_default_degree_is_two(self) -> None:
         assert StepPolynomial(["a"]).degree == 2
 
-    def test_default_role_is_predictor(self) -> None:
-        assert StepPolynomial(["a"]).output_role == "predictor"
+    def test_default_role_is_feature(self) -> None:
+        assert StepPolynomial(["a"]).output_role == "feature"
 
     def test_keep_original_cols_default_false(self) -> None:
         assert StepPolynomial(["a"]).keep_original_cols is False

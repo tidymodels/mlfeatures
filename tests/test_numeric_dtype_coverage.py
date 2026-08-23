@@ -112,7 +112,7 @@ SCENARIOS: list[Scenario] = [
                 "label": ["a", "a", "b", "b"],
             }
         ),
-        lambda: StepClassDistance(["x", "y"], outcome="label"),
+        lambda: StepClassDistance(["x", "y"], target="label"),
         ["distance_a", "distance_b"],
     ),
     # Impute scenarios include a null so the int→float promotion path runs.

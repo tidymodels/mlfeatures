@@ -18,7 +18,7 @@ from shoez import Mode, Recipe, SchemaInfo, StepClassDistance
 
 
 def _data() -> dict[str, list[float] | list[str]]:
-    """Two-predictor, two-class training data with one passthrough column."""
+    """Two-feature, two-class training data with one passthrough column."""
     return {
         "x": [0.0, 2.0, 10.0, 12.0],
         "y": [0.0, 4.0, 10.0, 14.0],
@@ -37,7 +37,7 @@ class TestEndToEnd:
         df = pd.DataFrame(_data())
         recipe = Recipe(
             steps=[
-                StepClassDistance(["x", "y"], outcome="label", log_distance=False),
+                StepClassDistance(["x", "y"], target="label", log_distance=False),
             ]
         )
         out = recipe.fit(df).transform(df)
@@ -55,7 +55,7 @@ class TestEndToEnd:
     def test_polars_produces_distance_columns(self) -> None:
         df = pl.DataFrame(_data())
         recipe = Recipe().add(
-            StepClassDistance(["x", "y"], outcome="label", log_distance=False)
+            StepClassDistance(["x", "y"], target="label", log_distance=False)
         )
         out = recipe.fit(df).transform(df)
 
@@ -68,7 +68,7 @@ class TestEndToEnd:
         df = pd.DataFrame(_data())
         recipe = Recipe(
             steps=[
-                StepClassDistance(["x", "y"], outcome="label", log_distance=False),
+                StepClassDistance(["x", "y"], target="label", log_distance=False),
             ]
         )
         out = recipe.fit(df).transform(df)
@@ -87,7 +87,7 @@ class TestEndToEnd:
         )
         new = pd.DataFrame(
             {
-                # Same predictor values, completely different labels — if the
+                # Same feature values, completely different labels — if the
                 # centroids were re-estimated from ``new``, the values would change.
                 "x": [0.0, 2.0, 10.0, 12.0],
                 "y": [0.0, 4.0, 10.0, 14.0],
@@ -96,7 +96,7 @@ class TestEndToEnd:
         )
         fitted = Recipe(
             steps=[
-                StepClassDistance(["x", "y"], outcome="label", log_distance=False),
+                StepClassDistance(["x", "y"], target="label", log_distance=False),
             ]
         ).fit(train)
         out = fitted.transform(new)
@@ -108,7 +108,7 @@ class TestEndToEnd:
         # Default is log_distance=True
         df = pd.DataFrame(_data())
         recipe = Recipe(
-            steps=[StepClassDistance(["x", "y"], outcome="label")],
+            steps=[StepClassDistance(["x", "y"], target="label")],
         )
         out = recipe.fit(df).transform(df)
         # Every distance is < raw distance (since log compresses for d > 1)
@@ -118,12 +118,12 @@ class TestEndToEnd:
 
     def test_source_columns_lose_roles(self) -> None:
         df = pd.DataFrame(_data())
-        fitted = Recipe(steps=[StepClassDistance(["x", "y"], outcome="label")]).fit(df)
+        fitted = Recipe(steps=[StepClassDistance(["x", "y"], target="label")]).fit(df)
         assert fitted.roles.of("x") == set()
         assert fitted.roles.of("y") == set()
-        # The outcome column is read but not consumed, so it keeps its role.
+        # The target column is read but not consumed, so it keeps its role.
         assert fitted.roles.of("label") != set()
-        assert "predictor" in fitted.roles.of("distance_a")
+        assert "feature" in fitted.roles.of("distance_a")
 
     def test_keep_original_cols_retains_sources(self) -> None:
         df = pd.DataFrame(_data())
@@ -132,7 +132,7 @@ class TestEndToEnd:
             .add(
                 StepClassDistance(
                     ["x", "y"],
-                    outcome="label",
+                    target="label",
                     log_distance=False,
                     keep_original_cols=True,
                 )
@@ -154,11 +154,11 @@ class TestEndToEnd:
         df = pd.DataFrame(_data())
         fitted = Recipe(
             steps=[
-                StepClassDistance(["x", "y"], outcome="label", keep_original_cols=True)
+                StepClassDistance(["x", "y"], target="label", keep_original_cols=True)
             ]
         ).fit(df)
-        assert "predictor" in fitted.roles.of("x")
-        assert "predictor" in fitted.roles.of("distance_a")
+        assert "feature" in fitted.roles.of("x")
+        assert "feature" in fitted.roles.of("distance_a")
 
     def test_keep_original_cols_leaves_produced_columns_alone(self) -> None:
         # The flag governs the source columns only; what the step *produces* is
@@ -166,7 +166,7 @@ class TestEndToEnd:
         df = pd.DataFrame(_data())
         fitted = Recipe(
             steps=[
-                StepClassDistance(["x", "y"], outcome="label", keep_original_cols=True)
+                StepClassDistance(["x", "y"], target="label", keep_original_cols=True)
             ]
         ).fit(df)
         step = fitted.steps[0]
@@ -177,7 +177,7 @@ class TestEndToEnd:
         }
 
     def test_trained_flag_set_by_recipe(self) -> None:
-        fitted = Recipe(steps=[StepClassDistance(["x", "y"], outcome="label")]).fit(
+        fitted = Recipe(steps=[StepClassDistance(["x", "y"], target="label")]).fit(
             pd.DataFrame(_data())
         )
         assert all(step.trained for step in fitted.steps)
@@ -198,7 +198,7 @@ class TestEndToEnd:
             index=[100, 200, 300, 400, 500, 600],
         )
         recipe = Recipe(
-            steps=[StepClassDistance(["x", "y"], outcome="label", log_distance=False)]
+            steps=[StepClassDistance(["x", "y"], target="label", log_distance=False)]
         )
         out = recipe.fit(df).transform(df)
         # Rows preserved (no NaN introduced) and indices kept.
@@ -214,56 +214,56 @@ class TestEndToEnd:
 
 class TestStepClassDistanceUnit:
     def test_mode_is_many_to_many(self) -> None:
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         assert step.mode is Mode.MANY_TO_MANY
 
     def test_default_id(self) -> None:
-        assert StepClassDistance(["x"], outcome="label").id == "class_distance"
+        assert StepClassDistance(["x"], target="label").id == "class_distance"
 
     def test_explicit_id(self) -> None:
-        step = StepClassDistance(["x"], outcome="label", id="my_dist")
+        step = StepClassDistance(["x"], target="label", id="my_dist")
         assert step.id == "my_dist"
 
     def test_keep_original_cols_default_false(self) -> None:
-        assert StepClassDistance(["x"], outcome="label").keep_original_cols is False
+        assert StepClassDistance(["x"], target="label").keep_original_cols is False
 
     def test_keep_original_cols_is_settable(self) -> None:
-        step = StepClassDistance(["x"], outcome="label", keep_original_cols=True)
+        step = StepClassDistance(["x"], target="label", keep_original_cols=True)
         assert step.keep_original_cols is True
 
     def test_fit_returns_self(self) -> None:
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         fitted = step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
         assert fitted is step
 
     def test_transform_before_fit_raises(self) -> None:
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         with pytest.raises(RuntimeError):
             step.transform(nw.from_native(pd.DataFrame(_data())))
 
     def test_schema_in_before_fit_raises(self) -> None:
         with pytest.raises(RuntimeError):
-            StepClassDistance(["x"], outcome="label").schema_in()
+            StepClassDistance(["x"], target="label").schema_in()
 
     def test_schema_out_before_fit_raises(self) -> None:
         with pytest.raises(RuntimeError):
-            StepClassDistance(["x"], outcome="label").schema_out()
+            StepClassDistance(["x"], target="label").schema_out()
 
     def test_accepts_numeric_dtypes(self) -> None:
-        accepted = StepClassDistance(["x"], outcome="label").accepts_dtypes()
+        accepted = StepClassDistance(["x"], target="label").accepts_dtypes()
         # Same numeric set as StepNormalize.
         assert nw.Float64 in accepted
         assert nw.Int64 in accepted
         assert nw.String not in accepted
 
-    def test_schema_in_lists_predictor_columns_only(self) -> None:
-        step = StepClassDistance(["x", "y"], outcome="label")
+    def test_schema_in_lists_feature_columns_only(self) -> None:
+        step = StepClassDistance(["x", "y"], target="label")
         step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
-        # The outcome column is consumed at fit time but not declared an input.
+        # The target column is consumed at fit time but not declared an input.
         assert step.schema_in().columns == ["x", "y"]
 
     def test_schema_out_lists_new_distance_columns(self) -> None:
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         step.fit(nw.from_native(pd.DataFrame(_data())), SchemaInfo())
         # Two classes -> two distance columns, both Float64.
         assert step.schema_out().columns == ["distance_a", "distance_b"]
@@ -273,7 +273,7 @@ class TestStepClassDistanceUnit:
         }
 
     def test_schema_out_sorts_classes_regardless_of_input_order(self) -> None:
-        # Outcome labels appear in reverse-sorted order ("b" before "a"); the
+        # Target labels appear in reverse-sorted order ("b" before "a"); the
         # distance columns must still come out sorted at the wrapper layer.
         df = pd.DataFrame(
             {
@@ -282,21 +282,21 @@ class TestStepClassDistanceUnit:
                 "label": ["b", "b", "a", "a"],
             }
         )
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         step.fit(nw.from_native(df), SchemaInfo())
         assert step.schema_out().columns == ["distance_a", "distance_b"]
 
     def test_single_class_yields_single_distance_column(self) -> None:
         df = pd.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0], "label": ["a", "a"]})
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         step.fit(nw.from_native(df), SchemaInfo())
         assert step.schema_out().columns == ["distance_a"]
 
-    def test_missing_outcome_column_raises(self) -> None:
+    def test_missing_target_column_raises(self) -> None:
         df = pd.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0]})  # no "label"
-        step = StepClassDistance(["x", "y"], outcome="label")
+        step = StepClassDistance(["x", "y"], target="label")
         with pytest.raises(KeyError):
             step.fit(nw.from_native(df), SchemaInfo())
 
     def test_not_sparse(self) -> None:
-        assert StepClassDistance(["x"], outcome="label").produces_sparse is False
+        assert StepClassDistance(["x"], target="label").produces_sparse is False

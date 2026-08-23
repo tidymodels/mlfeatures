@@ -1,20 +1,20 @@
 # serializer version: 1
 # name: TestRoles.test_incompatible_combo_rejected
-  "column 'a' cannot hold incompatible roles: outcome, predictor"
+  "column 'a' cannot hold incompatible roles: feature, target"
 # ---
 # name: TestSetRolesIntegration.test_repr_summarises_roles
   '''
   Recipe (untrained)
-    Inputs: 3 columns — 1 outcome, 2 predictors
+    Inputs: 3 columns — 2 features, 1 target
     Steps:
       <none>
   '''
 # ---
-# name: TestSetRolesValidation.test_constructor_spelling_of_predictor_rejected
-  "set_roles() takes 'predictor', not 'predictors'; the plural spelling is the Recipe() constructor's"
+# name: TestSetRolesValidation.test_constructor_spelling_of_feature_rejected
+  "set_roles() takes 'feature', not 'features'; the plural spelling is the Recipe() constructor's"
 # ---
 # name: TestSetRolesValidation.test_incompatible_combo_rejected
-  "column 'y' cannot hold incompatible roles: outcome, predictor"
+  "column 'y' cannot hold incompatible roles: feature, target"
 # ---
 # name: TestSetRolesValidation.test_unknown_column_rejected
   "column 'missing' is not in the prototype data"

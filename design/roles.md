@@ -15,8 +15,8 @@ Roles are a first-class concept and are what makes `shoez` different from a typi
 
 | Role             | Meaning                                         |
 | ---------------- | ----------------------------------------------- |
-| `"predictor"`    | Used as a model input feature                   |
-| `"outcome"`      | The target variable(s) to predict               |
+| `"feature"`    | Used as a model input feature                   |
+| `"target"`      | The target variable(s) to predict               |
 | `"case_weights"` | Per-row observation weights |
 
 Users may add arbitrary string roles (`"id"`, `"group"`, `"date_split"`, etc.). New roles register cheaply — no coordinated changes across packages required.
@@ -25,31 +25,31 @@ Users may add arbitrary string roles (`"id"`, `"group"`, `"date_split"`, etc.). 
 
 ## Multi-role variables
 
-A variable may carry multiple roles simultaneously. Validation **rejects nonsensical combinations** at assignment time — e.g. a variable cannot be both `"outcome"` and `"predictor"`.
+A variable may carry multiple roles simultaneously. Validation **rejects nonsensical combinations** at assignment time — e.g. a variable cannot be both `"target"` and `"feature"`.
 
 ```python
-# A timestamp column used both as a predictor feature and for time-based splitting
+# A timestamp column used both as a feature feature and for time-based splitting
 rec = Recipe(data=df).set_roles(
-    outcome=["price"],
-    predictor=["sqft", "timestamp"],
+    target=["price"],
+    feature=["sqft", "timestamp"],
 ).add_role("timestamp", role="date_split")
-# timestamp now has roles {"predictor", "date_split"}
+# timestamp now has roles {"feature", "date_split"}
 
-# A weight column used both for model weighting and as a predictor
+# A weight column used both for model weighting and as a feature
 rec = rec.add_role("sample_weight", role="case_weights")
-# sample_weight now has roles {"predictor", "case_weights"}
+# sample_weight now has roles {"feature", "case_weights"}
 
-# Survival analysis: both time and event columns are outcomes
+# Survival analysis: both time and event columns are targets
 rec = Recipe(data=df).set_roles(
-    outcome=["surv_time", "event"],
-    predictor=["age", "treatment"],
+    target=["surv_time", "event"],
+    feature=["age", "treatment"],
 )
-# surv_time and event each have role {"outcome"}
+# surv_time and event each have role {"target"}
 ```
 
-A variable with no role is retained in the schema but is not selected by `all_predictors()` etc.
+A variable with no role is retained in the schema but is not selected by `s.features()` etc.
 
-Outcomes are a structured object (or a role applied to multiple columns), not a single formula LHS. This generalizes cleanly to multi-output regression, survival, and multitask learning. See [goals.md § open questions](goals.md).
+Targets are a structured object (or a role applied to multiple columns), not a single formula LHS. This generalizes cleanly to multi-output regression, survival, and multitask learning. See [goals.md § open questions](goals.md).
 
 ---
 
@@ -57,7 +57,7 @@ Outcomes are a structured object (or a role applied to multiple columns), not a 
 
 ```python
 recipe.add_role("col", role="group")
-recipe.update_role("col", new_role="id", old_role="predictor")
+recipe.update_role("col", new_role="id", old_role="feature")
 recipe.remove_role("col", role="group")
 ```
 
@@ -68,11 +68,11 @@ Role management calls are **first-class pipeline operations**, interleaved with 
 ```python
 rec = (
     Recipe(data=df)
-    .add(ImputeKNN(all_predictors()))
+    .add(ImputeKNN(s.features()))
     .add_role(starts_with("key_"), role="group")   # role change mid-pipeline
-    .add(Dummy(all_nominal_predictors()))
+    .add(Dummy(s.nominal_features()))
     .update_role("weight", new_role="case_weights")
-    .add(Normalize(all_numeric_predictors()))
+    .add(Normalize(s.numeric_features()))
 )
 ```
 
@@ -84,10 +84,10 @@ Role management also operates on **any** column in the schema — including colu
 
 ## Roles on produced columns
 
-Steps that create new columns must declare a `role=` for those columns (default `"predictor"`). The user may override `role=` at the step call site:
+Steps that create new columns must declare a `role=` for those columns (default `"feature"`). The user may override `role=` at the step call site:
 
 ```python
-recipe.add(ClassDist(all_predictors(), role="distance"))
+recipe.add(ClassDist(s.features(), role="distance"))
 ```
 
 ---

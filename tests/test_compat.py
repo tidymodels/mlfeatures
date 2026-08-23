@@ -13,9 +13,9 @@ from shoez.compat import RecipeTransformer
 
 
 def _supervised_recipe() -> Recipe:
-    """A recipe that normalizes the predictors and knows which column is the outcome."""
+    """A recipe that normalizes the features and knows which column is the target."""
     data = pd.DataFrame({"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "y": [0, 1, 0]})
-    return Recipe(data=data, outcome="y", predictors=["x1", "x2"]).add(
+    return Recipe(data=data, target="y", features=["x1", "x2"]).add(
         StepNormalize(["x1", "x2"])
     )
 
@@ -60,7 +60,7 @@ class TestAssemble:
         out = RecipeTransformer(rec).fit_transform(X)
         assert list(out.columns) == ["x1"]
 
-    def test_y_without_outcome_role_raises(self, snapshot: SnapshotAssertion) -> None:
+    def test_y_without_target_role_raises(self, snapshot: SnapshotAssertion) -> None:
         data = pd.DataFrame({"x1": [1.0, 2.0, 3.0]})
         rec = Recipe(data=data).add(StepNormalize(["x1"]))
         X, y = _X_y()
@@ -192,10 +192,10 @@ def _cancer_recipe() -> tuple[Recipe, pd.DataFrame, pd.Series]:
     from sklearn.datasets import load_breast_cancer
 
     X, y = load_breast_cancer(return_X_y=True, as_frame=True)
-    features = list(X.columns)
+    feature_cols = list(X.columns)
     full = X.assign(target=y)
-    rec = Recipe(data=full, outcome="target", predictors=features).add(
-        StepNormalize(features)
+    rec = Recipe(data=full, target="target", features=feature_cols).add(
+        StepNormalize(feature_cols)
     )
     return rec, X, y
 

@@ -8,15 +8,15 @@
 # name: TestPolarsBackend.test_dtype_mismatch_errors
   "dtype mismatch against the training ptype: 'x' (expected Float64, got String)"
 # ---
-# name: TestPolarsBackend.test_missing_predictor_errors
+# name: TestPolarsBackend.test_missing_feature_errors
   "missing required column(s) at transform time: 'x'"
 # ---
-# name: TestRoleRequirements.test_outcome_requirement_not_configurable
-  "requirement for role 'outcome' is not configurable"
+# name: TestRoleRequirements.test_target_requirement_not_configurable
+  "requirement for role 'target' is not configurable"
 # ---
-# name: TestRoleRequirements.test_predictor_requirement_not_configurable
-  "requirement for role 'predictor' is not configurable"
+# name: TestRoleRequirements.test_feature_requirement_not_configurable
+  "requirement for role 'feature' is not configurable"
 # ---
-# name: TestTransformColumnPresence.test_missing_predictor_errors
+# name: TestTransformColumnPresence.test_missing_feature_errors
   "missing required column(s) at transform time: 'x'"
 # ---

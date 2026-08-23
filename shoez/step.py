@@ -310,7 +310,7 @@ class Step(ABC):
     def _describe_selection(self) -> str:
         """A short description of what columns this step acts on, for printing.
 
-        Untrained: the unresolved selector (``all_numeric_predictors()``,
+        Untrained: the unresolved selector (``all_numeric_features()``,
         ``['age']``). Trained: the concrete columns the selector resolved to at
         fit time, mirroring the resolved/unresolved distinction in
         ``design/inspection.md``. A column-adding step additionally shows the

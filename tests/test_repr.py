@@ -42,16 +42,16 @@ class TestSelectorRepr:
     def test_role_and_type_selectors(self, snapshot: SnapshotAssertion) -> None:
         assert {
             "everything": repr(cs.everything()),
-            "predictors": repr(cs.predictors()),
-            "numeric_predictors": repr(cs.numeric_predictors()),
+            "features": repr(cs.features()),
+            "numeric_features": repr(cs.numeric_features()),
             "nominal": repr(cs.nominal()),
         } == snapshot
 
     def test_composite_and_complement(self, snapshot: SnapshotAssertion) -> None:
         assert {
-            "and": repr(cs.predictors() & cs.numeric()),
-            "or": repr(cs.predictors() | cs.numeric()),
-            "complement": repr(~cs.predictors()),
+            "and": repr(cs.features() & cs.numeric()),
+            "or": repr(cs.features() | cs.numeric()),
+            "complement": repr(~cs.features()),
         } == snapshot
 
     def test_source_selectors(self, snapshot: SnapshotAssertion) -> None:
@@ -67,15 +67,15 @@ class TestStepRepr:
     def test_untrained_shows_unresolved_selector(
         self, snapshot: SnapshotAssertion
     ) -> None:
-        assert repr(StepNormalize(cs.numeric_predictors())) == snapshot
+        assert repr(StepNormalize(cs.numeric_features())) == snapshot
 
     def test_untrained_list_selector(self, snapshot: SnapshotAssertion) -> None:
         assert repr(StepDummy(["city"])) == snapshot
 
     def test_trained_shows_resolved_columns(self, snapshot: SnapshotAssertion) -> None:
         rec = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(cs.numeric_predictors()))
+            Recipe(data=_df(), target="price", features=["age", "city"])
+            .add(StepNormalize(cs.numeric_features()))
             .fit(_df())
         )
         (step,) = rec.steps
@@ -85,7 +85,7 @@ class TestStepRepr:
         # A column-adding step renders ``consumed → produced`` so the expansion
         # is visible in the trained view (design/inspection.md).
         rec = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            Recipe(data=_df(), target="price", features=["age", "city"])
             .add(StepDummy(["city"]))
             .fit(_df())
         )
@@ -97,7 +97,7 @@ class TestStepRepr:
 
     def test_trained_empty_selection(self, snapshot: SnapshotAssertion) -> None:
         rec = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            Recipe(data=_df(), target="price", features=["age", "city"])
             .add(StepNormalize(cs.starts_with("zzz")))
             .fit(_df())
         )
@@ -112,12 +112,12 @@ class TestRecipeRepr:
         assert repr(Recipe()) == snapshot
 
     def test_roles_and_column_count(self, snapshot: SnapshotAssertion) -> None:
-        rec = Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+        rec = Recipe(data=_df(), target="price", features=["age", "city"])
         assert repr(rec) == snapshot
 
     def test_steps_listed_untrained(self, snapshot: SnapshotAssertion) -> None:
         rec = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            Recipe(data=_df(), target="price", features=["age", "city"])
             .add(StepNormalize(["age"]))
             .add(StepDummy(["city"]))
         )
@@ -131,7 +131,7 @@ class TestRecipeRepr:
         # Structural property (not a content snapshot): every training-state
         # marker must start at the same column so the listing lines up.
         rec = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            Recipe(data=_df(), target="price", features=["age", "city"])
             .add(StepNormalize(["age"]))
             .add(StepDummy(["city"]))
         )
@@ -149,7 +149,7 @@ class TestFittedRecipeRepr:
 
     def test_trained_header_and_step_markers(self, snapshot: SnapshotAssertion) -> None:
         fitted = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            Recipe(data=_df(), target="price", features=["age", "city"])
             .add(StepNormalize(["age"]))
             .add(StepDummy(["city"]))
             .fit(_df())
@@ -158,7 +158,7 @@ class TestFittedRecipeRepr:
 
     def test_resolved_columns_shown(self, snapshot: SnapshotAssertion) -> None:
         fitted = (
-            Recipe(data=_df(), outcome="price", predictors=["age", "city"])
+            Recipe(data=_df(), target="price", features=["age", "city"])
             .add(StepNormalize(["age"]))
             .fit(_df())
         )
