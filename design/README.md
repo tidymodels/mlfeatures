@@ -26,12 +26,15 @@ Key invariants the framework guarantees:
 
 | Concept            | R term      | Meaning                                                                                                                                                                          |
 | ------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Variable / Term / Feature** | variable / term | A column — whether in the input table or the output design matrix. The terms are used interchangeably; a derived column (e.g. a dummy or PCA component) is a feature just as a raw input column is. |
-| **Role**           | role        | A user-assigned label describing *how* a variable is used: `"feature"`, `"target"`, `"id"`, `"case_weights"`, or any user-defined string. A variable may have multiple roles. |
+| **Column**         | variable / term | A column, whether in the input table or the output design matrix. A derived column (e.g. a dummy or PCA component) is as much a column as a raw input one. |
+| **Sample**         | observation / case | One row of the data. |
+| **Feature**        | predictor   | A column used as model input, i.e. one carrying the `"feature"` role. Not a synonym for "column": a target or an ID column is a column but not a feature. |
+| **Target**         | outcome     | The column being predicted, i.e. one carrying the `"target"` role. |
+| **Role**           | role        | A user-assigned label describing *how* a column is used: `"feature"`, `"target"`, `"id"`, `"case_weights"`, or any user-defined string. A column may have multiple roles. |
 | **Type**           | type        | Inferred data type with a hierarchy: `double`, `int`, `bool`, `string`, `factor[ordered]`, `factor[unordered]`, `date`, `datetime`.                                              |
-| **Selector**       | selector    | A small DSL for choosing variables by name, role, or type.                                                                                                                       |
+| **Selector**       | selector    | A small DSL for choosing columns by name, role, or type.                                                                                                                       |
 | **Step**           | `step_*()`  | A single transformation (e.g. center, dummy-encode, PCA).                                                                                                                        |
-| **Recipe**         | `recipe`    | The ordered container of steps + a schema describing input variables.                                                                                                            |
+| **Recipe**         | `recipe`    | The ordered container of steps + a schema describing input columns.                                                                                                            |
 
 ---
 
@@ -53,3 +56,4 @@ Key invariants the framework guarantees:
 | [inspection.md](inspection.md)         | `repr`, errors, `summary()`                          |
 | [dependencies.md](dependencies.md)     | Optional dependencies — lazy imports in steps        |
 | [goals.md](goals.md)                   | Non-goals, open questions, v0.1 success criteria     |
+| [naming_conventions.md](naming_conventions.md) | Terminology and the `step_drop_*` prefix rule |

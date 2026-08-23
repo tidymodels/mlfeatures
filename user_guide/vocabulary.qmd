@@ -1,0 +1,66 @@
+---
+title: "Vocabulary"
+toc: true
+---
+
+The R and Python modeling communities use different words for the same things, and shoez has R `recipes` in its lineage while living in the Python ecosystem. This page is the translation table. shoez follows scikit-learn's vocabulary wherever the two communities disagree, because that is the ecosystem a shoez recipe actually plugs into.
+
+## The three quantities
+
+| Quantity | shoez | scikit-learn | R `recipes` / tidymodels |
+| --- | --- | --- | --- |
+| A column used as model input | `feature` | feature | predictor |
+| The column being predicted | `target` | target, label | outcome |
+| One row of the data | sample | sample | observation, case |
+
+These are not just prose conventions: `"feature"` and `"target"` are the literal role names shoez assigns to columns, so they show up in `Recipe()` kwargs, in `Selectors` methods, and in a recipe's printed output.
+
+```{python}
+#| echo: false
+#| output: false
+import pandas as pd
+from shoez import Recipe, StepNormalize
+from shoez import Selectors as s
+```
+
+```{python}
+df = pd.DataFrame({"price": [200.0, 250.0, 310.0], "sqft": [1.0, 2.0, 3.0]})
+recipe = Recipe(data=df, target="price", features="sqft").add(
+    StepNormalize(s.numeric_features())
+)
+recipe
+```
+
+## False friends
+
+A few words mean something different here than you might expect, so they are worth calling out.
+
+**`predictor` is not a column.** In scikit-learn, "predictor" means an *estimator* that implements `predict()`: `TreePredictor`, `make_predictor()`, `_linear_predictor`. It is never a name for an input column, which is exactly the opposite of R `recipes`, where `all_predictors()` selects input columns. shoez does not use the word at all.
+
+**`label` is not the target.** scikit-learn uses "label" as a synonym for the target, roughly as often as it uses "target" itself. shoez does not, because "label" would then collide with the class values of a categorical target and with the distinct concept below. Where a single class value of a target is meant, shoez says **class**.
+
+**`level`, not `label`, for a category's values.** The distinct values of a categorical column are its **levels**, following R's factor terminology. `StepDummy` and `StepOneHot` learn a column's levels at fit time, and `StepUnknown` deals with missing ones. A level is a value *within* a column, which is a different thing from a role, which is a property *of* a column.
+
+**`sample` also has its statistical sense.** shoez says "sample" for one row of data, but "sample standard deviation" in `StepNormalize` means the `ddof=1` estimator, not anything about rows.
+
+## shoez-specific terms
+
+| Term | Meaning | R `recipes` equivalent |
+| --- | --- | --- |
+| `Recipe` | The declared, not-yet-estimated pipeline | `recipe` |
+| step | One feature-engineering operation | `step_*()` |
+| role | A user-assigned label on a column, such as `"feature"` or `"target"` | role |
+| selector | A description of *which* columns a step applies to, resolved at fit time | `all_predictors()` and friends |
+| untrained | A recipe whose steps have not estimated anything yet | unprepped |
+| trained | A recipe whose steps hold fitted state, ready to apply | prepped |
+| `fit()` | Estimate every step's state from training data | `prep()` |
+| `transform()` | Apply the fitted steps to data | `bake()` |
+| ptype | A zero-row snapshot of the training data's columns, dtypes, and roles | (no equivalent) |
+
+Note the two lifecycle names in particular. shoez deliberately does not use R `recipes`' cooking analogy, so a recipe is never "prepped" or "baked": it is untrained or trained, and you `fit()` then `transform()` it.
+
+## Roles beyond feature and target
+
+`"feature"` and `"target"` are the two roles shoez treats specially, but a role is just a string, and a column can carry more than one. `"case_weights"` is the third standard role, and you can register any custom role you like. See `Roles` for the details.
+
+A column with the `"feature"` role is always required when you `transform()` new data; a `"target"` column never is, since it is unknown at serving time. That asymmetry is the main reason the two roles are mutually exclusive.

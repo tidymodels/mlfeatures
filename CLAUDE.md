@@ -52,6 +52,14 @@ Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>
 
 ### Vocabulary
 
+shoez follows scikit-learn's vocabulary, not R `recipes`', wherever the two disagree. The full translation table lives in [`user_guide/vocabulary.qmd`](user_guide/vocabulary.qmd); the rules that come up most:
+
+- A column used as model input is a **feature**, never a "predictor". `"feature"` is the literal role name, so this is enforced by the API, not just by prose. Note that scikit-learn's own "predictor" means an *estimator*, so the word is a false friend and shoez avoids it entirely.
+- The column being predicted is the **target**, never an "outcome". `"target"` is the role name. scikit-learn also says "label" here, but shoez does not, because "label" would collide with a categorical target's class values.
+- One row of data is a **sample**, not an "observation". The statistical sense of the word ("sample standard deviation", "pairwise-complete observations") is untouched by this rule.
+- The distinct values of a categorical column are its **levels**, never its "labels". A level is a value within a column; a role is a property of a column.
+- Inside a step, the frame of columns the selector resolved to is `selected`, not `features`: it is *this step's* selection, which is not the set of feature-role columns.
+
 Describe a recipe's two states as **untrained** and **trained**, never as "prepped"/"unprepped" or "prepared". Those are inherited from R `recipes`' cooking analogy, which shoez does not use; the repr headers (`Recipe (untrained)` / `Recipe (trained)`) and the per-step `[untrained]` / `[trained]` markers are the wording to match. For the same reason, call the second lifecycle phase `transform()` rather than "bake". The one exception is when citing R `recipes`' actual function names (its `prep()` and `bake()`), as `shoez/step_normalize.py` does.
 
 ### Step docstrings

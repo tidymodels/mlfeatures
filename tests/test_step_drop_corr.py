@@ -205,7 +205,7 @@ class TestNaNHandling:
             warnings.simplefilter("always")
             result = fit_drop_corr(df, threshold=0.9)
         # The pandas correlation matrix has sporadic NaNs from pairwise-complete
-        # observations; the step warns and still returns a deterministic drop.
+        # samples; the step warns and still returns a deterministic drop.
         msg = next(str(x.message) for x in w if "sporadic" in str(x.message).lower())
         assert msg == snapshot
         assert result == ["c"]

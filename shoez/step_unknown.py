@@ -60,7 +60,7 @@ def fit_unknown(
     train/serve parity.
 
     A `UserWarning` is emitted if ``new_level`` already appears as a value
-    in any column, since recoding would then merge genuine observations into the
+    in any column, since recoding would then merge genuine samples into the
     "unknown" bucket.
     """
     collisions = [

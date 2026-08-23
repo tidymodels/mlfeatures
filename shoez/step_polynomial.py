@@ -136,7 +136,7 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
 
     fit_result: dict[str, PolynomialFit] = {}
     for col_name in selected.columns:
-        # Drop nulls first: a null observation is not a fittable level, and
+        # Drop nulls first: a null value is not a fittable level, and
         # narwhals' `n_unique` counts null as its own value otherwise.
         col = selected[col_name]
         n_unique = col.drop_nulls().n_unique()

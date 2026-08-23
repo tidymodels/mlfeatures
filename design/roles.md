@@ -17,7 +17,7 @@ Roles are a first-class concept and are what makes `shoez` different from a typi
 | ---------------- | ----------------------------------------------- |
 | `"feature"`    | Used as a model input feature                   |
 | `"target"`      | The target variable(s) to predict               |
-| `"case_weights"` | Per-row observation weights |
+| `"case_weights"` | Per-sample weights |
 
 Users may add arbitrary string roles (`"id"`, `"group"`, `"date_split"`, etc.). New roles register cheaply — no coordinated changes across packages required.
 

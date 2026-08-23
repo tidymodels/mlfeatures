@@ -29,7 +29,7 @@ X_new   = trained.transform(df_new, s.features())  # selector at transform time
 
 ## Required behaviors
 
-- `Recipe(...)` takes explicit role assignment from a sample dataframe (used only for schema, not for fitting). There is **one canonical constructor**: roles are assigned explicitly via constructor kwargs or `set_roles`. **We have decided not to ship a formula interface.** It was originally planned as syntactic sugar over role assignment (simple `"y ~ ."` / `"y ~ x1 + x2"` splits only), but we removed it: it adds a parsing surface and a second way to do one thing, while explicit role assignment covers every case it could. Anything beyond basic column selection must be expressed as a step regardless.
+- `Recipe(...)` takes explicit role assignment from an example dataframe (used only for schema, not for fitting). There is **one canonical constructor**: roles are assigned explicitly via constructor kwargs or `set_roles`. **We have decided not to ship a formula interface.** It was originally planned as syntactic sugar over role assignment (simple `"y ~ ."` / `"y ~ x1 + x2"` splits only), but we removed it: it adds a parsing surface and a second way to do one thing, while explicit role assignment covers every case it could. Anything beyond basic column selection must be expressed as a step regardless.
 - Steps are pure: `.add(Step(...))` returns a new `Recipe` with the step appended; it does **not** touch data.
 - `fit()` runs each step's fit on the **training** data, in order. The transformed output of step *i* becomes the input to step *i+1*'s fit.
 - `transform()` runs each step's transform on **new** data using stored statistics. `transform()` **never re-estimates**.
