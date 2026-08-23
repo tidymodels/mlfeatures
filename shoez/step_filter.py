@@ -42,16 +42,16 @@ def _keep_all_rows(frame: Frame) -> bool:
     return True
 
 
-def apply_filter(features: Frame, predicate: Predicate) -> Frame:
+def apply_filter(selected: Frame, predicate: Predicate) -> Frame:
     """Keep only the rows for which ``predicate`` evaluates to ``True``.
 
     Parameters
     ----------
-    features
+    selected
         Internal `Frame` (narwhals). Native frames are wrapped via
         `shoez._frame.from_native()` at the recipe boundary.
     predicate
-        Callable taking ``features`` and returning a boolean narwhals
+        Callable taking ``selected`` and returning a boolean narwhals
         expression or series, ``True`` for the rows to retain (``dplyr::filter``
         / ``pl.DataFrame.filter`` semantics). The mask is built from the frame
         it is applied to, so it works unchanged across backends and on 0-row and
@@ -60,10 +60,10 @@ def apply_filter(features: Frame, predicate: Predicate) -> Frame:
     Returns
     -------
     Frame
-        ``features`` with the non-matching rows removed. The column schema is
+        ``selected`` with the non-matching rows removed. The column schema is
         never touched — this is a pure row operation.
     """
-    return features.filter(predicate(features))
+    return selected.filter(predicate(selected))
 
 
 class StepFilter(RowOp):

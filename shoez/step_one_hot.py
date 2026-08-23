@@ -31,12 +31,12 @@ if TYPE_CHECKING:
 __all__ = ["fit_one_hot", "StepOneHot"]
 
 
-def fit_one_hot(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
+def fit_one_hot(selected: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     """Identify all levels for one-hot (full indicator) encoding.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all discrete (string, integer,
         boolean, categorical, or enum). Passed in by `StepOneHot.fit()`
         after column selection.
@@ -56,13 +56,13 @@ def fit_one_hot(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     # Empty selections never reach here: the recipe detects a zero-column
     # selection and treats the step as the identity transform, so ``fit`` is
     # not called. See ``Recipe.fit`` / ``Step._empty_selection``.
-    if features.shape[0] == 0:
+    if selected.shape[0] == 0:
         raise ValueError(
             "cannot fit one-hot encoding on a zero-row frame; no levels can be learned"
         )
     result: dict[str, list[Any]] = {}
-    for col in features.columns:
-        levels: list[Any] = features[col].drop_nulls().unique().sort().to_list()
+    for col in selected.columns:
+        levels: list[Any] = selected[col].drop_nulls().unique().sort().to_list()
         if len(levels) < 2:
             raise ValueError(
                 f"column {col!r} has fewer than 2 unique non-null levels "
@@ -85,7 +85,7 @@ class StepOneHot(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        shoez selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -121,7 +121,7 @@ class StepOneHot(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepOneHot(s.nominal_predictors()))
+    recipe = Recipe().add(StepOneHot(s.nominal_features()))
     recipe
     ```
 
@@ -141,7 +141,7 @@ class StepOneHot(Step):
     ``keep_original_cols`` keeps the source column alongside them:
 
     ```{python}
-    recipe = Recipe().add(StepOneHot(s.nominal_predictors(), keep_original_cols=True))
+    recipe = Recipe().add(StepOneHot(s.nominal_features(), keep_original_cols=True))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
@@ -161,7 +161,7 @@ class StepOneHot(Step):
         self.keep_original_cols = keep_original_cols
         self.id = id if id is not None else "one_hot"
         self.trained = False
-        self.output_role: str | None = "predictor"
+        self.output_role: str | None = "feature"
         self._estimates: dict[str, list[Any]] | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
@@ -169,12 +169,12 @@ class StepOneHot(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the full sorted level list for each selected column."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_one_hot(features)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        self._estimates = fit_one_hot(selected)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         # Each indicator descends from exactly its source column. The ordered
         # list preserves any duplicate name (which the parents map, keyed by
         # name, would silently dedup).

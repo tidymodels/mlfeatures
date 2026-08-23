@@ -42,27 +42,27 @@ __all__ = ["fit_impute_mean", "apply_impute_mean", "StepImputeMean"]
 
 
 def fit_impute_mean(
-    features: Frame,
+    selected: Frame,
 ) -> dict[str, float]:
     """Estimate the per-column mean used to impute missing values.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all numeric. Passed in by the
         step's ``fit()`` method after selector resolution.
 
     Returns
     -------
     ``dict`` mapping every input column name to its mean. Empty when
-    ``features`` has no columns.
+    ``selected`` has no columns.
 
     A column whose values are *all* null has an undefined (``NaN``) mean and so
     cannot be imputed. It is **not** dropped: it stays in the mapping with a
     ``NaN`` value, `apply_impute_mean()` leaves it unchanged, and a
     `UserWarning` is emitted naming such columns.
     """
-    means = {col: as_float(features[col].mean()) for col in features.columns}
+    means = {col: as_float(selected[col].mean()) for col in selected.columns}
 
     all_null = [col for col, mean in means.items() if math.isnan(mean)]
     if all_null:
@@ -76,18 +76,18 @@ def fit_impute_mean(
 
 
 def apply_impute_mean(
-    features: Frame,
+    selected: Frame,
     means: dict[str, float],
 ) -> Frame:
     """Fill nulls with the stored per-column mean.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame to impute.
     means:
         The ``{column: mean}`` mapping returned by `fit_impute_mean()`. Any
-        column of ``features`` not present as a key is passed through untouched.
+        column of ``selected`` not present as a key is passed through untouched.
         A ``NaN`` mean marks a column that could not be estimated (entirely null
         at fit time); such columns are left unchanged.
 
@@ -103,7 +103,7 @@ def apply_impute_mean(
         for col, mean in means.items()
         if not math.isnan(mean)
     ]
-    return features.with_columns(*exprs)
+    return selected.with_columns(*exprs)
 
 
 class StepImputeMean(Step):
@@ -120,7 +120,7 @@ class StepImputeMean(Step):
     ----------
     columns
         Columns to impute. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        shoez selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -149,7 +149,7 @@ class StepImputeMean(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepImputeMean(s.numeric_predictors()))
+    recipe = Recipe().add(StepImputeMean(s.numeric_features()))
     recipe
     ```
 
@@ -185,12 +185,12 @@ class StepImputeMean(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mean over the selected columns."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_impute_mean(features)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        self._estimates = fit_impute_mean(selected)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:
