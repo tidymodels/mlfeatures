@@ -2,13 +2,13 @@
 title: "Ames + xgboost: the model flips the recipe"
 ---
 
-Same data and predictors as the realistic linear model, entirely different recipe — for boosting, preprocessing shrinks to encode-and-guard. Ported from [Tidy Modeling with R, ch. 13](https://www.tmwr.org/grid-search).
+Same data and features as the realistic linear model, entirely different recipe — for boosting, preprocessing shrinks to encode-and-guard. Ported from [Tidy Modeling with R, ch. 13](https://www.tmwr.org/grid-search).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/tmwr11-r-vs-py.html){target="_blank"} · R original: test rmse 0.0730.
 
 ::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
 ```
-Mirrors the R script section-for-section: same data, same 6 predictors, same
+Mirrors the R script section-for-section: same data, same 6 features, same
 recipe shape (novel -> one-hot -> zv), same tuned params (trees, learn_rate)
 over the same 2x3 grid on 5-fold CV. sklearn Pipeline + GridSearchCV stand in
 for workflow() + tune_grid(), via shoez's RecipeTransformer bridge.
@@ -19,9 +19,9 @@ PARITY NOTES (differences from example.R that are structural, not bugs):
    *nulls*, not unseen levels. This port simply omits the guard; shoez's
    StepOneHot/StepDummy warn and emit nulls for unseen levels at transform
    time instead of encoding a "new" bucket. When StepNovel lands, add
-   .add(StepNovel(s.nominal_predictors())) ahead of the one-hot.
+   .add(StepNovel(s.nominal_features())) ahead of the one-hot.
  - Seeds cannot match across languages: same design (stratified 80/20 by
-   outcome quartile; 5-fold shuffle), different rows.
+   target quartile; 5-fold shuffle), different rows.
  - xgboost defaults differ slightly between the R engine and XGBRegressor;
    metric magnitudes land near the R run (test rmse 0.0730), not identically.
  - Ames exported from R on first run: data/ames.csv (null_values="NA" —
@@ -42,16 +42,16 @@ from xgboost import XGBRegressor
 from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
 from shoez import Selectors as s
 
-# ── Data + outcome transform (outside the recipe, per TMwR Ch. 5)
+# ── Data + target transform (outside the recipe, per TMwR Ch. 5)
 
-PREDICTORS = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
+FEATURES = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
               "Latitude", "Longitude"]
 
 ames = pl.read_parquet("data/ames.parquet")
-ames = ames.select(PREDICTORS + ["Sale_Price"])
+ames = ames.select(FEATURES + ["Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
 
-# ── Split (stratified 80/20 by outcome quartile, mirroring initial_split)
+# ── Split (stratified 80/20 by target quartile, mirroring initial_split)
 
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
@@ -64,9 +64,9 @@ ames_train, ames_test = train_test_split(
 #     step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
 #     step_zv(all_predictors())
 xgboost_recipe = (
-    Recipe(data=ames_train, outcome="Sale_Price")
-    .add(StepOneHot(s.nominal_predictors()))
-    .add(StepDropZeroVariance(s.predictors()))
+    Recipe(data=ames_train, target="Sale_Price")
+    .add(StepOneHot(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
 )
 
 # ── Model spec + workflow (sklearn Pipeline via RecipeTransformer)

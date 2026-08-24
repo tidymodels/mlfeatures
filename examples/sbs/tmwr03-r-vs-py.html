@@ -62,8 +62,8 @@ tidymodels_prefer()
 
 
 
-<span class="bn"># Data + outcome transform -------------------------------------------------</span>
-<span class="cm"># Six predictors now (adds Latitude/Longitude); log10 the outcome pre-split.</span>
+<span class="bn"># Data + target transform --------------------------------------------------</span>
+<span class="cm"># Six features now (adds Latitude/Longitude); log10 the target pre-split.</span>
 <span class="cm">#</span>
 
 data(ames, package = &quot;modeldata&quot;)
@@ -73,7 +73,7 @@ ames &lt;- ames %&gt;% mutate(Sale_Price = log10(Sale_Price))
 
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
-<span class="cm"># Stratified 80/20 split on the outcome (same as TMWR-01).</span>
+<span class="cm"># Stratified 80/20 split on the target (same as TMWR-01).</span>
 
 set.seed(502)
 ames_split &lt;- initial_split(ames, prop = 0.80, strata = Sale_Price)
@@ -138,8 +138,8 @@ from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s
 
-<span class="bn"># Data + outcome transform -------------------------------------------------</span>
-<span class="cm"># Six predictors now (adds Latitude/Longitude); log10 the outcome pre-split.</span>
+<span class="bn"># Data + target transform --------------------------------------------------</span>
+<span class="cm"># Six features now (adds Latitude/Longitude); log10 the target pre-split.</span>
 <span class="gp"># DIFF (GAP): step_log again worked around pre-recipe (see TMWR-01).</span>
 
 ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
@@ -149,7 +149,7 @@ ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10),
                          pl.col(&quot;Gr_Liv_Area&quot;).log(base=10))  # was step_log
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
-<span class="cm"># Stratified 80/20 split on the outcome (same as TMWR-01).</span>
+<span class="cm"># Stratified 80/20 split on the target (same as TMWR-01).</span>
 
 strata = ames[&quot;Sale_Price&quot;].qcut(4, labels=[&quot;q1&quot;,&quot;q2&quot;,&quot;q3&quot;,&quot;q4&quot;])
 ames_train, ames_test = train_test_split(
@@ -166,10 +166,10 @@ ames_train, ames_test = train_test_split(
 <span class="gp"># DIFF (GAP): step_ns unbuilt — no spline steps at all.</span>
 
 ames_rec = (
-    Recipe(data=ames_train, outcome=&quot;Sale_Price&quot;)
+    Recipe(data=ames_train, target=&quot;Sale_Price&quot;)
 
     # .add(StepOther(s.col(&quot;Neighborhood&quot;), threshold=0.01))   # GAP
-    .add(StepDummy(s.nominal_predictors()))
+    .add(StepDummy(s.nominal_features()))
     # .add(StepInteract(s.col(&quot;Gr_Liv_Area&quot;)
     #                   * s.starts_with(&quot;Bldg_Type_&quot;)))         # GAP
     # .add(StepSplineNatural(s.col(&quot;Latitude&quot;, &quot;Longitude&quot;),

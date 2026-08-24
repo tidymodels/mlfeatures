@@ -66,7 +66,7 @@ library(tidymodels)
 
 
 <span class="bn"># Data + split -------------------------------------------------------------</span>
-<span class="cm"># credit_data: 4,454 x 14 with NAs in several predictors — the imputation</span>
+<span class="cm"># credit_data: 4,454 x 14 with NAs in several features — the imputation</span>
 <span class="cm"># example no polished resource provides.</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -151,7 +151,7 @@ from shoez import (Recipe, RecipeTransformer, StepDropZeroVariance,
 from shoez import Selectors as s
 
 <span class="bn"># Data + split -------------------------------------------------------------</span>
-<span class="cm"># credit_data: 4,454 x 14 with NAs in several predictors — the imputation</span>
+<span class="cm"># credit_data: 4,454 x 14 with NAs in several features — the imputation</span>
 <span class="cm"># example no polished resource provides.</span>
 <span class="df"># DIFF: exported from R -&gt; data/credit.csv. null_values=&#x27;NA&#x27; is load-bearing</span>
 <span class="df"># here — the dataset&#x27;s whole point is its NAs, and polars would read them</span>
@@ -175,14 +175,14 @@ credit_train, credit_test = train_test_split(
 <span class="df"># DIFF: everything else ports 1:1 — the imputation spine runs today.</span>
 
 credit_rec = (
-    Recipe(data=credit_train, outcome=&quot;Status&quot;)
-    .add(StepImputeMedian(s.numeric_predictors()))
-    .add(StepImputeMode(s.nominal_predictors()))
+    Recipe(data=credit_train, target=&quot;Status&quot;)
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepImputeMode(s.nominal_features()))
 
-    # .add(StepOther(s.nominal_predictors(), threshold=0.05))  # GAP
-    .add(StepDummy(s.nominal_predictors()))
-    .add(StepDropZeroVariance(s.predictors()))
-    .add(StepNormalize(s.numeric_predictors()))
+    # .add(StepOther(s.nominal_features(), threshold=0.05))  # GAP
+    .add(StepDummy(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
+    .add(StepNormalize(s.numeric_features()))
 )
 
 <span class="bn"># Model + penalty tuning ---------------------------------------------------</span>

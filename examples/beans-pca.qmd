@@ -54,10 +54,10 @@ bean_validation, bean_test = train_test_split(
 # ── Base recipe: zv -> (orderNorm GAP) -> normalize
 
 bean_rec = (
-    Recipe(data=bean_train, outcome="class")
-    .add(StepDropZeroVariance(s.numeric_predictors()))
-    # .add(StepOrderNorm(s.numeric_predictors()))   # 🧪 GAP: no analog at all
-    .add(StepNormalize(s.numeric_predictors()))
+    Recipe(data=bean_train, target="class")
+    .add(StepDropZeroVariance(s.numeric_features()))
+    # .add(StepOrderNorm(s.numeric_features()))   # 🧪 GAP: no analog at all
+    .add(StepNormalize(s.numeric_features()))
 )
 ```
 ## Fit

@@ -35,7 +35,7 @@ from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s
 
-# ── Data + outcome transform (outside the recipe, per TMwR Ch. 5)
+# ── Data + target transform (outside the recipe, per TMwR Ch. 5)
 
 ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
@@ -47,7 +47,7 @@ ames = ames.with_columns(
     pl.col("Gr_Liv_Area").log(base=10),
 )
 
-# ── Split (stratified 80/20 by outcome quartile, mirroring initial_split)
+# ── Split (stratified 80/20 by target quartile, mirroring initial_split)
 
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
@@ -57,8 +57,8 @@ ames_train, ames_test = train_test_split(
 # ── Recipe (what remains of simple_ames after the log moved out)
 
 simple_ames = (
-    Recipe(data=ames_train, outcome="Sale_Price")
-    .add(StepDummy(s.nominal_predictors()))
+    Recipe(data=ames_train, target="Sale_Price")
+    .add(StepDummy(s.nominal_features()))
 )
 
 # ── Model + workflow (sklearn Pipeline via RecipeTransformer)

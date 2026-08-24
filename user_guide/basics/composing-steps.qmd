@@ -9,8 +9,8 @@ E.g.
 
 ```python
 rec = (
-    Recipe(data=df, outcome="label", predictors=[...])
-    .add(StepDummy(s.nominal_predictors()))
+    Recipe(data=df, target="label", features=[...])
+    .add(StepDummy(s.nominal_features()))
     .add(StepNormalize(s.has_source(step_type=StepDummy)))
 )
 ```

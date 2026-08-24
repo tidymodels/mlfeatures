@@ -116,8 +116,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s"""),
-("Data + outcome transform",
- ["Four predictors; log10 the outcome BEFORE the recipe."],
+("Data + target transform",
+ ["Four features; log10 the target BEFORE the recipe."],
  ["DIFF: ames exported once from R (no PyPI package) -> data/ames.csv;",
   "polars needs null_values='NA' — R's NA strings aren't auto-parsed.",
   "DIFF (GAP): step_log has no shoez analog — the log moves PRE-recipe.",
@@ -133,7 +133,7 @@ ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built",
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10),
                          pl.col("Gr_Liv_Area").log(base=10))  # was step_log"""),
 ("Split",
- ["Stratified 80/20 split on the outcome."],
+ ["Stratified 80/20 split on the target."],
  ["DIFF: explicit quartile binning (qcut); seeds don't transfer across",
   "languages — same design, different rows."],
  """set.seed(502)
@@ -154,13 +154,13 @@ ames_train, ames_test = train_test_split(
   step_log(Gr_Liv_Area, base = 10) %>%
   step_dummy(all_nominal_predictors())""",
  """simple_ames = (
-    Recipe(data=ames_train, outcome="Sale_Price")
-    .add(StepDummy(s.nominal_predictors()))
+    Recipe(data=ames_train, target="Sale_Price")
+    .add(StepDummy(s.nominal_features()))
 )"""),
 ("Model + fit",
  ["Bind recipe + lm; fit on the training set."],
  ["DIFF: Pipeline + RecipeTransformer = workflow(); the X/y split is sklearn",
-  "idiom — RecipeTransformer re-joins y as the outcome internally."],
+  "idiom — RecipeTransformer re-joins y as the target internally."],
  """lm_model <- linear_reg() %>% set_engine("lm")
 
 lm_wflow <- workflow() %>%
@@ -216,8 +216,8 @@ from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s"""),
-("Data + outcome transform",
- ["Six predictors now (adds Latitude/Longitude); log10 the outcome pre-split."],
+("Data + target transform",
+ ["Six features now (adds Latitude/Longitude); log10 the target pre-split."],
  ["DIFF (GAP): step_log again worked around pre-recipe (see TMWR-01)."],
  """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))""",
@@ -227,7 +227,7 @@ ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10),
                          pl.col("Gr_Liv_Area").log(base=10))  # was step_log"""),
 ("Split",
- ["Stratified 80/20 split on the outcome (same as TMWR-01)."],
+ ["Stratified 80/20 split on the target (same as TMWR-01)."],
  [],
  """set.seed(502)
 ames_split <- initial_split(ames, prop = 0.80, strata = Sale_Price)
@@ -254,10 +254,10 @@ ames_train, ames_test = train_test_split(
   step_interact( ~ Gr_Liv_Area:starts_with("Bldg_Type_") ) %>%
   step_ns(Latitude, Longitude, deg_free = 20)""",
  """ames_rec = (
-    Recipe(data=ames_train, outcome="Sale_Price")
+    Recipe(data=ames_train, target="Sale_Price")
 
     # .add(StepOther(s.col("Neighborhood"), threshold=0.01))   # GAP
-    .add(StepDummy(s.nominal_predictors()))
+    .add(StepDummy(s.nominal_features()))
     # .add(StepInteract(s.col("Gr_Liv_Area")
     #                   * s.starts_with("Bldg_Type_")))         # GAP
     # .add(StepSplineNatural(s.col("Latitude", "Longitude"),
@@ -318,12 +318,12 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
 from shoez import Selectors as s"""),
-("Data + outcome transform",
- ["Ames housing; log10 the outcome BEFORE the recipe (outcome transforms",
+("Data + target transform",
+ ["Ames housing; log10 the target BEFORE the recipe (target transforms",
   "don't belong inside it — they fail at predict time)."],
  ["DIFF: no ames on PyPI — exported once from R: modeldata::ames -> data/ames.csv.",
   "DIFF: the CSV drops R's factor dtypes; plain strings are fine, because",
-  "nominal_predictors() matches them (categorical_predictors() would not)."],
+  "nominal_features() matches them (categorical_features() would not)."],
  """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))
 
@@ -333,7 +333,7 @@ ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built",
                     "Bldg_Type", "Latitude", "Longitude", "Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))"""),
 ("Split",
- ["Stratified 80/20 split on the outcome."],
+ ["Stratified 80/20 split on the target."],
  ["DIFF: explicit quartile binning (qcut) does what initial_split(strata=)",
   "does internally.",
   "DIFF: seeds don't transfer across languages — same design, different rows."],
@@ -351,7 +351,7 @@ ames_train, ames_test = train_test_split(
  ["DIFF (GAP): step_novel() has no shoez analog yet — StepNovel is unbuilt and",
   "StepUnknown fills only nulls. Omitted here; StepOneHot warns and emits",
   "nulls for unseen levels at transform instead.",
-  "DIFF: Recipe(outcome=...) roles replace the R formula; selectors pick",
+  "DIFF: Recipe(target=...) roles replace the R formula; selectors pick",
   "columns by kind."],
  """xgboost_recipe <-
   recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built +
@@ -360,9 +360,9 @@ ames_train, ames_test = train_test_split(
   step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
   step_zv(all_predictors())""",
  """xgboost_recipe = (
-    Recipe(data=ames_train, outcome="Sale_Price")
-    .add(StepOneHot(s.nominal_predictors()))
-    .add(StepDropZeroVariance(s.predictors()))
+    Recipe(data=ames_train, target="Sale_Price")
+    .add(StepOneHot(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
 )"""),
 ("Model spec + workflow",
  ["Bind recipe + model; trees and learn_rate will be tuned."],
@@ -387,7 +387,7 @@ xgboost_workflow <-
  ["DIFF: GridSearchCV is three tidymodels verbs in one object:",
   "tune_grid (search) + select_best (pick) + refit on full train (refit=True).",
   "DIFF: sklearn separates X from y; RecipeTransformer re-joins y as the",
-  "outcome internally, so the recipe still sees one frame."],
+  "target internally, so the recipe still sees one frame."],
  """set.seed(1001)
 ames_folds <- vfold_cv(ames_train, v = 5)
 
@@ -478,7 +478,7 @@ concrete = (concrete.group_by(ingredients)
             .agg(pl.col("compressive_strength").mean())
             .sort(ingredients))   # 1,030 -> 992"""),
 ("Split",
- ["Stratified 75/25 split on the outcome."],
+ ["Stratified 75/25 split on the target."],
  [],
  """set.seed(1501)
 concrete_split <- initial_split(concrete, strata = compressive_strength)
@@ -503,12 +503,12 @@ concrete_train, concrete_test = train_test_split(
 #    step_poly(all_predictors()) %>%
 #    step_interact(~ all_predictors():all_predictors())""",
  """normalized_rec = (
-    Recipe(data=concrete_train, outcome="compressive_strength")
-    .add(StepNormalize(s.predictors()))
+    Recipe(data=concrete_train, target="compressive_strength")
+    .add(StepNormalize(s.features()))
 )
 # poly_recipe = normalized_rec.add(
-#     StepPolynomial(s.predictors(), degree=2))
-#     # .add(StepInteract(s.predictors() * s.predictors()))  # GAP"""),
+#     StepPolynomial(s.features(), degree=2))
+#     # .add(StepInteract(s.features() * s.features()))  # GAP"""),
 ("Model + tune",
  ["Tune the neighborhood over 5-fold CV."],
  ["DIFF: kknn tunes neighbors / dist_power / weight_func (kernel weights);",
@@ -609,10 +609,10 @@ bean_validation, bean_test = train_test_split(
 bean_rec_trained <- prep(bean_rec)
 bake(bean_rec_trained, new_data = bean_validation) %>% head()""",
  """bean_rec = (
-    Recipe(data=bean_train, outcome="class")
-    .add(StepDropZeroVariance(s.numeric_predictors()))
+    Recipe(data=bean_train, target="class")
+    .add(StepDropZeroVariance(s.numeric_features()))
 
-    .add(StepNormalize(s.numeric_predictors()))
+    .add(StepNormalize(s.numeric_features()))
 )
 fitted = bean_rec.fit(bean_train)
 fitted.transform(bean_validation).head()"""),
@@ -620,7 +620,7 @@ fitted.transform(bean_validation).head()"""),
  ["Four components, estimated on training data only, scored on validation."],
  ["DIFF (GAP): StepPCA is designed-but-unbuilt — sklearn PCA consumes the",
   "recipe's output OUTSIDE the replay boundary. When it lands, this block",
-  "collapses into .add(StepPCA(s.numeric_predictors(), num_comp=4)).",
+  "collapses into .add(StepPCA(s.numeric_features(), num_comp=4)).",
   "DIFF: R pipes a NEW step onto the already-prep()ed recipe and re-preps",
   "(incremental fit); shoez recipes are declared whole and fit once."],
  """bean_pca_rec <-
@@ -672,7 +672,7 @@ from shoez import (Recipe, RecipeTransformer, StepDropZeroVariance,
                    StepNormalize)
 from shoez import Selectors as s"""),
 ("Data + split",
- ["credit_data: 4,454 x 14 with NAs in several predictors — the imputation",
+ ["credit_data: 4,454 x 14 with NAs in several features — the imputation",
   "example no polished resource provides."],
  ["DIFF: exported from R -> data/credit.csv. null_values='NA' is load-bearing",
   "here — the dataset's whole point is its NAs, and polars would read them",
@@ -708,14 +708,14 @@ credit_train, credit_test = train_test_split(
   step_zv(all_predictors()) %>%
   step_normalize(all_numeric_predictors())""",
  """credit_rec = (
-    Recipe(data=credit_train, outcome="Status")
-    .add(StepImputeMedian(s.numeric_predictors()))
-    .add(StepImputeMode(s.nominal_predictors()))
+    Recipe(data=credit_train, target="Status")
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepImputeMode(s.nominal_features()))
 
-    # .add(StepOther(s.nominal_predictors(), threshold=0.05))  # GAP
-    .add(StepDummy(s.nominal_predictors()))
-    .add(StepDropZeroVariance(s.predictors()))
-    .add(StepNormalize(s.numeric_predictors()))
+    # .add(StepOther(s.nominal_features(), threshold=0.05))  # GAP
+    .add(StepDummy(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
+    .add(StepNormalize(s.numeric_features()))
 )"""),
 ("Model + penalty tuning",
  ["Lasso-penalized logistic; tune the penalty on stratified 5-fold CV."],

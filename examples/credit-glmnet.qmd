@@ -60,15 +60,15 @@ credit_train, credit_test = train_test_split(
 # ── Recipe: impute -> (other GAP) -> dummy -> filter -> normalize
 
 credit_rec = (
-    Recipe(data=credit_train, outcome="Status")
-    .add(StepImputeMedian(s.numeric_predictors()))
-    .add(StepImputeMode(s.nominal_predictors()))
-    # .add(StepOther(s.nominal_predictors(), threshold=0.05))   # 🧪 GAP — and
+    Recipe(data=credit_train, target="Status")
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepImputeMode(s.nominal_features()))
+    # .add(StepOther(s.nominal_features(), threshold=0.05))   # 🧪 GAP — and
     #     the R run showed why the pooled-label default needs a collision
     #     strategy: credit_data$Home already has a level named "other"
-    .add(StepDummy(s.nominal_predictors()))
-    .add(StepDropZeroVariance(s.predictors()))
-    .add(StepNormalize(s.numeric_predictors()))
+    .add(StepDummy(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
+    .add(StepNormalize(s.numeric_features()))
 )
 
 # ── Model + workflow + penalty tuning

@@ -39,7 +39,7 @@ from sklearn.pipeline import Pipeline
 from shoez import Recipe, RecipeTransformer, StepDummy
 from shoez import Selectors as s
 
-# ── Data + outcome transform (outside the recipe, per TMwR Ch. 5)
+# ── Data + target transform (outside the recipe, per TMwR Ch. 5)
 
 ames = pl.read_parquet("data/ames.parquet")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
@@ -49,7 +49,7 @@ ames = ames.with_columns(
     pl.col("Gr_Liv_Area").log(base=10),   # GAP workaround (step_log)
 )
 
-# ── Split (stratified 80/20 by outcome quartile)
+# ── Split (stratified 80/20 by target quartile)
 
 strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
 ames_train, ames_test = train_test_split(
@@ -59,9 +59,9 @@ ames_train, ames_test = train_test_split(
 # ── Recipe (the runnable subset of ames_rec; gaps marked in place)
 
 ames_rec = (
-    Recipe(data=ames_train, outcome="Sale_Price")
+    Recipe(data=ames_train, target="Sale_Price")
     # .add(StepOther(s.col("Neighborhood"), threshold=0.01))          # 🧪 GAP
-    .add(StepDummy(s.nominal_predictors()))
+    .add(StepDummy(s.nominal_features()))
     # .add(StepInteract(s.col("Gr_Liv_Area") * s.starts_with("Bldg_Type_")))
     #                                       # 🧪 GAP — the has_source showcase
     # .add(StepSplineNatural(s.col("Latitude", "Longitude"), deg_free=20))

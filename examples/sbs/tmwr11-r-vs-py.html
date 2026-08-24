@@ -63,8 +63,8 @@ tidymodels_prefer()
 
 
 
-<span class="bn"># Data + outcome transform -------------------------------------------------</span>
-<span class="cm"># Ames housing; log10 the outcome BEFORE the recipe (outcome transforms</span>
+<span class="bn"># Data + target transform --------------------------------------------------</span>
+<span class="cm"># Ames housing; log10 the target BEFORE the recipe (target transforms</span>
 <span class="cm"># don&#x27;t belong inside it — they fail at predict time).</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -76,7 +76,7 @@ ames &lt;- ames %&gt;% mutate(Sale_Price = log10(Sale_Price))
 <span class="cm"># (predictors declared in the recipe formula, below)</span>
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
-<span class="cm"># Stratified 80/20 split on the outcome.</span>
+<span class="cm"># Stratified 80/20 split on the target.</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -173,12 +173,12 @@ from xgboost import XGBRegressor
 from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
 from shoez import Selectors as s
 
-<span class="bn"># Data + outcome transform -------------------------------------------------</span>
-<span class="cm"># Ames housing; log10 the outcome BEFORE the recipe (outcome transforms</span>
+<span class="bn"># Data + target transform --------------------------------------------------</span>
+<span class="cm"># Ames housing; log10 the target BEFORE the recipe (target transforms</span>
 <span class="cm"># don&#x27;t belong inside it — they fail at predict time).</span>
 <span class="df"># DIFF: no ames on PyPI — exported once from R: modeldata::ames -&gt; data/ames.csv.</span>
 <span class="df"># DIFF: the CSV drops R&#x27;s factor dtypes; plain strings are fine, because</span>
-<span class="df"># nominal_predictors() matches them (categorical_predictors() would not).</span>
+<span class="df"># nominal_features() matches them (categorical_features() would not).</span>
 
 ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
 ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Year_Built&quot;,
@@ -186,7 +186,7 @@ ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Yea
 ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10))
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
-<span class="cm"># Stratified 80/20 split on the outcome.</span>
+<span class="cm"># Stratified 80/20 split on the target.</span>
 <span class="df"># DIFF: explicit quartile binning (qcut) does what initial_split(strata=)</span>
 <span class="df"># does internally.</span>
 <span class="df"># DIFF: seeds don&#x27;t transfer across languages — same design, different rows.</span>
@@ -202,13 +202,13 @@ ames_train, ames_test = train_test_split(
 <span class="gp"># DIFF (GAP): step_novel() has no shoez analog yet — StepNovel is unbuilt and</span>
 <span class="gp"># StepUnknown fills only nulls. Omitted here; StepOneHot warns and emits</span>
 <span class="gp"># nulls for unseen levels at transform instead.</span>
-<span class="df"># DIFF: Recipe(outcome=...) roles replace the R formula; selectors pick</span>
+<span class="df"># DIFF: Recipe(target=...) roles replace the R formula; selectors pick</span>
 <span class="df"># columns by kind.</span>
 
 xgboost_recipe = (
-    Recipe(data=ames_train, outcome=&quot;Sale_Price&quot;)
-    .add(StepOneHot(s.nominal_predictors()))
-    .add(StepDropZeroVariance(s.predictors()))
+    Recipe(data=ames_train, target=&quot;Sale_Price&quot;)
+    .add(StepOneHot(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
 )
 
 
@@ -232,7 +232,7 @@ pipe = Pipeline([
 <span class="df"># DIFF: GridSearchCV is three tidymodels verbs in one object:</span>
 <span class="df"># tune_grid (search) + select_best (pick) + refit on full train (refit=True).</span>
 <span class="df"># DIFF: sklearn separates X from y; RecipeTransformer re-joins y as the</span>
-<span class="df"># outcome internally, so the recipe still sees one frame.</span>
+<span class="df"># target internally, so the recipe still sees one frame.</span>
 
 cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 

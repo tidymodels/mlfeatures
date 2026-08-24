@@ -48,7 +48,7 @@ concrete = (concrete.group_by(ingredients)
                     .sort(ingredients))  # group_by output is unordered —
                                          # sort makes the split deterministic
 
-# ── Split (stratified by outcome quartile, mirroring initial_split)
+# ── Split (stratified by target quartile, mirroring initial_split)
 
 strata = (concrete["compressive_strength"]
           .qcut(4, labels=["q1", "q2", "q3", "q4"]))
@@ -59,13 +59,13 @@ concrete_train, concrete_test = train_test_split(
 # ── Recipe (ports 1:1 — the whole story for KNN is the shared scale)
 
 normalized_rec = (
-    Recipe(data=concrete_train, outcome="compressive_strength")
-    .add(StepNormalize(s.predictors()))
+    Recipe(data=concrete_train, target="compressive_strength")
+    .add(StepNormalize(s.features()))
 )
 
 # Variant (the book's response-surface recipe; the glmnet story, not KNN's):
-# poly_recipe = normalized_rec.add(StepPolynomial(s.predictors(), degree=2))
-#     # .add(StepInteract(s.predictors() * s.predictors()))   # 🧪 GAP: all-pairs
+# poly_recipe = normalized_rec.add(StepPolynomial(s.features(), degree=2))
+#     # .add(StepInteract(s.features() * s.features()))   # 🧪 GAP: all-pairs
 
 # ── Model + workflow + tune
 

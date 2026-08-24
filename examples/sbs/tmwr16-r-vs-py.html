@@ -146,10 +146,10 @@ bean_validation, bean_test = train_test_split(
 <span class="gp"># so components will differ somewhat from the book&#x27;s.</span>
 
 bean_rec = (
-    Recipe(data=bean_train, outcome=&quot;class&quot;)
-    .add(StepDropZeroVariance(s.numeric_predictors()))
+    Recipe(data=bean_train, target=&quot;class&quot;)
+    .add(StepDropZeroVariance(s.numeric_features()))
 
-    .add(StepNormalize(s.numeric_predictors()))
+    .add(StepNormalize(s.numeric_features()))
 )
 fitted = bean_rec.fit(bean_train)
 fitted.transform(bean_validation).head()
@@ -158,7 +158,7 @@ fitted.transform(bean_validation).head()
 <span class="cm"># Four components, estimated on training data only, scored on validation.</span>
 <span class="gp"># DIFF (GAP): StepPCA is designed-but-unbuilt — sklearn PCA consumes the</span>
 <span class="gp"># recipe&#x27;s output OUTSIDE the replay boundary. When it lands, this block</span>
-<span class="gp"># collapses into .add(StepPCA(s.numeric_predictors(), num_comp=4)).</span>
+<span class="gp"># collapses into .add(StepPCA(s.numeric_features(), num_comp=4)).</span>
 <span class="df"># DIFF: R pipes a NEW step onto the already-prep()ed recipe and re-preps</span>
 <span class="df"># (incremental fit); shoez recipes are declared whole and fit once.</span>
 

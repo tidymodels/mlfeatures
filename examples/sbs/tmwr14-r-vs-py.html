@@ -77,7 +77,7 @@ concrete &lt;- concrete %&gt;%
 
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
-<span class="cm"># Stratified 75/25 split on the outcome.</span>
+<span class="cm"># Stratified 75/25 split on the target.</span>
 
 set.seed(1501)
 concrete_split &lt;- initial_split(concrete, strata = compressive_strength)
@@ -161,7 +161,7 @@ concrete = (concrete.group_by(ingredients)
             .sort(ingredients))   # 1,030 -&gt; 992
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
-<span class="cm"># Stratified 75/25 split on the outcome.</span>
+<span class="cm"># Stratified 75/25 split on the target.</span>
 
 strata = (concrete[&quot;compressive_strength&quot;]
           .qcut(4, labels=[&quot;q1&quot;,&quot;q2&quot;,&quot;q3&quot;,&quot;q4&quot;]))
@@ -177,12 +177,12 @@ concrete_train, concrete_test = train_test_split(
 <span class="gp"># all-pairs StepInteract (unbuilt); StepPolynomial itself exists.</span>
 
 normalized_rec = (
-    Recipe(data=concrete_train, outcome=&quot;compressive_strength&quot;)
-    .add(StepNormalize(s.predictors()))
+    Recipe(data=concrete_train, target=&quot;compressive_strength&quot;)
+    .add(StepNormalize(s.features()))
 )
 <span class="cm"># poly_recipe = normalized_rec.add(</span>
-<span class="cm">#     StepPolynomial(s.predictors(), degree=2))</span>
-<span class="cm">#     # .add(StepInteract(s.predictors() * s.predictors()))  # GAP</span>
+<span class="cm">#     StepPolynomial(s.features(), degree=2))</span>
+<span class="cm">#     # .add(StepInteract(s.features() * s.features()))  # GAP</span>
 
 <span class="bn"># Model + tune -------------------------------------------------------------</span>
 <span class="cm"># Tune the neighborhood over 5-fold CV.</span>
