@@ -168,10 +168,10 @@ class SchemaInfo:
 
 
 class Roles:
-    """Column → set of role labels. See ``design/roles.md``.
+    """Column → set of role names. See ``design/roles.md``.
 
     Every column carries **zero or more** roles stored as a ``set[str]``. The
-    standard roles are ``"outcome"``, ``"predictor"``, and ``"case_weights"``;
+    standard roles are ``"target"``, ``"feature"``, and ``"case_weights"``;
     users may register arbitrary custom roles. A column may hold several roles
     at once, but nonsensical combinations are rejected at assignment time.
 
@@ -187,14 +187,14 @@ class Roles:
 
     ```{python}
     roles = Roles(
-        {"price": {"outcome"}, "age": {"predictor"}, "city": {"predictor"}}
+        {"price": {"target"}, "age": {"feature"}, "city": {"feature"}}
     )
-    roles.columns_with_role("predictor"), roles.of("price")
+    roles.columns_with_role("feature"), roles.of("price")
     ```
     """
 
     #: Role pairs that may not co-occur on a single column.
-    _INCOMPATIBLE: tuple[frozenset[str], ...] = (frozenset({"outcome", "predictor"}),)
+    _INCOMPATIBLE: tuple[frozenset[str], ...] = (frozenset({"target", "feature"}),)
 
     def __init__(self, mapping: dict[str, set[str]] | None = None):
         self._roles: dict[str, set[str]] = {}
@@ -233,8 +233,8 @@ class Roles:
         """Columns carrying ``role``, in insertion order."""
         return [col for col, roles in self._roles.items() if role in roles]
 
-    def role_labels(self) -> list[str]:
-        """Every role label currently in use, sorted. Empty if no roles assigned."""
+    def role_names(self) -> list[str]:
+        """Every role name currently in use, sorted. Empty if no roles assigned."""
         return sorted({role for roles in self._roles.values() for role in roles})
 
     def all_columns(self) -> list[str]:

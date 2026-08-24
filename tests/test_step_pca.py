@@ -113,8 +113,8 @@ class TestConstructor:
     def test_required_pkgs(self) -> None:
         assert StepPca(["x", "y"]).required_pkgs() == ["numpy"]
 
-    def test_default_output_role_is_predictor(self) -> None:
-        assert StepPca(["x", "y"]).output_role == "predictor"
+    def test_default_output_role_is_feature(self) -> None:
+        assert StepPca(["x", "y"]).output_role == "feature"
 
     def test_keep_original_cols_defaults_to_false(self) -> None:
         assert StepPca(["x", "y"]).keep_original_cols is False

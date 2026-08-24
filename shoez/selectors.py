@@ -4,8 +4,8 @@ Import as ``from shoez import Selectors as s`` and pass the result of a
 factory call directly to any step:
 
 ```python
-StepDropCorr(s.numeric_predictors())
-StepPCA(s.starts_with("x") & s.predictors())
+StepDropCorr(s.numeric_features())
+StepPCA(s.starts_with("x") & s.features())
 StepPCA(s.has_source(step_type=StepDummy))
 ```
 
@@ -442,14 +442,14 @@ class Selectors:
         return _RoleTypeSelector(role=role, dtype=None)
 
     @classmethod
-    def predictors(cls) -> ShoezSelector:
-        """All predictor columns regardless of type."""
-        return _RoleTypeSelector(role="predictor", dtype=None)
+    def features(cls) -> ShoezSelector:
+        """All feature columns regardless of type."""
+        return _RoleTypeSelector(role="feature", dtype=None)
 
     @classmethod
-    def outcomes(cls) -> ShoezSelector:
-        """All outcome columns regardless of type."""
-        return _RoleTypeSelector(role="outcome", dtype=None)
+    def targets(cls) -> ShoezSelector:
+        """All target columns regardless of type."""
+        return _RoleTypeSelector(role="target", dtype=None)
 
     # --- By type (bare) ----------------------------------------------------
 
@@ -511,54 +511,54 @@ class Selectors:
         """All Datetime columns."""
         return _RoleTypeSelector(role=None, dtype=nw.Datetime)
 
-    # --- Compound predictor selectors (preferred in step args) -------------
+    # --- Compound feature selectors (preferred in step args) -------------
 
     @classmethod
-    def numeric_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are numeric."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.NumericType)
+    def numeric_features(cls) -> ShoezSelector:
+        """All feature columns that are numeric."""
+        return _RoleTypeSelector(role="feature", dtype=nw.dtypes.NumericType)
 
     @classmethod
-    def categorical_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are categorical."""
-        return _RoleTypeSelector(role="predictor", dtype=(nw.Categorical, nw.Enum))
+    def categorical_features(cls) -> ShoezSelector:
+        """All feature columns that are categorical."""
+        return _RoleTypeSelector(role="feature", dtype=(nw.Categorical, nw.Enum))
 
     @classmethod
-    def nominal_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are nominal (categorical, enum, or string)."""
+    def nominal_features(cls) -> ShoezSelector:
+        """All feature columns that are nominal (categorical, enum, or string)."""
         return _RoleTypeSelector(
-            role="predictor", dtype=(nw.String, nw.Categorical, nw.Enum)
+            role="feature", dtype=(nw.String, nw.Categorical, nw.Enum)
         )
 
     @classmethod
-    def string_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are string-typed."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.String)
+    def string_features(cls) -> ShoezSelector:
+        """All feature columns that are string-typed."""
+        return _RoleTypeSelector(role="feature", dtype=nw.String)
 
     @classmethod
-    def integer_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are integer-typed."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.IntegerType)
+    def integer_features(cls) -> ShoezSelector:
+        """All feature columns that are integer-typed."""
+        return _RoleTypeSelector(role="feature", dtype=nw.dtypes.IntegerType)
 
     @classmethod
-    def double_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are floating-point typed."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.dtypes.FloatType)
+    def double_features(cls) -> ShoezSelector:
+        """All feature columns that are floating-point typed."""
+        return _RoleTypeSelector(role="feature", dtype=nw.dtypes.FloatType)
 
     @classmethod
-    def date_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are Date-typed."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.Date)
+    def date_features(cls) -> ShoezSelector:
+        """All feature columns that are Date-typed."""
+        return _RoleTypeSelector(role="feature", dtype=nw.Date)
 
     @classmethod
-    def datetime_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are Datetime-typed."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.Datetime)
+    def datetime_features(cls) -> ShoezSelector:
+        """All feature columns that are Datetime-typed."""
+        return _RoleTypeSelector(role="feature", dtype=nw.Datetime)
 
     @classmethod
-    def boolean_predictors(cls) -> ShoezSelector:
-        """All predictor columns that are boolean-typed."""
-        return _RoleTypeSelector(role="predictor", dtype=nw.Boolean)
+    def boolean_features(cls) -> ShoezSelector:
+        """All feature columns that are boolean-typed."""
+        return _RoleTypeSelector(role="feature", dtype=nw.Boolean)
 
     # --- By source (lineage DAG) -------------------------------------------
 
@@ -609,7 +609,7 @@ class Selectors:
         import polars.selectors as cs
         from shoez import Selectors as s
 
-        s.wrap(cs.starts_with("x_")) & s.predictors()
+        s.wrap(cs.starts_with("x_")) & s.features()
         ```
         """
         return _coerce(selector)

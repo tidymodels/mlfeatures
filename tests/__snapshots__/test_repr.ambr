@@ -2,7 +2,7 @@
 # name: TestFittedRecipeRepr.test_resolved_columns_shown
   '''
   Recipe (trained)
-    Inputs: 3 columns — 1 outcome, 2 predictors
+    Inputs: 3 columns — 2 features, 1 target
     Steps:
       step_normalize(age)  [trained]
   '''
@@ -10,7 +10,7 @@
 # name: TestFittedRecipeRepr.test_trained_header_and_step_markers
   '''
   Recipe (trained)
-    Inputs: 4 columns — 1 outcome, 3 predictors
+    Inputs: 4 columns — 3 features, 1 target
     Steps:
       step_normalize(age)                   [trained]
       step_dummy(city → city_NYC, city_SF)  [trained]
@@ -35,7 +35,7 @@
 # name: TestRecipeRepr.test_roles_and_column_count
   '''
   Recipe (untrained)
-    Inputs: 3 columns — 1 outcome, 2 predictors
+    Inputs: 3 columns — 2 features, 1 target
     Steps:
       <none>
   '''
@@ -43,7 +43,7 @@
 # name: TestRecipeRepr.test_steps_listed_untrained
   '''
   Recipe (untrained)
-    Inputs: 3 columns — 1 outcome, 2 predictors
+    Inputs: 3 columns — 2 features, 1 target
     Steps:
       step_normalize(['age'])  [untrained]
       step_dummy(['city'])     [untrained]
@@ -51,9 +51,9 @@
 # ---
 # name: TestSelectorRepr.test_composite_and_complement
   dict({
-    'and': "select(role='predictor') & select(type=NumericType)",
-    'complement': "~select(role='predictor')",
-    'or': "select(role='predictor') | select(type=NumericType)",
+    'and': "select(role='feature') & select(type=NumericType)",
+    'complement': "~select(role='feature')",
+    'or': "select(role='feature') | select(type=NumericType)",
   })
 # ---
 # name: TestSelectorRepr.test_name_selectors
@@ -68,9 +68,9 @@
 # name: TestSelectorRepr.test_role_and_type_selectors
   dict({
     'everything': 'everything()',
+    'features': "select(role='feature')",
     'nominal': 'select(type=(String, Categorical, Enum))',
-    'numeric_predictors': "select(role='predictor', type=NumericType)",
-    'predictors': "select(role='predictor')",
+    'numeric_features': "select(role='feature', type=NumericType)",
   })
 # ---
 # name: TestSelectorRepr.test_source_selectors
@@ -95,5 +95,5 @@
   "step_dummy(['city'])  [untrained]"
 # ---
 # name: TestStepRepr.test_untrained_shows_unresolved_selector
-  "step_normalize(select(role='predictor', type=NumericType))  [untrained]"
+  "step_normalize(select(role='feature', type=NumericType))  [untrained]"
 # ---

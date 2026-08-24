@@ -73,8 +73,8 @@ class TestStepIntercept:
     def test_default_id(self) -> None:
         assert StepIntercept().id == "intercept"
 
-    def test_default_output_role_is_predictor(self) -> None:
-        assert StepIntercept().output_role == "predictor"
+    def test_default_output_role_is_feature(self) -> None:
+        assert StepIntercept().output_role == "feature"
 
     def test_custom_output_role(self) -> None:
         assert StepIntercept(role=None).output_role is None

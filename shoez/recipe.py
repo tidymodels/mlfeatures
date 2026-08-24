@@ -49,7 +49,7 @@ def _format_recipe(
     """
     header = f"Recipe ({'trained' if trained else 'untrained'})"
 
-    labels = roles.role_labels()
+    labels = roles.role_names()
     if labels:
         parts: list[str] = []
         for label in labels:
@@ -90,19 +90,19 @@ class Recipe:
 
     recipe = (
         Recipe()
-        .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
-        .add(StepNormalize(s.numeric_predictors()))
+        .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+        .add(StepNormalize(s.numeric_features()))
     )
     ```
 
     Steps may also be passed at construction, which is equivalent:
 
     ```python
-    Recipe(steps=[StepDropCorr(s.numeric_predictors(), threshold=0.9)])
+    Recipe(steps=[StepDropCorr(s.numeric_features(), threshold=0.9)])
     ```
 
     A prototype ``data`` frame may be supplied to capture the column names used
-    when assigning roles. Roles are declared via ``outcome``, ``predictors``,
+    when assigning roles. Roles are declared via ``target``, ``features``,
     and ``case_weights`` keyword arguments.
     """
 
@@ -111,8 +111,8 @@ class Recipe:
         steps: list[Step] | None = None,
         *,
         data: DataFrame | None = None,
-        outcome: str | list[str] | None = None,
-        predictors: str | list[str] | None = None,
+        target: str | list[str] | None = None,
+        features: str | list[str] | None = None,
         case_weights: str | list[str] | None = None,
     ):
         self.steps: list[Step] = list(steps) if steps is not None else []
@@ -130,7 +130,7 @@ class Recipe:
         self._role_req_overrides: list[tuple[str | ShoezSelector, bool]] = []
         _apply_role_assignments(
             self.roles,
-            {"outcome": outcome, "predictor": predictors, "case_weights": case_weights},
+            {"target": target, "feature": features, "case_weights": case_weights},
             check_col=self._check_column_exists,
         )
 
@@ -179,8 +179,8 @@ class Recipe:
         ```{python}
         (
             Recipe()
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
         )
         ```
         """
@@ -191,8 +191,8 @@ class Recipe:
     def set_roles(
         self,
         *,
-        outcome: str | list[str] | None = None,
-        predictor: str | list[str] | None = None,
+        target: str | list[str] | None = None,
+        feature: str | list[str] | None = None,
         case_weights: str | list[str] | None = None,
         **custom: str | list[str],
     ) -> "Recipe":
@@ -202,7 +202,7 @@ class Recipe:
         may be passed as additional keywords. Each value is a column name or a
         list of names. Assignments are *added* to any roles the recipe already
         carries, so a column may end up with several roles at once; incompatible
-        combinations (e.g. outcome + predictor on one column) are rejected. When
+        combinations (e.g. target + feature on one column) are rejected. When
         the recipe was built with a prototype ``data`` frame, every name is
         checked against it; without a prototype there is nothing to check
         against, so any name is accepted and typos surface later, when the
@@ -210,16 +210,16 @@ class Recipe:
 
         Parameters
         ----------
-        outcome
-            Column(s) to assign the ``"outcome"`` role. Default ``None``.
-        predictor
-            Column(s) to assign the ``"predictor"`` role. Default ``None``.
+        target
+            Column(s) to assign the ``"target"`` role. Default ``None``.
+        feature
+            Column(s) to assign the ``"feature"`` role. Default ``None``.
         case_weights
             Column(s) to assign the ``"case_weights"`` role. Default ``None``.
         **custom
             Any further keywords assign arbitrary custom roles, the keyword
             being the role name (e.g. ``group="city"``). The constructor's
-            plural ``predictors=`` is rejected here rather than silently
+            plural ``features=`` is rejected here rather than silently
             becoming a custom role.
 
         Examples
@@ -247,7 +247,7 @@ class Recipe:
         Assigning roles returns a new recipe, leaving the original untouched:
 
         ```{python}
-        recipe = Recipe(data=df).set_roles(outcome="price", predictor=["sqft", "city"])
+        recipe = Recipe(data=df).set_roles(target="price", feature=["sqft", "city"])
         recipe
         ```
 
@@ -259,10 +259,10 @@ class Recipe:
         ```
         """
         # ``**custom`` swallows any keyword, so the constructor's plural
-        # spelling would otherwise create a bogus 'predictors' role in silence.
-        if "predictors" in custom:
+        # spelling would otherwise create a bogus 'features' role in silence.
+        if "features" in custom:
             raise ValueError(
-                "set_roles() takes 'predictor', not 'predictors'; "
+                "set_roles() takes 'feature', not 'features'; "
                 "the plural spelling is the Recipe() constructor's"
             )
 
@@ -270,8 +270,8 @@ class Recipe:
         _apply_role_assignments(
             new.roles,
             {
-                "outcome": outcome,
-                "predictor": predictor,
+                "target": target,
+                "feature": feature,
                 "case_weights": case_weights,
                 **custom,
             },
@@ -281,28 +281,28 @@ class Recipe:
 
     def update_role_requirements(
         self,
-        target: str | ShoezSelector,
+        role: str | ShoezSelector,
         *,
         transform_required: bool,
     ) -> "Recipe":
         """Return a new recipe overriding whether columns are required at transform.
 
-        ``target`` is either a **role name** (a ``str``, e.g. ``"id"``) or a
+        ``role`` is either a **role name** (a ``str``, e.g. ``"id"``) or a
         selector (e.g. ``starts_with("id_")``) resolved against the training
-        frame at ``fit()``. The ``predictor`` and ``outcome`` roles are hardcoded
-        and cannot be configured (predictors are always required at transform,
-        outcomes never are); passing either as a string ``target`` raises. A
-        selector that happens to catch a predictor or outcome column is silently
+        frame at ``fit()``. The ``feature`` and ``target`` roles are hardcoded
+        and cannot be configured (features are always required at transform,
+        targets never are); passing either as a string ``role`` raises. A
+        selector that happens to catch a feature or target column is silently
         a no-op for that column (the hardcoded role wins), so it does not raise.
 
         See ``design/lifecycle.md`` for the per-role requirement defaults.
         """
-        if isinstance(target, str) and target in _NON_CONFIGURABLE_ROLES:
-            raise ValueError(f"requirement for role {target!r} is not configurable")
+        if isinstance(role, str) and role in _NON_CONFIGURABLE_ROLES:
+            raise ValueError(f"requirement for role {role!r} is not configurable")
         new = self._clone()
         new._role_req_overrides = [
             *self._role_req_overrides,
-            (target, transform_required),
+            (role, transform_required),
         ]
         return new
 
@@ -311,11 +311,11 @@ class Recipe:
     ) -> dict[str, bool]:
         """Resolve pending overrides to a column→requirement map (last wins)."""
         resolved: dict[str, bool] = {}
-        for target, required in self._role_req_overrides:
-            if isinstance(target, str):
-                columns = roles.columns_with_role(target)
+        for role, required in self._role_req_overrides:
+            if isinstance(role, str):
+                columns = roles.columns_with_role(role)
             else:
-                columns = target.resolve(frame, roles)
+                columns = role.resolve(frame, roles)
             for column in columns:
                 resolved[column] = required
         return resolved
@@ -360,8 +360,8 @@ class Recipe:
         )
         (
             Recipe()
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
             .fit(df)
         )
         ```
@@ -381,16 +381,16 @@ class Recipe:
         # a step author wrote ``fit()``.
         steps = [copy.deepcopy(step) for step in self.steps]
         live_roles = self.roles.copy()
-        if not live_roles.columns_with_role("predictor"):
+        if not live_roles.columns_with_role("feature"):
             reserved = {
                 col
                 for col in _frame.columns(current)
-                if "outcome" in live_roles.of(col)
+                if "target" in live_roles.of(col)
                 or "case_weights" in live_roles.of(col)
             }
             for col in _frame.columns(current):
                 if col not in reserved:
-                    live_roles.add(col, "predictor")
+                    live_roles.add(col, "feature")
         # Snapshot the training schema into a ptype and validate the incoming
         # frame against it (all columns required at fit). The snapshot rides on
         # the FittedRecipe so transform() can re-check new data at the boundary.
@@ -487,9 +487,9 @@ class Recipe:
             }
         )
         rec = (
-            Recipe(data=df, outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            Recipe(data=df, target="price", features=["age", "city"])
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
         )
         rec.summary()
         ```
@@ -615,8 +615,8 @@ class FittedRecipe:
         )
         fitted = (
             Recipe()
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
             .fit(df)
         )
         fitted.transform(df)
@@ -648,7 +648,7 @@ class FittedRecipe:
         --------
         After fitting, the summary reflects the transformed schema: ``city`` has
         been expanded into dummy indicators (source ``"dummy"``) while the
-        normalized ``age`` keeps its predictor role:
+        normalized ``age`` keeps its feature role:
 
         ```{python}
         import pandas as pd
@@ -663,9 +663,9 @@ class FittedRecipe:
             }
         )
         fitted = (
-            Recipe(data=df, outcome="price", predictors=["age", "city"])
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            Recipe(data=df, target="price", features=["age", "city"])
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
             .fit(df)
         )
         fitted.summary()

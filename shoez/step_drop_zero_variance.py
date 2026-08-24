@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 __all__ = ["fit_drop_zero_variance", "StepDropZeroVariance"]
 
 
-def fit_drop_zero_variance(features: Frame) -> list[str]:
+def fit_drop_zero_variance(selected: Frame) -> list[str]:
     """Find columns with a single unique non-null value.
 
     A column is "zero-variance" if every observed (non-null) value is the
@@ -42,9 +42,9 @@ def fit_drop_zero_variance(features: Frame) -> list[str]:
 
     Parameters
     ----------
-    features
+    selected
         Internal `Frame` (narwhals) holding the candidate
-        predictor columns. Native frames are wrapped via
+        feature columns. Native frames are wrapped via
         `shoez._frame.from_native()` at the recipe boundary.
 
     Returns
@@ -54,7 +54,7 @@ def fit_drop_zero_variance(features: Frame) -> list[str]:
         `shoez._frame.apply_drop()` to remove the offending columns
         from any frame with the same schema.
     """
-    return [c for c in features.columns if features[c].drop_nulls().n_unique() <= 1]
+    return [c for c in selected.columns if selected[c].drop_nulls().n_unique() <= 1]
 
 
 class StepDropZeroVariance(Step):
@@ -67,7 +67,7 @@ class StepDropZeroVariance(Step):
     ----------
     columns
         Columns to consider for removal. Accepts a single column name, a list
-        of names, a shoez selector such as ``Selectors.predictors()`` (see
+        of names, a shoez selector such as ``Selectors.features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -96,7 +96,7 @@ class StepDropZeroVariance(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepDropZeroVariance(s.numeric_predictors()))
+    recipe = Recipe().add(StepDropZeroVariance(s.numeric_features()))
     recipe
     ```
 
@@ -132,12 +132,12 @@ class StepDropZeroVariance(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_drop_zero_variance(features)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        self._estimates = fit_drop_zero_variance(selected)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

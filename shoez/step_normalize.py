@@ -38,13 +38,13 @@ __all__ = ["fit_normalize", "apply_normalize", "StepNormalize"]
 
 
 def fit_normalize(
-    features: Frame,
+    selected: Frame,
 ) -> dict[str, tuple[float, float]]:
     """Estimate per-column mean and standard deviation for normalization.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all numeric. Passed in by the
         step's ``fit()`` method after selector resolution.
 
@@ -55,7 +55,7 @@ def fit_normalize(
     Returns
     -------
     ``dict`` mapping each normalizable column name to its ``(mean, std)`` pair.
-    Empty when ``features`` has no columns.
+    Empty when ``selected`` has no columns.
 
     Columns with a standard deviation of ``0`` (constant columns — every value
     the same) cannot be scaled to unit variance, so they are **omitted** from
@@ -73,14 +73,14 @@ def fit_normalize(
     stats: dict[str, tuple[float, float]] = {}
     constant: list[str] = []
 
-    for col in features.columns:
+    for col in selected.columns:
         # ddof=1 (sample std) explicitly: scaling by it makes the sample std of
         # the normalized column exactly 1, matching R's sd().
-        std = as_float(features[col].std(ddof=1))
+        std = as_float(selected[col].std(ddof=1))
         if std == 0.0:
             constant.append(col)
             continue
-        stats[col] = (as_float(features[col].mean()), std)
+        stats[col] = (as_float(selected[col].mean()), std)
 
     if constant:
         warnings.warn(
@@ -93,18 +93,18 @@ def fit_normalize(
 
 
 def apply_normalize(
-    features: Frame,
+    selected: Frame,
     stats: dict[str, tuple[float, float]],
 ) -> Frame:
-    """Standardize ``features`` as ``(x - mean) / std`` using stored statistics.
+    """Standardize ``selected`` as ``(x - mean) / std`` using stored statistics.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame to normalize.
     stats:
         The ``{column: (mean, std)}`` mapping returned by `fit_normalize()`. Any
-        column of ``features`` not present as a key (e.g. a constant column
+        column of ``selected`` not present as a key (e.g. a constant column
         dropped at fit time) is passed through untouched.
 
     Returns
@@ -116,7 +116,7 @@ def apply_normalize(
     exprs = [
         ((nw.col(col) - mean) / std).alias(col) for col, (mean, std) in stats.items()
     ]
-    return features.with_columns(*exprs)
+    return selected.with_columns(*exprs)
 
 
 class StepNormalize(Step):
@@ -133,7 +133,7 @@ class StepNormalize(Step):
     ----------
     columns
         Columns to normalize. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        shoez selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -163,7 +163,7 @@ class StepNormalize(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepNormalize(s.numeric_predictors()))
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
     recipe
     ```
 
@@ -199,12 +199,12 @@ class StepNormalize(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-column mean and std over the selected columns."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_normalize(features)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        self._estimates = fit_normalize(selected)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

@@ -20,7 +20,7 @@ uv run pyright                 # type-check (strict)
 
 Both type-checkers run in strict mode over `shoez/` (tests are excluded). New code must be fully typed and pass both. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
 
-When adding a new step, also run its `StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass it before merging.
+When adding a new step, also add its `tests/test_step_x_infrastructure.py` subclassing `shoez.testing.StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass the contract before merging. The subclass supplies only `make_step()` and `training_data`; the checks themselves are written once in [`shoez/testing.py`](shoez/testing.py).
 
 When adding a new step, also add a matching `step_*` wrapper method to the `ShzNamespace` in [`shoez/polars.py`](shoez/polars.py) so the step is reachable through the `df.shz` accessor. Mirror the step's constructor signature and keep the one-line docstring pointing at the step class (e.g. `See \`StepDummy\`.`); without a wrapper the step is only reachable via the generic `df.shz.apply(...)`. The `TestWrapperStepParity` tests in [`tests/test_polars_accessor.py`](tests/test_polars_accessor.py) enforce this both ways: CI fails if a public step has no wrapper, or if a wrapper points at a step that no longer exists, so the accessor can never silently drift out of sync.
 
@@ -30,7 +30,7 @@ Raised exceptions and `warnings.warn` messages follow a uniform style so they re
 
 - **Lowercase first word**, unless it is an identifier that is naturally capitalized (e.g. a class name like `StepDummy` in the `called before fit()` guards).
 - **No trailing period.** Join what would be two sentences with `;` rather than `. ` so the message stays a single phrase.
-- **Single quotes** around parameter names, role names, and values (`'degree'`, `'outcome'`, `got 'kendall'`) — use `{value!r}` for interpolated values. Do not use backticks (a Markdown convention, not a runtime one).
+- **Single quotes** around parameter names, role names, and values (`'degree'`, `'target'`, `got 'kendall'`) — use `{value!r}` for interpolated values. Do not use backticks (a Markdown convention, not a runtime one).
 - **Numerals** for counts (`fewer than 2 unique levels`, not `two`).
 - **No em dashes** — use `;` or `:` instead.
 - Pluralize with the `(s)` form (`column(s)`, `name(s)`) and quote column lists as their repr (`['empty']`).
@@ -52,6 +52,14 @@ Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>
 
 ### Vocabulary
 
+shoez follows scikit-learn's vocabulary, not R `recipes`', wherever the two disagree. The full translation table lives in [`user_guide/vocabulary.qmd`](user_guide/vocabulary.qmd); the rules that come up most:
+
+- A column used as model input is a **feature**, never a "predictor". `"feature"` is the literal role name, so this is enforced by the API, not just by prose. Note that scikit-learn's own "predictor" means an *estimator*, so the word is a false friend and shoez avoids it entirely.
+- The column being predicted is the **target**, never an "outcome". `"target"` is the role name. scikit-learn also says "label" here, but shoez never uses a bare "label" to mean the target column, because it would collide with a categorical target's class values ("class label" for one of those values is fine).
+- One row of data is a **sample**, not an "observation". The statistical sense of the word ("sample standard deviation", "pairwise-complete observations") is untouched by this rule.
+- The distinct values of a categorical column are its **levels**, never its "labels". A level is a value within a column; a role is a property of a column.
+- Inside a step, the frame of columns the selector resolved to is `selected`, not `features`: it is *this step's* selection, which is not the set of feature-role columns.
+
 Describe a recipe's two states as **untrained** and **trained**, never as "prepped"/"unprepped" or "prepared". Those are inherited from R `recipes`' cooking analogy, which shoez does not use; the repr headers (`Recipe (untrained)` / `Recipe (trained)`) and the per-step `[untrained]` / `[trained]` markers are the wording to match. For the same reason, call the second lifecycle phase `transform()` rather than "bake". The one exception is when citing R `recipes`' actual function names (its `prep()` and `bake()`), as `shoez/step_normalize.py` does.
 
 ### Step docstrings
@@ -68,7 +76,7 @@ A step's class docstring is its reference page, so it is written for someone usi
   ```
   columns
       Columns to project. Accepts a single column name, a list of names, a
-      shoez selector such as ``Selectors.numeric_predictors()`` (see
+      shoez selector such as ``Selectors.numeric_features()`` (see
       `Selectors` for the full set), or a narwhals or polars selector
       (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
       Selectors are resolved against the frame's schema when the recipe is
@@ -83,22 +91,22 @@ A step's class docstring is its reference page, so it is written for someone usi
 
 These conventions apply to every example we write: docstring `Examples` cells, [`README.qmd`](README.qmd), and the snippets in `design/`.
 
-- **Import selectors as `s`**: `from shoez import Selectors as s`, then `s.numeric_predictors()`. This is the house style everywhere, and it keeps the shoez namespace clear of `cs`, the conventional alias for `polars.selectors`. Prose cross-references to the API still use the real name (`Selectors.wrap`).
-- **Select columns with selectors, not literal names.** Pass `s.numeric_predictors()` rather than a hardcoded list like `["a", "b", "c"]`; the selector says what the step is for, and the example keeps working when the frame changes.
-- **Build recipes by chaining `.add()`** rather than `Recipe(steps=[...])`, binding the recipe to a name and fitting on the next line. A single step stays on one line (`recipe = Recipe().add(StepNormalize(s.numeric_predictors()))`); a step's own docstring needs only that step. In overview examples (the README, `Recipe`) show at least two steps, one per line inside a parenthesized expression, so the chained shape is the thing being demonstrated:
+- **Import selectors as `s`**: `from shoez import Selectors as s`, then `s.numeric_features()`. This is the house style everywhere, and it keeps the shoez namespace clear of `cs`, the conventional alias for `polars.selectors`. Prose cross-references to the API still use the real name (`Selectors.wrap`).
+- **Select columns with selectors, not literal names.** Pass `s.numeric_features()` rather than a hardcoded list like `["a", "b", "c"]`; the selector says what the step is for, and the example keeps working when the frame changes.
+- **Build recipes by chaining `.add()`** rather than `Recipe(steps=[...])`, binding the recipe to a name and fitting on the next line. A single step stays on one line (`recipe = Recipe().add(StepNormalize(s.numeric_features()))`); a step's own docstring needs only that step. In overview examples (the README, `Recipe`) show at least two steps, one per line inside a parenthesized expression, so the chained shape is the thing being demonstrated:
 
   ```python
   recipe = (
       Recipe()
-      .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
-      .add(StepNormalize(s.numeric_predictors()))
+      .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+      .add(StepNormalize(s.numeric_features()))
   )
   ```
 
 - **Keep the three lifecycle phases on their own lines.** Bind each one rather than chaining them together, so specify, fit, and transform read as the distinct phases they are:
 
   ```python
-  recipe = Recipe().add(StepNormalize(s.numeric_predictors()))
+  recipe = Recipe().add(StepNormalize(s.numeric_features()))
   fitted = recipe.fit(df)
   fitted.transform(df)
   ```

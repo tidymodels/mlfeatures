@@ -33,8 +33,8 @@ Decisions that must be made **before v0.1 ships**.
 
 6. **Deprecation policy.** "One minor version of warning, removal in the next major" vs. a longer cycle. Must be documented in v0.1 release notes.
 
-7. **Multi-column structured outcomes.** Survival outcomes, multi-output regression, and multitask learning need outcomes as a structured object (or a role applied to multiple columns), not a single formula LHS. First-class representation vs. emergent from formula tricks — decide before the role API is finalized.
-8. **Anti-leakage guardrails.** At minimum: warn when a step's `fit()` consumes the outcome column (other than target-encoding steps designed to do so). Research item for a richer solution [#414].
+7. **Multi-column structured targets.** Survival targets, multi-output regression, and multitask learning need targets as a structured object (or a role applied to multiple columns), not a single formula LHS. First-class representation vs. emergent from formula tricks — decide before the role API is finalized.
+8. **Anti-leakage guardrails.** At minimum: warn when a step's `fit()` consumes the target column (other than target-encoding steps designed to do so). Research item for a richer solution [#414].
 
 9. **Mutating vs. immutable `.add()`.** When steps are appended to a recipe via a builder method, does `.add()` mutate the recipe in place (as the [gist prototype](https://gist.github.com/EmilHvitfeldt/8b134755222a1ba43f3ee8fdf7461b31) does, returning `None`) or return a new `Recipe`? Returning a new recipe is consistent with the [lifecycle.md](lifecycle.md) "deferred, inspectable, modifiable before fitting" stance and lets chains compose, but costs a copy per call. The `steps=[...]` constructor form sidesteps the question and is the recommended primary spelling regardless. Recommendation: **`.add()` returns a new `Recipe`.** See [interfaces.md](interfaces.md).
 

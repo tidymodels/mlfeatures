@@ -35,8 +35,8 @@ df = pd.DataFrame(
 # specify -> fit -> transform
 recipe = (
     Recipe()
-    .add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
-    .add(StepNormalize(s.numeric_predictors()))
+    .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+    .add(StepNormalize(s.numeric_features()))
 )
 fitted = recipe.fit(df)
 result = fitted.transform(df)

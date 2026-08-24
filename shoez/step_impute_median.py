@@ -47,27 +47,27 @@ __all__ = [
 
 
 def fit_impute_median(
-    features: Frame,
+    selected: Frame,
 ) -> dict[str, float]:
     """Estimate the per-column median used to impute missing values.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all numeric. Passed in by the
         step's ``fit()`` method after selector resolution.
 
     Returns
     -------
     ``dict`` mapping every input column name to its median. Empty when
-    ``features`` has no columns.
+    ``selected`` has no columns.
 
     A column whose values are *all* null has an undefined (``NaN``) median and
     so cannot be imputed. It is **not** dropped: it stays in the mapping with a
     ``NaN`` value, `apply_impute_median()` leaves it unchanged, and a
     `UserWarning` is emitted naming such columns.
     """
-    medians = {col: as_float(features[col].median()) for col in features.columns}
+    medians = {col: as_float(selected[col].median()) for col in selected.columns}
 
     all_null = [col for col, med in medians.items() if math.isnan(med)]
     if all_null:
@@ -81,18 +81,18 @@ def fit_impute_median(
 
 
 def apply_impute_median(
-    features: Frame,
+    selected: Frame,
     medians: dict[str, float],
 ) -> Frame:
     """Fill nulls with the stored per-column median.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame to impute.
     medians:
         The ``{column: median}`` mapping returned by `fit_impute_median()`. Any
-        column of ``features`` not present as a key is passed through untouched.
+        column of ``selected`` not present as a key is passed through untouched.
         A ``NaN`` median marks a column that could not be estimated (entirely
         null at fit time); such columns are left unchanged.
 
@@ -108,7 +108,7 @@ def apply_impute_median(
         for col, med in medians.items()
         if not math.isnan(med)
     ]
-    return features.with_columns(*exprs)
+    return selected.with_columns(*exprs)
 
 
 class StepImputeMedian(Step):
@@ -125,7 +125,7 @@ class StepImputeMedian(Step):
     ----------
     columns
         Columns to impute. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        shoez selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -154,7 +154,7 @@ class StepImputeMedian(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepImputeMedian(s.numeric_predictors()))
+    recipe = Recipe().add(StepImputeMedian(s.numeric_features()))
     recipe
     ```
 
@@ -190,12 +190,12 @@ class StepImputeMedian(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column median over the selected columns."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_impute_median(features)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        self._estimates = fit_impute_median(selected)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

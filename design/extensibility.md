@@ -52,9 +52,27 @@ Namespace-reserved plugin packages — see [steps-catalog.md](steps-catalog.md):
 
 ---
 
+## Conformance
+
+`shoez.testing.StepConformanceTest` ships inside the package, so a plugin runs the same contract shoez's own steps do:
+
+```python
+from shoez.testing import StepConformanceTest
+
+class TestMyStepConformance(StepConformanceTest):
+    training_data = {"a": [1.0, 2.0, 3.0], "g": ["x", "y", "x"]}
+
+    def make_step(self) -> StepMyThing:
+        return StepMyThing(["a"])
+```
+
+It needs pytest, which shoez does not require at runtime: install the `test` extra (`pip install shoez[test]`). See [step-contract.md](step-contract.md) for the checks and the opt-out hooks.
+
+---
+
 ## Step template
 
-A cookiecutter / template is provided covering: `fit`, `transform`, `schema_in`, `schema_out`, `tidy`, `required_pkgs`, `StepConformanceTest` invocation, and a minimal test fixture.
+A cookiecutter / template is **not yet provided**. It would cover: `fit`, `transform`, `schema_in`, `schema_out`, `required_pkgs`, a `StepConformanceTest` subclass, and a minimal test fixture.
 
 ---
 

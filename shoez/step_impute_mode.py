@@ -36,12 +36,12 @@ __all__ = ["fit_impute_mode", "apply_impute_mode", "StepImputeMode"]
 _CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
 
 
-def fit_impute_mode(features: Frame) -> dict[str, Any]:
+def fit_impute_mode(selected: Frame) -> dict[str, Any]:
     """Estimate the per-column mode used to impute missing values.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame of categorical columns. Passed in by the step's
         ``fit()`` method after selector resolution; dtype screening is the
         ``accepts_dtypes`` layer's job, so this function does not re-validate it.
@@ -49,7 +49,7 @@ def fit_impute_mode(features: Frame) -> dict[str, Any]:
     Returns
     -------
     ``dict`` mapping every input column name to its mode. Empty when
-    ``features`` has no columns. When a column has several equally-frequent
+    ``selected`` has no columns. When a column has several equally-frequent
     values, the smallest (by sort order) is chosen so the result is
     deterministic.
 
@@ -61,12 +61,12 @@ def fit_impute_mode(features: Frame) -> dict[str, Any]:
     modes: dict[str, Any] = {}
     all_null: list[str] = []
 
-    for col in features.columns:
+    for col in selected.columns:
         # Drop nulls first so a null is never itself selected as the mode, then
         # break ties deterministically by taking the smallest value.
         candidates = [
             v
-            for v in features[col].drop_nulls().mode().sort().to_list()
+            for v in selected[col].drop_nulls().mode().sort().to_list()
             if v is not None
         ]
         if candidates:
@@ -86,18 +86,18 @@ def fit_impute_mode(features: Frame) -> dict[str, Any]:
 
 
 def apply_impute_mode(
-    features: Frame,
+    selected: Frame,
     modes: dict[str, Any],
 ) -> Frame:
     """Fill nulls with the stored per-column mode.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame to impute.
     modes:
         The ``{column: mode}`` mapping returned by `fit_impute_mode()`. Any
-        column of ``features`` not present as a key is passed through untouched.
+        column of ``selected`` not present as a key is passed through untouched.
         A ``None`` mode marks a column that had no mode (entirely null at fit
         time); such columns are left unchanged.
 
@@ -113,7 +113,7 @@ def apply_impute_mode(
         for col, mode in modes.items()
         if mode is not None
     ]
-    return features.with_columns(*exprs)
+    return selected.with_columns(*exprs)
 
 
 class StepImputeMode(Step):
@@ -133,7 +133,7 @@ class StepImputeMode(Step):
     ----------
     columns
         Columns to impute. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        shoez selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -165,7 +165,7 @@ class StepImputeMode(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepImputeMode(s.nominal_predictors()))
+    recipe = Recipe().add(StepImputeMode(s.nominal_features()))
     recipe
     ```
 
@@ -201,12 +201,12 @@ class StepImputeMode(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mode over the selected columns."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_impute_mode(features)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        self._estimates = fit_impute_mode(selected)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

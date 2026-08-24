@@ -24,7 +24,7 @@ X.iloc[:5, :3]
 ```
 
 scikit-learn keeps the features `X` and the target `y` apart, while `shoez`
-identifies the outcome by its **role**. Build the recipe with the outcome role
+identifies the target by its **role**. Build the recipe with the target role
 assigned; the adapter re-joins `y` onto `X` under that name at fit time and
 strips it back out of the transformed output, so `transform` returns the feature
 matrix only.
@@ -35,7 +35,7 @@ from shoez import Recipe, StepNormalize
 features = list(X.columns)
 
 recipe = (
-    Recipe(data=X.assign(target=y), outcome="target", predictors=features)
+    Recipe(data=X.assign(target=y), target="target", features=features)
     .add(StepNormalize(features))
 )
 ```

@@ -64,11 +64,11 @@ def test_from_frame_builds_one_original_node_per_column(backend: str) -> None:
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_from_frame_pulls_roles(backend: str) -> None:
     frame = _frame_of(backend, {"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
-    roles = Roles({"y": {"outcome"}, "x": {"predictor"}})
+    roles = Roles({"y": {"target"}, "x": {"feature"}})
     schema = Schema.from_frame(frame, roles)
 
-    assert schema["y"].roles == {"outcome"}
-    assert schema["x"].roles == {"predictor"}
+    assert schema["y"].roles == {"target"}
+    assert schema["x"].roles == {"feature"}
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
@@ -80,11 +80,11 @@ def test_from_frame_without_roles_gives_empty_role_sets(backend: str) -> None:
 def test_node_roles_are_independent_copies() -> None:
     """Mutating a node's roles must not bleed back into the source Roles."""
     frame = _frame_of("polars", {"a": [1, 2, 3]})
-    roles = Roles({"a": {"predictor"}})
+    roles = Roles({"a": {"feature"}})
     schema = Schema.from_frame(frame, roles)
 
     schema["a"].roles.add("id")
-    assert roles.of("a") == {"predictor"}
+    assert roles.of("a") == {"feature"}
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
@@ -148,7 +148,7 @@ class _FakeReduce(Step):
         self.id = id
         self.trained = False
         self.keep_original_cols = False
-        self.output_role = "predictor"
+        self.output_role = "feature"
         self._inputs: list[str] = []
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "_FakeReduce":
@@ -250,7 +250,7 @@ def test_update_adding_constant_has_no_parents(backend: str) -> None:
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_adding_derived_has_feature_parents(backend: str) -> None:
     schema, _ = _apply(
-        [StepClassDistance(["a", "b"], outcome="out")],
+        [StepClassDistance(["a", "b"], target="out")],
         backend,
         {"a": [1.0, 2.0, 3.0, 4.0], "b": [2.0, 4.0, 6.0, 8.0], "out": [0, 0, 1, 1]},
     )
@@ -336,11 +336,11 @@ def test_update_rejects_unknown_parent(snapshot: SnapshotAssertion) -> None:
 
 
 def test_update_propagates_roles_to_produced_columns() -> None:
-    roles = Roles({"g": {"predictor"}})
+    roles = Roles({"g": {"feature"}})
     schema, _ = _apply(
         [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"]}, roles=roles
     )
-    assert schema["g_b"].roles == {"predictor"}
+    assert schema["g_b"].roles == {"feature"}
 
 
 def test_update_composes_across_a_multi_step_sequence() -> None:
@@ -366,13 +366,13 @@ def test_update_composes_across_a_multi_step_sequence() -> None:
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_summary_columns_and_values(backend: str) -> None:
     frame = _frame_of(backend, {"a": [1, 2, 3], "b": [1.5, 2.5, 3.5]})
-    schema = Schema.from_frame(frame, Roles({"a": {"predictor"}}))
+    schema = Schema.from_frame(frame, Roles({"a": {"feature"}}))
     out = nw.from_native(schema.summary())
 
     assert out.columns == ["name", "dtype", "roles", "source", "sparse"]
     assert out["name"].to_list() == ["a", "b"]
     assert out["dtype"].to_list() == ["int", "float"]  # taxonomy categories
-    assert out["roles"].to_list() == ["predictor", ""]
+    assert out["roles"].to_list() == ["feature", ""]
     assert out["source"].to_list() == ["original", "original"]
     assert out["sparse"].to_list() == [False, False]
 
@@ -455,11 +455,11 @@ def test_fitted_recipe_summary_reflects_the_final_schema() -> None:
 
 def test_recipe_summary_pre_fit_shows_initial_schema_with_declared_roles() -> None:
     train = pd.DataFrame({"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
-    out = nw.from_native(Recipe(data=train, outcome="y", predictors="x").summary())
+    out = nw.from_native(Recipe(data=train, target="y", features="x").summary())
     assert out["name"].to_list() == ["y", "x"]
     assert out["source"].to_list() == ["original", "original"]
     role_of = dict(zip(out["name"].to_list(), out["roles"].to_list()))
-    assert role_of == {"y": "outcome", "x": "predictor"}
+    assert role_of == {"y": "target", "x": "feature"}
 
 
 def test_recipe_summary_without_prototype_raises(

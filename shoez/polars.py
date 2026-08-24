@@ -121,7 +121,7 @@ class ShzNamespace:
         self,
         value: float = 1.0,
         name: str = "intercept",
-        role: str | None = "predictor",
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """Add a constant intercept column. See `StepIntercept`."""
         return self.apply(StepIntercept(value, name, role))
@@ -141,7 +141,7 @@ class ShzNamespace:
         self,
         mutations: Mapping[str, Callable[[Any], Any]],
         *,
-        role: str | None = "predictor",
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """Apply arbitrary column expressions. See `StepMutate`."""
         return self.apply(StepMutate(mutations, role=role))
@@ -153,7 +153,7 @@ class ShzNamespace:
         num_comp: int = 5,
         prefix: str = "PC",
         keep_original_cols: bool = False,
-        role: str | None = "predictor",
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """Project numeric columns onto principal components. See `StepPca`."""
         return self.apply(
@@ -169,20 +169,20 @@ class ShzNamespace:
     def step_class_distance(
         self,
         columns: Selector,
-        outcome: str,
+        target: str,
         *,
         metric: Metric = "euclidean",
         log_distance: bool = True,
         eps: float = 0.001,
         prefix: str = "distance",
         keep_original_cols: bool = False,
-        role: str | None = "predictor",
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """Per-class distance features. See `StepClassDistance`."""
         return self.apply(
             StepClassDistance(
                 columns,
-                outcome,
+                target,
                 metric=metric,
                 log_distance=log_distance,
                 eps=eps,
@@ -210,7 +210,7 @@ class ShzNamespace:
         *,
         degree: int = 2,
         keep_original_cols: bool = False,
-        role: str | None = "predictor",
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """Expand columns into a polynomial basis. See `StepPolynomial`."""
         return self.apply(

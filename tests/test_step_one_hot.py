@@ -312,8 +312,8 @@ class TestStepOneHotInfrastructure:
     def test_custom_id(self) -> None:
         assert StepOneHot(columns=["x"], id="my_ohe").id == "my_ohe"
 
-    def test_output_role_is_predictor(self) -> None:
-        assert StepOneHot(columns=["x"]).output_role == "predictor"
+    def test_output_role_is_feature(self) -> None:
+        assert StepOneHot(columns=["x"]).output_role == "feature"
 
 
 # ---------------------------------------------------------------------------
@@ -397,21 +397,21 @@ class TestStepOneHotRoles:
     def test_generated_columns_inherit_source_role(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepOneHot(columns=["x"]).fit(df, _schema())
-        roles = Roles({"x": {"predictor"}})
+        roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
         for col in ("x_a", "x_b", "x_c"):
-            assert "predictor" in roles.of(col)
+            assert "feature" in roles.of(col)
 
     def test_source_role_retained_when_keep_original_cols(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepOneHot(columns=["x"], keep_original_cols=True).fit(df, _schema())
-        roles = Roles({"x": {"predictor"}})
+        roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
-        assert "predictor" in roles.of("x")
+        assert "feature" in roles.of("x")
 
     def test_source_role_removed_when_not_keeping_original(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepOneHot(columns=["x"], keep_original_cols=False).fit(df, _schema())
-        roles = Roles({"x": {"predictor"}})
+        roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
         assert roles.of("x") == set()

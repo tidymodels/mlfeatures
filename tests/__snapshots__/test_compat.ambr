@@ -1,4 +1,4 @@
 # serializer version: 1
-# name: TestAssemble.test_y_without_outcome_role_raises
-  "y was provided but the recipe declares no 'outcome' role; assign one with set_roles(outcome=...) or pass y=None"
+# name: TestAssemble.test_y_without_target_role_raises
+  "y was provided but the recipe declares no 'target' role; assign one with set_roles(target=...) or pass y=None"
 # ---

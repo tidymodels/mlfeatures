@@ -14,17 +14,17 @@ Shows different information depending on training status:
 **Before fit** (unresolved):
 ```
 Recipe (untrained)
-  Inputs: 12 columns — 1 outcome, 11 predictors
+  Inputs: 12 columns — 1 target, 11 features
   Steps:
-    step_impute_knn(all_predictors())              [untrained]
-    step_dummy(all_nominal_predictors())           [untrained]
-    step_normalize(all_numeric_predictors())       [untrained]
+    step_impute_knn(s.features())              [untrained]
+    step_dummy(s.nominal_features())           [untrained]
+    step_normalize(s.numeric_features())       [untrained]
 ```
 
 **After fit** (resolved):
 ```
 Recipe (trained)
-  Inputs: 12 columns — 1 outcome, 11 predictors
+  Inputs: 12 columns — 1 target, 11 features
   Steps:
     step_impute_knn [x1, x2, x4, x7]              [trained]
     step_dummy      [color → color_red, color_blue][trained]
@@ -58,7 +58,7 @@ Python's `raise X from e` gives this for free — R needed a deferred fix [#734]
 
 A selector that matches zero columns is **silent by default** — the step is a no-op and processing continues normally. Steps must handle empty selection without error. The `StepConformanceTest` verifies this path explicitly — see [step-contract.md](step-contract.md).
 
-This is the opposite of R's default, which errors on zero matches and requires `allow_empty = TRUE` to opt out. That default caused unnecessary friction when a selector legitimately resolves to nothing (e.g. no nominal predictors in a dataset).
+This is the opposite of R's default, which errors on zero matches and requires `allow_empty = TRUE` to opt out. That default caused unnecessary friction when a selector legitimately resolves to nothing (e.g. no nominal features in a dataset).
 
 ---
 

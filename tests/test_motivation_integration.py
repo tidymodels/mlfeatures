@@ -8,15 +8,15 @@ and a final step (Normalize) operates on columns the PCA step produced.
 
 The pipeline, straight from ``design/motivation.md``:
 
-1. impute the numeric predictors' medians,
-2. give categorical predictors an explicit ``"unknown"`` level,
-3. one-hot encode the categorical predictors,
+1. impute the numeric features' medians,
+2. give categorical features an explicit ``"unknown"`` level,
+3. one-hot encode the categorical features,
 4. PCA the dummies **together with just the** ``geo_*`` **numerics** (``sqft`` /
    ``lot_size`` / ``year_built`` flow past untouched), then
 5. normalize **everything numeric**, including the fresh PCA components.
 
 The whole point is that steps 4 and 5 name no literal columns: ``has_source`` picks
-up whatever the dummy step happened to produce, and the final ``numeric_predictors``
+up whatever the dummy step happened to produce, and the final ``numeric_features``
 selector is a live query that automatically catches the PCA components that did not
 exist when the recipe was declared. Both backends are exercised so the integration is
 confirmed backend-agnostic.
@@ -46,7 +46,7 @@ NUM_COMP = 3
 def _housing() -> dict[str, list[object]]:
     """A small housing frame with mixed types and a few nulls to impute."""
     return {
-        # outcome
+        # target
         "price": [3.1e5, 4.2e5, 5.0e5, 2.8e5, 6.1e5, 3.9e5, 4.7e5, 5.5e5],
         # plain numerics: imputed then normalized, never PCA'd
         "sqft": [1200.0, 1800.0, None, 950.0, 2400.0, 1600.0, 2000.0, 2200.0],
@@ -75,17 +75,17 @@ def _housing() -> dict[str, list[object]]:
 def _recipe(df: pd.DataFrame | pl.DataFrame) -> Recipe:
     """The motivation pipeline, declared exactly as the document describes it.
 
-    The document writes ``all_categorical_predictors()`` for the categorical
+    The document writes ``all_categorical_features()`` for the categorical
     columns; the raw housing frame stores them as strings, so the faithful
-    selector is ``nominal_predictors()`` (string + categorical + enum). The
-    ``categorical_predictors()`` variant matches only true Categorical/Enum
+    selector is ``nominal_features()`` (string + categorical + enum). The
+    ``categorical_features()`` variant matches only true Categorical/Enum
     dtypes and would skip the string columns.
     """
     return (
-        Recipe(data=df, outcome=["price"])
-        .add(StepImputeMedian(Selectors.numeric_predictors()))
-        .add(StepUnknown(Selectors.nominal_predictors()))
-        .add(StepDummy(Selectors.nominal_predictors(), id="dummy"))
+        Recipe(data=df, target=["price"])
+        .add(StepImputeMedian(Selectors.numeric_features()))
+        .add(StepUnknown(Selectors.nominal_features()))
+        .add(StepDummy(Selectors.nominal_features(), id="dummy"))
         .add(
             StepPca(
                 Selectors.has_source(step_type=StepDummy)
@@ -93,7 +93,7 @@ def _recipe(df: pd.DataFrame | pl.DataFrame) -> Recipe:
                 num_comp=NUM_COMP,
             )
         )
-        .add(StepNormalize(Selectors.numeric_predictors()))
+        .add(StepNormalize(Selectors.numeric_features()))
     )
 
 
@@ -128,7 +128,7 @@ class TestMotivationPipeline:
 
         for out, n_rows in ((x_train, 8), (x_test, 2)):
             cols = list(out.columns)
-            # The outcome is carried through untouched.
+            # The target is carried through untouched.
             assert "price" in cols
             # Plain numerics survive PCA and are still present.
             for name in PLAIN_NUMERIC:
@@ -150,8 +150,8 @@ class TestMotivationPipeline:
             # Row count is preserved end-to-end.
             assert len(out) == n_rows
 
-    def test_final_numeric_predictors_catches_pca_components(self) -> None:
-        # The last StepNormalize is declared with a live ``numeric_predictors``
+    def test_final_numeric_features_catches_pca_components(self) -> None:
+        # The last StepNormalize is declared with a live ``numeric_features``
         # selector; at fit time it must resolve to the plain numerics *and* the
         # PCA components that did not exist when the recipe was declared.
         df = pd.DataFrame(_housing())
@@ -160,7 +160,7 @@ class TestMotivationPipeline:
         captured = set(normalize.schema_in().columns)
         assert set(PLAIN_NUMERIC) <= captured
         assert {f"PC{i + 1}" for i in range(NUM_COMP)} <= captured
-        # price is an outcome, so a *_predictors selector must never catch it.
+        # price is a target, so a *_features selector must never catch it.
         assert "price" not in captured
 
     def test_transform_agrees_across_backends(self) -> None:

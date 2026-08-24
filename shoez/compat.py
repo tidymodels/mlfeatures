@@ -6,11 +6,11 @@ is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
 without re-implementing it.
 
 The adapter resolves one impedance mismatch between the two worlds. shoez fits on a *single*
-frame in which the outcome is identified by its ``"outcome"`` role; sklearn calls
+frame in which the target is identified by its ``"target"`` role; sklearn calls
 ``fit(X, y=None)`` with features and target kept apart and expects ``transform`` to return the
 feature matrix only (``y`` flows around the transformer inside a pipeline). So this adapter
-re-joins ``y`` onto ``X`` under the recipe's outcome-role column name before fitting, and strips
-the outcome column back out of the transformed output.
+re-joins ``y`` onto ``X`` under the recipe's target-role column name before fitting, and strips
+the target column back out of the transformed output.
 """
 
 from __future__ import annotations
@@ -90,8 +90,8 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     )
     rec = (
         Recipe()
-        .add(StepNormalize(s.numeric_predictors()))
-        .add(StepDummy(s.nominal_predictors()))
+        .add(StepNormalize(s.numeric_features()))
+        .add(StepDummy(s.nominal_features()))
     )
     fitted = RecipeTransformer(rec).fit(X)
     fitted.transform(X)
@@ -159,7 +159,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         )
 
     def fit(self, X: DataFrame, y: Any = None) -> "RecipeTransformer":
-        """Fit the wrapped recipe on ``X`` (with ``y`` re-joined as the outcome)."""
+        """Fit the wrapped recipe on ``X`` (with ``y`` re-joined as the target)."""
         data = self._assemble(X, y)
         self.fitted_: FittedRecipe = self.recipe.fit(data)
         self.feature_names_in_ = list(_frame.columns(_frame.from_native(X)))
@@ -167,7 +167,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         # so cache them for get_feature_names_out / set_output. Compute via the fitted
         # recipe directly rather than self.transform, whose set_output wrapper would
         # call get_feature_names_out before the cache exists.
-        out = self._drop_outcomes(self.fitted_.transform(X))
+        out = self._drop_targets(self.fitted_.transform(X))
         self.feature_names_out_ = list(_frame.columns(_frame.from_native(out)))
         return self
 
@@ -178,7 +178,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
                 "This RecipeTransformer is not fitted yet; call 'fit' before 'transform'."
             )
         out = self.fitted_.transform(X)
-        return self._drop_outcomes(out)
+        return self._drop_targets(out)
 
     def get_feature_names_out(
         self, input_features: Any = None
@@ -197,37 +197,37 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
 
     # -- internal helpers ---------------------------------------------------
 
-    def _outcome_columns(self) -> list[str]:
-        """Outcome-role column names declared on the recipe (may be empty)."""
-        return self.recipe.roles.columns_with_role("outcome")
+    def _target_columns(self) -> list[str]:
+        """Target-role column names declared on the recipe (may be empty)."""
+        return self.recipe.roles.columns_with_role("target")
 
     def _assemble(self, X: DataFrame, y: Any) -> DataFrame:
-        """Re-join ``y`` onto ``X`` under the recipe's outcome-role column name.
+        """Re-join ``y`` onto ``X`` under the recipe's target-role column name.
 
-        With no outcome role (an unsupervised recipe) or no ``y`` (transform time), ``X`` is
-        passed through unchanged. A declared outcome role with no ``y`` at fit time, or more
-        than one outcome column, is rejected with a clear error.
+        With no target role (an unsupervised recipe) or no ``y`` (transform time), ``X`` is
+        passed through unchanged. A declared target role with no ``y`` at fit time, or more
+        than one target column, is rejected with a clear error.
         """
-        outcomes = self._outcome_columns()
+        targets = self._target_columns()
         if y is None:
             return X
-        if not outcomes:
+        if not targets:
             raise ValueError(
-                "y was provided but the recipe declares no 'outcome' role; "
-                "assign one with set_roles(outcome=...) or pass y=None"
+                "y was provided but the recipe declares no 'target' role; "
+                "assign one with set_roles(target=...) or pass y=None"
             )
-        if len(outcomes) > 1:
+        if len(targets) > 1:
             raise ValueError(
-                f"multi-outcome recipes are not yet supported (got {outcomes!r}); "
-                "declare a single outcome column"
+                f"multi-target recipes are not yet supported (got {targets!r}); "
+                "declare a single target column"
             )
         frame = _frame.from_native(X)
-        return _frame.to_native(_frame.with_column(frame, outcomes[0], y))
+        return _frame.to_native(_frame.with_column(frame, targets[0], y))
 
-    def _drop_outcomes(self, data: DataFrame) -> DataFrame:
-        """Strip outcome-role columns from transformed output (features only)."""
-        outcomes = self._outcome_columns()
-        if not outcomes:
+    def _drop_targets(self, data: DataFrame) -> DataFrame:
+        """Strip target-role columns from transformed output (features only)."""
+        targets = self._target_columns()
+        if not targets:
             return data
         frame = _frame.from_native(data)
-        return _frame.to_native(_frame.apply_drop(frame, outcomes))
+        return _frame.to_native(_frame.apply_drop(frame, targets))

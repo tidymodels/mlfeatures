@@ -39,14 +39,14 @@ _CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.S
 
 
 def fit_unknown(
-    features: Frame,
+    selected: Frame,
     new_level: str = DEFAULT_UNKNOWN_LEVEL,
 ) -> list[str]:
     """Determine which columns to recode and check for level collisions.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all categorical-like. Passed in
         by the step's ``fit()`` method after selector resolution.
     new_level:
@@ -60,13 +60,13 @@ def fit_unknown(
     train/serve parity.
 
     A `UserWarning` is emitted if ``new_level`` already appears as a value
-    in any column, since recoding would then merge genuine observations into the
+    in any column, since recoding would then merge genuine samples into the
     "unknown" bucket.
     """
     collisions = [
         col
-        for col in features.columns
-        if bool((features[col].cast(nw.String) == new_level).any())
+        for col in selected.columns
+        if bool((selected[col].cast(nw.String) == new_level).any())
     ]
     if collisions:
         warnings.warn(
@@ -74,11 +74,11 @@ def fit_unknown(
             f"column(s); recoded nulls will be merged with it: {collisions!r}",
             stacklevel=2,
         )
-    return list(features.columns)
+    return list(selected.columns)
 
 
 def apply_unknown(
-    features: Frame,
+    selected: Frame,
     columns: list[str],
     new_level: str = DEFAULT_UNKNOWN_LEVEL,
 ) -> Frame:
@@ -86,11 +86,11 @@ def apply_unknown(
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame to recode.
     columns:
         The column names to recode — the columns returned by `fit_unknown()`.
-        Any column of ``features`` not in this list is passed through untouched.
+        Any column of ``selected`` not in this list is passed through untouched.
     new_level:
         The level that null values are recoded to. Default ``"unknown"``.
 
@@ -111,7 +111,7 @@ def apply_unknown(
         .alias(col)
         for col in columns
     ]
-    return features.with_columns(*exprs)
+    return selected.with_columns(*exprs)
 
 
 class StepUnknown(Step):
@@ -124,7 +124,7 @@ class StepUnknown(Step):
     ----------
     columns
         Columns to recode. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        shoez selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -160,7 +160,7 @@ class StepUnknown(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepUnknown(s.nominal_predictors()))
+    recipe = Recipe().add(StepUnknown(s.nominal_features()))
     recipe
     ```
 
@@ -180,7 +180,7 @@ class StepUnknown(Step):
     ``new_level`` names the added level:
 
     ```{python}
-    recipe = Recipe().add(StepUnknown(s.nominal_predictors(), new_level="missing"))
+    recipe = Recipe().add(StepUnknown(s.nominal_features(), new_level="missing"))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
@@ -207,14 +207,14 @@ class StepUnknown(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the columns to recode and check for level collisions."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
         # Called for its collision check / warning; every selected column is
         # recoded, so the resolved selection is recorded in ``_schema_in``.
-        fit_unknown(features, self.new_level)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        fit_unknown(selected, self.new_level)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

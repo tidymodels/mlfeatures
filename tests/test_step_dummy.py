@@ -417,8 +417,8 @@ class TestStepDummyInfrastructure:
     def test_custom_id(self) -> None:
         assert StepDummy(columns=["x"], id="my_step").id == "my_step"
 
-    def test_output_role_is_predictor(self) -> None:
-        assert StepDummy(columns=["x"]).output_role == "predictor"
+    def test_output_role_is_feature(self) -> None:
+        assert StepDummy(columns=["x"]).output_role == "feature"
 
 
 # ---------------------------------------------------------------------------
@@ -536,21 +536,21 @@ class TestStepDummyRoles:
     def test_generated_columns_inherit_source_role(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepDummy(columns=["x"]).fit(df, _schema())
-        roles = Roles({"x": {"predictor"}})
+        roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
-        assert "predictor" in roles.of("x_b")
-        assert "predictor" in roles.of("x_c")
+        assert "feature" in roles.of("x_b")
+        assert "feature" in roles.of("x_c")
 
     def test_source_role_retained_when_keep_original_cols(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepDummy(columns=["x"], keep_original_cols=True).fit(df, _schema())
-        roles = Roles({"x": {"predictor"}})
+        roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
-        assert "predictor" in roles.of("x")
+        assert "feature" in roles.of("x")
 
     def test_source_role_removed_when_not_keeping_original(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepDummy(columns=["x"], keep_original_cols=False).fit(df, _schema())
-        roles = Roles({"x": {"predictor"}})
+        roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
         assert roles.of("x") == set()
