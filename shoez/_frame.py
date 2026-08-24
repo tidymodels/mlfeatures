@@ -147,7 +147,7 @@ def with_column(frame: Frame, name: str, values: Any) -> Frame:
     """Return a frame with ``values`` attached as a column named ``name``.
 
     Used at the sklearn boundary to re-join a target ``y`` (a numpy array, list, or
-    Series) onto the feature frame under its outcome-role name. ``values`` is wrapped as a
+    Series) onto the feature frame under its target-role name. ``values`` is wrapped as a
     narwhals `Series` on the frame's backend so the result stays native (pandas in →
     pandas out).
     """

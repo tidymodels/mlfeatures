@@ -73,5 +73,5 @@ class TestConstructorValidation:
     def test_default_id(self) -> None:
         assert StepMutate({"y": lambda d: d["x"]}).id == "mutate"
 
-    def test_default_output_role_is_predictor(self) -> None:
-        assert StepMutate({"y": lambda d: d["x"]}).output_role == "predictor"
+    def test_default_output_role_is_feature(self) -> None:
+        assert StepMutate({"y": lambda d: d["x"]}).output_role == "feature"

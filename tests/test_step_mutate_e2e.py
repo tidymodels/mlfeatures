@@ -55,7 +55,7 @@ class TestEndToEnd:
     def test_new_column_gets_output_role(self) -> None:
         df = pd.DataFrame(_data())
         fitted = Recipe(steps=[StepMutate({"z": lambda d: d["x"] * 2})]).fit(df)
-        assert "predictor" in fitted.roles.of("z")
+        assert "feature" in fitted.roles.of("z")
 
     def test_clash_with_new_and_overwrite_distinguished(self) -> None:
         # Overwriting an existing column is allowed (it is not a "produced"

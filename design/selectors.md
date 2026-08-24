@@ -12,7 +12,7 @@ Selectors are a small expression DSL that resolves to a list of column names **a
 Selectors work **everywhere a column name or list of column names is accepted** — not just in step arguments. This includes:
 
 - Every step argument that names columns (not just the leading variadic)
-- `set_roles(outcome=..., predictor=...)`
+- `set_roles(target=..., feature=...)`
 - `update_role_requirements(role=..., ...)`
 - `add_role()`, `update_role()`, `remove_role()`
 - The column-subsetting argument of `transform()`
@@ -45,11 +45,11 @@ There is deliberately **no positional range selector** (recipes' `beds:sqft`, se
 
 ```python
 s.has_role("group")
-s.predictors()
-s.outcomes()
+s.features()
+s.targets()
 ```
 
-`s.predictors()` and `s.outcomes()` are exact aliases for `has_role("predictor")` and `has_role("outcome")` — they exist for readability and as the conventional spelling (mirroring recipes' `all_predictors()` / `all_outcomes()`), not because they apply any extra filtering. The outcome is excluded from `predictors()` purely because `outcome` and `predictor` are mutually exclusive roles (see [`roles.md`](roles.md)); no column can carry both, so the bare role query already does the right thing.
+`s.features()` and `s.targets()` are exact aliases for `has_role("feature")` and `has_role("target")` — they exist for readability and as the conventional spelling (mirroring R recipes' `all_predictors()` / `all_outcomes()`), not because they apply any extra filtering. The target is excluded from `features()` purely because `target` and `feature` are mutually exclusive roles (see [`roles.md`](roles.md)); no column can carry both, so the bare role query already does the right thing.
 
 ---
 
@@ -65,7 +65,7 @@ Because every step declares its input/output mode and the recipe maintains a col
 ```python
 rec = (
     Recipe(data=df)
-    .add(StepDummy(s.categorical_predictors()))
+    .add(StepDummy(s.categorical_features()))
     .add(StepPCA(s.has_source(step_type=StepDummy)))  # PCA only over the dummies
 )
 ```
@@ -106,15 +106,15 @@ Names follow Python and polars conventions, not R. The dtype check is an interna
 ## Compound selectors
 
 ```python
-s.numeric_predictors()       # numeric() & predictors()
-s.double_predictors()        # float() & predictors()
-s.integer_predictors()       # integer() & predictors()
-s.categorical_predictors()   # categorical() & predictors()
-s.string_predictors()        # string() & predictors()
-s.nominal_predictors()       # nominal() & predictors()
+s.numeric_features()       # numeric() & features()
+s.double_features()        # float() & features()
+s.integer_features()       # integer() & features()
+s.categorical_features()   # categorical() & features()
+s.string_features()        # string() & features()
+s.nominal_features()       # nominal() & features()
 ```
 
-These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`s.numeric()`, `s.float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `s.numeric_predictors()` should nearly always be the right choice over `s.numeric()`.
+These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`s.numeric()`, `s.float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `s.numeric_features()` should nearly always be the right choice over `s.numeric()`.
 
 ---
 
@@ -123,10 +123,10 @@ These compound selectors are the **preferred API** for step arguments. They are 
 All selectors compose freely with `&`, `|`, and `~`:
 
 ```python
-s.predictors() & s.numeric()                       # intersection
-s.predictors() | s.col("weight")                   # union
-s.predictors() & ~s.outcomes()                     # difference
-s.predictors() - s.outcomes()                      # difference (sugar)
+s.features() & s.numeric()                       # intersection
+s.features() | s.col("weight")                   # union
+s.features() & ~s.targets()                     # difference
+s.features() - s.targets()                      # difference (sugar)
 s.has_source(step_type=StepDummy) & s.float()      # dummy columns that are float
 s.has_source(step_type=StepDummy) | s.categorical()  # dummies or categoricals
 ~s.has_source(step_type=StepPCA)                           # everything except PCA outputs
@@ -171,7 +171,7 @@ polars and narwhals selectors compose cleanly *within their own family*, and nat
 The narwhals case is the dangerous one: it produces no error at all, just a meaningless `Expr` that fails downstream. **Rule: a shoez-native selector must lead any cross-family expression.** To put a polars/narwhals selector first, lift it into shoez-land with `s.wrap`:
 
 ```python
-s.wrap(cs.starts_with("x_")) & s.predictors()
+s.wrap(cs.starts_with("x_")) & s.features()
 ```
 
 In practice the native DSL covers the name/type surface, so cross-family mixing is rarely needed — but when it is, lead with shoez or use `wrap`.

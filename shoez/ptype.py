@@ -23,9 +23,9 @@ from shoez._frame import dtypes as frame_dtypes
 from shoez.types import Frame, Roles
 
 #: Roles whose transform-time requirement is fixed and cannot be configured via
-#: ``update_role_requirements``: a ``predictor`` is always required at transform,
-#: an ``outcome`` never is (it is unknown at serving time).
-_NON_CONFIGURABLE_ROLES = ("predictor", "outcome")
+#: ``update_role_requirements``: a ``feature`` is always required at transform,
+#: a ``target`` never is (it is unknown at serving time).
+_NON_CONFIGURABLE_ROLES = ("feature", "target")
 
 #: Default transform-time requirement for configurable roles. Any role not
 #: listed (including custom roles and unrolled columns) defaults to ``True``.
@@ -39,16 +39,16 @@ def column_transform_required(
 ) -> bool:
     """Whether ``column`` must be present in new data at ``transform()`` time.
 
-    Hardcoded roles win first: a ``predictor`` is always required, an
-    ``outcome`` never is. Otherwise an explicit ``overrides`` entry applies; with
+    Hardcoded roles win first: a ``feature`` is always required, a
+    ``target`` never is. Otherwise an explicit ``overrides`` entry applies; with
     no override the requirement is the most-demanding role default (a column is
     required if *any* of its roles defaults to required). Unrolled columns
     default to required.
     """
     column_roles = roles.of(column)
-    if "predictor" in column_roles:
+    if "feature" in column_roles:
         return True
-    if "outcome" in column_roles:
+    if "target" in column_roles:
         return False
     if column in overrides:
         return overrides[column]
@@ -87,8 +87,8 @@ class Ptype:
     from shoez import Selectors as s
 
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "y": [0, 1, 0]})
-    rec = Recipe(outcome="y", predictors="x").add(
-        StepNormalize(s.numeric_predictors())
+    rec = Recipe(target="y", features="x").add(
+        StepNormalize(s.numeric_features())
     )
     rec = rec.fit(df)
     rec.ptype.schema.names()

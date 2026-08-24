@@ -19,4 +19,4 @@ class TestClassDistanceConformance(StepConformanceTest):
     }
 
     def make_step(self) -> StepClassDistance:
-        return StepClassDistance(["a", "b"], outcome="out")
+        return StepClassDistance(["a", "b"], target="out")

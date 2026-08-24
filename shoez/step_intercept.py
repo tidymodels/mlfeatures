@@ -35,13 +35,13 @@ __all__ = ["add_intercept", "StepIntercept"]
 
 
 def add_intercept(
-    features: Frame, value: float = 1.0, name: str = "intercept"
+    selected: Frame, value: float = 1.0, name: str = "intercept"
 ) -> Frame:
     """Append a constant column of ``value`` named ``name``.
 
     Parameters
     ----------
-    features
+    selected
         Internal `Frame` (narwhals). Native frames are
         wrapped via `shoez._frame.from_native()` at the recipe boundary.
     value
@@ -54,14 +54,14 @@ def add_intercept(
     Returns
     -------
     Frame
-        ``features`` with one extra column appended. The literal broadcasts
+        ``selected`` with one extra column appended. The literal broadcasts
         across every row, so 0-row and 1-row frames still produce a
         schema-correct constant column. An existing column of the same name is
         overwritten in place; note that reaching this function through
         `StepIntercept` in a `Recipe` cannot happen, since the recipe rejects a
         step that produces an already-present column name.
     """
-    return features.with_columns(nw.lit(value).alias(name))
+    return selected.with_columns(nw.lit(value).alias(name))
 
 
 class StepIntercept(Step):
@@ -79,7 +79,7 @@ class StepIntercept(Step):
         Name of the new column. Default ``"intercept"``. A `Recipe` rejects the
         step if the frame already has a column of this name.
     role
-        Role assigned to the new column (see `Roles`). Default ``"predictor"``.
+        Role assigned to the new column (see `Roles`). Default ``"feature"``.
     id
         Stable step identifier. Default ``"intercept"``.
 
@@ -135,7 +135,7 @@ class StepIntercept(Step):
         self,
         value: float = 1.0,
         name: str = "intercept",
-        role: str | None = "predictor",
+        role: str | None = "feature",
         id: str | None = None,
     ):
         self.value = value

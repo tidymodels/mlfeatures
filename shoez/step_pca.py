@@ -73,8 +73,8 @@ class PcaFit:
     num_comp: int = 0
 
 
-def fit_pca(features: Frame, num_comp: int) -> PcaFit:
-    """Learn the PCA centering mean and component loadings from ``features``.
+def fit_pca(selected: Frame, num_comp: int) -> PcaFit:
+    """Learn the PCA centering mean and component loadings from ``selected``.
 
     Rows with any missing value are dropped before the SVD, so the basis is
     estimated on complete cases only. The number of components is capped at the
@@ -84,7 +84,7 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
 
     Parameters
     ----------
-    features
+    selected
         Internal `Frame` (narwhals) holding the numeric columns to project.
         Native frames are wrapped via `shoez._frame.from_native()` at the
         recipe boundary.
@@ -111,8 +111,8 @@ def fit_pca(features: Frame, num_comp: int) -> PcaFit:
         raise ValueError(
             f"'num_comp' must be an integer greater than zero, got {num_comp!r}"
         )
-    columns = _frame.columns(features)
-    x = _frame.to_float_array(features)
+    columns = _frame.columns(selected)
+    x = _frame.to_float_array(selected)
     # Complete cases only: a row with any NaN cannot contribute to the mean or
     # the SVD without contaminating them.
     complete = x[~np.isnan(x).any(axis=1)]
@@ -193,7 +193,7 @@ class StepPca(Step):
     ----------
     columns
         Columns to project. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        shoez selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -209,7 +209,7 @@ class StepPca(Step):
         instead of being dropped. Default ``False``.
     role
         Role assigned to the new component columns (see `Roles`). Default
-        ``"predictor"``.
+        ``"feature"``.
     id
         Stable step identifier. Default ``"pca"``.
 
@@ -235,7 +235,7 @@ class StepPca(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepPca(s.numeric_predictors(), num_comp=2))
+    recipe = Recipe().add(StepPca(s.numeric_features(), num_comp=2))
     recipe
     ```
 
@@ -255,7 +255,7 @@ class StepPca(Step):
     ``num_comp`` caps how many components are kept:
 
     ```{python}
-    recipe = Recipe().add(StepPca(s.numeric_predictors(), num_comp=1))
+    recipe = Recipe().add(StepPca(s.numeric_features(), num_comp=1))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
@@ -264,7 +264,7 @@ class StepPca(Step):
 
     ```{python}
     recipe = Recipe().add(
-        StepPca(s.numeric_predictors(), num_comp=2, keep_original_cols=True)
+        StepPca(s.numeric_features(), num_comp=2, keep_original_cols=True)
     )
     fitted = recipe.fit(df)
     fitted.transform(df)
@@ -280,7 +280,7 @@ class StepPca(Step):
         num_comp: int = 5,
         prefix: str = "PC",
         keep_original_cols: bool = False,
-        role: str | None = "predictor",
+        role: str | None = "feature",
         id: str | None = None,
     ) -> None:
         self.columns = columns
@@ -298,18 +298,18 @@ class StepPca(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the component basis from the selected columns on training data."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_pca(features, self.num_comp)
-        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
+        self._estimates = fit_pca(selected, self.num_comp)
+        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes_in)
         comp_names = [f"{self.prefix}{i + 1}" for i in range(self._estimates.num_comp)]
         self._schema_out = ColSchema(
             columns=comp_names, dtypes={name: "Float64" for name in comp_names}
         )
         # Every component descends from the whole input set.
-        self._output_parents = {name: list(features.columns) for name in comp_names}
+        self._output_parents = {name: list(selected.columns) for name in comp_names}
         return self
 
     def transform(self, new_data: Frame) -> Frame:

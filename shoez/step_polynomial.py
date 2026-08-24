@@ -81,7 +81,7 @@ class PolynomialFit:
     )
 
 
-def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
+def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
     """Learn the orthogonal polynomial basis for each column.
 
     For each column, picks an *effective* degree of
@@ -95,7 +95,7 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
 
     Parameters
     ----------
-    features
+    selected
         Internal `Frame` (narwhals) holding the columns to
         be expanded. Native frames are wrapped via `shoez._frame.from_native()`
         at the recipe boundary.
@@ -135,10 +135,10 @@ def fit_polynomial(features: Frame, degree: int) -> dict[str, PolynomialFit]:
         )
 
     fit_result: dict[str, PolynomialFit] = {}
-    for col_name in features.columns:
-        # Drop nulls first: a null observation is not a fittable level, and
+    for col_name in selected.columns:
+        # Drop nulls first: a null value is not a fittable level, and
         # narwhals' `n_unique` counts null as its own value otherwise.
-        col = features[col_name]
+        col = selected[col_name]
         n_unique = col.drop_nulls().n_unique()
         # Cap the requested degree at what the data can actually support, and
         # never go below zero (an empty / all-null column would otherwise give
@@ -349,7 +349,7 @@ class StepPolynomial(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_predictors()`` (see
+        shoez selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -364,7 +364,7 @@ class StepPolynomial(Step):
         terms instead of being dropped. Default ``False``.
     role
         Role assigned to the new polynomial columns (see `Roles`). Default
-        ``"predictor"``.
+        ``"feature"``.
     id
         Stable step identifier. Default ``"polynomial"``.
 
@@ -389,7 +389,7 @@ class StepPolynomial(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepPolynomial(s.numeric_predictors(), degree=2))
+    recipe = Recipe().add(StepPolynomial(s.numeric_features(), degree=2))
     recipe
     ```
 
@@ -409,7 +409,7 @@ class StepPolynomial(Step):
     A higher ``degree`` produces more terms:
 
     ```{python}
-    recipe = Recipe().add(StepPolynomial(s.numeric_predictors(), degree=3))
+    recipe = Recipe().add(StepPolynomial(s.numeric_features(), degree=3))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
@@ -418,7 +418,7 @@ class StepPolynomial(Step):
 
     ```{python}
     recipe = Recipe().add(
-        StepPolynomial(s.numeric_predictors(), degree=2, keep_original_cols=True)
+        StepPolynomial(s.numeric_features(), degree=2, keep_original_cols=True)
     )
     fitted = recipe.fit(df)
     fitted.transform(df)
@@ -433,7 +433,7 @@ class StepPolynomial(Step):
         *,
         degree: int = 2,
         keep_original_cols: bool = False,
-        role: str | None = "predictor",
+        role: str | None = "feature",
         id: str | None = None,
     ) -> None:
         self.columns = columns
@@ -450,12 +450,12 @@ class StepPolynomial(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the polynomial basis for each selected column on training data."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_polynomial(features, self.degree)
-        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
+        self._estimates = fit_polynomial(selected, self.degree)
+        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes_in)
         # Degree-0 columns stay put with their original dtype; the rest become
         # ``degree`` Float64 columns named {col}_1..{col}_d (same layout as
         # ``apply_polynomial`` produces).

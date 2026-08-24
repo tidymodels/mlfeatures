@@ -57,7 +57,7 @@ class ClassDistanceFit:
     """The fitted result returned by `fit_class_distance()`.
 
     Bundles everything `apply_class_distance()` needs to compute distances:
-    the centroid matrix, the names and order of the predictor columns and class
+    the centroid matrix, the names and order of the feature columns and class
     labels, plus the distance configuration so the apply call can be a one-arg
     invocation (no risk of mismatching fit-time and apply-time settings).
 
@@ -67,17 +67,17 @@ class ClassDistanceFit:
     Attributes
     ----------
     columns
-        Predictor column names in the row order of `centroids`. Length
-        equals the number of predictors ``p``.
+        Feature column names in the row order of `centroids`. Length
+        equals the number of features ``p``.
     classes
         Class labels in the column order of `centroids`, sorted by
         `sorted()` so the order is deterministic across fits.
         Length equals the number of classes ``c``.
     centroids
         Float-64 matrix of shape ``(p, c)`` — row ``i`` is the centroid
-        coordinate for predictor ``columns[i]``, column ``j`` is the centroid
+        coordinate for feature ``columns[i]``, column ``j`` is the centroid
         for class ``classes[j]``. This matches the orientation
-        ``p predictors × c classes`` requested by the original spec.
+        ``p features × c classes`` requested by the original spec.
     metric
         Distance function to apply: ``"euclidean"`` or ``"manhattan"``.
     log_distance
@@ -98,8 +98,8 @@ class ClassDistanceFit:
 
 
 def fit_class_distance(
-    features: Frame,
-    outcome: nw.Series[Any],
+    selected: Frame,
+    target: nw.Series[Any],
     *,
     metric: Metric = "euclidean",
     log_distance: bool = True,
@@ -114,13 +114,13 @@ def fit_class_distance(
 
     Parameters
     ----------
-    features
-        Narwhals ``DataFrame`` of numeric predictor columns. Dtype screening is
+    selected
+        Narwhals ``DataFrame`` of numeric feature columns. Dtype screening is
         the selector / ``accepts_dtypes`` layer's job; this function does not
         re-validate it (matching `fit_normalize()`).
-    outcome
+    target
         Narwhals ``Series`` of class labels, aligned row-for-row with
-        ``features``. Rows where the outcome is null are dropped before the
+        ``selected``. Rows where the target is null are dropped before the
         per-class means are taken — a missing label is not a class.
     metric
         Distance function to use at apply time. Recorded on the fit object;
@@ -148,27 +148,27 @@ def fit_class_distance(
     # zero-column selection and treats the step as the identity transform, so
     # ``fit`` is not called. See ``Recipe.fit`` / ``Step._empty_selection``.
     #
-    # Drop rows where the outcome is null: a null label isn't a class, so it
-    # can't contribute to any centroid. Filtering on the outcome side keeps the
+    # Drop rows where the target is null: a null value isn't a class, so it
+    # can't contribute to any centroid. Filtering on the target side keeps the
     # rest of the function dealing only with rows that have a real label.
     # We build a single-column frame so the standard ``drop_nulls()`` semantics
     # apply, then read back the filtered indices via a boolean mask.
-    outcome_np = outcome.to_numpy()
+    target_np = target.to_numpy()
     # ``pd.isna`` would also work here; ``np.equal`` against itself catches NaN
     # (NaN != NaN) without importing pandas. For object arrays (e.g. strings),
     # ``np.equal(x, x)`` returns ``True`` for non-None and ``False`` for None.
     # We treat None and NaN as "missing".
-    not_null = np.array([x is not None and not _is_nan(x) for x in outcome_np])
+    not_null = np.array([x is not None and not _is_nan(x) for x in target_np])
 
-    # Pull the predictor columns into a (n, p) float array. ``to_numpy()`` on a
-    # narwhals frame returns an ndarray with the columns in ``features.columns``
+    # Pull the feature columns into a (n, p) float array. ``to_numpy()`` on a
+    # narwhals frame returns an ndarray with the columns in ``selected.columns``
     # order, so the row index of the resulting centroid matrix maps 1-to-1 to
     # that list.
-    x = _frame.to_float_array(features)
-    # Apply the null-outcome mask to both the labels and the predictors so they
+    x = _frame.to_float_array(selected)
+    # Apply the null-target mask to both the labels and the features so they
     # stay aligned row-for-row.
     x = x[not_null]
-    labels = outcome_np[not_null]
+    labels = target_np[not_null]
 
     # Sort the unique class labels so the column order of ``centroids`` is
     # deterministic — same input always gives the same column layout. This
@@ -177,7 +177,7 @@ def fit_class_distance(
 
     p = x.shape[1]
     c = len(classes)
-    # Pre-allocate the (p, c) result: row ``i`` will hold predictor ``i``'s
+    # Pre-allocate the (p, c) result: row ``i`` will hold feature ``i``'s
     # mean across classes; column ``j`` will hold class ``j``'s centroid.
     centroids = np.empty((p, c), dtype=np.float64)
     for j, cls in enumerate(classes):
@@ -191,7 +191,7 @@ def fit_class_distance(
         centroids[:, j] = np.mean(x[class_mask], axis=0)
 
     return ClassDistanceFit(
-        columns=list(features.columns),
+        columns=list(selected.columns),
         classes=classes,
         centroids=centroids,
         metric=metric,
@@ -239,7 +239,7 @@ def apply_class_distance(
 
     Notes
     -----
-    NaN propagation: a null in any predictor column produces ``NaN`` for that
+    NaN propagation: a null in any feature column produces ``NaN`` for that
     row's distances in every new column. NumPy's arithmetic handles this
     naturally; other rows are unaffected (parallel to
     `apply_polynomial()`'s per-row null tolerance).
@@ -248,11 +248,11 @@ def apply_class_distance(
     log-transformed — the transformation is recorded in ``fit_result.log_distance``
     rather than in the column name.
     """
-    # Empty fit (no features were selected) — nothing to add; pass through.
+    # Empty fit (no columns were selected): nothing to add; pass through.
     if not fit_result.columns:
         return data
 
-    # Pull the predictor columns out as a (n, p) float array. ``select`` keeps
+    # Pull the feature columns out as a (n, p) float array. ``select`` keeps
     # the order we stored at fit time so the row index of ``X`` matches the
     # row index of ``fit_result.centroids``.
     x = _frame.to_float_array(_frame.select(data, fit_result.columns))
@@ -299,7 +299,7 @@ def _compute_distances(
     Parameters
     ----------
     x
-        Predictor matrix of shape ``(n, p)``.
+        Feature matrix of shape ``(n, p)``.
     centroids
         Centroid matrix of shape ``(p, c)`` — same layout as
         `ClassDistanceFit.centroids`.
@@ -319,11 +319,11 @@ def _compute_distances(
 
     * ``x[:, :, None]`` reshapes ``x`` to ``(n, p, 1)``.
     * ``centroids[None, :, :]`` reshapes the centroid matrix to ``(1, p, c)``.
-    * Subtracting them broadcasts to ``(n, p, c)`` — for every (row, predictor,
-      class) triple, the difference between that row's predictor value and the
+    * Subtracting them broadcasts to ``(n, p, c)`` — for every (row, feature,
+      class) triple, the difference between that row's feature value and the
       corresponding centroid coordinate.
 
-    From there each metric collapses the predictor axis (``axis=1``) in its
+    From there each metric collapses the feature axis (``axis=1``) in its
     own way: square + sum + sqrt for Euclidean, abs + sum for Manhattan.
     """
     # Compute the (n, p, c) difference tensor once and reuse it. For very large
@@ -363,7 +363,7 @@ def _is_nan(value: Any) -> bool:
 class StepClassDistance(Step):
     """Replace numeric columns with per-row distances to each class centroid.
 
-    The selected columns are read to learn one centroid per outcome class, then
+    The selected columns are read to learn one centroid per target class, then
     replaced by one ``distance_<class>`` column per class holding each row's
     distance to that class's centroid, or kept alongside them when
     ``keep_original_cols`` is ``True``. Each distance is computed from all the
@@ -373,13 +373,13 @@ class StepClassDistance(Step):
     ----------
     columns
         Columns to measure distances over. Accepts a single column name, a list
-        of names, a shoez selector such as ``Selectors.numeric_predictors()``
+        of names, a shoez selector such as ``Selectors.numeric_features()``
         (see `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
-    outcome
+    target
         Name of the column in the training frame that holds the class labels.
         Read at fit time only; the column is *not* declared as an input
         feature in `schema_in()`.
@@ -399,14 +399,14 @@ class StepClassDistance(Step):
         instead of being dropped. Default ``False``.
     role
         Role assigned to the new distance columns (see `Roles`). Default
-        ``"predictor"``.
+        ``"feature"``.
     id
         Stable step identifier. Default ``"class_distance"``.
 
     Examples
     --------
     The two numeric columns are replaced by one ``distance_<class>`` column per
-    class label found in ``outcome``:
+    class label found in ``target``:
 
     ```{python}
     #| echo: false
@@ -433,7 +433,7 @@ class StepClassDistance(Step):
     ```{python}
     recipe = Recipe().add(
         StepClassDistance(
-            s.numeric_predictors(), outcome="label", log_distance=False
+            s.numeric_features(), target="label", log_distance=False
         )
     )
     recipe
@@ -457,7 +457,7 @@ class StepClassDistance(Step):
 
     ```{python}
     recipe = Recipe().add(
-        StepClassDistance(s.numeric_predictors(), outcome="label")
+        StepClassDistance(s.numeric_features(), target="label")
     )
     fitted = recipe.fit(df)
     fitted.transform(df)
@@ -468,7 +468,7 @@ class StepClassDistance(Step):
     ```{python}
     recipe = Recipe().add(
         StepClassDistance(
-            s.numeric_predictors(), outcome="label", keep_original_cols=True
+            s.numeric_features(), target="label", keep_original_cols=True
         )
     )
     fitted = recipe.fit(df)
@@ -481,18 +481,18 @@ class StepClassDistance(Step):
     def __init__(
         self,
         columns: Selector,
-        outcome: str,
+        target: str,
         *,
         metric: Metric = "euclidean",
         log_distance: bool = True,
         eps: float = 0.001,
         prefix: str = "distance",
         keep_original_cols: bool = False,
-        role: str | None = "predictor",
+        role: str | None = "feature",
         id: str | None = None,
     ):
         self.columns = columns
-        self.outcome = outcome
+        self.target = target
         # Pin the attribute type to ``Metric`` so type-checkers don't widen the
         # stored value back to ``str`` and complain when we hand it to
         # ``fit_class_distance(metric=...)`` later.
@@ -511,24 +511,24 @@ class StepClassDistance(Step):
         self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
-        """Estimate per-class centroids from the predictor + outcome columns."""
-        features = _frame.select(
+        """Estimate per-class centroids from the feature + target columns."""
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
         # ``training_data[col]`` returns a narwhals Series — the same shape
         # ``_ortho_poly`` consumes in step_polynomial.
-        outcome_series = training_data[self.outcome]
+        target_series = training_data[self.target]
         self._estimates = fit_class_distance(
-            features,
-            outcome_series,
+            selected,
+            target_series,
             metric=self.metric,
             log_distance=self.log_distance,
             eps=self.eps,
         )
-        # ``schema_in`` records only the predictor columns; the outcome is
+        # ``schema_in`` records only the feature columns; the target is
         # consumed at fit time but isn't an input feature the step transforms.
-        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes_in)
+        dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes_in)
         # ``schema_out`` lists the new distance columns; all are Float64.
         out_names = [f"{self.prefix}_{cls}" for cls in self._estimates.classes]
         self._schema_out = ColSchema(
@@ -536,8 +536,8 @@ class StepClassDistance(Step):
             dtypes=dict.fromkeys(out_names, "Float64"),
         )
         # Every distance column is derived from the full feature set (the
-        # outcome drives centroid fitting but is not a transform-time input).
-        self._output_parents = {name: list(features.columns) for name in out_names}
+        # target drives centroid fitting but is not a transform-time input).
+        self._output_parents = {name: list(selected.columns) for name in out_names}
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -552,7 +552,7 @@ class StepClassDistance(Step):
         )
 
     def schema_in(self) -> ColSchema:
-        """Schema of the predictor columns consumed at fit time."""
+        """Schema of the feature columns consumed at fit time."""
         if self._schema_in is None:
             raise RuntimeError("StepClassDistance.schema_in() called before fit()")
         return self._schema_in
@@ -570,12 +570,12 @@ class StepClassDistance(Step):
         return self._output_parents
 
     def accepts_dtypes(self) -> AcceptedDtypes:
-        """Distances are only meaningful on numeric predictor columns."""
+        """Distances are only meaningful on numeric feature columns."""
         return set(NUMERIC_DTYPES)
 
     def update_roles(self, roles: Roles) -> None:
         # The source columns are dropped; strip their roles so they do not
-        # linger in the live role map. The outcome column is untouched, and
+        # linger in the live role map. The target column is untouched, and
         # when the sources are kept their roles stand.
         if self._schema_in is not None and not self.keep_original_cols:
             for col in self._schema_in.columns:

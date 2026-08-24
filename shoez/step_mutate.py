@@ -41,16 +41,16 @@ __all__ = ["apply_mutate", "StepMutate"]
 Mutation = Callable[[Frame], Any]
 
 
-def apply_mutate(features: Frame, mutations: Mapping[str, Mutation]) -> Frame:
-    """Apply each named mutation to ``features``.
+def apply_mutate(selected: Frame, mutations: Mapping[str, Mutation]) -> Frame:
+    """Apply each named mutation to ``selected``.
 
     Parameters
     ----------
-    features
+    selected
         Internal `Frame` (narwhals). Native frames are wrapped via
         `shoez._frame.from_native()` at the recipe boundary.
     mutations
-        Mapping from output column name to a callable taking ``features`` and
+        Mapping from output column name to a callable taking ``selected`` and
         returning that column's value (a narwhals expression or series). A name
         that already exists overwrites the column in place; a new name appends a
         column. Applied together via a single ``with_columns`` so the mutations
@@ -60,11 +60,11 @@ def apply_mutate(features: Frame, mutations: Mapping[str, Mutation]) -> Frame:
     Returns
     -------
     Frame
-        ``features`` with the mutations applied. Backend (pandas/polars) is
+        ``selected`` with the mutations applied. Backend (pandas/polars) is
         preserved end-to-end.
     """
-    return features.with_columns(
-        **{name: fn(features) for name, fn in mutations.items()}
+    return selected.with_columns(
+        **{name: fn(selected) for name, fn in mutations.items()}
     )
 
 
@@ -91,7 +91,7 @@ class StepMutate(Step):
     role
         Role assigned to any *new* columns the mutations create (see `Roles`).
         Columns overwritten in place keep their existing role. Default
-        ``"predictor"``.
+        ``"feature"``.
     id
         Stable step identifier. Default ``"mutate"``.
 
@@ -143,7 +143,7 @@ class StepMutate(Step):
         self,
         mutations: Mapping[str, Mutation],
         *,
-        role: str | None = "predictor",
+        role: str | None = "feature",
         id: str | None = None,
     ) -> None:
         if not isinstance(mutations, dict) or not mutations:

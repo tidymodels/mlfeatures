@@ -33,7 +33,7 @@ __all__ = ["fit_drop_corr", "StepDropCorr"]
 
 
 def fit_drop_corr(
-    features: nw.DataFrame[Any],
+    selected: nw.DataFrame[Any],
     threshold: float = 0.9,
     method: Literal["pearson", "spearman"] = "pearson",
 ) -> list[str]:
@@ -41,7 +41,7 @@ def fit_drop_corr(
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all numeric. Passed in by the
         step's ``fit()`` method after selector resolution.
     threshold:
@@ -72,10 +72,10 @@ def fit_drop_corr(
     if method not in ("pearson", "spearman"):
         raise ValueError(f"'method' must be 'pearson' or 'spearman', got {method!r}")
 
-    col_names = features.columns
+    col_names = selected.columns
     n = len(col_names)
 
-    if n < 2 or features.shape[0] == 0:
+    if n < 2 or selected.shape[0] == 0:
         return []
 
     # Build symmetric correlation matrix via pairwise nw.corr() calls.
@@ -84,7 +84,7 @@ def fit_drop_corr(
     np.fill_diagonal(corr, 1.0)
     for i in range(n):
         for j in range(i + 1, n):
-            val = features.select(
+            val = selected.select(
                 nw.corr(col_names[i], col_names[j], method=method)
             ).item()
             corr[i, j] = float(val)
@@ -167,7 +167,7 @@ class StepDropCorr(Step):
     ----------
     columns
         Columns to consider for removal. Accepts a single column name, a list
-        of names, a shoez selector such as ``Selectors.numeric_predictors()``
+        of names, a shoez selector such as ``Selectors.numeric_features()``
         (see `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -208,7 +208,7 @@ class StepDropCorr(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepDropCorr(s.numeric_predictors(), threshold=0.9))
+    recipe = Recipe().add(StepDropCorr(s.numeric_features(), threshold=0.9))
     recipe
     ```
 
@@ -228,7 +228,7 @@ class StepDropCorr(Step):
     A ``threshold`` above their correlation keeps both:
 
     ```{python}
-    recipe = Recipe().add(StepDropCorr(s.numeric_predictors(), threshold=0.9999))
+    recipe = Recipe().add(StepDropCorr(s.numeric_features(), threshold=0.9999))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
@@ -259,13 +259,13 @@ class StepDropCorr(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate which selected columns to drop and store the decision."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_drop_corr(features, self.threshold, self.method)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
+        self._estimates = fit_drop_corr(selected, self.threshold, self.method)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
         # Record the resolved column names (a selector is concrete only now).
-        self._schema_in = ColSchema(columns=list(features.columns), dtypes=dtypes)
+        self._schema_in = ColSchema(columns=list(selected.columns), dtypes=dtypes)
         return self
 
     def transform(self, new_data: Frame) -> Frame:

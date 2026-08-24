@@ -112,7 +112,7 @@ class TestFitDegreeComputation:
         assert fit_polynomial(frame, degree=5)["x"].degree == 1
 
     def test_repeated_nulls_do_not_count_as_a_unique_level(self) -> None:
-        """Multiple nulls collapse to "no observation" — they don't add a level.
+        """Multiple nulls collapse to "no value"; they don't add a level.
 
         narwhals' bare `n_unique()` would count null as its own unique value;
         the fitter avoids that by calling `drop_nulls()` first.

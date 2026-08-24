@@ -73,12 +73,12 @@ class DummyEstimates:
     all_known: dict[str, set[Any]]
 
 
-def fit_dummy(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
+def fit_dummy(selected: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     """Identify the levels to retain for treatment (drop-one) dummy encoding.
 
     Parameters
     ----------
-    features:
+    selected:
         A narwhals DataFrame whose columns are all discrete (string, integer,
         boolean, categorical, or enum). Passed in by `StepDummy.fit()`
         after column selection.
@@ -98,13 +98,13 @@ def fit_dummy(features: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     # Empty selections never reach here: the recipe detects a zero-column
     # selection and treats the step as the identity transform, so ``fit`` is
     # not called. See ``Recipe.fit`` / ``Step._empty_selection``.
-    if features.shape[0] == 0:
+    if selected.shape[0] == 0:
         raise ValueError(
             "cannot fit dummy encoding on a zero-row frame; no levels can be learned"
         )
     result: dict[str, list[Any]] = {}
-    for col in features.columns:
-        levels: list[Any] = features[col].drop_nulls().unique().sort().to_list()
+    for col in selected.columns:
+        levels: list[Any] = selected[col].drop_nulls().unique().sort().to_list()
         if len(levels) < 2:
             raise ValueError(
                 f"column {col!r} has fewer than 2 unique non-null levels "
@@ -224,7 +224,7 @@ class StepDummy(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_predictors()`` (see
+        shoez selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -260,7 +260,7 @@ class StepDummy(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepDummy(s.nominal_predictors()))
+    recipe = Recipe().add(StepDummy(s.nominal_features()))
     recipe
     ```
 
@@ -280,7 +280,7 @@ class StepDummy(Step):
     ``keep_original_cols`` keeps the source column alongside them:
 
     ```{python}
-    recipe = Recipe().add(StepDummy(s.nominal_predictors(), keep_original_cols=True))
+    recipe = Recipe().add(StepDummy(s.nominal_features(), keep_original_cols=True))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
@@ -300,7 +300,7 @@ class StepDummy(Step):
         self.keep_original_cols = keep_original_cols
         self.id = id if id is not None else "dummy"
         self.trained = False
-        self.output_role: str | None = "predictor"
+        self.output_role: str | None = "feature"
         self._estimates: DummyEstimates | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
@@ -308,20 +308,20 @@ class StepDummy(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the sorted level list for each selected column."""
-        features = _frame.select(
+        selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
         # Build the full known-level set (retained + reference) so that
         # apply_dummy does not flag the reference level as "unseen" at transform.
         self._estimates = DummyEstimates(
-            levels=fit_dummy(features),
+            levels=fit_dummy(selected),
             all_known={
-                col: set(features[col].drop_nulls().unique().to_list())
-                for col in features.columns
+                col: set(selected[col].drop_nulls().unique().to_list())
+                for col in selected.columns
             },
         )
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(features).items()}
-        self._schema_in = ColSchema(columns=features.columns, dtypes=dtypes)
+        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
+        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         # Each indicator descends from exactly its source column (a1, a2 ← a).
         # The ordered list preserves any duplicate name (which the parents map,
         # keyed by name, would silently dedup).

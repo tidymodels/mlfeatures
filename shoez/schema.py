@@ -76,7 +76,7 @@ class ColumnNode:
     from shoez import Selectors as s
 
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-    node = Recipe().add(StepDummy(s.nominal_predictors())).fit(df).schema["color_red"]
+    node = Recipe().add(StepDummy(s.nominal_features())).fit(df).schema["color_red"]
     node.name, node.source, node.parent_cols
     ```
     """
@@ -124,9 +124,9 @@ class Schema:
     )
     schema = (
         Recipe()
-        .add(StepImputeMean(s.numeric_predictors()))
-        .add(StepNormalize(s.numeric_predictors()))
-        .add(StepDummy(s.nominal_predictors()))
+        .add(StepImputeMean(s.numeric_features()))
+        .add(StepNormalize(s.numeric_features()))
+        .add(StepDummy(s.nominal_features()))
         .fit(df)
         .schema
     )
@@ -363,8 +363,8 @@ class Schema:
         )
         schema = (
             Recipe()
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
             .fit(df)
             .schema
         )
@@ -408,8 +408,8 @@ class Schema:
         )
         schema = (
             Recipe()
-            .add(StepNormalize(s.numeric_predictors()))
-            .add(StepDummy(s.nominal_predictors()))
+            .add(StepNormalize(s.numeric_features()))
+            .add(StepDummy(s.nominal_features()))
             .fit(df)
             .schema
         )
@@ -443,7 +443,7 @@ class Schema:
         from shoez import Selectors as s
 
         df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe().add(StepDummy(s.nominal_predictors())).fit(df).schema
+        schema = Recipe().add(StepDummy(s.nominal_features())).fit(df).schema
         ```
 
         Each indicator's immediate parent is the column it was encoded from:
@@ -490,7 +490,7 @@ class Schema:
             Recipe()
             .add(
                 StepClassDistance(
-                    s.numeric_predictors() - s.col("cls"), outcome="cls"
+                    s.numeric_features() - s.col("cls"), target="cls"
                 )
             )
             .add(StepPolynomial(s.col("distance_0"), degree=2))
