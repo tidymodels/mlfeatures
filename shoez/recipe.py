@@ -77,6 +77,42 @@ def _format_recipe(
     return "\n".join(lines)
 
 
+def _resolve_step_ids(existing: list[Step], incoming: tuple[Step, ...]) -> list[Step]:
+    """Return ``incoming`` with ids made unique against ``existing``.
+
+    Step ids key the lineage DAG, ``SchemaInfo.producing_steps``, the
+    ``has_source`` selectors, and step-level error messages, so two steps
+    sharing one id turn those lookups into wrong answers rather than errors.
+    Uniqueness is enforced here, at the earliest point it is detectable.
+
+    A *defaulted* id (the step type's short name) is disambiguated silently by
+    appending the lowest free ``_n`` suffix, so ``StepDummy`` twice in a recipe
+    yields ``"dummy"`` and ``"dummy_2"``. Renaming is done on a copy, keeping
+    ``add()`` pure with respect to the caller's step objects. An id the caller
+    passed explicitly is never rewritten: a duplicate there is a mistake about
+    a name the caller intends to use for lookups, so it raises.
+    """
+    taken = {step.id for step in existing}
+    resolved: list[Step] = []
+    for step in incoming:
+        if step.id not in taken:
+            taken.add(step.id)
+            resolved.append(step)
+            continue
+        if step._id_explicit:  # pyright: ignore[reportPrivateUsage]
+            raise ValueError(
+                f"duplicate step id {step.id!r}; ids must be unique within a recipe"
+            )
+        n = 2
+        while f"{step.id}_{n}" in taken:
+            n += 1
+        renamed = copy.copy(step)
+        renamed.id = f"{step.id}_{n}"
+        taken.add(renamed.id)
+        resolved.append(renamed)
+    return resolved
+
+
 class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
@@ -115,7 +151,9 @@ class Recipe:
         features: str | list[str] | None = None,
         case_weights: str | list[str] | None = None,
     ):
-        self.steps: list[Step] = list(steps) if steps is not None else []
+        self.steps: list[Step] = (
+            _resolve_step_ids([], tuple(steps)) if steps is not None else []
+        )
         # The optional prototype frame backs column-existence checks during role
         # assignment and the pre-fit ``summary()``. It is never mutated, so
         # clones share the reference. The lineage DAG is derived from it on
@@ -163,6 +201,12 @@ class Recipe:
     def add(self, *steps: Step) -> "Recipe":
         """Return a new recipe with ``steps`` appended (steps are pure).
 
+        Step ids are kept unique within the recipe. A step that did not get an
+        explicit ``id`` and whose default collides with an earlier step's is
+        appended under a suffixed id instead (``"dummy"``, then ``"dummy_2"``),
+        so the two are addressable separately. Passing an ``id`` that a step
+        already in the recipe uses raises ``ValueError``.
+
         Examples
         --------
         Each ``add()`` returns a new recipe, so steps chain into a pipeline
@@ -185,7 +229,7 @@ class Recipe:
         ```
         """
         new = self._clone()
-        new.steps = [*self.steps, *steps]
+        new.steps = [*self.steps, *_resolve_step_ids(self.steps, steps)]
         return new
 
     def set_roles(
