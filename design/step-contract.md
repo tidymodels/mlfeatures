@@ -188,6 +188,8 @@ Steps with **no input selector** (e.g. `step_intercept`, an `ADDING` step with n
 
 Because the no-op lives in the recipe, individual steps' `fit()` code must **not** add their own empty-selection guards — `fit()` is guaranteed a non-empty selection.
 
+One case is carved out of the rule, in the selector rather than in the recipe: `has_source` / `has_ancestor` given a step id or `step_type=` that names no step earlier in the recipe raises instead of resolving to zero columns (issue #220). The rule holds where matching nothing depends on the data; a step id or type is knowable from the recipe alone, so failing to match is a typo. See [selectors.md](selectors.md).
+
 ---
 
 ## `StepConformanceTest`

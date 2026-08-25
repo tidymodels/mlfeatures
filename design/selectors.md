@@ -79,7 +79,7 @@ The lineage DAG distinguishes between a column whose **immediate** parent is a g
 - **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Schema.columns_from_source`.
 - **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Schema.ancestors`.
 
-Both accept either a step id (positional) or a step class (`step_type=`), and both are silent no-ops when nothing matches. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
+Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
 
 ---
 
