@@ -138,6 +138,7 @@ class StepIntercept(Step):
 
     def __init__(
         self,
+        *,
         value: float = 1.0,
         name: str = "intercept",
         role: str | None = "feature",

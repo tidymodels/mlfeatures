@@ -124,6 +124,7 @@ class StepDropZeroVariance(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         id: str | None = None,
     ):
         self.columns = columns

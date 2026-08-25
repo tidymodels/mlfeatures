@@ -196,6 +196,7 @@ class StepUnknown(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         new_level: str = DEFAULT_UNKNOWN_LEVEL,
         id: str | None = None,
     ):

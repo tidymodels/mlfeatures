@@ -132,6 +132,7 @@ class StepFilter(RowOp):
     def __init__(
         self,
         predicate: Predicate,
+        *,
         id: str | None = None,
     ) -> None:
         if not callable(predicate):

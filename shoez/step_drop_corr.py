@@ -244,6 +244,7 @@ class StepDropCorr(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         threshold: float = 0.9,
         method: Literal["pearson", "spearman"] = "pearson",
         id: str | None = None,
