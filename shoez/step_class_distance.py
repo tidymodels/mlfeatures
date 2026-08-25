@@ -369,6 +369,9 @@ class StepClassDistance(Step):
     ``keep_original_cols`` is ``True``. Each distance is computed from all the
     selected columns at once, so no distance column belongs to any one of them.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns

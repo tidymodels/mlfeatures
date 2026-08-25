@@ -82,6 +82,9 @@ class StepMutate(Step):
     to infer which inputs a mutation read. This is the deliberate trade-off of
     an escape hatch — full flexibility, coarse lineage.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     mutations

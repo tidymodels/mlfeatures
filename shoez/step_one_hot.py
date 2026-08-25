@@ -81,6 +81,9 @@ class StepOneHot(Step):
     is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
     the missing values. Unlike `StepDummy`, no reference level is dropped.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns

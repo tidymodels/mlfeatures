@@ -163,6 +163,9 @@ class StepDropCorr(Step):
     with no usable correlation at all (constant or all-null), and no new
     columns are produced.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns

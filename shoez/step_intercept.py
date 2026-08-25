@@ -70,6 +70,9 @@ class StepIntercept(Step):
     A single constant column is added, by default a column of ones named
     ``"intercept"``.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     value
