@@ -60,6 +60,8 @@ A selector that matches zero columns is **silent by default** — the step is a 
 
 This is the opposite of R's default, which errors on zero matches and requires `allow_empty = TRUE` to opt out. That default caused unnecessary friction when a selector legitimately resolves to nothing (e.g. no nominal features in a dataset).
 
+The exception is the provenance selectors: `has_source` / `has_ancestor` raise on a step id or `step_type=` that names no step earlier in the recipe, because that is a typo rather than a data-dependent empty match (issue #220). See [selectors.md](selectors.md).
+
 ---
 
 ## `recipe.summary()`

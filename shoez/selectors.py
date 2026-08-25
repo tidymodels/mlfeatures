@@ -270,6 +270,13 @@ class _NameSelector(ShoezSelector):
         return [c for c in _frame.columns(frame) if predicate(c)]
 
 
+def _available(what: str, names: list[str]) -> str:
+    """Tail of a provenance error: what was on offer, or that nothing was."""
+    if not names:
+        return "this is the recipe's first step"
+    return f"earlier {what} {names}"
+
+
 class _SourceSelector(ShoezSelector):
     """Columns selected by which step produced them, via the lineage DAG.
 
@@ -299,15 +306,31 @@ class _SourceSelector(ShoezSelector):
         return f"{name}({arg})"
 
     def _matching_ids(self, schema: Schema, steps: dict[str, Step] | None) -> set[str]:
-        if self._step is not None:
-            return {self._step}
         if steps is None:
-            return set()
-        return {
-            sid
-            for sid, s in steps.items()
-            if self._step_type is not None and isinstance(s, self._step_type)
-        }
+            # No id→step map (e.g. resolved outside a recipe fit): no matches,
+            # and nothing to validate the id or type against.
+            return {self._step} if self._step is not None else set()
+        # A step id or type either names a step in the recipe or it is a typo,
+        # and that is knowable from the recipe alone. So unlike a dtype or role
+        # selector, matching nothing here is an error rather than the identity
+        # transform. Only steps fitted before this one are visible: a later
+        # step has produced no columns yet.
+        if self._step is not None:
+            if self._step != "original" and self._step not in steps:
+                raise ValueError(
+                    f"no step with id {self._step!r} before this one; "
+                    + _available("step id(s)", sorted(steps))
+                )
+            return {self._step}
+        assert self._step_type is not None
+        matched = {sid for sid, s in steps.items() if isinstance(s, self._step_type)}
+        if not matched:
+            seen = sorted({type(s).__name__ for s in steps.values()})
+            raise ValueError(
+                f"no step of type {self._step_type.__name__!r} before this one; "
+                + _available("step type(s)", seen)
+            )
+        return matched
 
     def resolve(
         self,
@@ -578,6 +601,11 @@ class Selectors:
         A step's default id is its type's short name, and a second step of the
         same type in one recipe is given a suffixed id (``"dummy_2"``), so an
         id here names exactly one step.
+
+        Unlike a dtype or role selector, matching nothing is an error, not the
+        identity transform: raises `ValueError` if no step earlier in the recipe
+        has that id (or is an instance of that type). Pass ``"original"`` as the
+        id for the input columns that survive to this point.
 
         ```python
         s.has_source("dummy")

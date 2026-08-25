@@ -1,0 +1,13 @@
+# serializer version: 1
+# name: TestProvenance.test_has_ancestor_unknown_id_raises
+  "no step with id 'nonexistent' before this one; earlier step id(s) ['dummy']"
+# ---
+# name: TestProvenance.test_has_source_unknown_id_raises
+  "no step with id 'nonexistent' before this one; earlier step id(s) ['dummy']"
+# ---
+# name: TestProvenance.test_id_of_a_later_step_raises
+  "no step with id 'dummy' before this one; this is the recipe's first step"
+# ---
+# name: TestProvenance.test_unknown_step_type_raises
+  "no step of type 'StepDummy' before this one; this is the recipe's first step"
+# ---
