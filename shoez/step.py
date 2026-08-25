@@ -108,8 +108,9 @@ class Step(ABC):
     runs at transform time is determined structurally by its type.
     """
 
-    #: Stable, content-derived identifier (user-overridable). All inspection and
-    #: tuning APIs key on ``id``, never on position.
+    #: Stable identifier, defaulting to the step type's short name
+    #: (user-overridable). All inspection and tuning APIs key on ``id``, never
+    #: on position.
     id: str
     #: Whether this step has been fitted. Set by ``recipe.fit()`` after
     #: ``step.fit()`` returns — not by the step itself.
