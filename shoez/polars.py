@@ -89,29 +89,36 @@ class ShzNamespace:
     def step_dummy(
         self,
         columns: list[str],
+        *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
     ) -> pl.DataFrame:
         """Treatment (drop-one) dummy encoding. See `StepDummy`."""
-        return self.apply(StepDummy(columns, name_fn, keep_original_cols))
+        return self.apply(
+            StepDummy(columns, name_fn=name_fn, keep_original_cols=keep_original_cols)
+        )
 
     def step_one_hot(
         self,
         columns: list[str],
+        *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
     ) -> pl.DataFrame:
         """One-hot encoding. See `StepOneHot`."""
-        return self.apply(StepOneHot(columns, name_fn, keep_original_cols))
+        return self.apply(
+            StepOneHot(columns, name_fn=name_fn, keep_original_cols=keep_original_cols)
+        )
 
     def step_drop_corr(
         self,
         columns: Selector,
+        *,
         threshold: float = 0.9,
         method: Literal["pearson", "spearman"] = "pearson",
     ) -> pl.DataFrame:
         """Drop highly correlated columns. See `StepDropCorr`."""
-        return self.apply(StepDropCorr(columns, threshold, method))
+        return self.apply(StepDropCorr(columns, threshold=threshold, method=method))
 
     def step_drop_zero_variance(self, columns: list[str]) -> pl.DataFrame:
         """Drop zero-variance columns. See `StepDropZeroVariance`."""
@@ -119,12 +126,13 @@ class ShzNamespace:
 
     def step_intercept(
         self,
+        *,
         value: float = 1.0,
         name: str = "intercept",
         role: str | None = "feature",
     ) -> pl.DataFrame:
         """Add a constant intercept column. See `StepIntercept`."""
-        return self.apply(StepIntercept(value, name, role))
+        return self.apply(StepIntercept(value=value, name=name, role=role))
 
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
@@ -225,7 +233,8 @@ class ShzNamespace:
     def step_unknown(
         self,
         columns: Selector,
+        *,
         new_level: str = DEFAULT_UNKNOWN_LEVEL,
     ) -> pl.DataFrame:
         """Recode unseen categorical levels. See `StepUnknown`."""
-        return self.apply(StepUnknown(columns, new_level))
+        return self.apply(StepUnknown(columns, new_level=new_level))
