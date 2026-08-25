@@ -401,7 +401,9 @@ class StepClassDistance(Step):
         Role assigned to the new distance columns (see `Roles`). Default
         ``"feature"``.
     id
-        Stable step identifier. Default ``"class_distance"``.
+        Stable step identifier. Defaults to ``"class_distance"`` when not given;
+        the default is per step type, so two steps of this type in one recipe
+        share it unless you set explicit ids.
 
     Examples
     --------

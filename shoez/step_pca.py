@@ -211,7 +211,9 @@ class StepPca(Step):
         Role assigned to the new component columns (see `Roles`). Default
         ``"feature"``.
     id
-        Stable step identifier. Default ``"pca"``.
+        Stable step identifier. Defaults to ``"pca"`` when not given; the
+        default is per step type, so two steps of this type in one recipe share
+        it unless you set explicit ids.
 
     Examples
     --------
