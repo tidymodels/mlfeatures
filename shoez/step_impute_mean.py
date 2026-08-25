@@ -127,9 +127,9 @@ class StepImputeMean(Step):
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     id
-        Stable step identifier. Defaults to ``"impute_mean"`` when not given;
-        the default is per step type, so two steps of this type in one recipe
-        share it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"impute_mean"``; a second step
+        of this type in the same recipe becomes ``"impute_mean_2"``, and
+        passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------

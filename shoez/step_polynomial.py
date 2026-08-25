@@ -366,9 +366,9 @@ class StepPolynomial(Step):
         Role assigned to the new polynomial columns (see `Roles`). Default
         ``"feature"``.
     id
-        Stable step identifier. Defaults to ``"polynomial"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"polynomial"``; a second step
+        of this type in the same recipe becomes ``"polynomial_2"``, and
+        passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------

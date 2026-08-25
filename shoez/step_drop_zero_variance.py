@@ -74,9 +74,9 @@ class StepDropZeroVariance(Step):
         fitted, so the same selector works on any backend. Any dtype is
         accepted.
     id
-        Stable step identifier. Defaults to ``"zv"`` when not given; the default
-        is per step type, so two steps of this type in one recipe share it
-        unless you set explicit ids.
+        Stable step identifier. Defaults to ``"zv"``; a second step of this
+        type in the same recipe becomes ``"zv_2"``, and passing an ``id``
+        already used in the recipe is an error.
 
     Examples
     --------

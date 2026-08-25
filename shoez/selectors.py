@@ -575,8 +575,12 @@ class Selectors:
         against the lineage DAG at fit time. For columns that trace back to a
         step *anywhere* in their ancestry, use `has_ancestor`.
 
+        A step's default id is its type's short name, and a second step of the
+        same type in one recipe is given a suffixed id (``"dummy_2"``), so an
+        id here names exactly one step.
+
         ```python
-        s.has_source("dummy_abc123")
+        s.has_source("dummy")
         s.has_source(step_type=StepDummy)
         ```
         """

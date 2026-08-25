@@ -135,9 +135,9 @@ class StepUnknown(Step):
         emitted if a selected column already contains this level, since the
         recoded rows then become indistinguishable from real ones.
     id
-        Stable step identifier. Defaults to ``"unknown"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"unknown"``; a second step of
+        this type in the same recipe becomes ``"unknown_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
