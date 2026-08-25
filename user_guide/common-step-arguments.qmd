@@ -1,0 +1,169 @@
+---
+title: "Arguments shared across steps"
+toc: true
+---
+
+Most steps take the same handful of arguments: `columns`, `keep_original_cols`, `role`, and `id`. Each step's reference page documents what *that* step does with them, which is the right place for the specifics. This page explains the concepts once: what a selector resolves to and when, what dropping a source column does to a recipe's column lineage, what a role is for, and why a step has an identifier at all.
+
+Every example below uses the same frame: three feature columns (two numeric, one nominal) and a numeric target.
+
+```{python}
+import pandas as pd
+
+from shoez import Recipe, StepDummy, StepNormalize, StepPca
+from shoez import Selectors as s
+
+df = pd.DataFrame(
+    {
+        "price": [200.0, 250.0, 310.0, 275.0],
+        "sqft": [1.0, 2.0, 3.0, 2.5],
+        "beds": [2.0, 3.0, 4.0, 3.0],
+        "city": ["LA", "SF", "LA", "SD"],
+    }
+)
+df
+```
+
+```{python}
+base = Recipe(data=df, target="price", features=["sqft", "beds", "city"])
+```
+
+## `columns`
+
+`columns` says which columns a step applies to. It accepts a single column name, a list of names, a shoez selector, or a narwhals or polars selector. A selector is the form to reach for: it says what the step is *for* rather than naming today's columns, so it keeps working when the frame changes and when an earlier step in the recipe has already added or removed columns. See `Selectors` for the full set.
+
+```{python}
+recipe = base.add(StepNormalize(s.numeric_features()))
+fitted = recipe.fit(df)
+fitted.transform(df)
+```
+
+The selector is resolved **once, at fit time**, against the training frame's schema. A fitted step holds the concrete column names it resolved to, and `transform()` applies itself to exactly those columns; it never re-resolves the selector against new data. This is what a fitted recipe's `repr` shows in place of the selector:
+
+```{python}
+fitted
+```
+
+A selection that matches nothing is not an error. The step stays in the fitted recipe so you can see it, but it is never fitted and never run, which makes it the identity transform:
+
+```{python}
+recipe = base.add(StepNormalize(s.starts_with("no_such_prefix")))
+fitted = recipe.fit(df)
+fitted
+```
+
+```{python}
+fitted.transform(df)
+```
+
+## `keep_original_cols`
+
+Steps that *derive* new columns take `keep_original_cols`. It controls whether the columns the step consumed stay in the frame alongside the columns it produced. The default is `False`: the source columns are dropped.
+
+Dropping is the default because the derived columns are meant to stand in for the sources, not to accompany them. `StepPca` replaces its inputs with components that are linear combinations of all of them, and `StepDummy` replaces a nominal column with the indicator columns encoding it. Keeping both would hand a downstream model the same information twice, in two coordinate systems.
+
+```{python}
+recipe = base.add(StepPca(s.numeric_features(), num_comp=2))
+fitted = recipe.fit(df)
+fitted.transform(df)
+```
+
+Set it to `True` when you want the sources too, for instance to compare a derived column against what it came from, or because a later step still needs the original scale:
+
+```{python}
+recipe = base.add(StepPca(s.numeric_features(), num_comp=2, keep_original_cols=True))
+fitted = recipe.fit(df)
+fitted.transform(df)
+```
+
+### What dropping does to the schema
+
+A fitted recipe maintains a column-lineage DAG (see `Schema`), and dropping a source column does not erase it from that DAG. The node is *archived* rather than deleted, with a record of which step removed it, so a derived column's provenance still resolves through columns that no longer exist:
+
+```{python}
+recipe = base.add(StepPca(s.numeric_features(), num_comp=2))
+fitted = recipe.fit(df)
+fitted.schema.summary()
+```
+
+`summary()` lists only the live columns, and `sqft` and `beds` are gone from it. Ancestry still finds them:
+
+```{python}
+fitted.schema.ancestors("PC1")
+```
+
+What the live schema does lose is the dropped columns' **roles**. A dropped source column is no longer a feature, because it is no longer a column, so a later `s.numeric_features()` in the same recipe will not pick it up. When `keep_original_cols=True`, the sources survive with their roles intact and later selectors do see them.
+
+### Name collisions
+
+A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the frame for the new ones to clash with. The recipe checks the names *before* the step runs and raises if any of them is already taken, so the failure is the same on every backend rather than a backend-specific error (polars) or a silently dropped column (pandas).
+
+## `role`
+
+A role is what a column *is for*: `"target"` for the column being predicted, `"feature"` for a column used as model input, `"case_weights"`, or any custom role you register. Roles are how selectors like `s.numeric_features()` know what to select, and how a fitted recipe knows which columns to require at transform time. See `Roles`.
+
+Steps that produce new columns take `role`, which assigns a role to those columns. The default is `"feature"`, because a step's whole purpose is normally to produce model input, and a newly created column with no role would be invisible to every role-based selector downstream:
+
+```{python}
+recipe = base.add(StepPca(s.numeric_features(), num_comp=2))
+fitted = recipe.fit(df)
+fitted.schema.summary()
+```
+
+Pass something else when the new columns are not model input. This replaces the default rather than adding to it, so the components below are *not* features and a later `s.numeric_features()` will skip them:
+
+```{python}
+recipe = base.add(StepPca(s.numeric_features(), num_comp=2, role="group"))
+fitted = recipe.fit(df)
+fitted.schema.summary()
+```
+
+Two related recipe-level APIs are worth knowing about. `Recipe.set_roles` assigns roles to columns that already exist in the input data, which is the other half of the same picture: `role` is for columns a step creates, `set_roles` for columns that arrived with the data. `Recipe.update_role_requirements` controls whether a role's columns must be present when `FittedRecipe.transform` is called on new data, which is where a custom role usually needs a decision: an identifier column you carry through the pipeline is required at transform time, an auxiliary column used only during fitting is not.
+
+## `id`
+
+Every step takes `id`, a short string naming that step within the recipe. It defaults to the step type's short name: `"normalize"` for `StepNormalize`, `"pca"` for `StepPca`, `"dummy"` for `StepDummy`.
+
+The id exists because a step needs a name that does not change when you edit the recipe around it. Positions shift the moment you insert a step; the id does not, so everything that refers to a step refers to it by id:
+
+- **Column provenance.** Each column the DAG knows about records the id of the step that produced it, which is the `source` column in `Schema.summary()` above (`pca`, not "step 1"). `Schema.columns_from_source` looks columns up by that id.
+- **Selectors.** `Selectors.has_source` and `Selectors.has_ancestor` select columns by which step produced them, letting a later step operate on exactly one earlier step's output.
+- **Errors.** When a step fails, the raised `StepError` names the id, so a failure deep in a long pipeline says which step broke.
+
+Here a normalize step is pointed at the dummy step's output, by id, without naming any of the columns that step will generate:
+
+```{python}
+recipe = base.add(StepDummy(s.nominal_features())).add(
+    StepNormalize(s.has_source("dummy"))
+)
+fitted = recipe.fit(df)
+fitted.transform(df)
+```
+
+The reason to override the default is that the default is per *type*, not per step: two steps of the same type in one recipe get the same id, and nothing stops them.
+
+```{python}
+recipe = (
+    base
+    .add(StepNormalize(s.numeric_features()))
+    .add(StepNormalize(s.numeric_features()))
+)
+fitted = recipe.fit(df)
+[step.id for step in fitted.steps]
+```
+
+An id that names two steps cannot distinguish them, so give them explicit ones as soon as a recipe has two steps of a type you want to refer to individually:
+
+```{python}
+recipe = (
+    base
+    .add(StepDummy(s.nominal_features(), id="dummy_city"))
+    .add(StepNormalize(s.has_source("dummy_city"), id="scale_city"))
+)
+fitted = recipe.fit(df)
+[step.id for step in fitted.steps]
+```
+
+## Naming the columns a step generates
+
+Steps that create columns have to name them, and the argument that controls those names is not yet uniform: `StepPca` and `StepClassDistance` take a `prefix`, while `StepDummy` and `StepOneHot` take a `name_fn`. Each step's reference page documents its own. This page will cover naming control once the convention is settled.
