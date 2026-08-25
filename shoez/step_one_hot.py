@@ -98,7 +98,9 @@ class StepOneHot(Step):
         If ``True``, the source columns are kept alongside the indicators
         instead of being dropped. Default ``False``.
     id
-        Stable step identifier. Default ``"one_hot"``.
+        Stable step identifier. Defaults to ``"one_hot"`` when not given; the
+        default is per step type, so two steps of this type in one recipe share
+        it unless you set explicit ids.
 
     Examples
     --------

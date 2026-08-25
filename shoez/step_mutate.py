@@ -93,7 +93,9 @@ class StepMutate(Step):
         Columns overwritten in place keep their existing role. Default
         ``"feature"``.
     id
-        Stable step identifier. Default ``"mutate"``.
+        Stable step identifier. Defaults to ``"mutate"`` when not given; the
+        default is per step type, so two steps of this type in one recipe share
+        it unless you set explicit ids.
 
     Examples
     --------

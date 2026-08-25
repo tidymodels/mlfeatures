@@ -81,7 +81,9 @@ class StepIntercept(Step):
     role
         Role assigned to the new column (see `Roles`). Default ``"feature"``.
     id
-        Stable step identifier. Default ``"intercept"``.
+        Stable step identifier. Defaults to ``"intercept"`` when not given; the
+        default is per step type, so two steps of this type in one recipe share
+        it unless you set explicit ids.
 
     Examples
     --------

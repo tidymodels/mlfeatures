@@ -179,7 +179,9 @@ class StepDropCorr(Step):
     method
         Correlation method: ``"pearson"`` (default) or ``"spearman"``.
     id
-        Stable step identifier. Default ``"corr"``.
+        Stable step identifier. Defaults to ``"corr"`` when not given; the
+        default is per step type, so two steps of this type in one recipe share
+        it unless you set explicit ids.
 
     Examples
     --------

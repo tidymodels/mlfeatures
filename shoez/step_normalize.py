@@ -140,7 +140,9 @@ class StepNormalize(Step):
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     id
-        Stable step identifier. Default ``"normalize"``.
+        Stable step identifier. Defaults to ``"normalize"`` when not given; the
+        default is per step type, so two steps of this type in one recipe share
+        it unless you set explicit ids.
 
     Examples
     --------
