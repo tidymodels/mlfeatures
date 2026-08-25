@@ -502,7 +502,7 @@ class StepClassDistance(Step):
         self.log_distance = log_distance
         self.eps = eps
         self.prefix = prefix
-        self.id = id if id is not None else "class_distance"
+        self._init_id(id, "class_distance")
         self.trained = False
         self.keep_original_cols = keep_original_cols
         self.output_role = role

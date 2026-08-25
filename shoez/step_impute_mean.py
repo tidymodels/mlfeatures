@@ -177,7 +177,7 @@ class StepImputeMean(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self.id = id if id is not None else "impute_mean"
+        self._init_id(id, "impute_mean")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

@@ -193,7 +193,7 @@ class StepImputeMode(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self.id = id if id is not None else "impute_mode"
+        self._init_id(id, "impute_mode")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

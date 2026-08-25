@@ -142,7 +142,7 @@ class StepIntercept(Step):
     ):
         self.value = value
         self.name = name
-        self.id = id if id is not None else "intercept"
+        self._init_id(id, "intercept")
         self.trained = False
         self.keep_original_cols = True  # ADDING never drops the source columns.
         self.output_role = role

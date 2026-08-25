@@ -251,7 +251,7 @@ class StepDropCorr(Step):
         self.columns = columns
         self.threshold = threshold
         self.method: Literal["pearson", "spearman"] = method
-        self.id = id if id is not None else "corr"
+        self._init_id(id, "corr")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

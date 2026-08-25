@@ -300,7 +300,7 @@ class StepDummy(Step):
         self.columns = columns
         self.name_fn = name_fn
         self.keep_original_cols = keep_original_cols
-        self.id = id if id is not None else "dummy"
+        self._init_id(id, "dummy")
         self.trained = False
         self.output_role: str | None = "feature"
         self._estimates: DummyEstimates | None = None

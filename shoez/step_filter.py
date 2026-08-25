@@ -136,7 +136,7 @@ class StepFilter(RowOp):
                 f"'predicate' must be callable; got {type(predicate).__name__!r}"
             )
         self.predicate = predicate
-        self.id = id if id is not None else "filter"
+        self._init_id(id, "filter")
         self.trained = False
         # A row operation touches no columns, so keeping originals is the only
         # sensible setting; there is nothing to drop.

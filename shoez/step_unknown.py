@@ -198,7 +198,7 @@ class StepUnknown(Step):
     ):
         self.columns = columns
         self.new_level = new_level
-        self.id = id if id is not None else "unknown"
+        self._init_id(id, "unknown")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

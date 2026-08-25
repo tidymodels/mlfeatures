@@ -191,7 +191,7 @@ class StepNormalize(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self.id = id if id is not None else "normalize"
+        self._init_id(id, "normalize")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

@@ -440,7 +440,7 @@ class StepPolynomial(Step):
     ) -> None:
         self.columns = columns
         self.degree = degree
-        self.id = id if id is not None else "polynomial"
+        self._init_id(id, "polynomial")
         self.trained = False
         self.keep_original_cols = keep_original_cols
         self.output_role = role

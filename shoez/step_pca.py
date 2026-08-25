@@ -288,7 +288,7 @@ class StepPca(Step):
         self.columns = columns
         self.num_comp = num_comp
         self.prefix = prefix
-        self.id = id if id is not None else "pca"
+        self._init_id(id, "pca")
         self.trained = False
         self.keep_original_cols = keep_original_cols
         self.output_role = role
