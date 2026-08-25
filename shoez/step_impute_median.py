@@ -121,6 +121,9 @@ class StepImputeMedian(Step):
     is left unchanged (not dropped) with a warning, and passes through
     ``transform`` untouched.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns

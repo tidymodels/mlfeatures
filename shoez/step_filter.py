@@ -76,6 +76,9 @@ class StepFilter(RowOp):
     given to it, because dropping rows from data being scored would silently
     lose predictions. So a recipe that filters is not a way to filter new data.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     predicate
