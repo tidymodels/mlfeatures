@@ -41,3 +41,20 @@ Because `shoez.testing` ships inside the package, third-party steps run this sam
 Steps that accept multiple input dtypes — like `step_normalize`, which accepts both floats and integers — must have unit tests verifying they work with each accepted dtype.
 
 These same tests must also assert that the output dtype is always float, even when an integer output could happen to be produced by chance.
+
+## Asserting error and warning messages
+
+When a test checks the *text* of a raised error, pin the whole message with a [syrupy](https://github.com/syrupy-project/syrupy) snapshot rather than a `pytest.raises(..., match=...)` regex:
+
+```python
+def test_something_raises(self, snapshot: SnapshotAssertion) -> None:
+    with pytest.raises(ValueError) as excinfo:
+        ...
+    assert str(excinfo.value) == snapshot
+```
+
+`match=` only asserts the fragment the test author happened to pick, so drift in the rest of the message goes unnoticed, and the regex has to escape the brackets and quotes that the house style puts in nearly every message (`['dummy']`). A snapshot pins the string exactly and shows up in review as a readable diff, which is how the message style in the root `CLAUDE.md` actually gets enforced. It also surfaces awkward phrasing (an interpolated empty list, say) that a partial regex would hide.
+
+Snapshots live in `tests/__snapshots__/<test file>.ambr` and are committed. Run `uv run pytest --snapshot-update` after an intentional message change, then read the diff to confirm every updated line is one you meant to change.
+
+`pytest.raises(SomeError)` with no message assertion is still fine when only the exception type is the point (argument validation, a guard that has its own dedicated message test elsewhere).
