@@ -1,0 +1,13 @@
+# serializer version: 1
+# name: TestExplicitDuplicatesRaise.test_explicit_duplicate_in_the_constructor
+  "duplicate step id 'scale'; ids must be unique within a recipe"
+# ---
+# name: TestExplicitDuplicatesRaise.test_explicit_duplicate_of_a_defaulted_id
+  "duplicate step id 'normalize'; ids must be unique within a recipe"
+# ---
+# name: TestExplicitDuplicatesRaise.test_explicit_duplicate_of_an_explicit_id
+  "duplicate step id 'scale'; ids must be unique within a recipe"
+# ---
+# name: TestExplicitDuplicatesRaise.test_explicit_duplicate_within_one_add_call
+  "duplicate step id 'scale'; ids must be unique within a recipe"
+# ---
