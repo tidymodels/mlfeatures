@@ -140,7 +140,7 @@ fitted = recipe.fit(df)
 fitted.transform(df)
 ```
 
-The reason to override the default is that the default is per *type*, not per step: two steps of the same type in one recipe get the same id, and nothing stops them.
+That works because an id names exactly one step. The default is per *type*, not per step, so two steps of the same type would collide; the recipe resolves that as you add them, by suffixing the second one:
 
 ```{python}
 recipe = (
@@ -152,7 +152,7 @@ fitted = recipe.fit(df)
 [step.id for step in fitted.steps]
 ```
 
-An id that names two steps cannot distinguish them, so give them explicit ones as soon as a recipe has two steps of a type you want to refer to individually:
+The suffix keeps the two addressable, but it does not make them readable: which one is `normalize_2` depends on the order you added them, and it shifts if you insert another normalize step earlier. So give steps explicit ids as soon as a recipe has two of a type you want to refer to individually. An id you pass yourself is never renamed, and passing one that a step already in the recipe uses raises instead.
 
 ```{python}
 recipe = (

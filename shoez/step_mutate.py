@@ -96,9 +96,9 @@ class StepMutate(Step):
         Columns overwritten in place keep their existing role. Default
         ``"feature"``.
     id
-        Stable step identifier. Defaults to ``"mutate"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"mutate"``; a second step of
+        this type in the same recipe becomes ``"mutate_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -161,7 +161,7 @@ class StepMutate(Step):
                     f"mutation {name!r} must be callable; got {type(fn).__name__!r}"
                 )
         self.mutations = dict(mutations)
-        self.id = id if id is not None else "mutate"
+        self._init_id(id, "mutate")
         self.trained = False
         self.keep_original_cols = True
         self.output_role = role

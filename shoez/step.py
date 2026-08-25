@@ -110,8 +110,13 @@ class Step(ABC):
 
     #: Stable identifier, defaulting to the step type's short name
     #: (user-overridable). All inspection and tuning APIs key on ``id``, never
-    #: on position.
+    #: on position. Ids are unique within a recipe: a default id that would
+    #: collide with an earlier step's is suffixed (``"dummy"``, ``"dummy_2"``),
+    #: while an explicitly passed duplicate is rejected. See ``_init_id``.
     id: str
+    #: Whether ``id`` was passed by the caller rather than defaulted. Only the
+    #: defaulted ones may be renamed to resolve a collision.
+    _id_explicit: bool = False
     #: Whether this step has been fitted. Set by ``recipe.fit()`` after
     #: ``step.fit()`` returns — not by the step itself.
     trained: bool
@@ -131,6 +136,17 @@ class Step(ABC):
     #: convention — mirroring how `RowOp` makes the transform-time skip
     #: structural. Defaults to ``False``.
     _empty_selection: bool = False
+
+    def _init_id(self, id: str | None, default: str) -> None:
+        """Set ``id`` from the constructor argument, or ``default`` if omitted.
+
+        Every concrete step calls this instead of assigning ``self.id``
+        directly, so the recipe can tell a defaulted id from a caller-supplied
+        one. That distinction is what lets ``Recipe`` silently disambiguate two
+        same-type steps while still rejecting an explicit duplicate.
+        """
+        self.id = default if id is None else id
+        self._id_explicit = id is not None
 
     @abstractmethod
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":

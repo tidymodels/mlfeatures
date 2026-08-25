@@ -182,9 +182,9 @@ class StepDropCorr(Step):
     method
         Correlation method: ``"pearson"`` (default) or ``"spearman"``.
     id
-        Stable step identifier. Defaults to ``"corr"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"corr"``; a second step of this
+        type in the same recipe becomes ``"corr_2"``, and passing an ``id``
+        already used in the recipe is an error.
 
     Examples
     --------
@@ -254,7 +254,7 @@ class StepDropCorr(Step):
         self.columns = columns
         self.threshold = threshold
         self.method: Literal["pearson", "spearman"] = method
-        self.id = id if id is not None else "corr"
+        self._init_id(id, "corr")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

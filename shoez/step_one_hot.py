@@ -101,9 +101,9 @@ class StepOneHot(Step):
         If ``True``, the source columns are kept alongside the indicators
         instead of being dropped. Default ``False``.
     id
-        Stable step identifier. Defaults to ``"one_hot"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"one_hot"``; a second step of
+        this type in the same recipe becomes ``"one_hot_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -164,7 +164,7 @@ class StepOneHot(Step):
         self.columns = columns
         self.name_fn = name_fn
         self.keep_original_cols = keep_original_cols
-        self.id = id if id is not None else "one_hot"
+        self._init_id(id, "one_hot")
         self.trained = False
         self.output_role: str | None = "feature"
         self._estimates: dict[str, list[Any]] | None = None

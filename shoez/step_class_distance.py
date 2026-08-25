@@ -404,9 +404,9 @@ class StepClassDistance(Step):
         Role assigned to the new distance columns (see `Roles`). Default
         ``"feature"``.
     id
-        Stable step identifier. Defaults to ``"class_distance"`` when not given;
-        the default is per step type, so two steps of this type in one recipe
-        share it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"class_distance"``; a second
+        step of this type in the same recipe becomes ``"class_distance_2"``,
+        and passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -505,7 +505,7 @@ class StepClassDistance(Step):
         self.log_distance = log_distance
         self.eps = eps
         self.prefix = prefix
-        self.id = id if id is not None else "class_distance"
+        self._init_id(id, "class_distance")
         self.trained = False
         self.keep_original_cols = keep_original_cols
         self.output_role = role

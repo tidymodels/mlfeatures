@@ -84,9 +84,9 @@ class StepIntercept(Step):
     role
         Role assigned to the new column (see `Roles`). Default ``"feature"``.
     id
-        Stable step identifier. Defaults to ``"intercept"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"intercept"``; a second step
+        of this type in the same recipe becomes ``"intercept_2"``, and
+        passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -145,7 +145,7 @@ class StepIntercept(Step):
     ):
         self.value = value
         self.name = name
-        self.id = id if id is not None else "intercept"
+        self._init_id(id, "intercept")
         self.trained = False
         self.keep_original_cols = True  # ADDING never drops the source columns.
         self.output_role = role

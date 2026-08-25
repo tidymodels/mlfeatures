@@ -225,8 +225,20 @@ Not yet covered: constructor arguments are not type-validated by the suite.
 
 ## Step IDs
 
-Every step has a stable, content-derived `id` by default (e.g. `"normalize_1a2b3c"`), user-overridable. All inspection and tuning APIs key on `id`, never on position. Position-based indexing is deprecated from the start.
-IDs must **not** use randomness. The suffix is derived deterministically from the step's type and hyperparameters — e.g. a hash of the constructor arguments. The same step type with the same arguments must produce the same `id` across sessions. This is what makes IDs stable and useful as handles in tuning and inspection APIs.
+Every step has a stable `id`, defaulting to the step type's short name (`"normalize"`) and user-overridable via the `id` constructor argument. All inspection and tuning APIs key on `id`, never on position. Position-based indexing is deprecated from the start.
+
+IDs must **not** use randomness: the same recipe, written the same way, must produce the same ids across sessions. That is what makes them usable as handles in tuning and inspection APIs, and it is what lets a `Selectors.has_source("dummy")` be written by hand against a recipe you can read.
+
+Ids are unique within a recipe, enforced by `Recipe.add` (and by the `Recipe(steps=[...])` constructor, which is the same thing) at the earliest point a collision is detectable. Uniqueness matters because the id is the key for the lineage DAG's `source` field, `SchemaInfo.producing_steps`, the `has_source` / `has_ancestor` selectors, and step-level error messages; two steps sharing an id turn each of those into a wrong answer rather than an error.
+
+Two steps of the same type are resolved differently depending on where the id came from:
+
+| Id | On collision |
+| --- | --- |
+| Defaulted (the type's short name) | Silently suffixed with the lowest free `_n`: `"dummy"`, then `"dummy_2"`. The renaming is done on a copy, so `add()` stays pure with respect to the caller's step objects. |
+| Passed explicitly | `ValueError`. The caller named the step in order to refer to it, so a duplicate is a mistake about that name, not something to paper over. |
+
+`Step._init_id()` records which of the two a step's id is; concrete steps call it rather than assigning `self.id` directly.
 
 ---
 

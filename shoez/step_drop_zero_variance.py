@@ -77,9 +77,9 @@ class StepDropZeroVariance(Step):
         fitted, so the same selector works on any backend. Any dtype is
         accepted.
     id
-        Stable step identifier. Defaults to ``"zv"`` when not given; the default
-        is per step type, so two steps of this type in one recipe share it
-        unless you set explicit ids.
+        Stable step identifier. Defaults to ``"zv"``; a second step of this
+        type in the same recipe becomes ``"zv_2"``, and passing an ``id``
+        already used in the recipe is an error.
 
     Examples
     --------
@@ -127,7 +127,7 @@ class StepDropZeroVariance(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self.id = id if id is not None else "zv"
+        self._init_id(id, "zv")
         self.trained = False
         self.keep_original_cols = False
         self.output_role = None

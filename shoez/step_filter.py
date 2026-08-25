@@ -85,9 +85,9 @@ class StepFilter(RowOp):
         Callable taking the frame and returning a boolean narwhals expression or
         series, ``True`` for the rows to keep. Must be callable.
     id
-        Stable step identifier. Defaults to ``"filter"`` when not given; the
-        default is per step type, so two steps of this type in one recipe share
-        it unless you set explicit ids.
+        Stable step identifier. Defaults to ``"filter"``; a second step of
+        this type in the same recipe becomes ``"filter_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -139,7 +139,7 @@ class StepFilter(RowOp):
                 f"'predicate' must be callable; got {type(predicate).__name__!r}"
             )
         self.predicate = predicate
-        self.id = id if id is not None else "filter"
+        self._init_id(id, "filter")
         self.trained = False
         # A row operation touches no columns, so keeping originals is the only
         # sensible setting; there is nothing to drop.

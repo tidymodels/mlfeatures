@@ -56,7 +56,7 @@ s.targets()
 ## By source (producing step)
 
 ```python
-s.has_source("dummy_abc123")        # columns whose immediate producer is this step id
+s.has_source("dummy")               # columns whose immediate producer is this step id
 s.has_source(step_type=StepDummy)   # columns produced directly by any StepDummy step
 ```
 
