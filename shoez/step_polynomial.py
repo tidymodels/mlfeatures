@@ -345,6 +345,9 @@ class StepPolynomial(Step):
     `UserWarning`. The caller can chain a zero-variance drop step to
     clean them up.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns

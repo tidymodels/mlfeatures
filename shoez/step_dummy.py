@@ -220,6 +220,9 @@ class StepDummy(Step):
     the missing values. The first level in ascending sort order is the
     reference level and is dropped.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
