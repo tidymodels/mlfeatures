@@ -28,6 +28,18 @@ df
 base = Recipe(data=df, target="price", features=["sqft", "beds", "city"])
 ```
 
+## Passing them: required positional, optional by keyword
+
+Every step follows the same calling convention. Its required argument or arguments (`columns` for most steps, `target` as well for `StepClassDistance`, `mutations` for `StepMutate`, `predicate` for `StepFilter`) are positional; everything optional, `id` included, is keyword-only. So a threshold or a degree is always named at the call site:
+
+```{python}
+from shoez import StepDropCorr
+
+StepDropCorr(s.numeric_features(), threshold=0.95)
+```
+
+Passing an option positionally is a `TypeError` rather than a silent mis-assignment. `StepIntercept` has no required argument at all, so all four of its arguments are keyword-only. The payoff is that reading a step is never a matter of counting commas, and an option can be reordered or renamed without changing what existing calls mean.
+
 ## `columns`
 
 `columns` says which columns a step applies to. It accepts a single column name, a list of names, a shoez selector, or a narwhals or polars selector. A selector is the form to reach for: it says what the step is *for* rather than naming today's columns, so it keeps working when the frame changes and when an earlier step in the recipe has already added or removed columns. See `Selectors` for the full set.

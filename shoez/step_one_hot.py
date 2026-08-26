@@ -157,6 +157,7 @@ class StepOneHot(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
         id: str | None = None,

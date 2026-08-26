@@ -67,6 +67,8 @@ Every step constructor must accept:
 | `prefix` / `name_fn`          | `str \| callable`   | Controls generated column names.                                                                               |
 | `id`                          | `str`               | Stable identifier; auto-generated if not provided.                                                             |
 
+**Only required arguments may be positional; every optional argument is keyword-only.** A `*` goes immediately after the required argument or arguments (`columns`, or `columns, target` for `StepClassDistance`, or `mutations` / `predicate`), so everything with a default, `id` included, must be passed by name. `StepIntercept` has no required argument and is therefore keyword-only throughout. This keeps the whole catalog callable the same way and lets an option be reordered or renamed without changing the meaning of existing calls. `StepConformanceTest.test_optional_arguments_are_keyword_only` enforces it by asserting that no `POSITIONAL_OR_KEYWORD` parameter has a default, which needs no per-step allowlist.
+
 These are constructor arguments on the concrete step, not slots on the `Step` base class. The selector is stored as an instance attribute on the concrete step and resolved against the schema during `fit()` — the base class has no knowledge of which columns were selected.
 
 All declared arguments are type-validated at construction. No silent coercions. Environment-dependent settings (locale, contrast schemes) are **captured at `fit()` time** and stored on the step — never read from global state at `transform()` time [#1349].
@@ -208,6 +210,7 @@ class TestMyStepConformance(StepConformanceTest):
 
 Every step must pass it before merging:
 
+- Every optional constructor argument is keyword-only; only required arguments may be passed positionally (see [Constructor requirements](#constructor-requirements)).
 - Empty selection returns empty output without error (handled structurally by the recipe — see [Empty selection ⇒ identity](#empty-selection--identity-structural); the step's own `fit()` is never called on an empty selection).
 - 0-row and 1-row `transform()` produce schema-correct output.
 - `fit()` is idempotent given the same training data.

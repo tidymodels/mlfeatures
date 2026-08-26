@@ -28,6 +28,7 @@ distinguishable from "forgotten".
 
 from __future__ import annotations
 
+import inspect
 import math
 import pickle
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
@@ -199,6 +200,27 @@ class StepConformanceTest:
         return Recipe(steps=[self.make_step()]).fit(train), train
 
     # -- the contract ------------------------------------------------------
+
+    def test_optional_arguments_are_keyword_only(self) -> None:
+        """Only required arguments are positional; every option is keyword-only.
+
+        Phrased as "no parameter with a default may be positional" so it needs no
+        per-step allowlist: required arguments (``columns``, ``target``,
+        ``mutations``, ``predicate``) have no default and stay positional, while
+        everything else, ``id`` included, must sit after the ``*``.
+        """
+        params = inspect.signature(type(self.make_step()).__init__).parameters
+        positional = [
+            name
+            for name, p in params.items()
+            if p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+            and p.default is not inspect.Parameter.empty
+        ]
+        assert not positional, (
+            f"optional parameter(s) {positional} can be passed positionally; "
+            "add a '*' after the required argument(s) so every option is "
+            "keyword-only"
+        )
 
     def test_empty_selection_is_noop(self) -> None:
         """An empty column selection is a no-op: the frame passes through unchanged."""
