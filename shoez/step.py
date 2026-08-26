@@ -261,8 +261,14 @@ class Step(ABC):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Dtypes this step is valid to apply to.
 
-        Checked against the schema before ``fit()`` runs. Return
-        `ANY_DTYPE` to skip dtype validation entirely.
+        Return a set of narwhals dtype classes (`NUMERIC_DTYPES` is ready-made
+        for numeric-only steps), or `ANY_DTYPE` to skip dtype validation
+        entirely. The recipe checks the resolved selection's dtypes against this
+        set before ``fit()`` runs and raises a ``TypeError`` naming the step, the
+        offending column(s), and their dtypes, so a step never sees a column it
+        declared itself invalid for. The check does not run again at
+        ``transform()`` time: the ptype snapshot already pins new data's dtypes
+        to what was seen at fit.
         """
         raise NotImplementedError
 
