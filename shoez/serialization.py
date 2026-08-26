@@ -101,8 +101,22 @@ _DTYPE_CLASSES: tuple[type[nw.dtypes.DType], ...] = (
     nw.Binary,
     nw.Object,
 )
+
+# The abstract dtype *categories* narwhals groups concrete dtypes under. Steps
+# never store these, but ``Selectors.numeric()`` and friends hold one as their
+# ``dtype``, so decoding a selector has to resolve them back to a class. They are
+# never instantiated, which is why ``_dtype_instance`` only handles the concrete
+# classes above.
+_DTYPE_CATEGORY_CLASSES: tuple[type[nw.dtypes.DType], ...] = (
+    nw.dtypes.NumericType,
+    nw.dtypes.IntegerType,
+    nw.dtypes.SignedIntegerType,
+    nw.dtypes.UnsignedIntegerType,
+    nw.dtypes.FloatType,
+    nw.dtypes.TemporalType,
+)
 _NAME_TO_DTYPE: dict[str, type[nw.dtypes.DType]] = {
-    cls.__name__: cls for cls in _DTYPE_CLASSES
+    cls.__name__: cls for cls in (*_DTYPE_CLASSES, *_DTYPE_CATEGORY_CLASSES)
 }
 
 
