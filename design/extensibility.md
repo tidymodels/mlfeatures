@@ -29,14 +29,34 @@ The core never relies on import order for correctness. Each plugin step declares
 ## Base classes
 
 ```python
-from shoez import Step, Check, RowOp
+from shoez import Step, RowOp
 ```
 
 - `Step` — base for all transformation steps. See [step-contract.md](step-contract.md) for the full ABC.
-- `Check` — base for validation steps (pure functions; must not mutate state).
 - `RowOp(Step)` — base for row-altering steps; skipped at transform time automatically.
 
 **Compose-don't-subclass** is the recommended extension pattern, but implementing the `Step` ABC directly is fully supported and documented. Subclassing `Step` subclasses is explicitly not supported (R explicitly refused it [#1058]); extend by implementing the ABC.
+
+---
+
+## Resolving a step's own selection
+
+A step's `columns` argument holds a selector, not column names, so `fit()` has to resolve it. `Step.resolve_selection()` is the supported route; narwhals' own `frame.schema` supplies the dtypes:
+
+```python
+from shoez import Frame, SchemaInfo, Step
+
+class StepMyThing(Step):
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "StepMyThing":
+        names = self.resolve_selection(training_data, info)
+        selected = training_data.select(names)
+        dtypes = {name: str(dt) for name, dt in selected.schema.items()}
+        ...
+```
+
+shoez's own steps reach for the private `shoez._frame` here instead, for historical reasons. **A plugin does not need it**, and should not import it: `resolve_selection()` covers the selector half and `frame.schema` covers the dtype half. The path above is the one that type-checks under `mypy --strict` and `pyright --strict` using only public names.
+
+Annotating the ABC's methods needs two type aliases that are exported alongside the base classes: `Selector` (the type of every step's `columns` parameter) and `AcceptedDtypes` (the return type of `accepts_dtypes()`).
 
 ---
 
