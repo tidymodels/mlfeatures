@@ -138,6 +138,44 @@ class TestNoClosures:
         pt.assert_frame_equal(restored.transform(df), rec.transform(df))
 
 
+def _zero_arg_selector_names() -> list[str]:
+    """Every ``Selectors`` constructor that a no-argument call actually builds.
+
+    ``has_source``/``has_ancestor`` have all-default signatures but reject the
+    empty call (they need exactly one of 'step'/'step_type'), so they drop out.
+    """
+    names: list[str] = []
+    for name in dir(Selectors):
+        if name.startswith("_"):
+            continue
+        factory = getattr(Selectors, name)
+        if not callable(factory):
+            continue
+        try:
+            factory()
+        except (TypeError, ValueError):
+            continue
+        names.append(name)
+    return names
+
+
+class TestEverySelectorRoundTrips:
+    """Every zero-argument ``Selectors`` constructor survives a JSON round-trip.
+
+    The dtype-category selectors (``numeric()``, ``integer()``, ``double()``) once
+    encoded to a name the decoder had no entry for (issue #195); enumerating the
+    constructors is what caught it, so the test enumerates them too.
+    """
+
+    @pytest.mark.parametrize("name", _zero_arg_selector_names())
+    def test_roundtrip(self, name: str) -> None:
+        df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
+        selector = getattr(Selectors, name)()
+        rec = Recipe().add(StepNormalize(selector)).fit(df)
+        restored = FittedRecipe.from_json(rec.to_json())
+        pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+
+
 class TestForeignSelectorRejected:
     """A raw polars/narwhals selector cannot be serialized; the error is clear."""
 
