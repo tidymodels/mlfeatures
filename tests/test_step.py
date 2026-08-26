@@ -17,6 +17,11 @@ from shoez.types import AcceptedDtypes, _AnyDtype
 class _ConcreteStep(Step):
     """Minimal concrete step used to verify the contract can be implemented."""
 
+    default_id = "concrete"
+
+    def __init__(self, id: str | None = None) -> None:
+        super().__init__(id, self.default_id)
+
     def fit(self, training_data: object, info: object) -> "Step":
         self.trained = True
         return self
@@ -39,6 +44,9 @@ class _ConcreteStep(Step):
 
 
 class _ConcreteRowOp(RowOp):
+    def __init__(self) -> None:
+        super().__init__(None, "concrete_rowop")
+
     def fit(self, training_data: object, info: object) -> "Step":
         return self
 
@@ -98,7 +106,7 @@ def test_required_pkgs_defaults_to_empty() -> None:
 class _MissingPkgStep(_ConcreteStep):
     """A step declaring a package that is guaranteed not to be installed."""
 
-    id = "needs_zzz"
+    default_id = "needs_zzz"
 
     def required_pkgs(self) -> list[str]:
         return ["shoez_no_such_dependency_zzz"]
@@ -120,7 +128,7 @@ def test_check_required_pkgs_reports_the_step_and_the_package() -> None:
 class _InstalledPkgStep(_ConcreteStep):
     """A step declaring an installed package, with a version constraint."""
 
-    id = "needs_numpy"
+    default_id = "needs_numpy"
 
     def required_pkgs(self) -> list[str]:
         return ["numpy>=1.0"]

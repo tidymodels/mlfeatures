@@ -19,10 +19,8 @@ from shoez.types import AcceptedDtypes
 class _MissingPkgStep(Step):
     """A step declaring a package that is guaranteed not to be installed."""
 
-    id = "needs_zzz"
-    # Real steps set these in their own ``__init__``; this one has none.
-    trained = False
-    _empty_selection = False
+    def __init__(self) -> None:
+        super().__init__(None, "needs_zzz")
 
     def required_pkgs(self) -> list[str]:
         return ["shoez_no_such_dependency_zzz"]
