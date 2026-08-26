@@ -86,7 +86,7 @@ A step's class docstring is its reference page, so it is written for someone usi
       are meaningful here.
   ```
 
-- **Say which dtypes are meaningful, not that others are rejected.** `accepts_dtypes()` is declared per step but nothing calls it, so a wrong dtype surfaces as a backend error rather than a shoez one. Until that is wired up, docstrings must not claim validation.
+- **Say which dtypes are meaningful.** `accepts_dtypes()` is enforced by the recipe before `fit()`, so a wrong dtype raises a shoez `TypeError` naming the step and column. A docstring may say which dtypes a step works on; it does not need to spell out the rejection, which is a universal contract described once on `Step`.
 - **Leave out what the reader can already see.** A filter not touching columns, or a constant column having nothing to estimate, does not need a paragraph.
 
 ### Example style

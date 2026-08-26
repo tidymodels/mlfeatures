@@ -145,7 +145,7 @@ def fit(self, data):
         resolved_cols = step.selector.resolve(self._schema)
 
         # check that selected columns match the step's accepted dtypes
-        step.accepts_dtypes_check(resolved_cols, self._schema)
+        check_accepted_dtypes(step, current_data, resolved_cols)
 
         # fit the step on the current data
         fitted_step = step.fit(current_data, info=self._schema)

@@ -108,20 +108,20 @@ Any future framework-owned attribute belongs in `super().__init__()` too, with a
 
 ## `accepts_dtypes()`
 
-Each step declares the set of column dtypes it is valid to apply to. The framework checks this against the schema **before `fit()` runs only** — if any selected column has a dtype not in the declared set, an error is raised immediately rather than failing deep inside the step's fitting code.
+Each step declares the set of column dtypes it is valid to apply to. `Recipe.fit()` checks the resolved selection against that declaration **before `fit()` runs only** — if any selected column has a dtype not in the declared set, a `TypeError` naming the step, the offending column(s), and their dtypes is raised immediately rather than failing deep inside the step's fitting code. The check is skipped for a step with no `columns` selector and for a selection that resolved to zero columns (the identity case).
 
 This check does not run at `transform()` time. By then, the ptype snapshot already guarantees that incoming column dtypes match what was seen during `fit()` — a second dtype check would be redundant. See [lifecycle.md](lifecycle.md).
 
-The return type is `AcceptedDtypes`, an alias for `set[str] | _AnyDtype` — either an explicit set of dtype names, or the `ANY_DTYPE` sentinel. (A plain `set[str]` annotation would be inconsistent, since `ANY_DTYPE` is not a set.)
+The return type is `AcceptedDtypes`, an alias for `set[type[nw.dtypes.DType]] | _AnyDtype` — either an explicit set of narwhals dtype classes, or the `ANY_DTYPE` sentinel. (A plain `set` annotation would be inconsistent, since `ANY_DTYPE` is not a set.) `NUMERIC_DTYPES` is the ready-made set for numeric-only steps.
 
 ```python
 # e.g. step_normalize only makes sense on numeric columns
 def accepts_dtypes(self) -> AcceptedDtypes:
-    return {"float", "int"}
+    return set(NUMERIC_DTYPES)
 
 # e.g. step_dummy only makes sense on categorical columns
 def accepts_dtypes(self) -> AcceptedDtypes:
-    return {"categorical"}
+    return {nw.Categorical, nw.Enum, nw.String}
 
 # e.g. step_zv works on anything — use the ANY sentinel
 def accepts_dtypes(self) -> AcceptedDtypes:
