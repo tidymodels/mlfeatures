@@ -45,11 +45,12 @@ else:
 #: against this via `shoez._frame`. See ``design/ecosystem.md``.
 Frame: TypeAlias = nw.DataFrame[Any]
 
-#: How a step names the columns it operates on: a single column name, an explicit
-#: list of names, a narwhals selector (`NwSelector`, e.g.
-#: ``narwhals.selectors.numeric()``), or a polars selector (`PlSelector`,
-#: ``polars.selectors``). Any selector is resolved against the frame's schema at
-#: fit time, for any backend. See ``design/selectors.md``.
+#: The type of every step's ``columns`` parameter: a single column name, an
+#: explicit list of names, a shoez selector such as
+#: ``Selectors.numeric_features()`` (see `Selectors` for the full set), or a
+#: narwhals or polars selector (``narwhals.selectors.numeric()``,
+#: ``polars.selectors.numeric()``). Any selector is resolved against the frame's
+#: schema at fit time, so the same selector works on any backend.
 Selector: TypeAlias = Union[
     str, Sequence[str], NwSelector, "PlSelector", "ShoezSelector"
 ]

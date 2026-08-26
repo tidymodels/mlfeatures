@@ -18,7 +18,7 @@ Key invariants the framework guarantees:
 - **Deferred evaluation.** Constructing a recipe and adding steps (`Recipe(steps=[...])` / `.add(...)`) declares intent against a schema — no data is touched. All computation is deferred to `fit()` and `transform()`. This means recipes are cheap to construct, inspect, and modify before any data flows through them.
 - **Composability.** Steps are independent objects appended to a recipe; order is explicit and meaningful.
 - **Schema awareness.** Each step selects its inputs by **name**, **role**, or **type** — not by positional index.
-- **Extensibility.** Third-party packages can contribute new steps, checks, and roles without modifying core. The plugin contract is stable and documented; see [extensibility.md](extensibility.md).
+- **Extensibility.** Third-party packages can contribute new steps and roles without modifying core. The plugin contract is stable and documented; see [extensibility.md](extensibility.md).
 
 ---
 

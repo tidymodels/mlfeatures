@@ -229,18 +229,33 @@ class Step(ABC):
         raise NotImplementedError
 
     def resolve_selection(self, data: Frame, info: SchemaInfo) -> list[str]:
-        """Resolve this step's primary input selector to concrete column names.
+        """Resolve this step's ``columns`` selector to concrete column names.
 
-        Called by ``recipe.fit()`` *before* ``fit()`` so the recipe can detect
-        an empty selection and treat the step as the identity transform (see
-        ``_empty_selection``). The default resolves ``self.columns`` against the
-        current frame, which is correct for every selector-taking step —
-        including multi-selector steps like ``StepClassDistance`` whose primary
-        (feature) selector is ``columns``. Steps with no input selector are
-        special-cased by the recipe and never reach this method.
+        This is the supported way for a step to find out which columns it was
+        pointed at. Call it at the top of ``fit()`` and select from the frame
+        with the names it returns; narwhals' own ``frame.schema`` then gives the
+        dtypes:
 
-        Takes ``data`` (not just ``info``) because narwhals / polars selectors
-        resolve against the frame's schema.
+        ```python
+        def fit(self, training_data, info):
+            names = self.resolve_selection(training_data, info)
+            selected = training_data.select(names)
+            dtypes = {name: str(dt) for name, dt in selected.schema.items()}
+            ...
+        ```
+
+        The default resolves ``self.columns``, which is right for every
+        selector-taking step, including ones that take a second selector for a
+        different purpose: the primary input selector is always ``columns``.
+        Override only if a step's primary input is named something else.
+
+        Takes ``data`` as well as ``info`` because narwhals and polars selectors
+        resolve against the frame's schema rather than against the schema
+        snapshot alone.
+
+        The recipe also calls this before ``fit()`` so that a selection matching
+        no columns makes the step the identity transform; a step that resolves
+        its own selection therefore never has to handle the empty case itself.
         """
         from shoez import _frame
 
