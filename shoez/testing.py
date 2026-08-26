@@ -359,6 +359,24 @@ class StepConformanceTest:
         fitted, train = self._fitted()
         pd.testing.assert_frame_equal(fitted.transform(train), fitted.transform(train))
 
+    def test_accepts_dtypes_is_well_formed(self) -> None:
+        """accepts_dtypes() returns ANY_DTYPE or a set of narwhals dtype classes.
+
+        The recipe enforces the declaration before ``fit()``, so a set holding
+        anything other than dtype *classes* (a dtype instance, a string name)
+        would silently reject every column instead.
+        """
+        from shoez.types import ANY_DTYPE
+
+        accepted = self.make_step().accepts_dtypes()
+        if accepted is ANY_DTYPE:
+            return
+        assert isinstance(accepted, set)
+        assert accepted
+        for dtype in accepted:
+            assert isinstance(dtype, type)
+            assert issubclass(dtype, nw.dtypes.DType)
+
     def test_produces_sparse_is_bool(self) -> None:
         """produces_sparse is a plain bool."""
         fitted, _ = self._fitted()

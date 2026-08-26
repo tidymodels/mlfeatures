@@ -26,7 +26,12 @@ from shoez.ptype import (
 )
 from shoez.schema import Schema
 from shoez.selectors import ShoezSelector
-from shoez.step import RowOp, Step, StepError
+from shoez.step import (
+    RowOp,
+    Step,
+    StepError,
+    _step_type_label,  # pyright: ignore[reportPrivateUsage]
+)
 from shoez.types import (
     DataFrame,
     Frame,
@@ -36,6 +41,30 @@ from shoez.types import (
 )
 
 __all__ = ["Recipe", "FittedRecipe"]
+
+
+def _check_accepted_dtypes(step: Step, data: Frame, selected: list[str]) -> None:
+    """Reject a step whose selection includes a dtype it does not accept.
+
+    The framework-side half of ``Step.accepts_dtypes()``: it runs at the recipe
+    boundary, after the selector has resolved and before ``step.fit()``, so a
+    step never sees a column it declared itself invalid for and a mismatch is
+    reported by shoez rather than by whatever narwhals, polars, or pandas
+    happens to raise from inside the step. A step returning ``ANY_DTYPE`` opts
+    out (the sentinel contains every dtype).
+    """
+    accepted = step.accepts_dtypes()
+    schema = data.schema
+    offenders = {
+        name: schema[name] for name in selected if type(schema[name]) not in accepted
+    }
+    if offenders:
+        columns = sorted(offenders)
+        dtypes = [str(offenders[name]) for name in columns]
+        raise TypeError(
+            f"step {step.id!r} ({_step_type_label(step)}) does not accept "
+            f"column(s) {columns} with dtype(s) {dtypes}"
+        )
 
 
 def _format_recipe(
@@ -473,6 +502,12 @@ class Recipe:
                 step.trained = True
                 fitted_steps.append(step)
                 continue
+            # Dtype validation, also at the recipe boundary and also before the
+            # step runs: a step declares what it accepts, the framework enforces
+            # it (see design/step-contract.md). Only at fit time — the ptype
+            # already pins dtypes at transform time.
+            if has_selector:
+                _check_accepted_dtypes(step, current, selected)
             # Only the step's own ``fit``/``transform`` calls are wrapped in a
             # StepError; the recipe-side name-collision guard and schema/role
             # bookkeeping raise their own errors and are left unwrapped.
