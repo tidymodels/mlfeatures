@@ -10,6 +10,7 @@ import narwhals as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Recipe, SchemaInfo, StepDropCorr, StepNormalize
 
@@ -80,9 +81,19 @@ class TestEndToEnd:
     def test_refit_is_a_noop(self) -> None:
         df = pd.DataFrame(_data())
         fitted = Recipe(steps=[StepDropCorr(["a", "b", "c"])]).fit(df)
-        refitted = fitted.fit(df)
+        with pytest.warns(UserWarning):
+            refitted = fitted.fit(df)
         assert refitted is fitted
         assert refitted.steps is fitted.steps
+
+    def test_refit_warns_that_the_data_was_ignored(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        df = pd.DataFrame(_data())
+        fitted = Recipe(steps=[StepDropCorr(["a", "b", "c"])]).fit(df)
+        with pytest.warns(UserWarning) as record:
+            fitted.fit(df)
+        assert str(record[0].message) == snapshot
 
     def test_refitting_does_not_corrupt_earlier_fit(self) -> None:
         recipe = Recipe(steps=[StepNormalize(["x"])])
