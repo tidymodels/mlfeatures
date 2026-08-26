@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestEndToEnd.test_refit_warns_that_the_data_was_ignored
+  'the recipe is already fitted; fit() is a no-op and the data passed was ignored, so no statistics were re-estimated; fit the untrained recipe to estimate from this data'
+# ---

@@ -18,6 +18,7 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 from __future__ import annotations
 
 import copy
+import warnings
 
 from shoez import _frame
 from shoez.ptype import (
@@ -661,8 +662,17 @@ class FittedRecipe:
         """Re-fitting an already-fitted recipe is a no-op: returns ``self``.
 
         The stored statistics are never re-estimated, so ``rec.fit().fit()`` is
-        cheap and yields the same object. ``data`` is ignored.
+        cheap and yields the same object. ``data`` is ignored, which differs
+        from a scikit-learn estimator (whose ``fit()`` re-estimates), so this
+        warns to make the discarded data visible. Fit the untrained ``Recipe``
+        again to estimate from new data.
         """
+        warnings.warn(
+            "the recipe is already fitted; fit() is a no-op and the data passed "
+            "was ignored, so no statistics were re-estimated; fit the untrained "
+            "recipe to estimate from this data",
+            stacklevel=2,
+        )
         return self
 
     def transform(self, data: DataFrame) -> DataFrame:
