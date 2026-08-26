@@ -35,12 +35,14 @@ from shoez.step_unknown import StepUnknown
 from shoez.types import (
     ANY_DTYPE,
     NUMERIC_DTYPES,
+    AcceptedDtypes,
     ColSchema,
     DataFrame,
     Frame,
     Mode,
     Roles,
     SchemaInfo,
+    Selector,
 )
 
 try:
@@ -73,10 +75,12 @@ __all__ = [
     "StepError",
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
+    "AcceptedDtypes",
     "Mode",
     "Roles",
     "ColSchema",
     "SchemaInfo",
+    "Selector",
     "Schema",
     "ColumnNode",
     "Ptype",

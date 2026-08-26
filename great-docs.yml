@@ -222,6 +222,7 @@ reference:
     contents:
       - name: Selectors
         members: true
+      - Selector
       - name: ColSchema
         members: false
       - name: SchemaInfo
@@ -237,6 +238,7 @@ reference:
       - Frame
       - ANY_DTYPE
       - NUMERIC_DTYPES
+      - AcceptedDtypes
 
   - title: Developing
     desc: >-
@@ -250,12 +252,19 @@ reference:
         members: false
       - Step.fit
       - Step.transform
+      - Step.resolve_selection
+      - Step.update_roles
       - Step.schema_in
       - Step.schema_out
       - Step.output_parents
       - Step.accepts_dtypes
+      - Step.produces_sparse
+      - Step.produced_columns
       - Step.required_pkgs
       - Step.check_required_pkgs
+      - Step.to_state
+      - Step.from_state
+      - Step.minimize
       - name: RowOp
         members: false
       - name: StepError
