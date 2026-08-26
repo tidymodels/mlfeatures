@@ -164,10 +164,9 @@ class StepOneHot(Step):
     ) -> None:
         self.columns = columns
         self.name_fn = name_fn
-        self.keep_original_cols = keep_original_cols
-        self._init_id(id, "one_hot")
-        self.trained = False
-        self.output_role: str | None = "feature"
+        super().__init__(
+            id, "one_hot", keep_original_cols=keep_original_cols, output_role="feature"
+        )
         self._estimates: dict[str, list[Any]] | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None

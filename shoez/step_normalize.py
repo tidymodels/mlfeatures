@@ -195,10 +195,7 @@ class StepNormalize(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self._init_id(id, "normalize")
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "normalize")
         # Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
         self._estimates: dict[str, tuple[float, float]] | None = None
         self._schema_in: ColSchema | None = None

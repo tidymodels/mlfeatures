@@ -186,10 +186,7 @@ class StepImputeMedian(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self._init_id(id, "impute_median")
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "impute_median")
         # Populated by ``fit()``: {column: median} over the imputable columns.
         self._estimates: dict[str, float] | None = None
         self._schema_in: ColSchema | None = None

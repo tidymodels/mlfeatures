@@ -255,10 +255,7 @@ class StepDropCorr(Step):
         self.columns = columns
         self.threshold = threshold
         self.method: Literal["pearson", "spearman"] = method
-        self._init_id(id, "corr")
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "corr")
         # Populated by ``fit()``.
         self._estimates: list[str] | None = None
         self._schema_in: ColSchema | None = None

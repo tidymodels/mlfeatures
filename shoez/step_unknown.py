@@ -202,10 +202,7 @@ class StepUnknown(Step):
     ):
         self.columns = columns
         self.new_level = new_level
-        self._init_id(id, "unknown")
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "unknown")
         # Populated by ``fit()``. ``_schema_in.columns`` is the resolved
         # selection — every selected column is recoded, so no separate list is
         # needed.
