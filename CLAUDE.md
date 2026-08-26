@@ -14,11 +14,13 @@ Tooling is managed with [`uv`](https://docs.astral.sh/uv/); always invoke tools 
 uv run pytest                  # tests (add --cov --cov-report=term-missing for coverage)
 uv run ruff check .            # lint
 uv run ruff format --check .   # format check (drop --check to apply)
-uv run mypy shoez              # type-check (strict)
+uv run mypy shoez extras       # type-check (strict)
 uv run pyright                 # type-check (strict)
 ```
 
-Both type-checkers run in strict mode over `shoez/` (tests are excluded). New code must be fully typed and pass both. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
+Both type-checkers run in strict mode over `shoez/` and `extras/` (tests are excluded). New code must be fully typed and pass both.
+
+`extras/shoez_demo_step/` is an out-of-tree step written the way a plugin author would write one. It is not shipped; it exists so the public API cannot quietly stop being sufficient to write a step. It must import only from the top-level `shoez` namespace, and [`tests/test_out_of_tree_step.py`](tests/test_out_of_tree_step.py) fails if it reaches into a private module or imports a name absent from `shoez.__all__`. When a new name becomes necessary to author or annotate a step, export it rather than relaxing that test. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
 
 When adding a new step, also add its `tests/test_step_x_infrastructure.py` subclassing `shoez.testing.StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass the contract before merging. The subclass supplies only `make_step()` and `training_data`; the checks themselves are written once in [`shoez/testing.py`](shoez/testing.py).
 

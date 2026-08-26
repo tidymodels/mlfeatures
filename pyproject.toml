@@ -90,6 +90,10 @@ shoez = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# `extras/` holds the out-of-tree step fixture (`shoez_demo_step`), which lives
+# outside `tests/` because `tests/` is excluded from both type-checkers and the
+# whole point of the fixture is that it type-checks under strict mode.
+pythonpath = ["extras"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -155,7 +159,9 @@ line-ending = "auto"
 [tool.pyright]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
-include = ["shoez"]
+# `extras` holds the out-of-tree step fixture; it is type-checked precisely
+# because proving a plugin can be written under strict mode is its job.
+include = ["shoez", "extras"]
 exclude = [
     "**/__pycache__",
     "**/.venv",
