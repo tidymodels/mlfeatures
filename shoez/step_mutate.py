@@ -161,10 +161,7 @@ class StepMutate(Step):
                     f"mutation {name!r} must be callable; got {type(fn).__name__!r}"
                 )
         self.mutations = dict(mutations)
-        self._init_id(id, "mutate")
-        self.trained = False
-        self.keep_original_cols = True
-        self.output_role = role
+        super().__init__(id, "mutate", keep_original_cols=True, output_role=role)
         # Populated by ``fit()``.
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None

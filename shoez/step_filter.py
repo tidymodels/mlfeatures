@@ -140,12 +140,9 @@ class StepFilter(RowOp):
                 f"'predicate' must be callable; got {type(predicate).__name__!r}"
             )
         self.predicate = predicate
-        self._init_id(id, "filter")
-        self.trained = False
         # A row operation touches no columns, so keeping originals is the only
         # sensible setting; there is nothing to drop.
-        self.keep_original_cols = True
-        self.output_role = None
+        super().__init__(id, "filter", keep_original_cols=True)
         # Populated by ``fit()``. A filter changes no columns, so ``schema_in``
         # and ``schema_out`` are the same frame schema.
         self._schema: ColSchema | None = None

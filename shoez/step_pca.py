@@ -291,10 +291,9 @@ class StepPca(Step):
         self.columns = columns
         self.num_comp = num_comp
         self.prefix = prefix
-        self._init_id(id, "pca")
-        self.trained = False
-        self.keep_original_cols = keep_original_cols
-        self.output_role = role
+        super().__init__(
+            id, "pca", keep_original_cols=keep_original_cols, output_role=role
+        )
         # Populated by ``fit()``.
         self._estimates: PcaFit | None = None
         self._schema_in: ColSchema | None = None

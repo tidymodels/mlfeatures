@@ -39,6 +39,25 @@ from shoez import Step, RowOp
 
 ---
 
+## Initializing a step
+
+A step's `__init__` stores its own arguments and delegates the framework-owned ones to `Step.__init__()`, which sets `id`, `trained`, `keep_original_cols`, and `output_role`:
+
+```python
+from shoez import Mode, Selector, Step
+
+class StepMyThing(Step):
+    mode = Mode.ONE_TO_ONE
+
+    def __init__(self, columns: Selector, *, id: str | None = None) -> None:
+        self.columns = columns
+        super().__init__(id, "my_thing")
+```
+
+The second argument is the id to default to when the caller passes none; `keep_original_cols` and `output_role` are keyword-only and default to `False` and `None`. A plugin never assigns those attributes itself, and needs no private name to set them. See [Constructors](step-contract.md#constructors) for the full rules.
+
+---
+
 ## Resolving a step's own selection
 
 A step's `columns` argument holds a selector, not column names, so `fit()` has to resolve it. `Step.resolve_selection()` is the supported route; narwhals' own `frame.schema` supplies the dtypes:

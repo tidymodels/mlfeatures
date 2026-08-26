@@ -61,10 +61,7 @@ class StepDemoMaxAbs(Step):
 
     def __init__(self, columns: Selector, *, id: str | None = None) -> None:
         self.columns = columns
-        self._init_id(id, "demo_max_abs")
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "demo_max_abs")
         self._estimates: dict[str, float] | None = None
         self._schema_in: ColSchema | None = None
 

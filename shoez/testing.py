@@ -222,6 +222,20 @@ class StepConformanceTest:
             "keyword-only"
         )
 
+    def test_constructor_delegates_to_step_init(self) -> None:
+        """``__init__`` hands the framework-owned attributes to ``Step.__init__``.
+
+        ``id``, ``trained``, ``keep_original_cols``, and ``output_role`` are
+        annotated on ``Step`` without defaults, so a step that never calls
+        ``super().__init__()`` fails this with an ``AttributeError`` rather than
+        surfacing later as a missing attribute mid-fit.
+        """
+        step = self.make_step()
+        assert isinstance(step.id, str) and step.id
+        assert step.trained is False
+        assert isinstance(step.keep_original_cols, bool)
+        assert step.output_role is None or isinstance(step.output_role, str)
+
     def test_empty_selection_is_noop(self) -> None:
         """An empty column selection is a no-op: the frame passes through unchanged."""
         step = self.make_empty_step()

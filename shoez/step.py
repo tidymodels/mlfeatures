@@ -106,13 +106,27 @@ class Step(ABC):
     ``Step`` subclasses always run at transform time; `RowOp` subclasses never
     run on new data. There is intentionally no ``skip`` flag — whether a step
     runs at transform time is determined structurally by its type.
+
+    A subclass' ``__init__`` stores its own arguments and then calls
+    ``super().__init__()`` to hand the framework-owned ones to the base class:
+
+    ```python
+    class StepMaxAbs(Step):
+        mode = Mode.ONE_TO_ONE
+
+        def __init__(self, columns: Selector, *, id: str | None = None):
+            self.columns = columns
+            super().__init__(id, "max_abs")
+    ```
+
+    See ``__init__`` for the arguments it takes.
     """
 
     #: Stable identifier, defaulting to the step type's short name
     #: (user-overridable). All inspection and tuning APIs key on ``id``, never
     #: on position. Ids are unique within a recipe: a default id that would
     #: collide with an earlier step's is suffixed (``"dummy"``, ``"dummy_2"``),
-    #: while an explicitly passed duplicate is rejected. See ``_init_id``.
+    #: while an explicitly passed duplicate is rejected. See ``__init__``.
     id: str
     #: Whether ``id`` was passed by the caller rather than defaulted. Only the
     #: defaulted ones may be renamed to resolve a collision.
@@ -137,16 +151,46 @@ class Step(ABC):
     #: structural. Defaults to ``False``.
     _empty_selection: bool = False
 
-    def _init_id(self, id: str | None, default: str) -> None:
-        """Set ``id`` from the constructor argument, or ``default`` if omitted.
+    def __init__(
+        self,
+        id: str | None,
+        default_id: str,
+        *,
+        keep_original_cols: bool = False,
+        output_role: str | None = None,
+    ) -> None:
+        """Initialize the attributes every step shares.
 
-        Every concrete step calls this instead of assigning ``self.id``
-        directly, so the recipe can tell a defaulted id from a caller-supplied
-        one. That distinction is what lets ``Recipe`` silently disambiguate two
-        same-type steps while still rejecting an explicit duplicate.
+        A concrete step stores its own arguments, then calls this with the
+        framework-owned ones; it never assigns ``id``, ``trained``,
+        ``keep_original_cols``, or ``output_role`` directly. Routing ``id``
+        through here is what lets the recipe tell a defaulted id from a
+        caller-supplied one, and that distinction is what lets `Recipe` silently
+        disambiguate two same-type steps while still rejecting an explicit
+        duplicate.
+
+        Parameters
+        ----------
+        id
+            The ``id`` the caller passed to the step, or ``None`` if they
+            omitted it.
+        default_id
+            The step type's short name, used as ``id`` when the caller passed
+            none (e.g. ``"normalize"``).
+        keep_original_cols
+            Whether the step retains its source columns alongside any columns it
+            produces. Defaults to ``False``. A step with a
+            ``keep_original_cols`` parameter forwards it; one that always keeps
+            its inputs (a step that only adds columns) passes ``True``.
+        output_role
+            Role assigned to the columns the step produces, or ``None`` for a
+            step that produces no new columns. Defaults to ``None``.
         """
-        self.id = default if id is None else id
+        self.id = default_id if id is None else id
         self._id_explicit = id is not None
+        self.trained = False
+        self.keep_original_cols = keep_original_cols
+        self.output_role = output_role
 
     @abstractmethod
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":

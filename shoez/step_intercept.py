@@ -146,10 +146,8 @@ class StepIntercept(Step):
     ):
         self.value = value
         self.name = name
-        self._init_id(id, "intercept")
-        self.trained = False
-        self.keep_original_cols = True  # ADDING never drops the source columns.
-        self.output_role = role
+        # A step that only adds columns never drops the source columns.
+        super().__init__(id, "intercept", keep_original_cols=True, output_role=role)
         # Populated by ``fit()``.
         self._schema_out: ColSchema | None = None
         self._output_parents: dict[str, list[str]] | None = None

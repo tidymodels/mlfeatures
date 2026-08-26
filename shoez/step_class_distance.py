@@ -505,10 +505,12 @@ class StepClassDistance(Step):
         self.log_distance = log_distance
         self.eps = eps
         self.prefix = prefix
-        self._init_id(id, "class_distance")
-        self.trained = False
-        self.keep_original_cols = keep_original_cols
-        self.output_role = role
+        super().__init__(
+            id,
+            "class_distance",
+            keep_original_cols=keep_original_cols,
+            output_role=role,
+        )
         # Populated by ``fit()`` — both schemas plus the fitted statistics.
         self._estimates: ClassDistanceFit | None = None
         self._schema_in: ColSchema | None = None

@@ -22,6 +22,15 @@ class Step(ABC):
     keep_original_cols: bool
     output_role: str | None      # role assigned to new columns produced by this step
 
+    def __init__(
+        self,
+        id: str | None,
+        default_id: str,
+        *,
+        keep_original_cols: bool = False,
+        output_role: str | None = None,
+    ) -> None: ...
+
     @abstractmethod
     def fit(self, training_data: DataFrame, info: SchemaInfo) -> "Step": ...
 
@@ -74,6 +83,26 @@ These are constructor arguments on the concrete step, not slots on the `Step` ba
 All declared arguments are type-validated at construction. No silent coercions. Environment-dependent settings (locale, contrast schemes) are **captured at `fit()` time** and stored on the step — never read from global state at `transform()` time [#1349].
 
 The stronger goal is to avoid environment-dependent settings entirely. Every behaviour that affects output should be an explicit constructor argument. Capturing from the environment at fit time is a fallback for cases where that is genuinely impractical — it should not be the default approach.
+
+### Constructors
+
+A step's `__init__` stores its own arguments and then calls `super().__init__()` for the four attributes the framework owns (`id`, `trained`, `keep_original_cols`, `output_role`):
+
+```python
+class StepNormalize(Step):
+    mode = Mode.ONE_TO_ONE
+
+    def __init__(self, columns: Selector, *, id: str | None = None):
+        self.columns = columns
+        super().__init__(id, "normalize")
+        self._estimates: dict[str, tuple[float, float]] | None = None
+```
+
+`super().__init__()` takes the caller's `id` (or `None`) plus the step type's short name to default it to, and keyword-only `keep_original_cols` and `output_role`. A step with those as constructor arguments forwards them (`super().__init__(id, "pca", keep_original_cols=keep_original_cols, output_role=role)`); a step that only adds columns passes `keep_original_cols=True`, since it has nothing to drop.
+
+Routing `id` through the base class is what records whether it was defaulted or explicit, which is what makes the collision rules in [Step IDs](#step-ids) possible. Delegating rather than assigning `self.id` also means the requirement is discoverable from the public API: a step author reads `Step.__init__`'s signature instead of having to know about a protected helper. `trained` is always `False` at construction, so a step never passes it; the recipe sets it after `fit()` returns.
+
+Any future framework-owned attribute belongs in `super().__init__()` too, with a default, so existing steps and out-of-tree steps keep working unchanged.
 
 ---
 
@@ -211,6 +240,7 @@ class TestMyStepConformance(StepConformanceTest):
 Every step must pass it before merging:
 
 - Every optional constructor argument is keyword-only; only required arguments may be passed positionally (see [Constructor requirements](#constructor-requirements)).
+- The constructor delegates to `Step.__init__()`, so `id`, `trained`, `keep_original_cols`, and `output_role` are all set on a freshly built step (see [Constructors](#constructors)).
 - Empty selection returns empty output without error (handled structurally by the recipe — see [Empty selection ⇒ identity](#empty-selection--identity-structural); the step's own `fit()` is never called on an empty selection).
 - 0-row and 1-row `transform()` produce schema-correct output.
 - `fit()` is idempotent given the same training data.
@@ -243,7 +273,7 @@ Two steps of the same type are resolved differently depending on where the id ca
 | Defaulted (the type's short name) | Silently suffixed with the lowest free `_n`: `"dummy"`, then `"dummy_2"`. The renaming is done on a copy, so `add()` stays pure with respect to the caller's step objects. |
 | Passed explicitly | `ValueError`. The caller named the step in order to refer to it, so a duplicate is a mistake about that name, not something to paper over. |
 
-`Step._init_id()` records which of the two a step's id is; concrete steps call it rather than assigning `self.id` directly.
+`Step.__init__()` records which of the two a step's id is; a concrete step passes the caller's `id` (or `None`) and the type's short name to `super().__init__()` rather than assigning `self.id` directly. See [Constructors](#constructors).
 
 ---
 

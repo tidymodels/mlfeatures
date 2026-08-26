@@ -443,10 +443,9 @@ class StepPolynomial(Step):
     ) -> None:
         self.columns = columns
         self.degree = degree
-        self._init_id(id, "polynomial")
-        self.trained = False
-        self.keep_original_cols = keep_original_cols
-        self.output_role = role
+        super().__init__(
+            id, "polynomial", keep_original_cols=keep_original_cols, output_role=role
+        )
         # Populated by ``fit()``: per-column fitted basis + schemas.
         self._estimates: dict[str, PolynomialFit] | None = None
         self._schema_in: ColSchema | None = None

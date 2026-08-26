@@ -181,10 +181,7 @@ class StepImputeMean(Step):
         id: str | None = None,
     ):
         self.columns = columns
-        self._init_id(id, "impute_mean")
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "impute_mean")
         # Populated by ``fit()``: {column: mean} over the imputable columns.
         self._estimates: dict[str, float] | None = None
         self._schema_in: ColSchema | None = None

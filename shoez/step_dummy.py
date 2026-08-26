@@ -303,10 +303,9 @@ class StepDummy(Step):
     ) -> None:
         self.columns = columns
         self.name_fn = name_fn
-        self.keep_original_cols = keep_original_cols
-        self._init_id(id, "dummy")
-        self.trained = False
-        self.output_role: str | None = "feature"
+        super().__init__(
+            id, "dummy", keep_original_cols=keep_original_cols, output_role="feature"
+        )
         self._estimates: DummyEstimates | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
