@@ -46,6 +46,7 @@ from shoez import (
     StepImputeMedian,
     StepNormalize,
     StepPolynomial,
+    StepRange,
 )
 
 # The 10 dtypes that round-trip through numpy/pandas (the sklearn surface).
@@ -93,6 +94,13 @@ SCENARIOS: list[Scenario] = [
         ALL_NUMERIC,
         lambda dt: pl.DataFrame({"x": _num(dt, [1, 2, 3, 4])}),
         lambda: StepNormalize(["x"]),
+        ["x"],
+    ),
+    (
+        "range",
+        ALL_NUMERIC,
+        lambda dt: pl.DataFrame({"x": _num(dt, [1, 2, 3, 4])}),
+        lambda: StepRange(["x"]),
         ["x"],
     ),
     (
