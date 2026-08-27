@@ -13,9 +13,20 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Roles, SchemaInfo, Selector
+from shoez.types import (
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    KeepOriginals,
+    Mode,
+    Roles,
+    SchemaInfo,
+    Selector,
+)
 
 if TYPE_CHECKING:
+    from typing import ClassVar
+
     from typing_extensions import Self
 
 
@@ -134,8 +145,12 @@ class Step(ABC):
     #: Whether this step has been fitted. Set by ``recipe.fit()`` after
     #: ``step.fit()`` returns — not by the step itself.
     trained: bool
-    #: Whether to retain the source columns alongside any produced columns.
-    keep_original_cols: bool
+    #: The shape of this step's input/output relationship. Declared by every
+    #: concrete step; the framework reads it for lineage and to decide whether
+    #: ``keep_original_cols`` is fixed or configurable.
+    mode: "ClassVar[Mode]"
+    #: Backing store for the read-only ``keep_original_cols`` property.
+    _keep_original_cols: bool
     #: Role assigned to new columns produced by this step.
     output_role: str | None
     #: The step's primary input selector. Present on every selector-taking step
@@ -156,7 +171,7 @@ class Step(ABC):
         id: str | None,
         default_id: str,
         *,
-        keep_original_cols: bool = False,
+        keep_original_cols: bool | None = None,
         output_role: str | None = None,
     ) -> None:
         """Initialize the attributes every step shares.
@@ -179,9 +194,12 @@ class Step(ABC):
             none (e.g. ``"normalize"``).
         keep_original_cols
             Whether the step retains its source columns alongside any columns it
-            produces. Defaults to ``False``. A step with a
-            ``keep_original_cols`` parameter forwards it; one that always keeps
-            its inputs (a step that only adds columns) passes ``True``.
+            produces. Only meaningful for a step whose `Mode` makes it
+            configurable (``ONE_TO_MANY``, ``MANY_TO_MANY``), which forwards its
+            own constructor argument here. Every other mode has a fixed value,
+            derived from the mode; such a step omits the argument, and passing
+            anything but that fixed value is an error. Defaults to ``None``,
+            meaning "not stated".
         output_role
             Role assigned to the columns the step produces, or ``None`` for a
             step that produces no new columns. Defaults to ``None``.
@@ -189,8 +207,45 @@ class Step(ABC):
         self.id = default_id if id is None else id
         self._id_explicit = id is not None
         self.trained = False
-        self.keep_original_cols = keep_original_cols
+        self._keep_original_cols = self._resolve_keep_original_cols(keep_original_cols)
         self.output_role = output_role
+
+    def _resolve_keep_original_cols(self, requested: bool | None) -> bool:
+        """The ``keep_original_cols`` this step's `Mode` allows it to have."""
+        mode = self._declared_mode()
+        fixed = KeepOriginals.for_mode(mode).fixed_value()
+        if fixed is None:
+            # A configurable step always forwards its own argument, which has
+            # its own ``False`` default, so ``None`` cannot reach here.
+            return bool(requested)
+        if requested is not None and requested != fixed:
+            raise ValueError(
+                f"{type(self).__name__} has mode {mode.value!r}; "
+                f"'keep_original_cols' is fixed at {fixed!r} and cannot be "
+                f"set to {requested!r}"
+            )
+        return fixed
+
+    def _declared_mode(self) -> Mode:
+        """This step class's `Mode`, with a pointed error when it is missing."""
+        mode = getattr(type(self), "mode", None)
+        if not isinstance(mode, Mode):
+            raise TypeError(
+                f"{type(self).__name__} must declare a 'mode' class attribute "
+                "naming one of the 'Mode' members"
+            )
+        return mode
+
+    @property
+    def keep_original_cols(self) -> bool:
+        """Whether to retain the source columns alongside any produced columns.
+
+        Read-only: the value is settled when the step is constructed, and for
+        every mode but ``ONE_TO_MANY`` and ``MANY_TO_MANY`` it is fixed by the
+        mode rather than chosen. Reassigning it would silently break the step,
+        so rebuild the step instead of mutating it.
+        """
+        return self._keep_original_cols
 
     @abstractmethod
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
@@ -376,6 +431,11 @@ class Step(ABC):
 
         step = cls.__new__(cls)
         for key, value in state.items():
+            # ``keep_original_cols`` used to be a plain attribute and is now a
+            # read-only property over ``_keep_original_cols``; redirect the old
+            # key so a payload written before the change still loads.
+            if key == "keep_original_cols":
+                key = "_keep_original_cols"
             setattr(step, key, _decode(value))
         return step
 
@@ -435,4 +495,9 @@ class RowOp(Step):
     ``fit()`` (e.g. filtering or shuffling training rows). The behaviour is
     structural: because the framework dispatches on type, a ``RowOp`` can never
     accidentally run at transform time.
+
+    The mode follows from the base class, so a ``RowOp`` subclass does not
+    declare one.
     """
+
+    mode = Mode.ROW_OP

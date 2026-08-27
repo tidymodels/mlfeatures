@@ -231,6 +231,10 @@ reference:
         members: false
       - name: Mode
         members: false
+      - name: KeepOriginals
+        members: false
+      - KeepOriginals.for_mode
+      - KeepOriginals.fixed_value
       - name: Ptype
         members: false
       - Ptype.check
@@ -260,6 +264,7 @@ reference:
       - Step.accepts_dtypes
       - Step.produces_sparse
       - Step.produced_columns
+      - Step.keep_original_cols
       - Step.required_pkgs
       - Step.check_required_pkgs
       - Step.to_state

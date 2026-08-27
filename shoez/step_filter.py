@@ -23,7 +23,6 @@ from shoez.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
-    Mode,
     SchemaInfo,
 )
 
@@ -127,8 +126,6 @@ class StepFilter(RowOp):
     ```
     """
 
-    mode = Mode.ROW_OP
-
     def __init__(
         self,
         predicate: Predicate,
@@ -140,9 +137,7 @@ class StepFilter(RowOp):
                 f"'predicate' must be callable; got {type(predicate).__name__!r}"
             )
         self.predicate = predicate
-        # A row operation touches no columns, so keeping originals is the only
-        # sensible setting; there is nothing to drop.
-        super().__init__(id, "filter", keep_original_cols=True)
+        super().__init__(id, "filter")
         # Populated by ``fit()``. A filter changes no columns, so ``schema_in``
         # and ``schema_out`` are the same frame schema.
         self._schema: ColSchema | None = None

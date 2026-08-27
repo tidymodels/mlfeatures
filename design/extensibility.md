@@ -41,7 +41,7 @@ from shoez import Step, RowOp
 
 ## Initializing a step
 
-A step's `__init__` stores its own arguments and delegates the framework-owned ones to `Step.__init__()`, which sets `id`, `trained`, `keep_original_cols`, and `output_role`:
+A step's `__init__` stores its own arguments and delegates the framework-owned ones to `Step.__init__()`, which sets `id`, `trained`, `output_role`, and the value behind the read-only `keep_original_cols`. The class also declares its `mode`, which the base class reads; a step that omits it cannot be constructed.
 
 ```python
 from shoez import Mode, Selector, Step
@@ -54,7 +54,9 @@ class StepMyThing(Step):
         super().__init__(id, "my_thing")
 ```
 
-The second argument is the id to default to when the caller passes none; `keep_original_cols` and `output_role` are keyword-only and default to `False` and `None`. A plugin never assigns those attributes itself, and needs no private name to set them. See [Constructors](step-contract.md#constructors) for the full rules.
+The second argument is the id to default to when the caller passes none; `keep_original_cols` and `output_role` are keyword-only and both default to `None`. A plugin never assigns those attributes itself, and needs no private name to set them.
+
+`keep_original_cols` is worth passing only from a step whose `mode` is `ONE_TO_MANY` or `MANY_TO_MANY`; for any other mode the base class derives the value from the mode and the attribute is read-only, so a step neither states it nor can change it later. See [Constructors](step-contract.md#constructors) for the full rules.
 
 ---
 

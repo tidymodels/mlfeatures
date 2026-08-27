@@ -11,13 +11,15 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from shoez import ANY_DTYPE, ColSchema, Recipe, Step
+from shoez import ANY_DTYPE, ColSchema, Mode, Recipe, Step
 from shoez._dependencies import MissingDependencyError
 from shoez.types import AcceptedDtypes
 
 
 class _MissingPkgStep(Step):
     """A step declaring a package that is guaranteed not to be installed."""
+
+    mode = Mode.ONE_TO_ONE
 
     def __init__(self) -> None:
         super().__init__(None, "needs_zzz")

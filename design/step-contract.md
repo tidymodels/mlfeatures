@@ -19,15 +19,18 @@ from abc import ABC, abstractmethod
 class Step(ABC):
     id: str                      # content-derived, stable, user-overridable
     trained: bool
-    keep_original_cols: bool
+    mode: ClassVar[Mode]         # declared by every concrete step
     output_role: str | None      # role assigned to new columns produced by this step
+
+    @property
+    def keep_original_cols(self) -> bool: ...   # read-only; settled at construction
 
     def __init__(
         self,
         id: str | None,
         default_id: str,
         *,
-        keep_original_cols: bool = False,
+        keep_original_cols: bool | None = None,   # None means "not stated"
         output_role: str | None = None,
     ) -> None: ...
 
@@ -72,7 +75,7 @@ Every step constructor must accept:
 | selector(s)                   | `Selector`          | Resolved at fit time against schema. Usable in **every** column-naming arg — see [selectors.md](selectors.md). |
 | step-specific hyperparameters | varies              | Type-validated at construction time.                                                                           |
 | `role`                        | `str \| None`       | Role assigned to *new* columns.                                                                                |
-| `keep_original_cols`          | `bool`              | Whether to retain the source columns.                                                                          |
+| `keep_original_cols`          | `bool`              | Whether to retain the source columns. Only on a step whose `mode` makes it configurable — see [`keep_original_cols` applicability](#what-recording-this-information-enables). |
 | `prefix` / `name_fn`          | `str \| callable`   | Controls generated column names.                                                                               |
 | `id`                          | `str`               | Stable identifier; auto-generated if not provided.                                                             |
 
@@ -86,7 +89,7 @@ The stronger goal is to avoid environment-dependent settings entirely. Every beh
 
 ### Constructors
 
-A step's `__init__` stores its own arguments and then calls `super().__init__()` for the four attributes the framework owns (`id`, `trained`, `keep_original_cols`, `output_role`):
+A step's `__init__` stores its own arguments and then calls `super().__init__()` for the four attributes the framework owns (`id`, `trained`, `keep_original_cols`, `output_role`). The class also declares its `mode`, which the base class reads:
 
 ```python
 class StepNormalize(Step):
@@ -98,7 +101,9 @@ class StepNormalize(Step):
         self._estimates: dict[str, tuple[float, float]] | None = None
 ```
 
-`super().__init__()` takes the caller's `id` (or `None`) plus the step type's short name to default it to, and keyword-only `keep_original_cols` and `output_role`. A step with those as constructor arguments forwards them (`super().__init__(id, "pca", keep_original_cols=keep_original_cols, output_role=role)`); a step that only adds columns passes `keep_original_cols=True`, since it has nothing to drop.
+`super().__init__()` takes the caller's `id` (or `None`) plus the step type's short name to default it to, and keyword-only `keep_original_cols` and `output_role`. A step whose mode makes `keep_original_cols` configurable forwards its constructor argument (`super().__init__(id, "pca", keep_original_cols=keep_original_cols, output_role=role)`); every other step passes nothing, because the base class derives the fixed value from `mode` and raises if a step tries to contradict it.
+
+A `RowOp` subclass does not declare a `mode` either: `RowOp` sets `Mode.ROW_OP` for it.
 
 Routing `id` through the base class is what records whether it was defaulted or explicit, which is what makes the collision rules in [Step IDs](#step-ids) possible. Delegating rather than assigning `self.id` also means the requirement is discoverable from the public API: a step author reads `Step.__init__`'s signature instead of having to know about a protected helper. `trained` is always `False` at construction, so a step never passes it; the recipe sets it after `fit()` returns.
 
@@ -183,7 +188,9 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 - **Feature provenance.** The lineage DAG records which input columns produced which output columns. Tracing PCA components or dummy columns back to their source is possible programmatically. This is the core problem identified in [tidymodels/recipes#1158](https://github.com/tidymodels/recipes/issues/1158).
 - **`has_source()` selector.** Users can select all columns produced by a given step or step type — e.g. `has_source(step_type=step_dummy)`. See [selectors.md](selectors.md).
 - **Naming contract enforcement.** The framework validates that generated column names are unique — both against the existing schema and within the step — before each step runs, via `produced_columns()` and `Schema.check_additions`. Steps do not self-check.
-- **`keep_original_cols` applicability.** Every `ONE_TO_MANY` and `MANY_TO_MANY` step exposes `keep_original_cols` as a constructor argument defaulting to `False`, since keeping the source columns beside the derived ones is a legitimate thing to want. Steps in the other modes fix the value in `__init__`: `ONE_TO_ONE` and `REMOVING` steps to `False`, `ADDING`, `ROW_OP`, and `UNCONSTRAINED` steps to `True`.
+- **`keep_original_cols` applicability.** Every `ONE_TO_MANY` and `MANY_TO_MANY` step exposes `keep_original_cols` as a constructor argument defaulting to `False`, since keeping the source columns beside the derived ones is a legitimate thing to want. Steps in the other modes have no such argument, and the value is fixed: `False` for `ONE_TO_ONE` and `REMOVING`, `True` for `ADDING`, `ROW_OP`, and `UNCONSTRAINED`.
+
+  The rule is enforced rather than merely documented. `KeepOriginals.for_mode(mode)` is the single table encoding it; `Step.__init__` consults it, so a step in a fixed mode never states the value itself. The base parameter defaults to `None` rather than `False` precisely so "not stated" is distinguishable from "stated as `False`": a fixed-mode step that passes *either* value against its mode raises, in both directions. The attribute is a **read-only property** over `_keep_original_cols`, so reassigning it after construction (which would silently break a step whose correctness depends on the fixed value) is an `AttributeError` at runtime and an error under both type-checkers. `StepConformanceTest` checks both halves: that the value matches the mode's policy and that only a configurable step exposes the constructor argument.
 
 ---
 

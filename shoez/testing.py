@@ -40,7 +40,7 @@ import pytest
 
 from shoez import _frame
 from shoez.recipe import FittedRecipe, Recipe
-from shoez.types import DataFrame, SchemaInfo
+from shoez.types import DataFrame, KeepOriginals, SchemaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -235,6 +235,39 @@ class StepConformanceTest:
         assert step.trained is False
         assert isinstance(step.keep_original_cols, bool)
         assert step.output_role is None or isinstance(step.output_role, str)
+
+    def test_keep_original_cols_follows_the_mode(self) -> None:
+        """The step's `Mode` decides whether ``keep_original_cols`` can vary.
+
+        ``ONE_TO_MANY`` and ``MANY_TO_MANY`` steps expose it as a constructor
+        argument defaulting to ``False``; every other mode fixes it (``True`` for
+        the modes that keep their inputs, ``False`` for the ones that consume
+        them) and must not offer the argument at all. This is the rule from
+        ``design/step-contract.md``, checked rather than merely written down.
+        """
+        step = self.make_step()
+        policy = KeepOriginals.for_mode(type(step).mode)
+        params = inspect.signature(type(step).__init__).parameters
+        param = params.get("keep_original_cols")
+        fixed = policy.fixed_value()
+        if fixed is None:
+            assert param is not None, (
+                f"a step with mode {type(step).mode.value!r} must expose "
+                "'keep_original_cols' as a constructor argument"
+            )
+            assert param.default is False
+        else:
+            assert param is None, (
+                f"a step with mode {type(step).mode.value!r} must not expose "
+                f"'keep_original_cols'; it is fixed at {fixed!r}"
+            )
+            assert step.keep_original_cols is fixed
+
+    def test_keep_original_cols_is_read_only(self) -> None:
+        """The value settles at construction; reassigning it would break the step."""
+        step = self.make_step()
+        with pytest.raises(AttributeError):
+            step.keep_original_cols = True  # type: ignore[misc]
 
     def test_empty_selection_is_noop(self) -> None:
         """An empty column selection is a no-op: the frame passes through unchanged."""
