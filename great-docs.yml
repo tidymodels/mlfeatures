@@ -116,6 +116,8 @@ reference:
     contents:
       - name: StepNormalize
         members: false
+      - name: StepRange
+        members: false
       - name: StepPolynomial
         members: false
       - name: StepClassDistance
