@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestKeepOriginalColsFollowsMode.test_a_step_without_a_mode_cannot_be_constructed
+  "_ModelessStep must declare a 'mode' class attribute naming one of the 'Mode' members"
+# ---
+# name: TestKeepOriginalColsFollowsMode.test_contradicting_a_discarding_mode_raises
+  "_BadStep has mode 'one_to_one'; 'keep_original_cols' is fixed at False and cannot be set to True"
+# ---
+# name: TestKeepOriginalColsFollowsMode.test_contradicting_a_keeping_mode_raises
+  "_BadRowOp has mode 'row_op'; 'keep_original_cols' is fixed at True and cannot be set to False"
+# ---
