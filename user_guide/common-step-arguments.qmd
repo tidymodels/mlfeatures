@@ -72,6 +72,8 @@ fitted.transform(df)
 
 Steps that *derive* new columns take `keep_original_cols`. It controls whether the columns the step consumed stay in the frame alongside the columns it produced. The default is `False`: the source columns are dropped.
 
+Only those steps take it. For every other kind of step there is one right answer, so the argument does not exist and the value is fixed: a step that edits its columns in place or drops them keeps nothing, and one that only adds columns or touches rows keeps everything. The value is settled when the step is constructed and cannot be reassigned afterwards.
+
 Dropping is the default because the derived columns are meant to stand in for the sources, not to accompany them. `StepPca` replaces its inputs with components that are linear combinations of all of them, and `StepDummy` replaces a nominal column with the indicator columns encoding it. Keeping both would hand a downstream model the same information twice, in two coordinate systems.
 
 ```{python}
