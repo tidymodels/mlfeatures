@@ -29,6 +29,7 @@ from shoez.step_intercept import StepIntercept
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
 from shoez.step_polynomial import StepPolynomial
+from shoez.step_range import StepRange
 from shoez.step_unknown import StepUnknown
 
 
@@ -88,6 +89,7 @@ class TestRegistration:
         ("step_drop_zero_variance", StepDropZeroVariance, (["x", "const"],)),
         ("step_intercept", StepIntercept, ()),
         ("step_normalize", StepNormalize, (["x"],)),
+        ("step_range", StepRange, (["x"],)),
         ("step_class_distance", StepClassDistance, (["x", "x2"], "color")),
         ("step_impute_mean", StepImputeMean, (["x"],)),
         ("step_impute_median", StepImputeMedian, (["x"],)),

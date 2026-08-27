@@ -45,6 +45,7 @@ from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
 from shoez.step_pca import StepPca
 from shoez.step_polynomial import StepPolynomial
+from shoez.step_range import StepRange
 from shoez.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
 
 if TYPE_CHECKING:
@@ -137,6 +138,17 @@ class ShzNamespace:
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))
+
+    def step_range(
+        self,
+        columns: Selector,
+        *,
+        min: float = 0.0,
+        max: float = 1.0,
+        clipping: bool = True,
+    ) -> pl.DataFrame:
+        """Min-max scale numeric columns to a fixed range. See `StepRange`."""
+        return self.apply(StepRange(columns, min=min, max=max, clipping=clipping))
 
     def step_filter(
         self,
