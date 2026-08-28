@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestEndToEnd.test_collision_warns_through_recipe
+  "the level 'other' already exists in 1 column(s); pooled levels will be merged with it: ['c']"
+# ---
+# name: TestStepOtherUnit.test_schema_in_before_fit_raises
+  'StepOther.schema_in() called before fit()'
+# ---
+# name: TestStepOtherUnit.test_transform_before_fit_raises
+  'StepOther.transform() called before fit()'
+# ---
