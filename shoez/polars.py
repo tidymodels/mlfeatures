@@ -32,6 +32,7 @@ from shoez._dependencies import import_optional
 from shoez.recipe import Recipe
 from shoez.step import Step
 from shoez.step_class_distance import StepClassDistance
+from shoez.step_drop import StepDrop
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
@@ -110,6 +111,10 @@ class ShzNamespace:
         return self.apply(
             StepOneHot(columns, name_fn=name_fn, keep_original_cols=keep_original_cols)
         )
+
+    def step_drop(self, columns: Selector) -> pl.DataFrame:
+        """Drop the selected columns. See `StepDrop`."""
+        return self.apply(StepDrop(columns))
 
     def step_drop_corr(
         self,
