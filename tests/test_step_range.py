@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import math
 import warnings
 from typing import Any
@@ -201,3 +202,94 @@ class TestApplyRange:
         out = apply_range(df, {})
         assert out["x"].to_list() == [1.0, 2.0, 3.0]
         assert out["y"].to_list() == [4.0, 5.0, 6.0]
+
+    def test_matches_the_closed_form_on_new_data(self) -> None:
+        # The reference formula, spelled out: rescale into [min, max] using the
+        # training bounds, then clamp. Mirrors the check in R recipes'
+        # test-range.R, where held-out rows fall outside the fitted bounds.
+        train = _df(("x", [2.0, 4.0, 6.0, 10.0]))  # bounds (2, 10)
+        new = _df(("x", [1.0, 4.0, 6.0, 11.0]))
+        new_min, new_max = -12.0, 1.0
+        out = apply_range(new, fit_range(train), min=new_min, max=new_max)
+
+        lo, hi = 2.0, 10.0
+        expected = [
+            builtins.min(
+                builtins.max(
+                    (v - lo) / (hi - lo) * (new_max - new_min) + new_min, new_min
+                ),
+                new_max,
+            )
+            for v in [1.0, 4.0, 6.0, 11.0]
+        ]
+        assert out["x"].to_list() == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------------------
+# Missing values
+# ---------------------------------------------------------------------------
+
+
+class TestMissingValues:
+    def test_nulls_are_excluded_from_the_bounds(self) -> None:
+        lo, hi = fit_range(_df(("a", [3.0, None, 1.0, 7.0])))["a"]
+        assert (lo, hi) == (1.0, 7.0)
+
+    def test_null_rows_stay_missing_after_rescaling(self) -> None:
+        df = _df(("x", [1.0, None, 3.0]))
+        out = apply_range(df, fit_range(df))
+        values = out["x"].to_list()
+        assert values[0] == pytest.approx(0.0)
+        assert math.isnan(values[1])
+        assert values[2] == pytest.approx(1.0)
+
+    def test_null_rows_stay_missing_without_clipping(self) -> None:
+        # Clipping must not turn a missing value into a bound.
+        df = _df(("x", [1.0, None, 3.0]))
+        out = apply_range(df, fit_range(df), clipping=False)
+        assert math.isnan(out["x"].to_list()[1])
+
+    def test_all_null_column_yields_nan_bounds(self) -> None:
+        # No non-null values to compare, so the column is not "constant" — it
+        # is kept with NaN bounds, the same signal as a zero-row fit.
+        bounds = fit_range(_df(("a", [None, None, None])))
+        assert list(bounds) == ["a"]
+        lo, hi = bounds["a"]
+        assert math.isnan(lo)
+        assert math.isnan(hi)
+
+    def test_constant_apart_from_nulls_is_still_constant(self) -> None:
+        with pytest.warns(UserWarning):
+            assert fit_range(_df(("c", [5.0, 5.0, None]))) == {}
+
+    def test_nan_bounds_propagate_to_every_row(self) -> None:
+        out = apply_range(_df(("x", [1.0, 2.0])), {"x": (float("nan"), float("nan"))})
+        assert all(math.isnan(v) for v in out["x"].to_list())
+
+
+# ---------------------------------------------------------------------------
+# Infinite values
+# ---------------------------------------------------------------------------
+
+
+class TestInfiniteValues:
+    def test_positive_infinity_becomes_the_upper_bound(self) -> None:
+        lo, hi = fit_range(_df(("a", [2.0, 3.0, float("inf")])))["a"]
+        assert lo == 2.0
+        assert hi == float("inf")
+
+    def test_negative_infinity_becomes_the_lower_bound(self) -> None:
+        lo, hi = fit_range(_df(("a", [2.0, 3.0, float("-inf")])))["a"]
+        assert lo == float("-inf")
+        assert hi == 3.0
+
+    def test_infinite_bound_degrades_the_rescaling(self) -> None:
+        # An infinite range divides every finite deviation to 0, and the
+        # infinite value itself becomes NaN (inf - inf). R recipes warns here;
+        # shoez currently lets the degenerate values through unflagged.
+        df = _df(("a", [2.0, 3.0, float("inf")]))
+        out = apply_range(df, fit_range(df))
+        values = out["a"].to_list()
+        assert values[0] == 0.0
+        assert values[1] == 0.0
+        assert math.isnan(values[2])
