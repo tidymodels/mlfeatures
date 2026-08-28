@@ -191,6 +191,20 @@ class TestArgumentValidation:
             StepOther(["g"], min_count=0)
         assert str(excinfo.value) == snapshot
 
+    def test_fractional_min_count_raises(self, snapshot: SnapshotAssertion) -> None:
+        # A count of rows has to be a whole number; 2.5 would otherwise be
+        # accepted and act as 3, silently.
+        with pytest.raises(ValueError) as excinfo:
+            StepOther(["g"], min_count=2.5)  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
+
+    def test_integral_float_min_count_allowed(self) -> None:
+        # 3.0 is a whole number of rows, so it is accepted and behaves as 3.
+        df = _df(("g", ["a", "a", "a", "b", "b"]))
+        step = StepOther(["g"], min_count=3.0)  # type: ignore[arg-type]
+        assert step.min_count == 3
+        assert fit_other(df, min_count=step.min_count) == {"g": ["a"]}
+
     def test_neither_criterion_is_allowed(self) -> None:
         step = StepOther(["g"])
         assert step.threshold is None

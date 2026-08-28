@@ -287,8 +287,14 @@ class StepOther(Step):
                 f"'threshold' must be a proportion strictly between 0 and 1, got "
                 f"{threshold!r}; pass 'min_count' to give a count of rows instead"
             )
-        if min_count is not None and min_count < 1:
-            raise ValueError(f"'min_count' must be 1 or greater, got {min_count!r}")
+        if min_count is not None and (min_count < 1 or min_count != int(min_count)):
+            # A fractional count would otherwise be accepted and silently act as
+            # its ceiling, which is exactly the units ambiguity splitting
+            # 'threshold' and 'min_count' set out to remove.
+            raise ValueError(
+                f"'min_count' must be a whole number of rows, 1 or greater, got "
+                f"{min_count!r}"
+            )
         self.columns = columns
         self.threshold = threshold
         self.min_count = min_count
