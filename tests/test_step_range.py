@@ -274,22 +274,45 @@ class TestMissingValues:
 
 class TestInfiniteValues:
     def test_positive_infinity_becomes_the_upper_bound(self) -> None:
-        lo, hi = fit_range(_df(("a", [2.0, 3.0, float("inf")])))["a"]
+        with pytest.warns(UserWarning):
+            lo, hi = fit_range(_df(("a", [2.0, 3.0, float("inf")])))["a"]
         assert lo == 2.0
         assert hi == float("inf")
 
     def test_negative_infinity_becomes_the_lower_bound(self) -> None:
-        lo, hi = fit_range(_df(("a", [2.0, 3.0, float("-inf")])))["a"]
+        with pytest.warns(UserWarning):
+            lo, hi = fit_range(_df(("a", [2.0, 3.0, float("-inf")])))["a"]
         assert lo == float("-inf")
         assert hi == 3.0
 
+    def test_warning_names_the_columns(self, snapshot: SnapshotAssertion) -> None:
+        df = _df(("x", [1.0, 2.0, 3.0]), ("i", [2.0, 3.0, float("inf")]))
+        with pytest.warns(UserWarning) as record:
+            bounds = fit_range(df)
+        assert str(record[0].message) == snapshot
+        assert list(bounds) == ["x", "i"]  # kept, unlike a constant column
+
+    def test_constant_and_infinite_columns_warn_separately(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        df = _df(("c", [5.0, 5.0, 5.0]), ("i", [2.0, 3.0, float("inf")]))
+        with pytest.warns(UserWarning) as record:
+            fit_range(df)
+        assert [str(w.message) for w in record] == snapshot
+
+    def test_no_warning_when_all_bounds_are_finite(self) -> None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert list(fit_range(_df(("x", [1.0, 2.0, 3.0])))) == ["x"]
+
     def test_infinite_bound_degrades_the_rescaling(self) -> None:
         # An infinite range divides every finite deviation to 0, and the
-        # infinite value itself becomes NaN (inf - inf). R recipes warns here;
-        # shoez currently lets the degenerate values through unflagged.
+        # infinite value itself becomes NaN (inf - inf) — which is what the
+        # fit-time warning is for.
         df = _df(("a", [2.0, 3.0, float("inf")]))
-        out = apply_range(df, fit_range(df))
-        values = out["a"].to_list()
+        with pytest.warns(UserWarning):
+            bounds = fit_range(df)
+        values = apply_range(df, bounds)["a"].to_list()
         assert values[0] == 0.0
         assert values[1] == 0.0
         assert math.isnan(values[2])

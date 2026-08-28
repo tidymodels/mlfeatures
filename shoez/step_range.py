@@ -12,6 +12,7 @@ at transform time as ``(x - lo) / (hi - lo) * (max - min) + min``.
 
 from __future__ import annotations
 
+import math
 import warnings
 from typing import TYPE_CHECKING
 
@@ -60,15 +61,21 @@ def fit_range(
     same) cannot be spread across the target range, so they are **omitted** from
     the result and a `UserWarning` is emitted naming them.
 
+    A column containing ``inf`` or ``-inf`` gets an infinite bound, which makes
+    the rescaling degenerate: every finite value collapses onto the same end of
+    the target range and the infinite one becomes ``NaN``. Such columns are kept
+    (there is no sound bound to substitute) but a `UserWarning` names them.
+
     Notes
     -----
-    Based on the ``prep`` step of ``step_range`` in the R ``recipes`` package.
-    A ``NaN`` bound (e.g. from a zero-row fit) is not treated as constant — it
-    is kept and propagates as ``NaN`` at transform time, signalling a degenerate
-    fit.
+    Based on the ``prep`` step of ``step_range`` in the R ``recipes`` package,
+    which warns about the same two degenerate fits. A ``NaN`` bound (e.g. from a
+    zero-row fit) is not treated as constant — it is kept and propagates as
+    ``NaN`` at transform time, signalling a degenerate fit.
     """
     bounds: dict[str, tuple[float, float]] = {}
     constant: list[str] = []
+    infinite: list[str] = []
 
     for col in selected.columns:
         lo = as_float(selected[col].min())
@@ -76,12 +83,21 @@ def fit_range(
         if hi - lo == 0.0:
             constant.append(col)
             continue
+        if math.isinf(lo) or math.isinf(hi):
+            infinite.append(col)
         bounds[col] = (lo, hi)
 
     if constant:
         warnings.warn(
             f"{len(constant)} column(s) had a zero range (constant) "
             f"and were not rescaled: {constant!r}",
+            stacklevel=2,
+        )
+
+    if infinite:
+        warnings.warn(
+            f"{len(infinite)} column(s) had an infinite bound; rescaling them "
+            f"will produce NaN: {infinite!r}",
             stacklevel=2,
         )
 
@@ -143,7 +159,9 @@ class StepRange(Step):
 
     Constant columns among the selection have a zero range and cannot be spread
     across the target range; they are dropped from the rescaling (with a
-    warning) and pass through ``transform`` untouched.
+    warning) and pass through ``transform`` untouched. A column holding an
+    infinite value is rescaled against an infinite bound, which yields ``NaN``;
+    that too is warned about at fit time.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
