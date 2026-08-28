@@ -132,6 +132,8 @@ reference:
         members: false
       - name: StepOneHot
         members: false
+      - name: StepOther
+        members: false
 
   - title: "Steps: missing data"
     desc: Impute missing values, or give them an explicit level.
