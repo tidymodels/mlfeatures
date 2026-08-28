@@ -89,7 +89,10 @@ def fit_other(
     kept: dict[str, list[str]] = {}
 
     for col in selected.columns:
-        values = selected[col].cast(nw.String).drop_nulls()
+        # Drop nulls *before* casting: older polars (resolved on Python 3.10)
+        # casts null to the literal string "None", which would then survive
+        # drop_nulls and be counted as a level of its own.
+        values = selected[col].drop_nulls().cast(nw.String)
         n_non_null = len(values)
         # Count in the backend rather than over a materialized Python list: the
         # level counts are the only part of fitting that scales with row count.
@@ -146,15 +149,18 @@ def apply_other(
     ``String`` and every value outside its kept set replaced by ``other_level``.
     Nulls stay null. Column names, order, and structure are unchanged.
     """
-    # Guard the null branch with an explicit ``is_null`` mask rather than casting
-    # first: older polars (resolved on Python 3.10) casts null to the literal
-    # string ``"None"``, which would otherwise be pooled as a real level.
+    # Keep the null rows out of the pooling entirely, with an outer ``is_null``
+    # mask whose false branch is left implicit. The obvious spelling -- a
+    # ``then(lit(None, String))`` branch -- does not survive older polars
+    # (resolved on Python 3.10), which materializes that literal as the string
+    # "None"; an omitted ``otherwise`` yields a real null on every backend.
     exprs = [
-        nw.when(nw.col(col).is_null())
-        .then(nw.lit(None, nw.String))
-        .when(nw.col(col).cast(nw.String).is_in(levels))
-        .then(nw.col(col).cast(nw.String))
-        .otherwise(nw.lit(other_level))
+        nw.when(~nw.col(col).is_null())
+        .then(
+            nw.when(nw.col(col).cast(nw.String).is_in(levels))
+            .then(nw.col(col).cast(nw.String))
+            .otherwise(nw.lit(other_level))
+        )
         .alias(col)
         for col, levels in kept.items()
     ]
