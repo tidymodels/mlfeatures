@@ -234,11 +234,25 @@ class StepRange(Step):
     ).transform(df)
     ```
 
-    Values beyond the training bounds are clamped, unless ``clipping=False``
-    lets them extrapolate:
+    New data can fall outside the training bounds:
 
     ```{python}
     new_df = pd.DataFrame({"x": [0.0, 9.0]})
+    new_df
+    ```
+
+    With the default ``clipping=True`` those values are clamped into
+    ``[min, max]``:
+
+    ```{python}
+    Recipe().add(StepRange(s.numeric_features(), clipping=True)).fit(
+        df
+    ).transform(new_df)
+    ```
+
+    With ``clipping=False`` they extrapolate past the target range instead:
+
+    ```{python}
     Recipe().add(StepRange(s.numeric_features(), clipping=False)).fit(
         df
     ).transform(new_df)
