@@ -154,6 +154,8 @@ reference:
         members: false
       - name: StepDropCorr
         members: false
+      - name: StepDrop
+        members: false
 
   - title: "Steps: general expressions"
     desc: >-
