@@ -9,6 +9,13 @@ They are the pure ``prep`` / ``bake`` counterparts of R ``recipes``'
 which columns to touch and screens them for values outside the logarithm's
 domain, while the apply half computes ``log(x + offset) / log(base)``.
 
+``signed`` selects the other formula recipes offers, ``sign(x) * log(|x|)``,
+with ``|x| < 1`` flattened to ``0`` (`_signed_log_expr`). The flattening is what
+makes it continuous through the origin: without it, ``|x|`` just below ``1``
+would log to a large negative number on both sides of zero. It is R
+``recipes``' rule too, and it means the whole real line is in the domain, so the
+warning below never fires under ``signed``.
+
 Unlike the other numeric steps, the domain screen runs at *both* fit and
 transform time (`_warn_non_positive`): a column can be strictly positive in the
 training data and still contain a zero or a negative in new data, and that is
@@ -65,7 +72,24 @@ def _warn_non_positive(
         )
 
 
-def fit_log(selected: Frame, *, offset: float = 0.0) -> list[str]:
+def _signed_log_expr(col: str, *, base: float) -> nw.Expr:
+    """Build ``sign(x) * log(|x|, base)``, with ``|x| < 1`` flattened to ``0``.
+
+    narwhals has no ``Expr.sign()``, so the sign is spelled out as a ``when``.
+    The ``|x| < 1`` branch also swallows ``x == 0``, which would otherwise log
+    to ``-inf``.
+    """
+    x = nw.col(col)
+    sign = nw.when(x < 0).then(nw.lit(-1.0)).otherwise(nw.lit(1.0))
+    return (
+        nw.when(x.abs() < 1)
+        .then(nw.lit(0.0))
+        .otherwise(sign * x.abs().log(base=base))
+        .alias(col)
+    )
+
+
+def fit_log(selected: Frame, *, offset: float = 0.0, signed: bool = False) -> list[str]:
     """Resolve which columns the log transform will touch.
 
     Parameters
@@ -76,6 +100,9 @@ def fit_log(selected: Frame, *, offset: float = 0.0) -> list[str]:
     offset:
         The shift applied before the logarithm, used here only to decide which
         columns fall outside its domain.
+    signed:
+        When true, the signed formula is used instead, which is defined for
+        every real value; the domain screen is then skipped.
 
     Callers are expected to pass an all-numeric frame; dtype screening is the
     selector / ``accepts_dtypes`` layer's job, so this function does not
@@ -92,7 +119,8 @@ def fit_log(selected: Frame, *, offset: float = 0.0) -> list[str]:
     informative output rather than an error) but a `UserWarning` names them.
     """
     columns = list(selected.columns)
-    _warn_non_positive(selected, columns, offset=offset)
+    if not signed:
+        _warn_non_positive(selected, columns, offset=offset)
     return columns
 
 
@@ -102,6 +130,7 @@ def apply_log(
     *,
     base: float = math.e,
     offset: float = 0.0,
+    signed: bool = False,
 ) -> Frame:
     """Replace each column in ``columns`` by ``log(x + offset) / log(base)``.
 
@@ -115,7 +144,11 @@ def apply_log(
     base:
         Base of the logarithm.
     offset:
-        Added to every value before the logarithm.
+        Added to every value before the logarithm. Ignored under ``signed``,
+        whose formula takes no offset.
+    signed:
+        When true, compute ``sign(x) * log(|x|, base)`` with ``|x| < 1``
+        flattened to ``0`` instead (see `_signed_log_expr`).
 
     Returns
     -------
@@ -127,12 +160,16 @@ def apply_log(
     does, because new data can leave it even when the training data did not. The
     numpy ``RuntimeWarning``s pandas raises for those values ("divide by zero
     encountered in log") are suppressed so both backends behave alike and that
-    single `UserWarning` is the only signal.
+    single `UserWarning` is the only signal. Under ``signed`` nothing is out of
+    domain, so no warning is possible; the suppression still applies, because
+    pandas evaluates the ``|x| < 1`` branch's ``log(0)`` before discarding it.
     """
-    _warn_non_positive(selected, columns, offset=offset)
-    exprs: list[nw.Expr] = [
-        (nw.col(col) + offset).log(base=base).alias(col) for col in columns
-    ]
+    exprs: list[nw.Expr]
+    if signed:
+        exprs = [_signed_log_expr(col, base=base) for col in columns]
+    else:
+        _warn_non_positive(selected, columns, offset=offset)
+        exprs = [(nw.col(col) + offset).log(base=base).alias(col) for col in columns]
     with warnings.catch_warnings():
         # polars computes this silently; pandas routes through numpy, which
         # warns on log(0) and log(negative). The UserWarning above already
@@ -157,6 +194,14 @@ class StepLog(Step):
     ``offset`` to a positive number is the usual way to bring zeros into the
     domain.
 
+    ``signed`` is the other way to handle a column that spans zero. It computes
+    ``sign(x) * log(|x|)`` instead, flattening ``|x| < 1`` to ``0`` so the
+    result is continuous through the origin. Every real value is then in the
+    domain and no warning is possible, at the cost of a transform that is flat
+    across the interval from ``-1`` to ``1``. ``offset`` takes no part in that
+    formula, so passing both is an error rather than a silently ignored
+    argument.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 
@@ -175,7 +220,10 @@ class StepLog(Step):
         and must be positive and not ``1``.
     offset
         Added to every value before the logarithm, which shifts what counts as
-        out of domain. Defaults to ``0.0``.
+        out of domain. Defaults to ``0.0``. Cannot be combined with ``signed``.
+    signed
+        Whether to compute ``sign(x) * log(|x|)``, with ``|x| < 1`` flattened to
+        ``0``, instead of the plain logarithm. Defaults to ``False``.
     id
         Stable step identifier. Defaults to ``"log"``; a second step of this
         type in the same recipe becomes ``"log_2"``, and passing an ``id``
@@ -238,6 +286,22 @@ class StepLog(Step):
         counts
     ).transform(counts)
     ```
+
+    A column spanning zero has negatives too, which no offset would fix without
+    distorting the large values:
+
+    ```{python}
+    spread = pd.DataFrame({"x": [-100.0, -1.0, 0.0, 1.0, 100.0]})
+    spread
+    ```
+
+    ``signed`` logs each side on its own scale and flattens the middle:
+
+    ```{python}
+    Recipe().add(StepLog(s.numeric_features(), base=10, signed=True)).fit(
+        spread
+    ).transform(spread)
+    ```
     """
 
     mode = Mode.ONE_TO_ONE
@@ -248,13 +312,20 @@ class StepLog(Step):
         *,
         base: float = math.e,
         offset: float = 0.0,
+        signed: bool = False,
         id: str | None = None,
     ):
         if base <= 0 or base == 1:
             raise ValueError(f"'base' must be positive and not 1, got {base!r}")
+        if signed and offset != 0:
+            raise ValueError(
+                f"'offset' takes no part in the signed formula; got "
+                f"offset={offset!r} with signed=True"
+            )
         self.columns = columns
         self.base = base
         self.offset = offset
+        self.signed = signed
         super().__init__(id, "log")
         # Populated by ``fit()``: the resolved column names, in frame order.
         self._estimates: list[str] | None = None
@@ -265,7 +336,7 @@ class StepLog(Step):
         selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_log(selected, offset=self.offset)
+        self._estimates = fit_log(selected, offset=self.offset, signed=self.signed)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
         self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
         return self
@@ -274,7 +345,13 @@ class StepLog(Step):
         """Log the columns resolved at fit time."""
         if self._estimates is None:
             raise RuntimeError("StepLog.transform() called before fit()")
-        return apply_log(new_data, self._estimates, base=self.base, offset=self.offset)
+        return apply_log(
+            new_data,
+            self._estimates,
+            base=self.base,
+            offset=self.offset,
+            signed=self.signed,
+        )
 
     def schema_in(self) -> ColSchema:
         """Schema of the columns this step consumed. Known after ``fit()``."""

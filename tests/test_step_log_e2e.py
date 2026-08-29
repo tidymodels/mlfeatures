@@ -8,6 +8,7 @@ backend-agnostic.
 from __future__ import annotations
 
 import math
+import warnings
 
 import narwhals.stable.v2 as nw
 import pandas as pd
@@ -56,6 +57,32 @@ class TestEndToEnd:
         recipe = Recipe().add(StepLog(["zero"], base=2.0, offset=1.0))
         out = recipe.fit(df).transform(df)
         assert out["zero"].tolist() == pytest.approx([0.0, 1.0, math.log2(3), 2.0])
+
+    def test_signed_through_recipe(self) -> None:
+        df = pd.DataFrame({"x": [-100.0, -0.5, 0.0, 10.0, 100.0]})
+        recipe = Recipe().add(StepLog(["x"], base=10.0, signed=True))
+        out = recipe.fit(df).transform(df)
+        assert out["x"].tolist() == pytest.approx([-2.0, 0.0, 0.0, 1.0, 2.0])
+
+    def test_signed_matches_across_backends(self) -> None:
+        data = {"x": [-100.0, -0.5, 0.0, 10.0, 100.0]}
+        step = StepLog(["x"], base=10.0, signed=True)
+        pd_out = (
+            Recipe(steps=[step]).fit(pd.DataFrame(data)).transform(pd.DataFrame(data))
+        )
+        pl_out = (
+            Recipe(steps=[StepLog(["x"], base=10.0, signed=True)])
+            .fit(pl.DataFrame(data))
+            .transform(pl.DataFrame(data))
+        )
+        assert pd_out["x"].tolist() == pytest.approx(pl_out["x"].to_list())
+
+    def test_signed_does_not_warn_on_negatives(self) -> None:
+        df = pd.DataFrame({"x": [-100.0, 0.0, 100.0]})
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            fitted = Recipe(steps=[StepLog(["x"], signed=True)]).fit(df)
+            fitted.transform(df)
 
     def test_unselected_columns_pass_through(self) -> None:
         df = pd.DataFrame(_data())
@@ -110,6 +137,9 @@ class TestStepLogUnit:
 
     def test_default_base_is_e(self) -> None:
         assert StepLog(["a"]).base == math.e
+
+    def test_signed_defaults_to_false(self) -> None:
+        assert StepLog(["a"]).signed is False
 
     def test_fit_returns_self(self) -> None:
         step = StepLog(["a", "b"])

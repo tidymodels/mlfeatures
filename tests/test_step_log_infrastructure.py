@@ -17,3 +17,15 @@ class TestLogConformance(StepConformanceTest):
 
     def make_step(self) -> StepLog:
         return StepLog(["a"])
+
+
+class TestSignedLogConformance(StepConformanceTest):
+    """The contract again under ``signed``, which is a different formula.
+
+    The data spans zero, which the default formula could not take at all.
+    """
+
+    training_data = {"a": [-10.0, -0.5, 0.0, 10.0], "g": ["x", "y", "x", "y"]}
+
+    def make_step(self) -> StepLog:
+        return StepLog(["a"], signed=True)

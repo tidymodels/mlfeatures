@@ -169,6 +169,80 @@ class TestOffset:
 
 
 # ---------------------------------------------------------------------------
+# signed
+# ---------------------------------------------------------------------------
+
+
+class TestSigned:
+    def test_logs_each_side_on_its_own_scale(self) -> None:
+        out = apply_log(
+            _df(("x", [-100.0, -10.0, 10.0, 100.0])), ["x"], base=10.0, signed=True
+        )
+        assert out["x"].to_list() == pytest.approx([-2.0, -1.0, 1.0, 2.0])
+
+    def test_interval_around_zero_is_flattened(self) -> None:
+        # |x| < 1 maps to 0, which is what keeps the transform continuous
+        # through the origin; matches R recipes' signed log.
+        out = apply_log(_df(("x", [-0.999, -0.5, 0.0, 0.5, 0.999])), ["x"], signed=True)
+        assert out["x"].to_list() == pytest.approx([0.0, 0.0, 0.0, 0.0, 0.0])
+
+    def test_boundary_of_one_is_included(self) -> None:
+        # |x| == 1 takes the log branch, and log(1) is 0 either way.
+        out = apply_log(_df(("x", [-1.0, 1.0])), ["x"], signed=True)
+        assert out["x"].to_list() == pytest.approx([0.0, 0.0])
+
+    def test_is_odd_around_zero(self) -> None:
+        out = apply_log(_df(("x", [-7.0, 7.0])), ["x"], signed=True)
+        low, high = out["x"].to_list()
+        assert low == pytest.approx(-high)
+
+    def test_matches_the_closed_form(self) -> None:
+        values = [-40.0, -1.5, -0.25, 0.0, 0.25, 1.5, 40.0]
+        out = apply_log(_df(("x", values)), ["x"], base=3.0, signed=True)
+        expected = [
+            0.0 if abs(v) < 1 else math.copysign(math.log(abs(v), 3.0), v)
+            for v in values
+        ]
+        assert out["x"].to_list() == pytest.approx(expected)
+
+    def test_negatives_do_not_warn(self) -> None:
+        # Every real value is in the signed formula's domain.
+        df = _df(("x", [-5.0, 0.0, 5.0]))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            columns = fit_log(df, signed=True)
+            out = apply_log(df, columns, signed=True)
+        assert all(math.isfinite(v) for v in out["x"].to_list())
+
+    def test_offset_with_signed_raises(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepLog(["a"], offset=1.0, signed=True)
+        assert str(excinfo.value) == snapshot
+
+    def test_zero_offset_with_signed_is_allowed(self) -> None:
+        assert StepLog(["a"], offset=0.0, signed=True).signed is True
+
+    def test_nulls_are_preserved(self) -> None:
+        out = apply_log(_df(("x", [-10.0, None, 10.0])), ["x"], base=10.0, signed=True)
+        values = out["x"].to_list()
+        assert values[0] == pytest.approx(-1.0)
+        assert math.isnan(values[1])
+        assert values[2] == pytest.approx(1.0)
+
+    def test_integer_input_yields_float_output(self) -> None:
+        df = _df(("x", [-100, 0, 100]))
+        assert df["x"].dtype.is_integer()  # integer in
+        out = apply_log(df, ["x"], base=10.0, signed=True)
+        assert out["x"].dtype == nw.Float64  # float out
+        assert out["x"].to_list() == pytest.approx([-2.0, 0.0, 2.0])
+
+    def test_unselected_columns_pass_through(self) -> None:
+        df = _df(("x", [-10.0, 10.0]), ("y", [-5.0, 5.0]))
+        out = apply_log(df, ["x"], signed=True)
+        assert out["y"].to_list() == [-5.0, 5.0]
+
+
+# ---------------------------------------------------------------------------
 # Values outside the logarithm's domain
 # ---------------------------------------------------------------------------
 

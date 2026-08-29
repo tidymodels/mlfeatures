@@ -164,9 +164,10 @@ class ShzNamespace:
         *,
         base: float = math.e,
         offset: float = 0.0,
+        signed: bool = False,
     ) -> pl.DataFrame:
         """Take the logarithm of numeric columns. See `StepLog`."""
-        return self.apply(StepLog(columns, base=base, offset=offset))
+        return self.apply(StepLog(columns, base=base, offset=offset, signed=signed))
 
     def step_filter(
         self,
