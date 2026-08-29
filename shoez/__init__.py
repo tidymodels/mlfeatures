@@ -27,6 +27,7 @@ from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
+from shoez.step_log import StepLog
 from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
@@ -72,6 +73,7 @@ __all__ = [
     "StepImputeMean",
     "StepImputeMode",
     "StepIntercept",
+    "StepLog",
     "StepNormalize",
     "StepOther",
     "StepPolynomial",

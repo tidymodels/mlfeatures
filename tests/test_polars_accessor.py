@@ -26,6 +26,7 @@ from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
+from shoez.step_log import StepLog
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
 from shoez.step_polynomial import StepPolynomial
@@ -90,6 +91,7 @@ class TestRegistration:
         ("step_intercept", StepIntercept, ()),
         ("step_normalize", StepNormalize, (["x"],)),
         ("step_range", StepRange, (["x"],)),
+        ("step_log", StepLog, (["x"],)),
         ("step_class_distance", StepClassDistance, (["x", "x2"], "color")),
         ("step_impute_mean", StepImputeMean, (["x"],)),
         ("step_impute_median", StepImputeMedian, (["x"],)),

@@ -26,6 +26,7 @@ polars is already a hard dependency, so this adds no new requirement.
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, cast
 
 from shoez._dependencies import import_optional
@@ -41,6 +42,7 @@ from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
+from shoez.step_log import StepLog
 from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
@@ -155,6 +157,16 @@ class ShzNamespace:
     ) -> pl.DataFrame:
         """Min-max scale numeric columns to a fixed range. See `StepRange`."""
         return self.apply(StepRange(columns, min=min, max=max, clipping=clipping))
+
+    def step_log(
+        self,
+        columns: Selector,
+        *,
+        base: float = math.e,
+        offset: float = 0.0,
+    ) -> pl.DataFrame:
+        """Take the logarithm of numeric columns. See `StepLog`."""
+        return self.apply(StepLog(columns, base=base, offset=offset))
 
     def step_filter(
         self,

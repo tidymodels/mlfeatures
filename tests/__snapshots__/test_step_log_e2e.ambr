@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestEndToEnd.test_out_of_domain_column_warns_and_yields_negative_infinity
+  "1 column(s) had value(s) at or below the negated 'offset'; log will produce -inf or NaN: ['zero']"
+# ---
