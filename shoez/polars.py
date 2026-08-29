@@ -44,6 +44,7 @@ from shoez.step_intercept import StepIntercept
 from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
+from shoez.step_other import DEFAULT_OTHER_LEVEL, StepOther
 from shoez.step_pca import StepPca
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_range import StepRange
@@ -255,3 +256,21 @@ class ShzNamespace:
     ) -> pl.DataFrame:
         """Recode unseen categorical levels. See `StepUnknown`."""
         return self.apply(StepUnknown(columns, new_level=new_level))
+
+    def step_other(
+        self,
+        columns: Selector,
+        *,
+        threshold: float | None = None,
+        min_count: int | None = None,
+        other_level: str = DEFAULT_OTHER_LEVEL,
+    ) -> pl.DataFrame:
+        """Collapse infrequent categorical levels. See `StepOther`."""
+        return self.apply(
+            StepOther(
+                columns,
+                threshold=threshold,
+                min_count=min_count,
+                other_level=other_level,
+            )
+        )

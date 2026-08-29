@@ -30,6 +30,7 @@ from shoez.step_intercept import StepIntercept
 from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
+from shoez.step_other import StepOther
 from shoez.step_pca import StepPca
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_range import StepRange
@@ -72,6 +73,7 @@ __all__ = [
     "StepImputeMode",
     "StepIntercept",
     "StepNormalize",
+    "StepOther",
     "StepPolynomial",
     "StepRange",
     "StepUnknown",

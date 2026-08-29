@@ -1,0 +1,19 @@
+# serializer version: 1
+# name: TestArgumentValidation.test_both_criteria_raises
+  "'threshold' and 'min_count' are mutually exclusive; set only one"
+# ---
+# name: TestArgumentValidation.test_fractional_min_count_raises
+  "'min_count' must be a whole number of rows, 1 or greater, got 2.5"
+# ---
+# name: TestArgumentValidation.test_min_count_below_one_raises
+  "'min_count' must be a whole number of rows, 1 or greater, got 0"
+# ---
+# name: TestArgumentValidation.test_threshold_of_one_raises
+  "'threshold' must be a proportion strictly between 0 and 1, got 1.0; pass 'min_count' to give a count of rows instead"
+# ---
+# name: TestFitOther.test_collision_warns
+  "the level 'other' already exists in 1 column(s); pooled levels will be merged with it: ['g']"
+# ---
+# name: TestFitOther.test_custom_level_collision
+  "the level 'RARE' already exists in 1 column(s); pooled levels will be merged with it: ['g']"
+# ---
