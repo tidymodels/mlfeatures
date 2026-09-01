@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestStepDropNearZeroVarianceGuards.test_negative_freq_cut_raises
+  "'freq_cut' must be non-negative, got -1"
+# ---
+# name: TestStepDropNearZeroVarianceGuards.test_unique_cut_too_high_raises
+  "'unique_cut' must be between 0 and 100, got 101"
+# ---
+# name: TestStepDropNearZeroVarianceGuards.test_unique_cut_too_low_raises
+  "'unique_cut' must be between 0 and 100, got -1"
+# ---
