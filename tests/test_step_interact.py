@@ -116,6 +116,18 @@ class TestApplyProducts:
         assert out.columns == ["a"]
         assert out["a"].to_list() == [1.0, 2.0, 3.0]
 
+    def test_zero_selected_columns_warns_and_returns_unchanged(self) -> None:
+        """A selector matching nothing yields a 0-column fit; applying it to
+        the full frame (unrelated columns included) is a no-op, same as the
+        1-column case above but exercised with a genuinely empty selection."""
+        selected = _df({})
+        frame = _df({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
+        with pytest.warns(UserWarning):
+            out = apply_interact(frame, fit_interact(selected))
+        assert out.columns == ["a", "b"]
+        assert out["a"].to_list() == [1.0, 2.0, 3.0]
+        assert out["b"].to_list() == [4.0, 5.0, 6.0]
+
     def test_returns_narwhals_dataframe(self) -> None:
         frame = _df({"a": [1.0], "b": [2.0]})
         out = apply_interact(frame, fit_interact(frame))
