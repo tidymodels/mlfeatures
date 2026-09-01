@@ -154,6 +154,8 @@ reference:
     contents:
       - name: StepDropZeroVariance
         members: false
+      - name: StepDropNearZeroVariance
+        members: false
       - name: StepPca
         members: false
       - name: StepDropCorr
