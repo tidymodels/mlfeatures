@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestApplyProducts.test_no_pairs_warns_and_returns_unchanged
+  'fewer than 2 columns were selected; no interaction columns were created'
+# ---
