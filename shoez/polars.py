@@ -42,6 +42,7 @@ from shoez.step_filter import StepFilter
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
+from shoez.step_interact import StepInteract
 from shoez.step_intercept import StepIntercept
 from shoez.step_log import StepLog
 from shoez.step_mutate import StepMutate
@@ -159,6 +160,21 @@ class ShzNamespace:
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))
+
+    def step_interact(
+        self,
+        columns: Selector,
+        *,
+        sep: str = "_x_",
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Add the pairwise product of every pair of selected columns. See `StepInteract`."""
+        return self.apply(
+            StepInteract(
+                columns, sep=sep, keep_original_cols=keep_original_cols, role=role
+            )
+        )
 
     def step_range(
         self,

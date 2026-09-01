@@ -126,6 +126,8 @@ reference:
         members: false
       - name: StepIntercept
         members: false
+      - name: StepInteract
+        members: false
 
   - title: "Steps: categorical features"
     desc: Encode nominal columns as numeric ones.

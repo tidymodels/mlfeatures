@@ -27,6 +27,7 @@ from shoez.step_filter import StepFilter
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
+from shoez.step_interact import StepInteract
 from shoez.step_intercept import StepIntercept
 from shoez.step_log import StepLog
 from shoez.step_mutate import StepMutate
@@ -75,6 +76,7 @@ __all__ = [
     "StepImputeMean",
     "StepImputeMode",
     "StepIntercept",
+    "StepInteract",
     "StepLog",
     "StepNormalize",
     "StepOther",
