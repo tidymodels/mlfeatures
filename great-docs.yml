@@ -118,6 +118,8 @@ reference:
         members: false
       - name: StepRange
         members: false
+      - name: StepLog
+        members: false
       - name: StepPolynomial
         members: false
       - name: StepClassDistance

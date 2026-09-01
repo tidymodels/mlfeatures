@@ -127,6 +127,7 @@ fall into a few families by how they reshape the data:
 |------|--------------|-------|
 | `StepNormalize` | center & scale each column to mean 0, sd 1 | numeric |
 | `StepRange` | scale each column to a fixed range, by default 0 to 1 | numeric |
+| `StepLog` | take the logarithm of each column | numeric |
 | `StepDummy` | expand into *k−1* indicator columns (treatment coding) | categorical |
 | `StepOneHot` | expand into *k* indicator columns (full coding) | categorical |
 | `StepUnknown` | recode missing values to an explicit `"unknown"` level | categorical |
