@@ -19,7 +19,7 @@ for the tracking issues.
 | **Stage 1 · Handle missing values** | | | | | | |
 | 1 · impute | | | | `step_impute_mean` `step_impute_median` `step_impute_mode` | | |
 | 2 · category levels | | `step_unknown` *`step_other`* *`step_novel`* | | `step_unknown` | | |
-| **Stage 2 · Make numeric** | | | | | | |
+| **Stage 2 · Wrangle** | | | | | | |
 | 3 · transforms | *`step_log`* *`step_order_norm`* | | *`step_date_features`* *`step_datetime_features`* | | | |
 | 4 · discretize | — | | | | | |
 | 5 · dummy variables | | `step_dummy` `step_one_hot` | *`step_holiday`* | | | |

@@ -6,7 +6,7 @@ Steps that manage a categorical column's levels and turn them into numbers
 (the grouping follows [Feature Engineering A–Z](https://feaz-book.com/)). In
 the [eight-position ordering](../basics/four-stages-eight-steps.qmd) these fill
 [Missing: category levels](../four-stages/missing-category-levels.qmd) and
-[Numeric: dummy variables](../four-stages/numeric-dummy-variables.qmd).
+[Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd).
 
 Three steps to know:
 

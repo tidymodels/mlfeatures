@@ -21,8 +21,8 @@ Along with that lifecycle you get:
   step never touches the target by accident.
 - **Steps organized by the workflow.** Each step does one job, and the built-in
   steps follow the [four stages, eight steps](basics/four-stages-eight-steps.qmd)
-  order: handle missing values, make everything numeric, prepare for the model
-  (normalize, expand), then multivariate transforms such as PCA. Alongside them
+  order: handle missing values, wrangle everything into numbers, prepare for
+  the model (normalize, expand), then multivariate transforms such as PCA. Alongside them
   sit filters that [drop columns](basics/dropping-columns.qmd): zero-variance
   ones, or one of each highly correlated pair.
 - **Two doors into other ecosystems.** `df.shz` applies steps straight to a
@@ -215,7 +215,7 @@ the full list in the [API reference](../reference/index.qmd).
 |-------|------|--------------|
 | Handle missing values | `StepImputeMedian` | fill missing numeric values with the training median |
 | | `StepUnknown` | recode missing categorical values to an explicit `"unknown"` level |
-| Make numeric | `StepDummy` | expand a categorical column into *k−1* indicator columns |
+| Wrangle | `StepDummy` | expand a categorical column into *k−1* indicator columns |
 | | `StepOneHot` | expand into all *k* indicator columns |
 | Model prep | `StepNormalize` | center and scale each column to mean 0, sd 1 |
 | | `StepPolynomial` | polynomial basis expansion of a numeric column |
@@ -232,9 +232,9 @@ nearest-term ones:
 | Stage | Planned step | Issue |
 |-------|--------------|-------|
 | Handle missing values | `step_indicate_na`: add missing-data indicator columns | [#209](https://github.com/tidymodels/shoez/issues/209) |
-| Make numeric | `step_other`: collapse infrequent categorical levels | [#204](https://github.com/tidymodels/shoez/issues/204) |
+| | `step_other`: collapse infrequent categorical levels | [#204](https://github.com/tidymodels/shoez/issues/204) |
 | | `step_novel`: absorb unseen levels at transform time | [#205](https://github.com/tidymodels/shoez/issues/205) |
-| | `step_log`: logarithmic transform | [#208](https://github.com/tidymodels/shoez/issues/208) |
+| Wrangle | `step_log`: logarithmic transform | [#208](https://github.com/tidymodels/shoez/issues/208) |
 | | `step_orderNorm`: ordered-quantile normalization | [#211](https://github.com/tidymodels/shoez/issues/211) |
 | Model prep | `step_interact`: interaction columns | [#206](https://github.com/tidymodels/shoez/issues/206) |
 | | `step_spline_natural`: natural spline basis | [#214](https://github.com/tidymodels/shoez/issues/214) |

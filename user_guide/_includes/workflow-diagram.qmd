@@ -20,7 +20,7 @@ flowchart LR
   B["1 · Assign<br/>roles"] --> D
   subgraph D ["2 · Order the steps"]
     direction LR
-    S1["handle missing&nbsp;<br/>values <small>(1–2)</small>"] --> S2["make numeric<br/><small>(3–5)</small>"]
+    S1["handle missing&nbsp;<br/>values <small>(1–2)</small>"] --> S2["wrangle<br/><small>(3–5)</small>"]
     S2 --> S3["model prep<br/><small>(6–7)</small>"] --> S4["multivariate&nbsp;<br/>transforms <small>(8)</small>&nbsp;"]
   end
   D -- "fit(train)" --> E["3 · Ensure robust<br/>to new data<br/><small><i>new data arrives</i></small>"]

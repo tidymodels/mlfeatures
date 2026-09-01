@@ -269,9 +269,9 @@ user_guide:
     contents:
       - four-stages/missing-impute.qmd
       - four-stages/missing-category-levels.qmd
-      - four-stages/numeric-transforms.qmd
-      - four-stages/numeric-discretize.qmd
-      - four-stages/numeric-dummy-variables.qmd
+      - four-stages/wrangle-transforms.qmd
+      - four-stages/wrangle-discretize.qmd
+      - four-stages/wrangle-dummy-variables.qmd
       - four-stages/model-prep-interactions.qmd
       - four-stages/model-prep-normalize.qmd
       - four-stages/multivariate-transforms.qmd
