@@ -74,6 +74,7 @@ _EXTRAS: dict[str, str] = {
     "polars": "polars",
     "sklearn": "sklearn",
     "scipy": "scipy",
+    "pyarrow": "pyarrow",
 }
 
 

@@ -40,6 +40,13 @@ dependencies = [
 yaml = [
     "pyyaml",
 ]
+# pandas can only represent narwhals' `Date` dtype through a pyarrow-backed
+# column (`pd.ArrowDtype`); `StepDateFeatures` declares this extra via
+# `required_pkgs()` so a missing pyarrow surfaces as a friendly
+# `MissingDependencyError` instead of a cryptic narwhals cast failure.
+pyarrow = [
+    "pyarrow>=13.0.0",
+]
 # `shoez.testing` (the StepConformanceTest suite) imports pytest, so a plugin
 # author running the step contract needs it. The rest of the package does not.
 test = [
@@ -66,6 +73,9 @@ dev = [
     "twine>=3.4",
     "pyyaml",
     "types-PyYAML",
+    # Lets pandas represent narwhals' `Date` dtype (via `pd.ArrowDtype`), so
+    # `StepDateFeatures`'s pandas-backed tests can actually construct one.
+    "pyarrow>=13.0.0",
 ]
 
 [project.urls]
