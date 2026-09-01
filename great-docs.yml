@@ -265,8 +265,27 @@ user_guide:
       - basics/dropping-columns.qmd
       - basics/composing-steps.qmd
       - basics/fit-and-transform.qmd
+  - section: Four stages, eight steps
+    contents:
+      - four-stages/missing-impute.qmd
+      - four-stages/missing-category-levels.qmd
+      - four-stages/numeric-transforms.qmd
+      - four-stages/numeric-discretize.qmd
+      - four-stages/numeric-dummy-variables.qmd
+      - four-stages/model-prep-interactions.qmd
+      - four-stages/model-prep-normalize.qmd
+      - four-stages/multivariate-transforms.qmd
+  - section: Step families
+    contents:
+      - families/numeric-features.qmd
+      - families/categorical-features.qmd
+      - families/datetime-features.qmd
+      - families/missing-data.qmd
+      - families/text-features.qmd
+      - families/dimensionality-reduction.qmd
   - section: Extra
     contents:
+      - extra/crosswalk.qmd
       - extra/serializing-recipes.qmd
       - extra/creating-a-new-step.qmd
 

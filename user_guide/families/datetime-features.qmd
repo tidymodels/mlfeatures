@@ -1,0 +1,20 @@
+---
+title: "Datetime features"
+---
+
+Steps that split date and datetime columns into model-ready numeric and
+categorical features (the grouping follows
+[Feature Engineering A–Z](https://feaz-book.com/)). They run early in the
+[eight-position ordering](../basics/four-stages-eight-steps.qmd), so the
+levels they create flow into
+[Numeric: dummy variables](../four-stages/numeric-dummy-variables.qmd).
+
+No shoez step fills this family yet; three planned steps
+([#61](https://github.com/tidymodels/shoez/issues/61),
+[#217](https://github.com/tidymodels/shoez/issues/217)):
+
+- Date features — year, month, day of week, and friends from a date column.
+- Datetime features — the same plus hour, minute, and second resolution.
+- Holiday indicators — indicator columns for holidays near each date.
+
+*Stub — content to come.*

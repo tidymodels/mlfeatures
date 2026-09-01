@@ -73,6 +73,7 @@ examples = [
     # core dependencies already
     "xgboost>=2.0",
     "pyarrow>=15",  # xgboost's polars ingestion path requires it
+    "seaborn>=0.13",  # pairplots in the getting-started guide
 ]
 
 [project.urls]

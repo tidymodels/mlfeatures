@@ -3,139 +3,79 @@ title: "With polars extension (.shz)"
 toc: true
 ---
 
-`shoez` ships an opt-in [polars](https://docs.pola.rs/) accessor that lets you fit
-and apply a single step in one expression, without building a `Recipe`. Importing
+`shoez` ships an opt-in [polars](https://docs.pola.rs/) accessor for fitting
+and applying steps in one expression, without building a `Recipe`. Importing
 `shoez.polars` registers a `shz` namespace on polars DataFrames:
 
 ```{python}
 import polars as pl
-import polars.selectors as cs
 
 import shoez.polars  # registers the `df.shz` accessor
+from shoez import Selectors as s
 ```
 
 Each `df.shz.step_*(...)` call fits the step on `df`, applies it, and returns a
-**fresh polars DataFrame** — so calls chain and the result is just another polars
-frame you can keep working with. It is thin sugar over the recipe lifecycle
-(`Recipe(...).fit(df).transform(df)`), and it is the one place `shoez` depends on
-polars directly, which is why you opt in with an explicit import.
+fresh polars DataFrame — so calls chain, and the result is just another polars
+frame. It is thin sugar over the recipe lifecycle
+(`Recipe(...).fit(df).transform(df)`), and it is the one place `shoez` depends
+on polars directly, which is why you opt in with an explicit import.
 
-## The example data
-
-The `orders` frame below is the running example: two categorical columns
-(`city`, `tier`), two numerics (`price`, `qty`), a column perfectly correlated
-with `price` (`price_2x`), and a constant column (`active`).
+Every step has a matching `step_*` method whose arguments mirror the step's
+constructor. The three below cover the most common feature-engineering jobs;
+this small frame gives each one something to do:
 
 ```{python}
 orders = pl.DataFrame(
     {
-        "city": ["NYC", "LA", "NYC", "SF", "LA", "SF", "NYC", "LA"],
-        "tier": ["gold", "silver", "gold", "bronze", "silver", "gold", "bronze", "silver"],
-        "price": [10.0, 20.0, 15.0, 30.0, 25.0, 12.0, 18.0, 22.0],
-        "qty": [2, 1, 5, 1, 3, 4, 2, 1],
-        "price_2x": [20.0, 40.0, 30.0, 60.0, 50.0, 24.0, 36.0, 44.0],  # = 2 * price
-        "active": [1.0] * 8,  # constant
+        "city": ["NYC", "LA", "NYC", "SF", "LA", "SF"],
+        "price": [10.0, 20.0, None, 30.0, 25.0, 12.0],
+        "qty": [2, 1, 5, 1, 3, 4],
     }
 )
 orders
 ```
 
-## Single-step transforms
+## Handle missing values: `step_impute_median`
 
-Every step has a matching `step_*` method whose arguments mirror the step's
-constructor. `step_dummy` expands discrete columns into drop-one (treatment)
-indicators — the first level in sort order is the reference and is dropped:
-
-```{python}
-orders.shz.step_dummy(["city", "tier"])
-```
-
-`step_one_hot` is the same expansion but keeps *all* levels (no reference column
-is dropped):
+`step_impute_median` fills nulls with the column's median (`step_impute_mean`
+and `step_impute_mode` are the other flavors):
 
 ```{python}
-orders.shz.step_one_hot(["tier"])
+filled = orders.shz.step_impute_median(s.numeric_features())
+filled
 ```
 
-`step_normalize` centers and scales numeric columns to z-scores in place:
+## Make everything numeric: `step_dummy`
+
+`step_dummy` expands nominal columns into numeric indicator columns, dropping
+the first level as the reference:
 
 ```{python}
-orders.shz.step_normalize(["price", "qty"])
+orders.shz.step_dummy(s.nominal())
 ```
 
-`step_drop_zero_variance` removes columns with no variation — here the constant
-`active` column:
+## Multivariate feature engineering: `step_pca`
+
+`step_pca` replaces numeric columns with their projection onto principal
+components (here on the imputed frame, since PCA needs complete data):
 
 ```{python}
-orders.shz.step_drop_zero_variance(["active", "price"])
+filled.shz.step_pca(s.numeric_features(), num_comp=2)
 ```
 
-`step_drop_corr` drops columns that are too highly correlated. `price` and
-`price_2x` are perfectly correlated, so one of them is removed:
+## Beyond these three
 
-```{python}
-orders.shz.step_drop_corr(["price", "price_2x", "qty"])
-```
-
-`step_intercept` appends a constant column, handy as the intercept term for a
-linear model:
-
-```{python}
-orders.shz.step_intercept()
-```
-
-## Composing steps
-
-Because each call returns a polars frame, steps **chain** with further `.shz.*`
-calls — dummy-encode, then normalize, then add an intercept:
+Because each call returns a polars frame, the steps compose into a pipeline by
+chaining — impute, dummy-encode, then project:
 
 ```{python}
 (
     orders
-    .shz.step_dummy(["city", "tier"])
-    .shz.step_normalize(["price", "qty"])
-    .shz.step_intercept()
+    .shz.step_impute_median(s.numeric_features())
+    .shz.step_dummy(s.nominal())
+    .shz.step_pca(s.numeric_features(), num_comp=2)
 )
 ```
 
-For an arbitrary list of steps, the generic `apply(*steps)` method runs any
-`Step` objects in one shot — the same result, driven by step instances rather
-than per-step methods:
-
-```{python}
-from shoez import StepDropZeroVariance, StepDummy, StepNormalize
-
-orders.shz.apply(
-    StepDropZeroVariance(["active"]),
-    StepDummy(["tier"]),
-    StepNormalize(["price", "qty"]),
-)
-```
-
-## Selecting columns with selectors
-
-Steps that take a column *spec* — currently `step_drop_corr` — accept more than a
-list of names. You can pass a
-[polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html)
-from `polars.selectors`, resolved against the frame's schema. That means
-`cs.numeric()`, name patterns, and selector algebra (`-`, `&`, `|`) all work;
-plain `["col", ...]` lists keep working everywhere.
-
-Here, selector algebra picks every numeric column *except* the constant `active`,
-so the correlated `price` / `price_2x` pair collapses to one and `active` is left
-untouched:
-
-```{python}
-orders.shz.step_drop_corr(cs.numeric() - cs.by_name("active"))
-```
-
-Selectors also compose with chaining — drop the constant by name first, then
-correlation-filter whatever numerics remain via `cs.numeric()`:
-
-```{python}
-(
-    orders
-    .shz.step_drop_zero_variance(["active"])
-    .shz.step_drop_corr(cs.numeric())
-)
-```
+The accessor has a `step_*` method for every public step, plus a generic
+`df.shz.apply(*steps)` that runs any `Step` instances in one shot.

@@ -1,0 +1,10 @@
+---
+title: "5. Numeric: dummy variables"
+---
+
+Position 5, closing stage 2 (make numeric): expand categorical columns into
+numeric indicator columns, after the level guards have settled the vocabulary.
+Filled today by `StepDummy` (drop-one) and `StepOneHot` (all levels). By the
+end of this position, everything is a number.
+
+*Stub — content to come.*
