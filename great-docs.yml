@@ -139,6 +139,14 @@ reference:
       - name: StepOther
         members: false
 
+  - title: "Steps: date and datetime features"
+    desc: Expand Date and Datetime columns into calendar-part feature columns.
+    contents:
+      - name: StepDateFeatures
+        members: false
+      - name: StepDatetimeFeatures
+        members: false
+
   - title: "Steps: missing data"
     desc: Impute missing values, or give them an explicit level.
     contents:

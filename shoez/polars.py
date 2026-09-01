@@ -33,6 +33,8 @@ from shoez._dependencies import import_optional
 from shoez.recipe import Recipe
 from shoez.step import Step
 from shoez.step_class_distance import StepClassDistance
+from shoez.step_date_features import StepDateFeatures
+from shoez.step_datetime_features import StepDatetimeFeatures
 from shoez.step_drop import StepDrop
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
@@ -115,6 +117,51 @@ class ShzNamespace:
         """One-hot encoding. See `StepOneHot`."""
         return self.apply(
             StepOneHot(columns, name_fn=name_fn, keep_original_cols=keep_original_cols)
+        )
+
+    def step_date_features(
+        self,
+        columns: Selector,
+        *,
+        features: list[str] | tuple[str, ...] = ("year", "month", "day", "dow", "doy"),
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Expand Date columns into calendar-part feature columns. See `StepDateFeatures`."""
+        return self.apply(
+            StepDateFeatures(
+                columns,
+                features=features,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
+
+    def step_datetime_features(
+        self,
+        columns: Selector,
+        *,
+        features: list[str] | tuple[str, ...] = (
+            "year",
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "second",
+            "dow",
+            "doy",
+        ),
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Expand Datetime columns into calendar-part feature columns. See `StepDatetimeFeatures`."""
+        return self.apply(
+            StepDatetimeFeatures(
+                columns,
+                features=features,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
         )
 
     def step_drop(self, columns: Selector) -> pl.DataFrame:

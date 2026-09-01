@@ -18,6 +18,8 @@ from shoez.serialization import (
 )
 from shoez.step import RowOp, Step, StepError
 from shoez.step_class_distance import StepClassDistance
+from shoez.step_date_features import StepDateFeatures
+from shoez.step_datetime_features import StepDatetimeFeatures
 from shoez.step_drop import StepDrop
 from shoez.step_drop_corr import StepDropCorr
 from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
@@ -63,6 +65,8 @@ __all__ = [
     "FittedRecipe",
     "StepClassDistance",
     "RecipeTransformer",
+    "StepDateFeatures",
+    "StepDatetimeFeatures",
     "StepDrop",
     "StepDropCorr",
     "StepDropNearZeroVariance",
