@@ -35,6 +35,7 @@ from shoez.step import Step
 from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop import StepDrop
 from shoez.step_drop_corr import StepDropCorr
+from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_filter import StepFilter
@@ -128,6 +129,18 @@ class ShzNamespace:
     ) -> pl.DataFrame:
         """Drop highly correlated columns. See `StepDropCorr`."""
         return self.apply(StepDropCorr(columns, threshold=threshold, method=method))
+
+    def step_drop_near_zero_variance(
+        self,
+        columns: Selector,
+        *,
+        freq_cut: float = 95 / 5,
+        unique_cut: float = 10,
+    ) -> pl.DataFrame:
+        """Drop sparse, unbalanced columns. See `StepDropNearZeroVariance`."""
+        return self.apply(
+            StepDropNearZeroVariance(columns, freq_cut=freq_cut, unique_cut=unique_cut)
+        )
 
     def step_drop_zero_variance(self, columns: list[str]) -> pl.DataFrame:
         """Drop zero-variance columns. See `StepDropZeroVariance`."""

@@ -20,6 +20,7 @@ from shoez.step import RowOp, Step, StepError
 from shoez.step_class_distance import StepClassDistance
 from shoez.step_drop import StepDrop
 from shoez.step_drop_corr import StepDropCorr
+from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_filter import StepFilter
@@ -63,6 +64,7 @@ __all__ = [
     "RecipeTransformer",
     "StepDrop",
     "StepDropCorr",
+    "StepDropNearZeroVariance",
     "StepDummy",
     "StepOneHot",
     "StepDropZeroVariance",
