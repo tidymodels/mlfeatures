@@ -23,10 +23,17 @@ both round-trip identically. YAML support needs the optional ``pyyaml`` package;
 
 Known limitations
 -----------------
-- Parametrized narwhals dtypes (``Datetime`` time-unit/zone, ``Enum``
-  categories) round-trip by base name only. This matches `ColSchema`, which
-  already stores dtypes as ``str(dt)``; no shipped step depends on the
-  parameters.
+- ``Enum`` categories do not round-trip: an ``Enum`` column's ptype/schema
+  dtype comes back as an empty-category ``Enum`` after a JSON round-trip. This
+  is enough for the schema/ptype checks, which only compare dtype *identity*
+  by base type, but it does mean ``ColSchema``, which already stores dtypes as
+  ``str(dt)``, is a more faithful record of an ``Enum``'s categories than a
+  deserialized ``Ptype``/``Schema`` is.
+- ``Datetime`` (time-unit, time zone) and ``Duration`` (time-unit) *do*
+  round-trip their parameters (see `_encode_dtype_instance` /
+  `_decode_dtype_instance`) -- `StepDatetimeFeatures`'s conformance suite
+  depends on it: a pandas frame's nanosecond-precision ``Datetime`` must still
+  match the ptype snapshot after a JSON round-trip.
 - Raw polars / narwhals selectors are not serializable. Only shoez `Selectors`
   and plain name lists are; a native selector raises a clear ``TypeError``.
 """
@@ -145,6 +152,44 @@ def _dtype_instance(name: str) -> nw.dtypes.DType:
     if cls is nw.Enum:
         return nw.Enum([])
     return cls()
+
+
+def _encode_dtype_instance(dtype: nw.dtypes.DType) -> str | dict[str, Any]:
+    """Encode a concrete dtype instance for the ptype/schema-node codecs.
+
+    Unlike `_dtype_name` (used where only the base type matters, e.g. a
+    selector's stored dtype), this preserves ``Datetime``'s time-unit and time
+    zone, and ``Duration``'s time-unit, since two ``Datetime`` columns of
+    different precision are not the same ptype -- `Ptype.check` would
+    otherwise accept a nanosecond-precision new-data column against a
+    microsecond-precision training snapshot that a round-trip silently
+    downgraded to. Every other dtype still round-trips by base name only (see
+    the module docstring's ``Enum`` caveat).
+    """
+    name = _dtype_name(dtype)
+    if isinstance(dtype, nw.Datetime):
+        return {
+            "name": name,
+            "time_unit": dtype.time_unit,
+            "time_zone": dtype.time_zone,
+        }
+    if isinstance(dtype, nw.Duration):
+        return {"name": name, "time_unit": dtype.time_unit}
+    return name
+
+
+def _decode_dtype_instance(payload: str | dict[str, Any]) -> nw.dtypes.DType:
+    """Inverse of `_encode_dtype_instance`."""
+    if isinstance(payload, dict):
+        cls = _dtype_class(payload["name"])
+        if cls is nw.Datetime:
+            return nw.Datetime(
+                time_unit=payload["time_unit"], time_zone=payload["time_zone"]
+            )
+        if cls is nw.Duration:
+            return nw.Duration(time_unit=payload["time_unit"])
+        raise ValueError(f"unexpected parametrized dtype payload: {payload!r}")
+    return _dtype_instance(payload)
 
 
 # --------------------------------------------------------------------------- #
@@ -444,7 +489,8 @@ def _decode_roles(payload: dict[str, list[str]]) -> Any:
 def _encode_ptype(ptype: Any) -> dict[str, Any]:
     return {
         "schema": {
-            name: _dtype_name(ptype.schema[name]) for name in ptype.schema.names()
+            name: _encode_dtype_instance(ptype.schema[name])
+            for name in ptype.schema.names()
         },
         "roles": _encode_roles(ptype.roles),
         "transform_required": dict(ptype.transform_required),
@@ -455,7 +501,7 @@ def _decode_ptype(payload: dict[str, Any]) -> Any:
     from shoez.ptype import Ptype
 
     schema = nw.Schema(
-        {name: _dtype_instance(dt) for name, dt in payload["schema"].items()}
+        {name: _decode_dtype_instance(dt) for name, dt in payload["schema"].items()}
     )
     return Ptype(
         schema=schema,
@@ -467,11 +513,11 @@ def _decode_ptype(payload: dict[str, Any]) -> Any:
 def _encode_node(node: Any) -> dict[str, Any]:
     return {
         "name": node.name,
-        "dtype": _dtype_name(node.dtype),
+        "dtype": _encode_dtype_instance(node.dtype),
         "roles": sorted(node.roles),
         "source": node.source,
         "parent_cols": list(node.parent_cols),
-        "dtype_history": [_dtype_name(d) for d in node.dtype_history],
+        "dtype_history": [_encode_dtype_instance(d) for d in node.dtype_history],
         "sparse": node.sparse,
         "removed_by": node.removed_by,
     }
@@ -482,11 +528,11 @@ def _decode_node(payload: dict[str, Any]) -> Any:
 
     return ColumnNode(
         name=payload["name"],
-        dtype=_dtype_instance(payload["dtype"]),
+        dtype=_decode_dtype_instance(payload["dtype"]),
         roles=set(payload["roles"]),
         source=payload["source"],
         parent_cols=list(payload["parent_cols"]),
-        dtype_history=[_dtype_instance(d) for d in payload["dtype_history"]],
+        dtype_history=[_decode_dtype_instance(d) for d in payload["dtype_history"]],
         sparse=payload["sparse"],
         removed_by=payload["removed_by"],
     )
