@@ -91,6 +91,13 @@ class TestApplyProducts:
         out = apply_interact(frame, fit_interact(frame))
         assert out.columns == ["a_x_b", "a_x_c", "b_x_c"]
 
+    def test_three_columns_product_values_are_correct(self) -> None:
+        frame = _df({"a": [1.0, 2.0], "b": [3.0, 4.0], "c": [5.0, 6.0]})
+        out = apply_interact(frame, fit_interact(frame))
+        assert out["a_x_b"].to_list() == [3.0, 8.0]
+        assert out["a_x_c"].to_list() == [5.0, 12.0]
+        assert out["b_x_c"].to_list() == [15.0, 24.0]
+
     def test_null_in_either_column_produces_null_product(self) -> None:
         frame = _df({"a": [1.0, None, 3.0], "b": [4.0, 5.0, None]})
         out = apply_interact(frame, fit_interact(frame))

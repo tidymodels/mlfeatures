@@ -38,6 +38,14 @@ class TestEndToEnd:
         assert isinstance(out, pd.DataFrame)
         assert list(out.columns) == ["d", "a_x_b", "a_x_c", "b_x_c"]
 
+    def test_three_columns_product_values_are_correct(self) -> None:
+        df = pd.DataFrame(_data())
+        out = Recipe(steps=[StepInteract(["a", "b", "c"])]).fit(df).transform(df)
+        # a = [1, 2, 3, 4], b = [5, 6, 7, 8], c = [9, 10, 11, 12]
+        assert out["a_x_b"].tolist() == [5.0, 12.0, 21.0, 32.0]
+        assert out["a_x_c"].tolist() == [9.0, 20.0, 33.0, 48.0]
+        assert out["b_x_c"].tolist() == [45.0, 60.0, 77.0, 96.0]
+
     def test_polars_produces_pairwise_columns(self) -> None:
         df = pl.DataFrame(_data())
         out = Recipe().add(StepInteract(["a", "b"])).fit(df).transform(df)
