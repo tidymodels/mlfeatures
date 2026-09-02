@@ -224,6 +224,65 @@ class TestReferenceAgainstSklearn:
         np.testing.assert_allclose(np.abs(ours), np.abs(expected), atol=1e-8)
 
 
+class TestCategoricalTarget:
+    """A categorical target runs PLS discriminant analysis via dummy-coding."""
+
+    def _classes_frame(self) -> nw.DataFrame[Any]:
+        # x and y deliberately uncorrelated (unlike a scaled copy of each
+        # other) so the feature matrix has rank 2, not 1 -- a rank-1 X cannot
+        # support 2 PLS components and hits a degenerate SVD.
+        return _df(("x", [0.0, 1.0, 10.0, 11.0]), ("y", [5.0, 9.0, 2.0, 12.0]))
+
+    def test_fits_without_error(self) -> None:
+        fit = fit_pls(self._classes_frame(), _series(["a", "a", "b", "b"]), num_comp=1)
+        assert fit.num_comp == 1
+        assert fit.rotation.shape == (2, 1)
+
+    def test_num_comp_capped_at_features(self) -> None:
+        fit = fit_pls(self._classes_frame(), _series(["a", "a", "b", "b"]), num_comp=5)
+        assert fit.num_comp == 2
+
+    def test_rows_with_null_target_are_dropped(self) -> None:
+        target_with_null = _series(["a", None, "b", "b"])
+        target_dropped = _series(["a", "b", "b"])
+        features_dropped = _df(("x", [0.0, 10.0, 11.0]), ("y", [5.0, 2.0, 12.0]))
+        fit_with_null = fit_pls(self._classes_frame(), target_with_null, num_comp=1)
+        fit_dropped = fit_pls(features_dropped, target_dropped, num_comp=1)
+        assert fit_with_null.mean == pytest.approx(fit_dropped.mean)
+        assert fit_with_null.rotation == pytest.approx(fit_dropped.rotation)
+
+    def test_scores_match_sklearn_dummy_coded_fit(self) -> None:
+        # Reference: dummy-code the classes ourselves and fit PLSRegression
+        # directly, mirroring what fit_pls does internally for a categorical
+        # target.
+        x = np.array([[0.0, 0.0], [1.0, 1.0], [10.0, 10.0], [11.0, 11.0]])
+        labels = np.array(["a", "a", "b", "b"])
+        classes = sorted(set(labels.tolist()))
+        y = np.column_stack([(labels == cls).astype(float) for cls in classes])
+
+        frame = nw.from_native(pd.DataFrame(x, columns=["x", "y"]), eager_only=True)
+        target = _series(labels.tolist())
+        fit = fit_pls(frame, target, num_comp=1)
+        result = apply_pls(frame, fit, prefix="PLS")
+        ours = np.array(result["PLS1"].to_list())
+
+        reference = PLSRegression(n_components=1, scale=False)
+        reference.fit(x, y)
+        expected = reference.transform(x)[:, 0]
+
+        np.testing.assert_allclose(np.abs(ours), np.abs(expected), atol=1e-8)
+
+    def test_integer_target_is_treated_as_numeric_not_classes(self) -> None:
+        # An int column is numeric per accepts_dtypes/target.dtype.is_numeric,
+        # so it takes the regression path, not the dummy-coding one.
+        frame = self._classes_frame()
+        target = nw.from_native(
+            pd.Series([0, 0, 1, 1], name="target"), series_only=True
+        )
+        fit = fit_pls(frame, target, num_comp=1)
+        assert fit.rotation.shape == (2, 1)
+
+
 class TestConstructor:
     def test_default_id(self) -> None:
         assert StepPls(["x", "y"], target="out").id == "pls"

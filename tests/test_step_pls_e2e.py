@@ -137,6 +137,45 @@ class TestEndToEnd:
         assert out["out"].tolist() == [1.0, 2.0, 2.5, 4.5]
 
 
+class TestCategoricalTargetEndToEnd:
+    def _class_data(self) -> dict[str, list[float] | list[str]]:
+        return {
+            "id": [10.0, 20.0, 30.0, 40.0],
+            "x": [0.0, 1.0, 10.0, 11.0],
+            "y": [0.0, 1.0, 10.0, 11.0],
+            "label": ["a", "a", "b", "b"],
+        }
+
+    def test_pandas_replaces_inputs_with_components(self) -> None:
+        df = pd.DataFrame(self._class_data())
+        out = (
+            Recipe()
+            .add(StepPls(["x", "y"], target="label", num_comp=1))
+            .fit(df)
+            .transform(df)
+        )
+        assert isinstance(out, pd.DataFrame)
+        assert list(out.columns) == ["id", "label", "PLS1"]
+
+    def test_polars_replaces_inputs_with_components(self) -> None:
+        df = pl.DataFrame(self._class_data())
+        out = (
+            Recipe()
+            .add(StepPls(["x", "y"], target="label", num_comp=1))
+            .fit(df)
+            .transform(df)
+        )
+        assert isinstance(out, pl.DataFrame)
+        assert list(out.columns) == ["id", "label", "PLS1"]
+
+    def test_target_column_is_not_consumed(self) -> None:
+        df = pd.DataFrame(self._class_data())
+        fitted = Recipe(steps=[StepPls(["x", "y"], target="label", num_comp=1)]).fit(df)
+        assert "label" not in fitted.steps[0].schema_in().columns
+        out = fitted.transform(df)
+        assert out["label"].tolist() == ["a", "a", "b", "b"]
+
+
 class TestStepPls:
     def test_mode_is_many_to_many(self) -> None:
         assert StepPls(["x", "y"], target="out").mode is Mode.MANY_TO_MANY
