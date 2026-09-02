@@ -44,6 +44,7 @@ from shoez.step_filter import StepFilter
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
+from shoez.step_indicate_na import StepIndicateNa
 from shoez.step_interact import StepInteract
 from shoez.step_intercept import StepIntercept
 from shoez.step_log import StepLog
@@ -318,6 +319,18 @@ class ShzNamespace:
     def step_impute_mode(self, columns: Selector) -> pl.DataFrame:
         """Impute nulls with the column mode. See `StepImputeMode`."""
         return self.apply(StepImputeMode(columns))
+
+    def step_indicate_na(
+        self,
+        columns: Selector,
+        *,
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Add binary indicator columns flagging missing values. See `StepIndicateNa`."""
+        return self.apply(
+            StepIndicateNa(columns, keep_original_cols=keep_original_cols, role=role)
+        )
 
     def step_polynomial(
         self,
