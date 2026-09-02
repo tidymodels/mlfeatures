@@ -158,6 +158,8 @@ reference:
         members: false
       - name: StepUnknown
         members: false
+      - name: StepIndicateNa
+        members: false
 
   - title: "Steps: dimensionality reduction"
     desc: Reduce dimensionality, or filter columns that carry no signal.
