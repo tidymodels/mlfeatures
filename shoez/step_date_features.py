@@ -519,10 +519,6 @@ class StepDateFeatures(Step):
             for role in list(roles.of(col)):
                 roles.remove(col, role)
 
-    def required_pkgs(self) -> list[str]:
-        """A Date column is only representable via pyarrow-backed dtypes."""
-        return ["pyarrow"]
-
     @property
     def produces_sparse(self) -> bool:
         """Calendar-part columns are dense by construction."""

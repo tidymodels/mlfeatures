@@ -231,5 +231,8 @@ class TestStepDateFeaturesUnit:
     def test_not_sparse(self) -> None:
         assert StepDateFeatures(["d"]).produces_sparse is False
 
-    def test_required_pkgs(self) -> None:
-        assert StepDateFeatures(["d"]).required_pkgs() == ["pyarrow"]
+    def test_required_pkgs_is_empty(self) -> None:
+        # pyarrow is only needed to get a Date column into *pandas* in the
+        # first place (see the module docstring); the step itself never calls
+        # it, so a pure-polars user must not be forced to install it.
+        assert StepDateFeatures(["d"]).required_pkgs() == []
