@@ -51,6 +51,7 @@ from shoez.step_log import StepLog
 from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
+from shoez.step_order_norm import StepOrderNorm
 from shoez.step_other import DEFAULT_OTHER_LEVEL, StepOther
 from shoez.step_pca import StepPca
 from shoez.step_polynomial import StepPolynomial
@@ -208,6 +209,10 @@ class ShzNamespace:
     def step_normalize(self, columns: list[str]) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))
+
+    def step_order_norm(self, columns: Selector) -> pl.DataFrame:
+        """Normalize numeric columns onto a standard normal by rank. See `StepOrderNorm`."""
+        return self.apply(StepOrderNorm(columns))
 
     def step_interact(
         self,

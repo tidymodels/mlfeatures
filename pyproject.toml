@@ -47,6 +47,12 @@ yaml = [
 pyarrow = [
     "pyarrow>=13.0.0",
 ]
+# `StepOrderNorm` uses `scipy.stats.norm.ppf` for the inverse-normal-CDF step
+# of its rank-to-normal-quantile map; declared via `required_pkgs()` so a
+# missing scipy surfaces as a friendly `MissingDependencyError`.
+scipy = [
+    "scipy>=1.10",
+]
 # `shoez.testing` (the StepConformanceTest suite) imports pytest, so a plugin
 # author running the step contract needs it. The rest of the package does not.
 test = [
@@ -76,6 +82,8 @@ dev = [
     # Lets pandas represent narwhals' `Date` dtype (via `pd.ArrowDtype`), so
     # `StepDateFeatures`'s pandas-backed tests can actually construct one.
     "pyarrow>=13.0.0",
+    # `StepOrderNorm`'s tests exercise the real scipy dependency.
+    "scipy>=1.10",
 ]
 
 [project.urls]

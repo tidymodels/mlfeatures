@@ -36,6 +36,7 @@ from shoez.step_log import StepLog
 from shoez.step_mutate import StepMutate
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
+from shoez.step_order_norm import StepOrderNorm
 from shoez.step_other import StepOther
 from shoez.step_pca import StepPca
 from shoez.step_polynomial import StepPolynomial
@@ -85,6 +86,7 @@ __all__ = [
     "StepInteract",
     "StepLog",
     "StepNormalize",
+    "StepOrderNorm",
     "StepOther",
     "StepPolynomial",
     "StepRange",
