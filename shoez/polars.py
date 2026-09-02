@@ -55,6 +55,7 @@ from shoez.step_one_hot import StepOneHot
 from shoez.step_order_norm import StepOrderNorm
 from shoez.step_other import DEFAULT_OTHER_LEVEL, StepOther
 from shoez.step_pca import StepPca
+from shoez.step_pls import StepPls
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_range import StepRange
 from shoez.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
@@ -282,6 +283,28 @@ class ShzNamespace:
         return self.apply(
             StepPca(
                 columns,
+                num_comp=num_comp,
+                prefix=prefix,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
+
+    def step_pls(
+        self,
+        columns: Selector,
+        target: str,
+        *,
+        num_comp: int = 5,
+        prefix: str = "PLS",
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Project numeric columns onto PLS components. See `StepPls`."""
+        return self.apply(
+            StepPls(
+                columns,
+                target,
                 num_comp=num_comp,
                 prefix=prefix,
                 keep_original_cols=keep_original_cols,
