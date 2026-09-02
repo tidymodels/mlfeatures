@@ -26,6 +26,7 @@ import numpy as np
 
 from shoez import _frame
 from shoez._dependencies import import_optional
+from shoez._numeric_one_to_one import schema_out_for_touched
 from shoez.step import Step
 from shoez.types import (
     NUMERIC_DTYPES,
@@ -326,12 +327,7 @@ class StepOrderNorm(Step):
         """Schema of the produced columns: same names, normalized ones now float."""
         if self._schema_in is None or self._estimates is None:
             raise RuntimeError("StepOrderNorm.schema_out() called before fit()")
-        normalized = set(self._estimates)
-        dtypes = {
-            col: ("Float64" if col in normalized else self._schema_in.dtypes[col])
-            for col in self._schema_in.columns
-        }
-        return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)
+        return schema_out_for_touched(self._schema_in, set(self._estimates))
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Ordered-quantile normalization is only meaningful on numeric columns."""
