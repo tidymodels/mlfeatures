@@ -342,8 +342,7 @@ class StepPolynomial(Step):
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
     polynomial terms. Constant (or all-null) columns get an effective degree
     of ``0``; `transform()` leaves those columns untouched and emits a
-    `UserWarning`. The caller can chain a zero-variance drop step to
-    clean them up.
+    warning. The caller can chain a zero-variance drop step to clean them up.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
