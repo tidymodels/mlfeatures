@@ -41,6 +41,7 @@ from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_filter import StepFilter
+from shoez.step_geo_distance import StepGeoDistance
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
@@ -65,6 +66,7 @@ if TYPE_CHECKING:
     import polars as pl
 
     from shoez.step_class_distance import Metric
+    from shoez.step_geo_distance import GeoMetric
     from shoez.types import Selector
 else:
     # Runtime: this opt-in module is the one sanctioned place that imports polars
@@ -308,6 +310,34 @@ class ShzNamespace:
                 log_distance=log_distance,
                 eps=eps,
                 prefix=prefix,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
+
+    def step_geo_distance(
+        self,
+        lat: str,
+        lon: str,
+        *,
+        ref_lat: float,
+        ref_lon: float,
+        metric: GeoMetric = "haversine",
+        log_distance: bool = False,
+        name: str = "geo_dist",
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Distance from each row to a fixed reference point. See `StepGeoDistance`."""
+        return self.apply(
+            StepGeoDistance(
+                lat,
+                lon,
+                ref_lat=ref_lat,
+                ref_lon=ref_lon,
+                metric=metric,
+                log_distance=log_distance,
+                name=name,
                 keep_original_cols=keep_original_cols,
                 role=role,
             )

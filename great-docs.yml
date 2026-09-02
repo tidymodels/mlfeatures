@@ -126,6 +126,8 @@ reference:
         members: false
       - name: StepClassDistance
         members: false
+      - name: StepGeoDistance
+        members: false
       - name: StepIntercept
         members: false
       - name: StepInteract

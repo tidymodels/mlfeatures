@@ -26,6 +26,7 @@ from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
 from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_filter import StepFilter
+from shoez.step_geo_distance import StepGeoDistance
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
@@ -76,6 +77,7 @@ __all__ = [
     "StepOneHot",
     "StepDropZeroVariance",
     "StepFilter",
+    "StepGeoDistance",
     "StepMutate",
     "StepPca",
     "StepImputeMedian",
