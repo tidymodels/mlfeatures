@@ -164,6 +164,12 @@ class StepIndicateNa(Step):
     A float column is flagged missing on either a null or a NaN value; every
     other dtype has no NaN representation, so only null counts.
 
+    Unlike most ``ONE_TO_MANY`` steps, ``keep_original_cols`` is usually worth
+    setting to ``True`` here: the indicator alone discards the source
+    column's own value, and a downstream imputation step (`StepImputeMean`,
+    `StepImputeMedian`, `StepImputeMode`, `StepUnknown`) still needs that
+    column to fill in.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 
@@ -208,7 +214,7 @@ class StepIndicateNa(Step):
     Specifying the step touches no data:
 
     ```{python}
-    recipe = Recipe().add(StepIndicateNa(s.features()))
+    recipe = Recipe().add(StepIndicateNa(s.features(), keep_original_cols=True))
     recipe
     ```
 
@@ -219,16 +225,17 @@ class StepIndicateNa(Step):
     fitted
     ```
 
-    `transform()` adds one indicator column per selected column and drops the source:
+    `transform()` adds one indicator column per selected column, keeping the source
+    alongside it so it is still available to a later imputation step:
 
     ```{python}
     fitted.transform(df)
     ```
 
-    ``keep_original_cols`` keeps the source column alongside its indicator:
+    Without ``keep_original_cols``, the source column is dropped instead:
 
     ```{python}
-    recipe = Recipe().add(StepIndicateNa(s.features(), keep_original_cols=True))
+    recipe = Recipe().add(StepIndicateNa(s.features()))
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
