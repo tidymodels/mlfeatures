@@ -30,7 +30,16 @@ from shoez.types import (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-__all__ = ["fit_dummy", "apply_dummy", "StepDummy", "DummyEstimates", "DISCRETE_DTYPES"]
+__all__ = [
+    "fit_dummy",
+    "apply_dummy",
+    "StepDummy",
+    "DummyEstimates",
+    "DISCRETE_DTYPES",
+    "resolve_col_name",
+    "dummy_output_parents",
+    "dummy_update_roles",
+]
 
 DISCRETE_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.String,
@@ -210,6 +219,58 @@ def apply_dummy(
     return frame
 
 
+def resolve_col_name(
+    name_fn: Callable[[str, str], str] | None, col: str, level: str
+) -> str:
+    """The indicator column name for ``(col, level)``, shared by `StepDummy` / `StepOneHot`.
+
+    Delegates to ``name_fn`` if given, otherwise falls back to ``"{col}_{level}"``.
+    """
+    if name_fn is not None:
+        return name_fn(col, level)
+    return f"{col}_{level}"
+
+
+def dummy_output_parents(
+    levels: dict[str, list[Any]], col_name_fn: Callable[[str, str], str]
+) -> tuple[list[str], dict[str, list[str]]]:
+    """The ``(produced, output_parents)`` pair for dummy/one-hot encoding.
+
+    Shared by `StepDummy` / `StepOneHot`'s ``fit()``: each indicator descends
+    from exactly its source column. ``produced`` is the ordered list
+    (preserving any duplicate name, which the ``output_parents`` map, keyed by
+    name, would silently dedup); ``output_parents`` is the name -> source-column
+    map the recipe's lineage DAG consumes.
+    """
+    produced = [
+        col_name_fn(col, str(lvl)) for col, lvls in levels.items() for lvl in lvls
+    ]
+    output_parents = {
+        col_name_fn(col, str(lvl)): [col]
+        for col, lvls in levels.items()
+        for lvl in lvls
+    }
+    return produced, output_parents
+
+
+def dummy_update_roles(
+    roles: Roles,
+    levels: dict[str, list[Any]],
+    col_name_fn: Callable[[str, str], str],
+    *,
+    keep_original_cols: bool,
+) -> None:
+    """Propagate each source column's roles to its indicators, shared by `StepDummy` / `StepOneHot`."""
+    for source_col, lvls in levels.items():
+        source_roles = roles.of(source_col)
+        for role in source_roles:
+            for lvl in lvls:
+                roles.add(col_name_fn(source_col, str(lvl)), role)
+        if not keep_original_cols:
+            for role in list(source_roles):
+                roles.remove(source_col, role)
+
+
 class StepDummy(Step):
     """Expand discrete columns into *k−1* binary indicator columns.
 
@@ -327,19 +388,9 @@ class StepDummy(Step):
         )
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
         self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
-        # Each indicator descends from exactly its source column (a1, a2 ← a).
-        # The ordered list preserves any duplicate name (which the parents map,
-        # keyed by name, would silently dedup).
-        produced = [
-            self._col_name(col, str(lvl))
-            for col, lvls in self._estimates.levels.items()
-            for lvl in lvls
-        ]
-        self._output_parents = {
-            self._col_name(col, str(lvl)): [col]
-            for col, lvls in self._estimates.levels.items()
-            for lvl in lvls
-        }
+        produced, self._output_parents = dummy_output_parents(
+            self._estimates.levels, self._col_name
+        )
         self._schema_out = ColSchema(columns=produced)
         return self
 
@@ -384,14 +435,12 @@ class StepDummy(Step):
     def update_roles(self, roles: Roles) -> None:
         if self._estimates is None:
             return
-        for source_col, levels in self._estimates.levels.items():
-            source_roles = roles.of(source_col)
-            for role in source_roles:
-                for lvl in levels:
-                    roles.add(self._col_name(source_col, str(lvl)), role)
-            if not self.keep_original_cols:
-                for role in list(source_roles):
-                    roles.remove(source_col, role)
+        dummy_update_roles(
+            roles,
+            self._estimates.levels,
+            self._col_name,
+            keep_original_cols=self.keep_original_cols,
+        )
 
     @property
     def produces_sparse(self) -> bool:
@@ -399,6 +448,4 @@ class StepDummy(Step):
         return False
 
     def _col_name(self, col: str, level: str) -> str:
-        if self.name_fn is not None:
-            return self.name_fn(col, level)
-        return f"{col}_{level}"
+        return resolve_col_name(self.name_fn, col, level)
