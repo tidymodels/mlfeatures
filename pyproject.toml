@@ -53,6 +53,12 @@ pyarrow = [
 scipy = [
     "scipy>=1.10",
 ]
+# `StepHoliday` uses the `holidays` package's country calendars to check
+# whether a date is a named holiday; declared via `required_pkgs()` so a
+# missing install surfaces as a friendly `MissingDependencyError`.
+holidays = [
+    "holidays>=0.40",
+]
 # `shoez.testing` (the StepConformanceTest suite) imports pytest, so a plugin
 # author running the step contract needs it. The rest of the package does not.
 test = [
@@ -84,6 +90,8 @@ dev = [
     "pyarrow>=13.0.0",
     # `StepOrderNorm`'s tests exercise the real scipy dependency.
     "scipy>=1.10",
+    # `StepHoliday`'s tests exercise the real holidays dependency.
+    "holidays>=0.40",
 ]
 
 [project.urls]
