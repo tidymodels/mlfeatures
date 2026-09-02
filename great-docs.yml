@@ -124,6 +124,10 @@ reference:
         members: false
       - name: StepPolynomial
         members: false
+      - name: StepSplineNatural
+        members: false
+      - name: StepSplineMonotone
+        members: false
       - name: StepClassDistance
         members: false
       - name: StepGeoDistance

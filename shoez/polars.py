@@ -59,10 +59,12 @@ from shoez.step_pca import StepPca
 from shoez.step_pls import StepPls
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_range import StepRange
+from shoez.step_spline_monotone import StepSplineMonotone
+from shoez.step_spline_natural import StepSplineNatural
 from shoez.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
     from typing import Any, Literal
 
     import polars as pl
@@ -430,6 +432,52 @@ class ShzNamespace:
             StepPolynomial(
                 columns,
                 degree=degree,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
+
+    def step_spline_natural(
+        self,
+        columns: Selector,
+        *,
+        deg_free: int = 10,
+        complete_set: bool = False,
+        knots: Sequence[float] | None = None,
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Expand columns into a natural cubic spline basis. See `StepSplineNatural`."""
+        return self.apply(
+            StepSplineNatural(
+                columns,
+                deg_free=deg_free,
+                complete_set=complete_set,
+                knots=knots,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
+
+    def step_spline_monotone(
+        self,
+        columns: Selector,
+        *,
+        deg_free: int = 10,
+        degree: int = 3,
+        complete_set: bool = True,
+        knots: Sequence[float] | None = None,
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Expand columns into a monotone (I-spline) basis. See `StepSplineMonotone`."""
+        return self.apply(
+            StepSplineMonotone(
+                columns,
+                deg_free=deg_free,
+                degree=degree,
+                complete_set=complete_set,
+                knots=knots,
                 keep_original_cols=keep_original_cols,
                 role=role,
             )
