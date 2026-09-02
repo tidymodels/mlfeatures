@@ -42,6 +42,7 @@ from shoez.step_drop_zero_variance import StepDropZeroVariance
 from shoez.step_dummy import StepDummy
 from shoez.step_filter import StepFilter
 from shoez.step_geo_distance import StepGeoDistance
+from shoez.step_holiday import StepHoliday
 from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
@@ -338,6 +339,32 @@ class ShzNamespace:
                 metric=metric,
                 log_distance=log_distance,
                 name=name,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
+        )
+
+    def step_holiday(
+        self,
+        columns: Selector,
+        *,
+        holidays: "list[str] | tuple[str, ...]" = (
+            "New Year's Day",
+            "Labor Day",
+            "Christmas Day",
+        ),
+        country: str = "US",
+        subdiv: str | None = None,
+        keep_original_cols: bool = False,
+        role: str | None = "feature",
+    ) -> pl.DataFrame:
+        """Add binary indicator columns flagging named holidays. See `StepHoliday`."""
+        return self.apply(
+            StepHoliday(
+                columns,
+                holidays=holidays,
+                country=country,
+                subdiv=subdiv,
                 keep_original_cols=keep_original_cols,
                 role=role,
             )
