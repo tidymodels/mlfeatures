@@ -21,12 +21,12 @@ is deferred until the schema subsystem lands, matching ``step_unknown``.
 
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
+from shoez._level_recode import warn_level_collision
 from shoez.step import Step
 from shoez.types import (
     _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
@@ -121,12 +121,7 @@ def fit_other(
             )
         kept[col] = sorted(keep)
 
-    if collisions:
-        warnings.warn(
-            f"the level {other_level!r} already exists in {len(collisions)} "
-            f"column(s); pooled levels will be merged with it: {collisions!r}",
-            stacklevel=2,
-        )
+    warn_level_collision(other_level, collisions, merges="pooled levels")
     return kept
 
 

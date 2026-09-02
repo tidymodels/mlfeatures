@@ -17,12 +17,12 @@ its level set is deferred until the schema subsystem lands.
 
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
+from shoez._level_recode import warn_level_collision
 from shoez.step import Step
 from shoez.types import (
     _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
@@ -73,12 +73,7 @@ def fit_unknown(
         for col in selected.columns
         if bool((selected[col].cast(nw.String) == new_level).any())
     ]
-    if collisions:
-        warnings.warn(
-            f"the level {new_level!r} already exists in {len(collisions)} "
-            f"column(s); recoded nulls will be merged with it: {collisions!r}",
-            stacklevel=2,
-        )
+    warn_level_collision(new_level, collisions, merges="recoded nulls")
     return list(selected.columns)
 
 
