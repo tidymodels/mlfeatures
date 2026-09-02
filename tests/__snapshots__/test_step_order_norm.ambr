@@ -1,0 +1,7 @@
+# serializer version: 1
+# name: TestDegenerateColumns.test_constant_column_is_omitted
+  "1 column(s) had fewer than 2 distinct values and were not normalized: ['c']"
+# ---
+# name: TestDegenerateColumns.test_warning_names_the_columns
+  "1 column(s) had fewer than 2 distinct values and were not normalized: ['c']"
+# ---
