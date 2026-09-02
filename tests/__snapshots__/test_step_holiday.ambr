@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestFitHoliday.test_unknown_holiday_name_raises
+  "'holidays' must be holiday names in the 'US' calendar for 2023-2023; got unknown name(s) ['Not A Real Holiday']"
+# ---
