@@ -2,3 +2,9 @@
 # name: TestEndToEnd.test_fewer_than_two_columns_warns_and_is_noop
   'fewer than 2 columns were selected; no interaction columns were created'
 # ---
+# name: TestNameCollisions.test_two_pairs_producing_the_same_name_raise[pd]
+  "step 'interact' produces duplicate column name(s) ['a_x_x_b']; output column names must be unique"
+# ---
+# name: TestNameCollisions.test_two_pairs_producing_the_same_name_raise[pl]
+  "step 'interact' produces duplicate column name(s) ['a_x_x_b']; output column names must be unique"
+# ---

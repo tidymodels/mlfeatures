@@ -280,16 +280,21 @@ class StepInteract(Step):
         out_names = [f"{a}{self.sep}{b}" for a, b in self._estimates.pairs]
         # Read the products' actual output dtype off the training data rather
         # than assuming Float64: two integer columns multiply to an integer
-        # dtype on both backends.
+        # dtype on both backends. Aliased to positional temp names, never the
+        # (possibly colliding) real output names: two different pairs can
+        # legitimately produce the same `out_name` (see `produced_columns()`),
+        # and aliasing two columns identically within one `with_columns()` call
+        # raises a backend-specific error on its own, before the recipe's
+        # centralized collision check gets a chance to reject it cleanly.
         if out_names:
             products = selected.with_columns(
-                (nw.col(a) * nw.col(b)).alias(name)
-                for name, (a, b) in zip(out_names, self._estimates.pairs)
+                (nw.col(a) * nw.col(b)).alias(f"_interact_tmp_{i}")
+                for i, (a, b) in enumerate(self._estimates.pairs)
             )
+            product_dtypes = _frame.dtypes(products)
             out_dtypes = {
-                name: str(dt)
-                for name, dt in _frame.dtypes(products).items()
-                if name in out_names
+                name: str(product_dtypes[f"_interact_tmp_{i}"])
+                for i, name in enumerate(out_names)
             }
         else:
             out_dtypes = {}
@@ -324,6 +329,19 @@ class StepInteract(Step):
         if self._output_parents is None:
             raise RuntimeError("StepInteract.output_parents() called before fit()")
         return self._output_parents
+
+    def produced_columns(self) -> list[str]:
+        """Interaction column names in order, preserving duplicates (see ``Step``).
+
+        Two different pairs can produce the same ``f"{a}{sep}{b}"`` name for an
+        adversarial choice of column names and ``sep`` (e.g. ``sep="_x_"`` with
+        the pairs ``("a_x", "b")`` and ``("a", "x_b")``). ``output_parents()`` is
+        a dict, so such a collision would otherwise vanish there; this overrides
+        the base-class default (which derives from ``output_parents()``'s keys)
+        to preserve the duplicate so the recipe's centralized name-collision
+        check can reject it.
+        """
+        return list(self.schema_out().columns)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Pairwise products are only meaningful on numeric columns."""
