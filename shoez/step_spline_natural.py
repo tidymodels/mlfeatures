@@ -1,6 +1,6 @@
 """Natural cubic spline basis expansion: fit + apply.
 
-Port of R `recipes`' ``step_spline_natural()``, which wraps
+Port of R ``recipes``'s ``step_spline_natural()``, which wraps
 ``splines2::naturalSpline()``. The *fit* half (`fit_spline_natural()`)
 inspects training data to place interior knots (by quantile, or the caller's
 own explicit `knots`) and stores them alongside the training boundary
@@ -397,10 +397,6 @@ class StepSplineNatural(Step):
     and emits a `UserWarning`. New data outside the fit-time boundary is
     extrapolated linearly, not as a wild polynomial continuation — this is
     what "natural" means for this basis.
-
-    Not a base R ``recipes`` step by numeric coincidence — this ports
-    ``step_spline_natural()`` from R `recipes` (which wraps
-    ``splines2::naturalSpline()``).
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.

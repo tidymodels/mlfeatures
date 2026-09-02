@@ -1,6 +1,6 @@
 """Monotone (I-spline) spline basis expansion: fit + apply.
 
-Port of R `recipes`' ``step_spline_monotone()``, which wraps
+Port of R ``recipes``'s ``step_spline_monotone()``, which wraps
 ``splines2::iSpline()``. The *fit* half (`fit_spline_monotone()`) inspects
 training data to place interior knots (by quantile, or the caller's own
 explicit `knots`) and stores them alongside the training boundary; the
@@ -354,10 +354,6 @@ class StepSplineMonotone(Step):
     and emits a `UserWarning`. New data outside the fit-time boundary
     continues the local polynomial piece and can leave ``[0, 1]`` or lose
     monotonicity — the shape guarantee only holds within the training range.
-
-    Not a base R ``recipes`` step by numeric coincidence — this ports
-    ``step_spline_monotone()`` from R `recipes` (which wraps
-    ``splines2::iSpline()``).
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
