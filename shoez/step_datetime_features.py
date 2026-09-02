@@ -1,12 +1,11 @@
 """Calendar-part expansion for Datetime columns: fit + apply.
 
-`step_datetime_features` is the Datetime-only half of the R recipes'
-``step_date`` port (`step_date_features` in `shoez/step_date_features.py` is
-the Date-only half). They are two separate steps because narwhals' ``Date``
-and ``Datetime`` dtypes carry a different, non-overlapping set of meaningful
-``.dt`` parts -- a ``Date`` has no ``hour``/``minute``/``second`` -- mirroring
-Python's own ``datetime.date`` / ``datetime.datetime`` split (``datetime``
-does not inherit from ``date``).
+`step_datetime_features` is the Datetime-only counterpart of
+`step_date_features` (`shoez/step_date_features.py`). They are two separate
+steps because narwhals' ``Date`` and ``Datetime`` dtypes carry a different,
+non-overlapping set of meaningful ``.dt`` parts -- a ``Date`` has no
+``hour``/``minute``/``second`` -- mirroring Python's own ``datetime.date`` /
+``datetime.datetime`` split (``datetime`` does not inherit from ``date``).
 
 Time zones are read as narwhals/the backend already resolves them: this step
 does not accept a target zone to convert into, so a column's stored zone
