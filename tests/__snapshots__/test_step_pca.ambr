@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestFitPca.test_invalid_num_comp_message
+  "'num_comp' must be an integer greater than zero, got 0"
+# ---

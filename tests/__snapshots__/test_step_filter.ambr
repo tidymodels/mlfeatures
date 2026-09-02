@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestConstructorValidation.test_non_callable_predicate_message
+  "'predicate' must be callable; got 'str'"
+# ---

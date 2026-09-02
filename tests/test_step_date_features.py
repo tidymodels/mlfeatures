@@ -17,6 +17,7 @@ from typing import Any
 import narwhals.stable.v2 as nw
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, SchemaInfo
 from shoez.step_date_features import (
@@ -150,6 +151,11 @@ class TestStepDateFeaturesUnit:
         with pytest.raises(ValueError):
             StepDateFeatures(["d"], features=["not_a_feature"])
 
+    def test_invalid_feature_message(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepDateFeatures(["d"], features=["not_a_feature"])
+        assert str(excinfo.value) == snapshot
+
     def test_default_categorical_is_empty(self) -> None:
         assert StepDateFeatures(["d"]).categorical == ()
 
@@ -161,9 +167,23 @@ class TestStepDateFeaturesUnit:
         with pytest.raises(ValueError):
             StepDateFeatures(["d"], categorical=["year"])
 
+    def test_categorical_not_in_eligible_set_message(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepDateFeatures(["d"], categorical=["year"])
+        assert str(excinfo.value) == snapshot
+
     def test_categorical_not_requested_in_features_raises(self) -> None:
         with pytest.raises(ValueError):
             StepDateFeatures(["d"], features=["year"], categorical=["month"])
+
+    def test_categorical_not_requested_in_features_message(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepDateFeatures(["d"], features=["year"], categorical=["month"])
+        assert str(excinfo.value) == snapshot
 
     def test_fit_returns_self(self) -> None:
         step = StepDateFeatures(["d"])

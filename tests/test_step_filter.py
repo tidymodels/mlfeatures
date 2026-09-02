@@ -8,6 +8,7 @@ import narwhals as nw
 import pandas as pd
 import polars as pl
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez.step_filter import StepFilter, apply_filter
 
@@ -64,6 +65,11 @@ class TestConstructorValidation:
     def test_non_callable_predicate_raises(self) -> None:
         with pytest.raises(TypeError):
             StepFilter("a > 1")  # type: ignore[arg-type]
+
+    def test_non_callable_predicate_message(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(TypeError) as excinfo:
+            StepFilter("a > 1")  # type: ignore[arg-type]
+        assert str(excinfo.value) == snapshot
 
     def test_default_id(self) -> None:
         assert StepFilter(lambda d: d["a"] > 1).id == "filter"
