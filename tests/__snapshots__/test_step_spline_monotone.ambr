@@ -1,0 +1,16 @@
+# serializer version: 1
+# name: TestApplyDegenerate.test_constant_column_kept_unchanged
+  "column 'x' has fewer than 2 unique values; no monotone spline expansion was applied"
+# ---
+# name: TestFitDegenerateColumns.test_warning_names_the_column
+  "1 column(s) had fewer than 2 distinct values and were not expanded: ['weird_name']"
+# ---
+# name: TestFitExplicitKnots.test_invalid_explicit_knots_raise
+  "'knots' must lie strictly inside the boundary knots (1.0, 10.0) for column 'x', got [1.0, 5.0]"
+# ---
+# name: TestFitValidation.test_deg_free_below_minimum_raises
+  "'deg_free' must be an integer greater than or equal to 4, got 2"
+# ---
+# name: TestFitValidation.test_negative_degree_raises
+  "'degree' must be an integer greater than or equal to 0, got -1"
+# ---
