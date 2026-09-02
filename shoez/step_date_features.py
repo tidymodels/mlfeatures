@@ -23,6 +23,19 @@ from typing import TYPE_CHECKING
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
+from shoez._calendar_features import (
+    apply_calendar_features,
+    day_expr,
+    dow_expr,
+    doy_expr,
+    month_expr,
+    normalize_categorical,
+    normalize_features,
+    output_dtype_name,
+    validate_categorical,
+    validate_features,
+    year_expr,
+)
 from shoez.step import Step
 from shoez.types import (
     AcceptedDtypes,
@@ -47,26 +60,6 @@ __all__ = [
 ]
 
 
-def _year(e: nw.Expr) -> nw.Expr:
-    return e.dt.year()
-
-
-def _month(e: nw.Expr) -> nw.Expr:
-    return e.dt.month()
-
-
-def _day(e: nw.Expr) -> nw.Expr:
-    return e.dt.day()
-
-
-def _dow(e: nw.Expr) -> nw.Expr:
-    return e.dt.weekday()
-
-
-def _doy(e: nw.Expr) -> nw.Expr:
-    return e.dt.ordinal_day()
-
-
 #: Feature name -> function computing that calendar part from a Date expression.
 #: Every result is cast to ``Int32`` in `apply_date_features()` (unless the
 #: feature was requested as ``categorical``) so the output dtype is identical
@@ -74,116 +67,14 @@ def _doy(e: nw.Expr) -> nw.Expr:
 #: (``Int8`` for ``day``, ``Int16`` for ``doy``, ...) while pandas' narwhals
 #: backend always reports ``Int32``.
 _DATE_FEATURE_EXPRS: dict[str, "Callable[[nw.Expr], nw.Expr]"] = {
-    "year": _year,
-    "month": _month,
-    "day": _day,
-    "dow": _dow,
-    "doy": _doy,
+    "year": year_expr,
+    "month": month_expr,
+    "day": day_expr,
+    "dow": dow_expr,
+    "doy": doy_expr,
 }
 
 _DEFAULT_DATE_FEATURES: tuple[str, ...] = ("year", "month", "day", "dow", "doy")
-
-#: Ordered level labels for the two features that name a natural, fixed
-#: cycle. Every other feature (``year``, ``day``, ``doy``) has no such
-#: vocabulary -- there is no name for "day 214 of the year" -- so ``month``
-#: and ``dow`` are the only features `categorical` accepts.
-_MONTH_LABELS: list[str] = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-]
-_DOW_LABELS: list[str] = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-]
-_CATEGORICAL_LABELS: dict[str, list[str]] = {"month": _MONTH_LABELS, "dow": _DOW_LABELS}
-#: Order matches ``_DEFAULT_DATE_FEATURES``' order (``month`` before ``dow``),
-#: so normalizing `categorical` against this tuple keeps it consistent with
-#: `features`' own canonical order.
-_CATEGORICAL_ELIGIBLE: tuple[str, ...] = ("month", "dow")
-
-
-def _validate_date_features(features: tuple[str, ...]) -> None:
-    invalid = [f for f in features if f not in _DATE_FEATURE_EXPRS]
-    if invalid:
-        raise ValueError(
-            f"'features' must be a subset of {sorted(_DATE_FEATURE_EXPRS)!r}, "
-            f"got {invalid!r}"
-        )
-
-
-def _normalize_date_features(features: tuple[str, ...]) -> tuple[str, ...]:
-    """Dedup ``features`` and order it canonically (`_DEFAULT_DATE_FEATURES`' order).
-
-    Two constructor calls differing only in the order or duplication of the
-    same requested parts should behave identically -- same output columns,
-    same ``id`` collision behavior, same fitted state -- rather than produce
-    columns in whatever order the caller happened to type them.
-    """
-    requested = set(features)
-    return tuple(f for f in _DEFAULT_DATE_FEATURES if f in requested)
-
-
-def _validate_categorical(
-    categorical: tuple[str, ...], features: tuple[str, ...]
-) -> None:
-    invalid = [f for f in categorical if f not in _CATEGORICAL_ELIGIBLE]
-    if invalid:
-        raise ValueError(
-            f"'categorical' must be a subset of {sorted(_CATEGORICAL_ELIGIBLE)!r}, "
-            f"got {invalid!r}"
-        )
-    not_requested = [f for f in categorical if f not in features]
-    if not_requested:
-        raise ValueError(
-            f"'categorical' entries must also be requested in 'features'; "
-            f"not requested: {not_requested!r}"
-        )
-
-
-def _normalize_categorical(categorical: tuple[str, ...]) -> tuple[str, ...]:
-    """Dedup ``categorical`` and order it canonically (`_CATEGORICAL_ELIGIBLE`' order)."""
-    requested = set(categorical)
-    return tuple(f for f in _CATEGORICAL_ELIGIBLE if f in requested)
-
-
-def _feature_expr(col_name: str, feature: str, *, categorical: bool) -> nw.Expr:
-    """Build the expression computing ``feature`` from ``col_name``, aliased.
-
-    Plain features are cast to ``Int32`` for backend parity (see
-    `_DATE_FEATURE_EXPRS`). A ``categorical`` feature is instead mapped to its
-    ordered level labels (`_CATEGORICAL_LABELS`) and cast to a narwhals
-    ``Enum`` of those labels, so ``month``/``dow`` come back with readable
-    level names (``"January"``, ``"Monday"``, ...) instead of raw numbers.
-    """
-    name = f"{col_name}_{feature}"
-    raw = _DATE_FEATURE_EXPRS[feature](nw.col(col_name))
-    if categorical:
-        labels = _CATEGORICAL_LABELS[feature]
-        mapping = {i + 1: label for i, label in enumerate(labels)}
-        return raw.replace_strict(mapping, return_dtype=nw.Enum(labels)).alias(name)
-    return raw.cast(nw.Int32).alias(name)
-
-
-def _output_dtype_name(feature: str, *, categorical: tuple[str, ...]) -> str:
-    """The dtype string `_feature_expr()` produces for ``feature``, for `ColSchema`."""
-    if feature in categorical:
-        return str(nw.Enum(_CATEGORICAL_LABELS[feature]))
-    return "Int32"
 
 
 @dataclass(frozen=True)
@@ -269,30 +160,14 @@ def apply_date_features(
         ``data`` with one new column per selected column per requested
         feature. Backend (pandas/polars) is preserved end-to-end.
     """
-    final_order: list[str] = []
-    to_drop: list[str] = []
-    new_cols: list[nw.Expr] = []
-    selected_cols = set(fit_result.columns)
-    categorical = set(fit_result.categorical)
-    for col_name in data.columns:
-        if col_name not in selected_cols:
-            final_order.append(col_name)
-            continue
-        if keep_original_cols:
-            final_order.append(col_name)
-        else:
-            to_drop.append(col_name)
-        for feature in fit_result.features:
-            final_order.append(f"{col_name}_{feature}")
-            new_cols.append(
-                _feature_expr(col_name, feature, categorical=feature in categorical)
-            )
-
-    if new_cols:
-        data = data.with_columns(*new_cols)
-    if to_drop:
-        data = data.drop(to_drop)
-    return data.select(final_order)
+    return apply_calendar_features(
+        data,
+        fit_result.columns,
+        fit_result.features,
+        fit_result.categorical,
+        _DATE_FEATURE_EXPRS,
+        keep_original_cols=keep_original_cols,
+    )
 
 
 class StepDateFeatures(Step):
@@ -429,13 +304,13 @@ class StepDateFeatures(Step):
         id: str | None = None,
     ) -> None:
         features = tuple(features)
-        _validate_date_features(features)
-        features = _normalize_date_features(features)
+        validate_features(features, _DATE_FEATURE_EXPRS)
+        features = normalize_features(features, _DEFAULT_DATE_FEATURES)
         categorical = tuple(categorical)
-        _validate_categorical(categorical, features)
+        validate_categorical(categorical, features)
         self.columns = columns
         self.features = features
-        self.categorical = _normalize_categorical(categorical)
+        self.categorical = normalize_categorical(categorical)
         super().__init__(
             id,
             "date_features",
@@ -460,9 +335,7 @@ class StepDateFeatures(Step):
             f"{col}_{feature}" for col in selected.columns for feature in self.features
         ]
         out_dtypes = {
-            f"{col}_{feature}": _output_dtype_name(
-                feature, categorical=self.categorical
-            )
+            f"{col}_{feature}": output_dtype_name(feature, categorical=self.categorical)
             for col in selected.columns
             for feature in self.features
         }
