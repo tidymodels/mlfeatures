@@ -44,6 +44,7 @@ from shoez.step_pca import StepPca
 from shoez.step_pls import StepPls
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_range import StepRange
+from shoez.step_spline_natural import StepSplineNatural
 from shoez.step_unknown import StepUnknown
 from shoez.types import (
     ANY_DTYPE,
@@ -96,6 +97,7 @@ __all__ = [
     "StepOther",
     "StepPolynomial",
     "StepRange",
+    "StepSplineNatural",
     "StepUnknown",
     "Step",
     "RowOp",
