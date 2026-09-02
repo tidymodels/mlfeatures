@@ -40,6 +40,7 @@ from shoez.step_one_hot import StepOneHot
 from shoez.step_order_norm import StepOrderNorm
 from shoez.step_other import StepOther
 from shoez.step_pca import StepPca
+from shoez.step_pls import StepPls
 from shoez.step_polynomial import StepPolynomial
 from shoez.step_range import StepRange
 from shoez.step_unknown import StepUnknown
@@ -80,6 +81,7 @@ __all__ = [
     "StepGeoDistance",
     "StepMutate",
     "StepPca",
+    "StepPls",
     "StepImputeMedian",
     "StepImputeMean",
     "StepImputeMode",
