@@ -65,13 +65,8 @@ def fit_drop_corr(
     correlation across all columns is dropped; ties go to the row variable.
 
     Zero-variance / all-NaN columns are added to the drop list rather than
-    excluded from the filter but kept.
+    silently excluded from the filter.
     """
-    if not 0.0 <= threshold <= 1.0:
-        raise ValueError(f"'threshold' must be between 0 and 1, got {threshold!r}")
-    if method not in ("pearson", "spearman"):
-        raise ValueError(f"'method' must be 'pearson' or 'spearman', got {method!r}")
-
     col_names = selected.columns
     n = len(col_names)
 
@@ -249,6 +244,12 @@ class StepDropCorr(Step):
         method: Literal["pearson", "spearman"] = "pearson",
         id: str | None = None,
     ):
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError(f"'threshold' must be between 0 and 1, got {threshold!r}")
+        if method not in ("pearson", "spearman"):
+            raise ValueError(
+                f"'method' must be 'pearson' or 'spearman', got {method!r}"
+            )
         # Held verbatim. Interpreting a column spec (name, list, or selector) is
         # selection logic that belongs to the frame boundary, not the step:
         # ``fit()`` hands it to ``_frame.select``, which resolves it at fit time.
