@@ -28,7 +28,15 @@ import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo, Selector
+from shoez.types import (
+    _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+    Selector,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -40,9 +48,6 @@ DEFAULT_OTHER_LEVEL = "other"
 
 #: Proportion used when neither ``threshold`` nor ``min_count`` is given.
 DEFAULT_THRESHOLD = 0.05
-
-#: Dtypes ``step_other`` is valid on — categorical-like columns.
-_CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
 
 
 def fit_other(

@@ -317,6 +317,12 @@ NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.Decimal,
 }
 
+#: Dtypes valid for a step whose logic is level-based (an imputed mode, a
+#: recoded "unknown"/"other" level) rather than numeric or general discrete.
+#: Shared by ``step_impute_mode``, ``step_unknown``, and ``step_other``, which
+#: previously each redefined this set verbatim.
+_CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
+
 
 class Mode(Enum):
     """Shape of a step's input/output relationship.
