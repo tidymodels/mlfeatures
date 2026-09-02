@@ -96,7 +96,7 @@ class HolidayFit:
     columns: list[str]
     holidays: tuple[str, ...]
     country: str
-    subdiv: "str | None"
+    subdiv: str | None
     dtypes: dict[str, nw.dtypes.DType]
 
 
@@ -104,7 +104,7 @@ def fit_holiday(
     selected: Frame,
     holidays: tuple[str, ...],
     country: str,
-    subdiv: "str | None" = None,
+    subdiv: str | None = None,
 ) -> HolidayFit:
     """Resolve the selected columns and validate ``holidays`` against a real calendar.
 
@@ -354,9 +354,9 @@ class StepHoliday(Step):
         self,
         columns: Selector,
         *,
-        holidays: "list[str] | tuple[str, ...]" = _DEFAULT_HOLIDAYS,
+        holidays: list[str] | tuple[str, ...] = _DEFAULT_HOLIDAYS,
         country: str = "US",
-        subdiv: "str | None" = None,
+        subdiv: str | None = None,
         keep_original_cols: bool = False,
         role: str | None = "feature",
         id: str | None = None,

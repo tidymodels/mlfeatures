@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
     from shoez.step_class_distance import Metric
     from shoez.step_geo_distance import GeoMetric
-    from shoez.types import Selector
+    from shoez.types import Frame, Selector
 else:
     # Runtime: this opt-in module is the one sanctioned place that imports polars
     # at runtime (``design/ecosystem.md`` boundary rule #5). Route it through
@@ -105,7 +105,7 @@ class ShzNamespace:
 
     def step_dummy(
         self,
-        columns: list[str],
+        columns: Selector,
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
@@ -117,7 +117,7 @@ class ShzNamespace:
 
     def step_one_hot(
         self,
-        columns: list[str],
+        columns: Selector,
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
@@ -132,6 +132,7 @@ class ShzNamespace:
         columns: Selector,
         *,
         features: list[str] | tuple[str, ...] = ("year", "month", "day", "dow", "doy"),
+        categorical: list[str] | tuple[str, ...] = (),
         keep_original_cols: bool = False,
         role: str | None = "feature",
     ) -> pl.DataFrame:
@@ -140,6 +141,7 @@ class ShzNamespace:
             StepDateFeatures(
                 columns,
                 features=features,
+                categorical=categorical,
                 keep_original_cols=keep_original_cols,
                 role=role,
             )
@@ -159,6 +161,7 @@ class ShzNamespace:
             "dow",
             "doy",
         ),
+        categorical: list[str] | tuple[str, ...] = (),
         keep_original_cols: bool = False,
         role: str | None = "feature",
     ) -> pl.DataFrame:
@@ -167,6 +170,7 @@ class ShzNamespace:
             StepDatetimeFeatures(
                 columns,
                 features=features,
+                categorical=categorical,
                 keep_original_cols=keep_original_cols,
                 role=role,
             )
@@ -198,7 +202,7 @@ class ShzNamespace:
             StepDropNearZeroVariance(columns, freq_cut=freq_cut, unique_cut=unique_cut)
         )
 
-    def step_drop_zero_variance(self, columns: list[str]) -> pl.DataFrame:
+    def step_drop_zero_variance(self, columns: Selector) -> pl.DataFrame:
         """Drop zero-variance columns. See `StepDropZeroVariance`."""
         return self.apply(StepDropZeroVariance(columns))
 
@@ -212,7 +216,7 @@ class ShzNamespace:
         """Add a constant intercept column. See `StepIntercept`."""
         return self.apply(StepIntercept(value=value, name=name, role=role))
 
-    def step_normalize(self, columns: list[str]) -> pl.DataFrame:
+    def step_normalize(self, columns: Selector) -> pl.DataFrame:
         """Center and scale numeric columns. See `StepNormalize`."""
         return self.apply(StepNormalize(columns))
 
@@ -259,14 +263,14 @@ class ShzNamespace:
 
     def step_filter(
         self,
-        predicate: Callable[[Any], Any],
+        predicate: Callable[[Frame], Any],
     ) -> pl.DataFrame:
         """Keep only the rows matching a predicate. See `StepFilter`."""
         return self.apply(StepFilter(predicate))
 
     def step_mutate(
         self,
-        mutations: Mapping[str, Callable[[Any], Any]],
+        mutations: Mapping[str, Callable[[Frame], Any]],
         *,
         role: str | None = "feature",
     ) -> pl.DataFrame:
@@ -373,7 +377,7 @@ class ShzNamespace:
         self,
         columns: Selector,
         *,
-        holidays: "list[str] | tuple[str, ...]" = (
+        holidays: list[str] | tuple[str, ...] = (
             "New Year's Day",
             "Labor Day",
             "Christmas Day",
@@ -489,7 +493,7 @@ class ShzNamespace:
         *,
         new_level: str = DEFAULT_UNKNOWN_LEVEL,
     ) -> pl.DataFrame:
-        """Recode unseen categorical levels. See `StepUnknown`."""
+        """Recode missing categorical levels to an explicit level. See `StepUnknown`."""
         return self.apply(StepUnknown(columns, new_level=new_level))
 
     def step_other(
