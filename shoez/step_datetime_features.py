@@ -122,6 +122,18 @@ def _validate_datetime_features(features: tuple[str, ...]) -> None:
         )
 
 
+def _normalize_datetime_features(features: tuple[str, ...]) -> tuple[str, ...]:
+    """Dedup ``features`` and order it canonically (`_DEFAULT_DATETIME_FEATURES`' order).
+
+    Two constructor calls differing only in the order or duplication of the
+    same requested parts should behave identically -- same output columns,
+    same ``id`` collision behavior, same fitted state -- rather than produce
+    columns in whatever order the caller happened to type them.
+    """
+    requested = set(features)
+    return tuple(f for f in _DEFAULT_DATETIME_FEATURES if f in requested)
+
+
 @dataclass(frozen=True)
 class DatetimeFeaturesFit:
     """The fitted result returned by `fit_datetime_features()`.
@@ -261,6 +273,9 @@ class StepDatetimeFeatures(Step):
         ``"hour"``, ``"minute"``, ``"second"``, ``"dow"`` (day of week), and
         ``"doy"`` (day of year). Default
         ``("year", "month", "day", "hour", "minute", "second", "dow", "doy")``.
+        Deduplicated and reordered to that same canonical order regardless of
+        the order passed in, so the output columns are always in a fixed
+        order.
     keep_original_cols
         If ``True``, the source columns are kept alongside their calendar-part
         columns instead of being dropped. Default ``False``.
@@ -354,7 +369,7 @@ class StepDatetimeFeatures(Step):
         features = tuple(features)
         _validate_datetime_features(features)
         self.columns = columns
-        self.features = features
+        self.features = _normalize_datetime_features(features)
         super().__init__(
             id,
             "datetime_features",

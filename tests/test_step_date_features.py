@@ -108,6 +108,19 @@ class TestStepDateFeaturesUnit:
             "doy",
         )
 
+    def test_features_are_reordered_canonically(self) -> None:
+        assert StepDateFeatures(["d"], features=["doy", "dow", "year"]).features == (
+            "year",
+            "dow",
+            "doy",
+        )
+
+    def test_duplicate_features_are_deduped(self) -> None:
+        assert StepDateFeatures(["d"], features=["year", "year", "month"]).features == (
+            "year",
+            "month",
+        )
+
     def test_default_role_is_feature(self) -> None:
         assert StepDateFeatures(["d"]).output_role == "feature"
 
