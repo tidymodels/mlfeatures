@@ -19,7 +19,7 @@ them.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import narwhals.stable.v2 as nw
 import numpy as np
@@ -88,6 +88,12 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
     ``sklearn.cross_decomposition.PLSRegression``; only its plain NumPy
     arrays are kept.
 
+    A numeric ``target`` is fit directly (PLS regression). A categorical or
+    string ``target`` is dummy-coded into one indicator column per class,
+    sorted by `sorted()`, before fitting (PLS discriminant analysis); the
+    dummy-coding is transparent to `apply_pls()`, which only ever projects
+    the feature columns.
+
     Parameters
     ----------
     selected
@@ -95,8 +101,8 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
         Native frames are wrapped via `shoez._frame.from_native()` at the
         recipe boundary.
     target
-        Narwhals ``Series`` of a numeric target, aligned row-for-row with
-        ``selected``.
+        Narwhals ``Series`` of a numeric or categorical target, aligned
+        row-for-row with ``selected``.
     num_comp
         Number of components to keep. Must be an ``int`` strictly greater
         than zero. Booleans are rejected even though ``bool`` is an ``int``
@@ -122,13 +128,15 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
         )
     columns = _frame.columns(selected)
     x = _frame.to_float_array(selected)
-    y = _frame.series_to_float_array(target)
+    feature_complete = cast("np.ndarray[Any, Any]", ~np.isnan(x).any(axis=1))
 
-    # Complete cases only: a row with any NaN feature or a null target cannot
-    # contribute to the mean or the fit without contaminating them.
-    complete = ~np.isnan(x).any(axis=1) & ~np.isnan(y)
-    x_complete = x[complete]
-    y_complete = y[complete]
+    if target.dtype.is_numeric():
+        y = _frame.series_to_float_array(target)
+        complete = feature_complete & ~np.isnan(y)
+        x_complete = x[complete]
+        y_complete = y[complete]
+    else:
+        x_complete, y_complete = _dummy_code_target(x, feature_complete, target)
 
     eff = min(num_comp, x_complete.shape[1], x_complete.shape[0])
 
@@ -141,6 +149,38 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
     mean = np.asarray(pls._x_mean, dtype=np.float64)  # pyright: ignore[reportPrivateUsage]
     rotation = np.asarray(pls.x_rotations_, dtype=np.float64)
     return PlsFit(columns=columns, mean=mean, rotation=rotation, num_comp=eff)
+
+
+def _dummy_code_target(
+    x: "np.ndarray[Any, Any]",
+    feature_complete: "np.ndarray[Any, Any]",
+    target: "nw.Series[Any]",
+) -> tuple["np.ndarray[Any, Any]", "np.ndarray[Any, Any]"]:
+    """Restrict ``x`` to complete rows and dummy-code a categorical ``target``.
+
+    One indicator column per class (sorted by `sorted()`, matching
+    `shoez.step_class_distance.fit_class_distance`) turns PLS discriminant
+    analysis into an ordinary multi-output PLS regression -- the same
+    ``x_rotations_`` extraction in `fit_pls` works unchanged.
+    """
+    target_np = target.to_numpy()
+    not_null = np.array([v is not None and not _is_nan(v) for v in target_np])
+    complete = feature_complete & not_null
+    x_complete = x[complete]
+    labels = target_np[complete]
+    classes: list[Any] = sorted(set(labels.tolist()))
+    y_complete = np.zeros((len(labels), len(classes)), dtype=np.float64)
+    for j, cls in enumerate(classes):
+        y_complete[:, j] = labels == cls
+    return x_complete, y_complete
+
+
+def _is_nan(value: Any) -> bool:
+    """``True`` for a floating-point NaN, and for any value unequal to itself."""
+    try:
+        return bool(value != value)
+    except TypeError:  # pragma: no cover
+        return False
 
 
 def apply_pls(
@@ -200,7 +240,9 @@ class StepPls(Step):
     on the target as well as the selected columns. Asking for more
     components than there are input columns yields fewer.
 
-    ``target`` must be numeric; a categorical target is not supported.
+    ``target`` may be numeric (partial least squares regression) or
+    categorical/string (partial least squares discriminant analysis, fit by
+    dummy-coding the classes into one indicator column per class).
 
     The columns are centered but not scaled, so a column measured on a
     larger numeric range contributes more to the components; normalize
@@ -225,9 +267,9 @@ class StepPls(Step):
         fitted, so the same selector works on any backend. Only numeric
         columns are meaningful here.
     target
-        Name of the column in the training frame that holds the numeric
-        target. Read at fit time only; the column is *not* declared as an
-        input feature in `schema_in()`.
+        Name of the column in the training frame that holds the numeric or
+        categorical target. Read at fit time only; the column is *not*
+        declared as an input feature in `schema_in()`.
     num_comp
         Number of components to keep. Must be a positive integer. Default
         ``5``.
@@ -303,6 +345,24 @@ class StepPls(Step):
     )
     fitted = recipe.fit(df)
     fitted.transform(df)
+    ```
+
+    A categorical ``target`` runs partial least squares discriminant
+    analysis instead, by dummy-coding its classes:
+
+    ```{python}
+    df_class = pd.DataFrame(
+        {
+            "x": [1.0, 2.0, 3.0, 4.0],
+            "y": [2.1, 3.9, 6.1, 8.0],
+            "target": ["a", "a", "b", "b"],
+        }
+    )
+    recipe = Recipe().add(
+        StepPls(s.numeric_features() - "target", target="target", num_comp=1)
+    )
+    fitted = recipe.fit(df_class)
+    fitted.transform(df_class)
     ```
     """
 
