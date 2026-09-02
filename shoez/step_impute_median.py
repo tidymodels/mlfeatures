@@ -17,14 +17,15 @@ are returned as ``Float64`` (an integer column with imputed values is promoted).
 
 from __future__ import annotations
 
-import math
-import warnings
 from typing import TYPE_CHECKING
-
-import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez._frame import as_float
+from shoez._impute_reduce import (
+    apply_reduce_impute,
+    fit_reduce_impute,
+    reduce_impute_schema_out,
+)
 from shoez.step import Step
 from shoez.types import (
     NUMERIC_DTYPES,
@@ -67,17 +68,7 @@ def fit_impute_median(
     ``NaN`` value, `apply_impute_median()` leaves it unchanged, and a
     `UserWarning` is emitted naming such columns.
     """
-    medians = {col: as_float(selected[col].median()) for col in selected.columns}
-
-    all_null = [col for col, med in medians.items() if math.isnan(med)]
-    if all_null:
-        warnings.warn(
-            f"{len(all_null)} column(s) are entirely null and cannot be "
-            f"median-imputed; left unchanged: {all_null!r}",
-            stacklevel=2,
-        )
-
-    return medians
+    return fit_reduce_impute(selected, lambda s: as_float(s.median()), "median")
 
 
 def apply_impute_median(
@@ -102,13 +93,7 @@ def apply_impute_median(
     by its median (columns with a ``NaN`` median are left as-is). Column names,
     order, and structure are unchanged.
     """
-    # Skip columns with a NaN median (entirely null at fit time): leave as-is.
-    exprs = [
-        nw.col(col).fill_null(med).alias(col)
-        for col, med in medians.items()
-        if not math.isnan(med)
-    ]
-    return selected.with_columns(*exprs)
+    return apply_reduce_impute(selected, medians)
 
 
 class StepImputeMedian(Step):
@@ -217,14 +202,7 @@ class StepImputeMedian(Step):
         """Schema of the produced columns: same names, imputed ones now float."""
         if self._schema_in is None or self._estimates is None:
             raise RuntimeError("StepImputeMedian.schema_out() called before fit()")
-        # Only columns that were actually imputed (non-NaN median) become float;
-        # an entirely-null column is left unchanged and keeps its input dtype.
-        imputed = {col for col, med in self._estimates.items() if not math.isnan(med)}
-        dtypes = {
-            col: ("Float64" if col in imputed else self._schema_in.dtypes[col])
-            for col in self._schema_in.columns
-        }
-        return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)
+        return reduce_impute_schema_out(self._schema_in, self._estimates)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Median imputation is only meaningful on numeric columns."""

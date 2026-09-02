@@ -16,14 +16,15 @@ are returned as ``Float64`` (an integer column with imputed values is promoted).
 
 from __future__ import annotations
 
-import math
-import warnings
 from typing import TYPE_CHECKING
-
-import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez._frame import as_float
+from shoez._impute_reduce import (
+    apply_reduce_impute,
+    fit_reduce_impute,
+    reduce_impute_schema_out,
+)
 from shoez.step import Step
 from shoez.types import (
     NUMERIC_DTYPES,
@@ -62,17 +63,7 @@ def fit_impute_mean(
     ``NaN`` value, `apply_impute_mean()` leaves it unchanged, and a
     `UserWarning` is emitted naming such columns.
     """
-    means = {col: as_float(selected[col].mean()) for col in selected.columns}
-
-    all_null = [col for col, mean in means.items() if math.isnan(mean)]
-    if all_null:
-        warnings.warn(
-            f"{len(all_null)} column(s) are entirely null and cannot be "
-            f"mean-imputed; left unchanged: {all_null!r}",
-            stacklevel=2,
-        )
-
-    return means
+    return fit_reduce_impute(selected, lambda s: as_float(s.mean()), "mean")
 
 
 def apply_impute_mean(
@@ -97,13 +88,7 @@ def apply_impute_mean(
     by its mean (columns with a ``NaN`` mean are left as-is). Column names,
     order, and structure are unchanged.
     """
-    # Skip columns with a NaN mean (entirely null at fit time): leave them as-is.
-    exprs = [
-        nw.col(col).fill_null(mean).alias(col)
-        for col, mean in means.items()
-        if not math.isnan(mean)
-    ]
-    return selected.with_columns(*exprs)
+    return apply_reduce_impute(selected, means)
 
 
 class StepImputeMean(Step):
@@ -212,14 +197,7 @@ class StepImputeMean(Step):
         """Schema of the produced columns: same names, imputed ones now float."""
         if self._schema_in is None or self._estimates is None:
             raise RuntimeError("StepImputeMean.schema_out() called before fit()")
-        # Only columns that were actually imputed (non-NaN mean) become float;
-        # an entirely-null column is left unchanged and keeps its input dtype.
-        imputed = {col for col, mean in self._estimates.items() if not math.isnan(mean)}
-        dtypes = {
-            col: ("Float64" if col in imputed else self._schema_in.dtypes[col])
-            for col in self._schema_in.columns
-        }
-        return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)
+        return reduce_impute_schema_out(self._schema_in, self._estimates)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Mean imputation is only meaningful on numeric columns."""
