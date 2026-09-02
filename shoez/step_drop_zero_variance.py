@@ -1,33 +1,17 @@
 """Zero-variance drop: find columns with a single unique value.
 
 The *fit* half of the zero-variance rule lives in `fit_drop_zero_variance()`
-as a plain function so the logic can be exercised on its own;
-`StepDropZeroVariance` wraps it in the `Step`
-lifecycle so a `Recipe` can fit and apply it.
-
-The *apply* half (dropping the named columns) is `shoez._frame.apply_drop()`,
-which skips names that are absent from the frame.
+as a plain function so the logic can be exercised on its own (and reused by
+`shoez.step_drop_near_zero_variance`, whose rule is a superset of this one);
+`StepDropZeroVariance` supplies it as the `_drop_candidates()` rule for the
+fit/transform/schema lifecycle shared with the other ``step_drop_*`` steps in
+`shoez._drop.ColumnDropStep`.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
-    ANY_DTYPE,
-    AcceptedDtypes,
-    ColSchema,
-    Frame,
-    Mode,
-    Roles,
-    SchemaInfo,
-    Selector,
-)
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
+from shoez._drop import ColumnDropStep
+from shoez.types import ANY_DTYPE, AcceptedDtypes, Frame, Selector
 
 __all__ = ["fit_drop_zero_variance", "StepDropZeroVariance"]
 
@@ -57,7 +41,7 @@ def fit_drop_zero_variance(selected: Frame) -> list[str]:
     return [c for c in selected.columns if selected[c].drop_nulls().n_unique() <= 1]
 
 
-class StepDropZeroVariance(Step):
+class StepDropZeroVariance(ColumnDropStep):
     """Remove columns that have a single unique value (zero variance).
 
     The selected columns whose observed values are all the same — or all
@@ -119,59 +103,17 @@ class StepDropZeroVariance(Step):
     ```
     """
 
-    mode = Mode.REMOVING
-
     def __init__(
         self,
         columns: Selector,
         *,
         id: str | None = None,
     ):
-        self.columns = columns
-        super().__init__(id, "zv")
-        # Populated by ``fit()``.
-        self._estimates: list[str] | None = None
-        self._schema_in: ColSchema | None = None
+        super().__init__(columns, id=id, default_id="zv")
 
-    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
-        """Estimate which selected columns to drop and store the decision."""
-        selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
-        )
-        self._estimates = fit_drop_zero_variance(selected)
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
-        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
-        return self
-
-    def transform(self, new_data: Frame) -> Frame:
-        """Drop the columns chosen at fit time. Never re-estimates."""
-        if self._estimates is None:
-            raise RuntimeError("StepDropZeroVariance.transform() called before fit()")
-        return _frame.apply_drop(new_data, self._estimates)
-
-    def schema_in(self) -> ColSchema:
-        """Schema of the columns this step consumed. Known after ``fit()``."""
-        if self._schema_in is None:
-            raise RuntimeError("StepDropZeroVariance.schema_in() called before fit()")
-        return self._schema_in
-
-    def schema_out(self) -> ColSchema:
-        """Schema of the columns this step produced — none; it only removes."""
-        if self._estimates is None:
-            raise RuntimeError("StepDropZeroVariance.schema_out() called before fit()")
-        return ColSchema(columns=[])
+    def _drop_candidates(self, selected: Frame) -> list[str]:
+        return fit_drop_zero_variance(selected)
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Zero variance is meaningful for any dtype, not just numerics."""
         return ANY_DTYPE
-
-    def update_roles(self, roles: Roles) -> None:
-        if self._estimates:
-            for col in self._estimates:
-                for role in list(roles.of(col)):
-                    roles.remove(col, role)
-
-    @property
-    def produces_sparse(self) -> bool:
-        """``step_drop_zero_variance`` never produces sparse output."""
-        return False

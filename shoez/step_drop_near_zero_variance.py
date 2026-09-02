@@ -2,32 +2,16 @@
 
 The *fit* half of the near-zero-variance rule lives in
 `fit_drop_near_zero_variance()` as a plain function so the logic can be
-exercised on its own; `StepDropNearZeroVariance` wraps it in the `Step`
-lifecycle so a `Recipe` can fit and apply it.
-
-The *apply* half (dropping the named columns) is `shoez._frame.apply_drop()`,
-which skips names that are absent from the frame.
+exercised on its own; `StepDropNearZeroVariance` supplies it as the
+`_drop_candidates()` rule for the fit/transform/schema lifecycle shared with
+the other ``step_drop_*`` steps in `shoez._drop.ColumnDropStep`.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
-    ANY_DTYPE,
-    AcceptedDtypes,
-    ColSchema,
-    Frame,
-    Mode,
-    Roles,
-    SchemaInfo,
-    Selector,
-)
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
+from shoez._drop import ColumnDropStep
+from shoez.step_drop_zero_variance import fit_drop_zero_variance
+from shoez.types import ANY_DTYPE, AcceptedDtypes, Frame, Selector
 
 __all__ = ["fit_drop_near_zero_variance", "StepDropNearZeroVariance"]
 
@@ -37,11 +21,12 @@ def fit_drop_near_zero_variance(
 ) -> list[str]:
     """Find columns that are zero-variance or near-zero-variance.
 
-    A column is flagged if it has at most 1 unique non-null value (or is
-    entirely missing), or if both of the following hold: the ratio of the
-    most common non-null value's count to the second most common value's
-    count exceeds ``freq_cut``, and the percentage of unique non-null values
-    out of the total row count is at or below ``unique_cut``.
+    A column is flagged if it is zero-variance (see `fit_drop_zero_variance()`,
+    whose rule this delegates to rather than re-deriving), or if both of the
+    following hold: the ratio of the most common non-null value's count to
+    the second most common value's count exceeds ``freq_cut``, and the
+    percentage of unique non-null values out of the total row count is at or
+    below ``unique_cut``.
 
     Parameters
     ----------
@@ -64,15 +49,16 @@ def fit_drop_near_zero_variance(
         `shoez._frame.apply_drop()` to remove the offending columns
         from any frame with the same schema.
     """
+    zero_variance = set(fit_drop_zero_variance(selected))
     flagged: list[str] = []
     for col in selected.columns:
-        total = selected[col].len()
-        values = selected[col].drop_nulls()
-        n_unique = values.n_unique()
-        if n_unique <= 1:
+        if col in zero_variance:
             flagged.append(col)
             continue
 
+        total = selected[col].len()
+        values = selected[col].drop_nulls()
+        n_unique = values.n_unique()
         count_name = f"{col}_count"
         counts_frame = values.value_counts(name=count_name)
         counts = sorted(counts_frame[count_name].to_list(), reverse=True)
@@ -85,7 +71,7 @@ def fit_drop_near_zero_variance(
     return flagged
 
 
-class StepDropNearZeroVariance(Step):
+class StepDropNearZeroVariance(ColumnDropStep):
     """Remove columns that are sparse and unbalanced (near-zero variance).
 
     A selected column is dropped if it has a single unique value (or is
@@ -172,8 +158,6 @@ class StepDropNearZeroVariance(Step):
     ```
     """
 
-    mode = Mode.REMOVING
-
     def __init__(
         self,
         columns: Selector,
@@ -188,61 +172,15 @@ class StepDropNearZeroVariance(Step):
             )
         if freq_cut < 0:
             raise ValueError(f"'freq_cut' must be non-negative, got {freq_cut!r}")
-        self.columns = columns
         self.freq_cut = freq_cut
         self.unique_cut = unique_cut
-        super().__init__(id, "nzv")
-        # Populated by ``fit()``.
-        self._estimates: list[str] | None = None
-        self._schema_in: ColSchema | None = None
+        super().__init__(columns, id=id, default_id="nzv")
 
-    def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
-        """Estimate which selected columns to drop and store the decision."""
-        selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
-        )
-        self._estimates = fit_drop_near_zero_variance(
+    def _drop_candidates(self, selected: Frame) -> list[str]:
+        return fit_drop_near_zero_variance(
             selected, freq_cut=self.freq_cut, unique_cut=self.unique_cut
         )
-        dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
-        self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
-        return self
-
-    def transform(self, new_data: Frame) -> Frame:
-        """Drop the columns chosen at fit time. Never re-estimates."""
-        if self._estimates is None:
-            raise RuntimeError(
-                "StepDropNearZeroVariance.transform() called before fit()"
-            )
-        return _frame.apply_drop(new_data, self._estimates)
-
-    def schema_in(self) -> ColSchema:
-        """Schema of the columns this step consumed. Known after ``fit()``."""
-        if self._schema_in is None:
-            raise RuntimeError(
-                "StepDropNearZeroVariance.schema_in() called before fit()"
-            )
-        return self._schema_in
-
-    def schema_out(self) -> ColSchema:
-        """Schema of the columns this step produced — none; it only removes."""
-        if self._estimates is None:
-            raise RuntimeError(
-                "StepDropNearZeroVariance.schema_out() called before fit()"
-            )
-        return ColSchema(columns=[])
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Near-zero variance is meaningful for any dtype, not just numerics."""
         return ANY_DTYPE
-
-    def update_roles(self, roles: Roles) -> None:
-        if self._estimates:
-            for col in self._estimates:
-                for role in list(roles.of(col)):
-                    roles.remove(col, role)
-
-    @property
-    def produces_sparse(self) -> bool:
-        """``step_drop_near_zero_variance`` never produces sparse output."""
-        return False
