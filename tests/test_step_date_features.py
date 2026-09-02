@@ -83,6 +83,25 @@ class TestApplyDateFeatures:
         assert str(out.schema["d_year"]) == "Int32"
         assert str(out.schema["d_doy"]) == "Int32"
 
+    def test_categorical_month_produces_month_names(self) -> None:
+        frame = _df({"d": _data()["d"]})
+        fit_result = fit_date_features(frame, ("month",), ("month",))
+        out = apply_date_features(frame, fit_result).to_native()
+        assert out["d_month"].to_list() == ["January", "June", "December"]
+
+    def test_categorical_dow_produces_weekday_names(self) -> None:
+        frame = _df({"d": _data()["d"]})
+        fit_result = fit_date_features(frame, ("dow",), ("dow",))
+        out = apply_date_features(frame, fit_result).to_native()
+        assert out["d_dow"].to_list() == ["Wednesday", "Monday", "Thursday"]
+
+    def test_categorical_column_is_enum_dtype(self) -> None:
+        frame = _df({"d": _data()["d"]})
+        fit_result = fit_date_features(frame, ("month", "year"), ("month",))
+        out = apply_date_features(frame, fit_result)
+        assert isinstance(out.schema["d_month"], nw.Enum)
+        assert str(out.schema["d_year"]) == "Int32"
+
 
 # ---------------------------------------------------------------------------
 # StepDateFeatures — unit-level invariants
@@ -131,6 +150,21 @@ class TestStepDateFeaturesUnit:
         with pytest.raises(ValueError):
             StepDateFeatures(["d"], features=["not_a_feature"])
 
+    def test_default_categorical_is_empty(self) -> None:
+        assert StepDateFeatures(["d"]).categorical == ()
+
+    def test_categorical_month_and_dow(self) -> None:
+        step = StepDateFeatures(["d"], categorical=["dow", "month"])
+        assert step.categorical == ("month", "dow")
+
+    def test_categorical_not_in_eligible_set_raises(self) -> None:
+        with pytest.raises(ValueError):
+            StepDateFeatures(["d"], categorical=["year"])
+
+    def test_categorical_not_requested_in_features_raises(self) -> None:
+        with pytest.raises(ValueError):
+            StepDateFeatures(["d"], features=["year"], categorical=["month"])
+
     def test_fit_returns_self(self) -> None:
         step = StepDateFeatures(["d"])
         fitted = step.fit(_df(_data()), SchemaInfo())
@@ -169,6 +203,14 @@ class TestStepDateFeaturesUnit:
         step.fit(_df(_data()), SchemaInfo())
         assert step.schema_out().columns == ["d_year", "d_month"]
         assert step.schema_out().dtypes == {"d_year": "Int32", "d_month": "Int32"}
+
+    def test_schema_out_reports_enum_for_categorical_features(self) -> None:
+        step = StepDateFeatures(
+            ["d"], features=["month", "year"], categorical=["month"]
+        )
+        step.fit(_df(_data()), SchemaInfo())
+        assert step.schema_out().dtypes["d_year"] == "Int32"
+        assert step.schema_out().dtypes["d_month"].startswith("Enum(")
 
     def test_update_roles_with_no_output_role(self) -> None:
         from shoez.types import Roles

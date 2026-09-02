@@ -112,6 +112,40 @@ _DEFAULT_DATETIME_FEATURES: tuple[str, ...] = (
     "doy",
 )
 
+#: Ordered level labels for the two features that name a natural, fixed
+#: cycle. Every other feature (``year``, ``day``, ``doy``, ``hour``,
+#: ``minute``, ``second``) has no such vocabulary -- there is no name for
+#: "second 47" -- so ``month`` and ``dow`` are the only features
+#: `categorical` accepts.
+_MONTH_LABELS: list[str] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+_DOW_LABELS: list[str] = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
+_CATEGORICAL_LABELS: dict[str, list[str]] = {"month": _MONTH_LABELS, "dow": _DOW_LABELS}
+#: Order matches ``_DEFAULT_DATETIME_FEATURES``' order (``month`` before
+#: ``dow``), so normalizing `categorical` against this tuple keeps it
+#: consistent with `features`' own canonical order.
+_CATEGORICAL_ELIGIBLE: tuple[str, ...] = ("month", "dow")
+
 
 def _validate_datetime_features(features: tuple[str, ...]) -> None:
     invalid = [f for f in features if f not in _DATETIME_FEATURE_EXPRS]
@@ -134,6 +168,54 @@ def _normalize_datetime_features(features: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(f for f in _DEFAULT_DATETIME_FEATURES if f in requested)
 
 
+def _validate_categorical(
+    categorical: tuple[str, ...], features: tuple[str, ...]
+) -> None:
+    invalid = [f for f in categorical if f not in _CATEGORICAL_ELIGIBLE]
+    if invalid:
+        raise ValueError(
+            f"'categorical' must be a subset of {sorted(_CATEGORICAL_ELIGIBLE)!r}, "
+            f"got {invalid!r}"
+        )
+    not_requested = [f for f in categorical if f not in features]
+    if not_requested:
+        raise ValueError(
+            f"'categorical' entries must also be requested in 'features'; "
+            f"not requested: {not_requested!r}"
+        )
+
+
+def _normalize_categorical(categorical: tuple[str, ...]) -> tuple[str, ...]:
+    """Dedup ``categorical`` and order it canonically (`_CATEGORICAL_ELIGIBLE`' order)."""
+    requested = set(categorical)
+    return tuple(f for f in _CATEGORICAL_ELIGIBLE if f in requested)
+
+
+def _feature_expr(col_name: str, feature: str, *, categorical: bool) -> nw.Expr:
+    """Build the expression computing ``feature`` from ``col_name``, aliased.
+
+    Plain features are cast to ``Int32`` for backend parity (see
+    `_DATETIME_FEATURE_EXPRS`). A ``categorical`` feature is instead mapped to
+    its ordered level labels (`_CATEGORICAL_LABELS`) and cast to a narwhals
+    ``Enum`` of those labels, so ``month``/``dow`` come back with readable
+    level names (``"January"``, ``"Monday"``, ...) instead of raw numbers.
+    """
+    name = f"{col_name}_{feature}"
+    raw = _DATETIME_FEATURE_EXPRS[feature](nw.col(col_name))
+    if categorical:
+        labels = _CATEGORICAL_LABELS[feature]
+        mapping = {i + 1: label for i, label in enumerate(labels)}
+        return raw.replace_strict(mapping, return_dtype=nw.Enum(labels)).alias(name)
+    return raw.cast(nw.Int32).alias(name)
+
+
+def _output_dtype_name(feature: str, *, categorical: tuple[str, ...]) -> str:
+    """The dtype string `_feature_expr()` produces for ``feature``, for `ColSchema`."""
+    if feature in categorical:
+        return str(nw.Enum(_CATEGORICAL_LABELS[feature]))
+    return "Int32"
+
+
 @dataclass(frozen=True)
 class DatetimeFeaturesFit:
     """The fitted result returned by `fit_datetime_features()`.
@@ -144,14 +226,18 @@ class DatetimeFeaturesFit:
         Selected column names, in fit-time order.
     features
         Calendar parts to compute for each column, in requested order.
+    categorical
+        Subset of ``features`` to encode as an ordered ``Enum`` of level names
+        instead of a plain integer.
     """
 
     columns: list[str]
     features: tuple[str, ...]
+    categorical: tuple[str, ...] = ()
 
 
 def fit_datetime_features(
-    selected: Frame, features: tuple[str, ...]
+    selected: Frame, features: tuple[str, ...], categorical: tuple[str, ...] = ()
 ) -> DatetimeFeaturesFit:
     """Record which columns and calendar parts `apply_datetime_features()` will compute.
 
@@ -168,13 +254,18 @@ def fit_datetime_features(
     features
         Calendar parts to compute; every entry must be a key of the supported
         vocabulary (validated by the caller, `StepDatetimeFeatures.__init__`).
+    categorical
+        Subset of ``features`` to encode as an ordered ``Enum`` of level names
+        instead of a plain integer (validated by the caller).
 
     Returns
     -------
     DatetimeFeaturesFit
         The column order and feature list `apply_datetime_features()` needs.
     """
-    return DatetimeFeaturesFit(columns=list(selected.columns), features=features)
+    return DatetimeFeaturesFit(
+        columns=list(selected.columns), features=features, categorical=categorical
+    )
 
 
 def apply_datetime_features(
@@ -188,8 +279,9 @@ def apply_datetime_features(
     For every column in ``fit_result.columns``, adds one column per entry of
     ``fit_result.features``, named ``{column}_{feature}`` and placed in the
     column's original slot, replacing it (or following it, kept, under
-    ``keep_original_cols``). Every other column of ``data`` passes through
-    unchanged.
+    ``keep_original_cols``). A feature named in ``fit_result.categorical`` is
+    encoded as an ordered ``Enum`` of level names instead of a plain integer.
+    Every other column of ``data`` passes through unchanged.
 
     Parameters
     ----------
@@ -211,6 +303,7 @@ def apply_datetime_features(
     to_drop: list[str] = []
     new_cols: list[nw.Expr] = []
     selected_cols = set(fit_result.columns)
+    categorical = set(fit_result.categorical)
     for col_name in data.columns:
         if col_name not in selected_cols:
             final_order.append(col_name)
@@ -220,10 +313,10 @@ def apply_datetime_features(
         else:
             to_drop.append(col_name)
         for feature in fit_result.features:
-            name = f"{col_name}_{feature}"
-            final_order.append(name)
-            expr = _DATETIME_FEATURE_EXPRS[feature](nw.col(col_name))
-            new_cols.append(expr.cast(nw.Int32).alias(name))
+            final_order.append(f"{col_name}_{feature}")
+            new_cols.append(
+                _feature_expr(col_name, feature, categorical=feature in categorical)
+            )
 
     if new_cols:
         data = data.with_columns(*new_cols)
@@ -244,8 +337,8 @@ class StepDatetimeFeatures(Step):
     and new data.
 
     ``dow`` is the ISO day of week (``1`` = Monday, ``7`` = Sunday); ``doy`` is
-    the ordinal day of year (``1``-``366``). All produced columns are
-    ``Int32``, regardless of backend.
+    the ordinal day of year (``1``-``366``). Produced columns are ``Int32``
+    regardless of backend, unless named in ``categorical``.
 
     Calendar parts are read against whatever time zone the column already
     carries (including none); this step does not convert to a different zone.
@@ -276,6 +369,13 @@ class StepDatetimeFeatures(Step):
         Deduplicated and reordered to that same canonical order regardless of
         the order passed in, so the output columns are always in a fixed
         order.
+    categorical
+        Subset of ``features``, restricted to ``"month"`` and ``"dow"`` (the
+        two parts with a natural, fixed vocabulary of level names), to encode
+        as an ordered categorical column of level names (``"January"``,
+        ``"Monday"``, ...) instead of a plain integer. Default ``()``: no
+        feature is categorical. Each entry must also be present in
+        ``features``.
     keep_original_cols
         If ``True``, the source columns are kept alongside their calendar-part
         columns instead of being dropped. Default ``False``.
@@ -353,6 +453,16 @@ class StepDatetimeFeatures(Step):
     fitted = recipe.fit(df)
     fitted.transform(df)
     ```
+
+    ``categorical`` names level labels instead of raw numbers for ``month`` and ``dow``:
+
+    ```{python}
+    recipe = Recipe().add(
+        StepDatetimeFeatures(s.datetime_features(), categorical=["month", "dow"])
+    )
+    fitted = recipe.fit(df)
+    fitted.transform(df)
+    ```
     """
 
     mode = Mode.ONE_TO_MANY
@@ -362,14 +472,19 @@ class StepDatetimeFeatures(Step):
         columns: Selector,
         *,
         features: "list[str] | tuple[str, ...]" = _DEFAULT_DATETIME_FEATURES,
+        categorical: "list[str] | tuple[str, ...]" = (),
         keep_original_cols: bool = False,
         role: str | None = "feature",
         id: str | None = None,
     ) -> None:
         features = tuple(features)
         _validate_datetime_features(features)
+        features = _normalize_datetime_features(features)
+        categorical = tuple(categorical)
+        _validate_categorical(categorical, features)
         self.columns = columns
-        self.features = _normalize_datetime_features(features)
+        self.features = features
+        self.categorical = _normalize_categorical(categorical)
         super().__init__(
             id,
             "datetime_features",
@@ -387,13 +502,21 @@ class StepDatetimeFeatures(Step):
         selected = _frame.select(
             training_data, self.columns, info.roles, info.schema, info.producing_steps
         )
-        self._estimates = fit_datetime_features(selected, self.features)
+        self._estimates = fit_datetime_features(
+            selected, self.features, self.categorical
+        )
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
         self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes_in)
         out_cols = [
             f"{col}_{feature}" for col in selected.columns for feature in self.features
         ]
-        out_dtypes = {name: "Int32" for name in out_cols}
+        out_dtypes = {
+            f"{col}_{feature}": _output_dtype_name(
+                feature, categorical=self.categorical
+            )
+            for col in selected.columns
+            for feature in self.features
+        }
         self._schema_out = ColSchema(columns=out_cols, dtypes=out_dtypes)
         self._output_parents = {
             f"{col}_{feature}": [col]
