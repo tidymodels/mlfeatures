@@ -1,0 +1,7 @@
+# serializer version: 1
+# name: TestStepGeoDistanceUnit.test_invalid_ref_lat_raises
+  "'ref_lat' must be between -90 and 90; got 91.0"
+# ---
+# name: TestStepGeoDistanceUnit.test_invalid_ref_lon_raises
+  "'ref_lon' must be between -180 and 180; got 181.0"
+# ---
