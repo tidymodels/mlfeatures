@@ -38,27 +38,31 @@ class TestReturnType:
 
 
 # ---------------------------------------------------------------------------
-# Input validation
+# Constructor validation
 # ---------------------------------------------------------------------------
 
 
-class TestInputValidation:
+class TestConstructorValidation:
+    """``threshold``/``method`` are validated at construction, not at fit time.
+
+    ``fit_drop_corr`` itself performs no validation, matching every other
+    step's ``fit_*`` free function (e.g. ``fit_log``): hyperparameter checks
+    live solely on the step's ``__init__``.
+    """
+
     def test_threshold_above_1_raises(self, snapshot: SnapshotAssertion) -> None:
-        df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
         with pytest.raises(ValueError) as excinfo:
-            fit_drop_corr(df, threshold=1.1)
+            StepDropCorr(["a", "b"], threshold=1.1)
         assert str(excinfo.value) == snapshot
 
     def test_threshold_below_0_raises(self, snapshot: SnapshotAssertion) -> None:
-        df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
         with pytest.raises(ValueError) as excinfo:
-            fit_drop_corr(df, threshold=-0.1)
+            StepDropCorr(["a", "b"], threshold=-0.1)
         assert str(excinfo.value) == snapshot
 
     def test_invalid_method_raises(self, snapshot: SnapshotAssertion) -> None:
-        df = _df(("a", [1.0, 2.0]), ("b", [3.0, 4.0]))
         with pytest.raises(ValueError) as excinfo:
-            fit_drop_corr(df, method="kendall")  # type: ignore[arg-type]
+            StepDropCorr(["a", "b"], method="kendall")  # type: ignore[arg-type]
         assert str(excinfo.value) == snapshot
 
 

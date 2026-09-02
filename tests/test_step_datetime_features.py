@@ -14,6 +14,7 @@ from typing import Any
 import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, SchemaInfo
 from shoez.step_datetime_features import (
@@ -154,6 +155,11 @@ class TestStepDatetimeFeaturesUnit:
         with pytest.raises(ValueError):
             StepDatetimeFeatures(["dt"], features=["not_a_feature"])
 
+    def test_invalid_feature_message(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepDatetimeFeatures(["dt"], features=["not_a_feature"])
+        assert str(excinfo.value) == snapshot
+
     def test_default_categorical_is_empty(self) -> None:
         assert StepDatetimeFeatures(["dt"]).categorical == ()
 
@@ -165,9 +171,23 @@ class TestStepDatetimeFeaturesUnit:
         with pytest.raises(ValueError):
             StepDatetimeFeatures(["dt"], categorical=["hour"])
 
+    def test_categorical_not_in_eligible_set_message(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepDatetimeFeatures(["dt"], categorical=["hour"])
+        assert str(excinfo.value) == snapshot
+
     def test_categorical_not_requested_in_features_raises(self) -> None:
         with pytest.raises(ValueError):
             StepDatetimeFeatures(["dt"], features=["year"], categorical=["month"])
+
+    def test_categorical_not_requested_in_features_message(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            StepDatetimeFeatures(["dt"], features=["year"], categorical=["month"])
+        assert str(excinfo.value) == snapshot
 
     def test_fit_returns_self(self) -> None:
         step = StepDatetimeFeatures(["dt"])

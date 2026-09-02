@@ -41,6 +41,7 @@ import narwhals.stable.v2 as nw
 import numpy as np
 
 from shoez import _frame, _spline
+from shoez._basis_expansion import expand_columns_schema, update_roles_for_expansion
 from shoez._dependencies import import_optional
 from shoez.step import Step
 from shoez.types import (
@@ -492,23 +493,9 @@ class StepSplineMonotone(Step):
         )
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
         self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes_in)
-        out_cols: list[str] = []
-        out_dtypes: dict[str, str] = {}
-        parents: dict[str, list[str]] = {}
-        for col in self._schema_in.columns:
-            fit = self._estimates.get(col)
-            deg_free = fit.deg_free if fit is not None else 0
-            if deg_free <= 0:
-                out_cols.append(col)
-                out_dtypes[col] = dtypes_in[col]
-                continue
-            for i in range(1, deg_free + 1):
-                name = f"{col}_{i}"
-                out_cols.append(name)
-                out_dtypes[name] = "Float64"
-                parents[name] = [col]
-        self._schema_out = ColSchema(columns=out_cols, dtypes=out_dtypes)
-        self._output_parents = parents
+        self._schema_out, self._output_parents = expand_columns_schema(
+            self._schema_in, self._estimates, lambda fit: fit.deg_free
+        )
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -544,17 +531,12 @@ class StepSplineMonotone(Step):
     def update_roles(self, roles: Roles) -> None:
         if self._output_parents is None:
             return
-        if self.output_role is not None:
-            for col in self._output_parents:
-                roles.add(col, self.output_role)
-        if self.keep_original_cols:
-            return
-        expanded = {
-            parent for parents in self._output_parents.values() for parent in parents
-        }
-        for col in expanded:
-            for role in list(roles.of(col)):
-                roles.remove(col, role)
+        update_roles_for_expansion(
+            roles,
+            self._output_parents,
+            output_role=self.output_role,
+            keep_original_cols=self.keep_original_cols,
+        )
 
     def required_pkgs(self) -> list[str]:
         """The I-spline basis is built with SciPy."""

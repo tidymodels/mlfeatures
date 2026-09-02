@@ -131,6 +131,30 @@ class TestEndToEnd:
 
 
 # ---------------------------------------------------------------------------
+# Name collisions
+# ---------------------------------------------------------------------------
+
+
+class TestNameCollisions:
+    """Generated interaction names are validated centrally by the recipe."""
+
+    @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])
+    def test_two_pairs_producing_the_same_name_raise(
+        self, ctor: type, snapshot: SnapshotAssertion
+    ) -> None:
+        # With sep="_x_", the pairs ("a_x", "b") and ("a", "x_b") both name
+        # their product "a_x_x_b". `produced_columns()` must preserve this
+        # duplicate (rather than silently losing it the way a dict keyed by
+        # name would) so `Schema.check_additions` rejects it up front.
+        data = {"a_x": [1.0, 2.0], "b": [3.0, 4.0], "a": [5.0, 6.0], "x_b": [7.0, 8.0]}
+        df = ctor(data)
+        recipe = Recipe(steps=[StepInteract(["a_x", "b", "a", "x_b"])])
+        with pytest.raises(ValueError) as excinfo:
+            recipe.fit(df)
+        assert str(excinfo.value) == snapshot
+
+
+# ---------------------------------------------------------------------------
 # StepInteract — unit-level invariants
 # ---------------------------------------------------------------------------
 

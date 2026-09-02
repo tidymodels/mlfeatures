@@ -17,14 +17,22 @@ its level set is deferred until the schema subsystem lands.
 
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
+from shoez._level_recode import warn_level_collision
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo, Selector
+from shoez.types import (
+    _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+    Selector,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -33,9 +41,6 @@ __all__ = ["fit_unknown", "apply_unknown", "StepUnknown"]
 
 #: Default level used to replace missing categorical values.
 DEFAULT_UNKNOWN_LEVEL = "unknown"
-
-#: Dtypes ``step_unknown`` is valid on — categorical-like columns.
-_CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
 
 
 def fit_unknown(
@@ -68,12 +73,7 @@ def fit_unknown(
         for col in selected.columns
         if bool((selected[col].cast(nw.String) == new_level).any())
     ]
-    if collisions:
-        warnings.warn(
-            f"the level {new_level!r} already exists in {len(collisions)} "
-            f"column(s); recoded nulls will be merged with it: {collisions!r}",
-            stacklevel=2,
-        )
+    warn_level_collision(new_level, collisions, merges="recoded nulls")
     return list(selected.columns)
 
 

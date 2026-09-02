@@ -42,6 +42,11 @@ class TestFitPca:
         with pytest.raises(ValueError):
             fit_pca(_sample(), num_comp=bad)
 
+    def test_invalid_num_comp_message(self, snapshot: Any) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            fit_pca(_sample(), num_comp=0)
+        assert str(excinfo.value) == snapshot
+
 
 class TestApplyPca:
     def test_replaces_inputs_with_components(self) -> None:

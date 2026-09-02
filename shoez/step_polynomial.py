@@ -21,6 +21,7 @@ import numpy as np
 from numpy.polynomial.polynomial import polyvander
 
 from shoez import _frame
+from shoez._basis_expansion import expand_columns_schema, update_roles_for_expansion
 from shoez.step import Step
 from shoez.types import (
     NUMERIC_DTYPES,
@@ -342,8 +343,7 @@ class StepPolynomial(Step):
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
     polynomial terms. Constant (or all-null) columns get an effective degree
     of ``0``; `transform()` leaves those columns untouched and emits a
-    `UserWarning`. The caller can chain a zero-variance drop step to
-    clean them up.
+    warning. The caller can chain a zero-variance drop step to clean them up.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
@@ -462,27 +462,13 @@ class StepPolynomial(Step):
         self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes_in)
         # Degree-0 columns stay put with their original dtype; the rest become
         # ``degree`` Float64 columns named {col}_1..{col}_d (same layout as
-        # ``apply_polynomial`` produces).
-        out_cols: list[str] = []
-        out_dtypes: dict[str, str] = {}
-        # Each expansion column descends from its single source column. A
-        # degree-0 column is a pass-through (kept unchanged), not a newly
-        # produced column, so it is excluded from output_parents.
-        parents: dict[str, list[str]] = {}
-        for col in self._schema_in.columns:
-            fit = self._estimates.get(col)
-            d = fit.degree if fit is not None else 0
-            if d <= 0:
-                out_cols.append(col)
-                out_dtypes[col] = dtypes_in[col]
-                continue
-            for i in range(1, d + 1):
-                name = f"{col}_{i}"
-                out_cols.append(name)
-                out_dtypes[name] = "Float64"
-                parents[name] = [col]
-        self._schema_out = ColSchema(columns=out_cols, dtypes=out_dtypes)
-        self._output_parents = parents
+        # ``apply_polynomial`` produces). Each expansion column descends from
+        # its single source column; a degree-0 column is a pass-through (kept
+        # unchanged), not a newly produced column, so it is excluded from
+        # output_parents.
+        self._schema_out, self._output_parents = expand_columns_schema(
+            self._schema_in, self._estimates, lambda fit: fit.degree
+        )
         return self
 
     def transform(self, new_data: Frame) -> Frame:
@@ -516,21 +502,12 @@ class StepPolynomial(Step):
     def update_roles(self, roles: Roles) -> None:
         if self._output_parents is None:
             return
-        if self.output_role is not None:
-            for col in self._output_parents:
-                roles.add(col, self.output_role)
-        if self.keep_original_cols:
-            # The sources are still in the frame, so their roles stand.
-            return
-        # Strip the roles of the expanded sources only. A degree-0 column was
-        # passed through unchanged (it has no entry in ``_output_parents``) and
-        # keeps its roles.
-        expanded = {
-            parent for parents in self._output_parents.values() for parent in parents
-        }
-        for col in expanded:
-            for role in list(roles.of(col)):
-                roles.remove(col, role)
+        update_roles_for_expansion(
+            roles,
+            self._output_parents,
+            output_role=self.output_role,
+            keep_original_cols=self.keep_original_cols,
+        )
 
     @property
     def produces_sparse(self) -> bool:
