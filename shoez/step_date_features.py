@@ -2,11 +2,11 @@
 
 `step_date_features` is the Date-only counterpart of
 `step_datetime_features` (`shoez/step_datetime_features.py`). They are two
-separate steps because narwhals' ``Date`` and ``Datetime`` dtypes carry a
-different, non-overlapping set of meaningful ``.dt`` parts -- there is no
-``hour``/``minute``/``second`` on a ``Date``, and this mirrors Python's own
-``datetime.date`` / ``datetime.datetime`` split (``datetime`` does not
-inherit from ``date``).
+separate steps because a date has no time of day: ``hour``, ``minute``, and
+``second`` make no sense on a plain calendar date, so a single step trying to
+cover both would need to either fake a time-of-day or special-case Date
+columns internally. Splitting mirrors Python's own ``datetime.date`` /
+``datetime.datetime`` split (``datetime`` does not inherit from ``date``).
 
 The *fit* half (`fit_date_features()`) only needs the selected columns' names
 and the requested feature list; there is nothing to estimate from the data.

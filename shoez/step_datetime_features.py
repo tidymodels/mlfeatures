@@ -2,16 +2,17 @@
 
 `step_datetime_features` is the Datetime-only counterpart of
 `step_date_features` (`shoez/step_date_features.py`). They are two separate
-steps because narwhals' ``Date`` and ``Datetime`` dtypes carry a different,
-non-overlapping set of meaningful ``.dt`` parts -- a ``Date`` has no
-``hour``/``minute``/``second`` -- mirroring Python's own ``datetime.date`` /
+steps because a date has no time of day: ``hour``, ``minute``, and ``second``
+make no sense on a plain calendar date, so a single step trying to cover both
+would need to either fake a time-of-day or special-case Date columns
+internally. Splitting mirrors Python's own ``datetime.date`` /
 ``datetime.datetime`` split (``datetime`` does not inherit from ``date``).
 
-Time zones are read as narwhals/the backend already resolves them: this step
-does not accept a target zone to convert into, so a column's stored zone
-(including none) governs the calendar parts it produces. Zone conversion is
-left to a caller who wants it, via ``narwhals.Expr.dt.convert_time_zone()`` in
-a `StepMutate`, rather than added as a constructor argument here.
+Time zones are read as the backend already resolves them: this step does not
+accept a target zone to convert into, so a column's stored zone (including
+none) governs the calendar parts it produces. Zone conversion is left to a
+caller who wants it, via ``narwhals.Expr.dt.convert_time_zone()`` in a
+`StepMutate`, rather than added as a constructor argument here.
 
 The *fit* half (`fit_datetime_features()`) only needs the selected columns'
 names and the requested feature list; there is nothing to estimate from the
