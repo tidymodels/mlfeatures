@@ -90,9 +90,38 @@ def _assert_columns_equal(
             )
 
 
+def _cast_columns(
+    df: pd.DataFrame | pl.DataFrame,
+    dtype_casts: Mapping[str, type[nw.dtypes.DType]],
+) -> Any:
+    """Cast ``dtype_casts``' columns to their declared narwhals dtype.
+
+    A plain Python list can't materialize some dtypes identically on both
+    backends -- e.g. a list of ``datetime.date`` becomes pandas ``Object``
+    (pandas can only represent narwhals' ``Date`` through a pyarrow-backed
+    column) but polars ``Date`` natively. Casting after construction, on both
+    backends alike, is what lets a Date-only step's fixture materialize as the
+    same dtype either way.
+    """
+    if not dtype_casts:
+        return df
+    frame = nw.from_native(df, eager_only=True)
+    frame = frame.with_columns(
+        # ``Expr.cast()``'s overloads only cover its own concrete dtype
+        # classes; `dtype_casts` is typed as the general
+        # `type[nw.dtypes.DType]` so a test can name any of them, so the cast
+        # here is wider than any single overload matches.
+        nw.col(name).cast(cast("Any", dtype))
+        for name, dtype in dtype_casts.items()
+    )
+    return frame.to_native()
+
+
 def assert_backend_parity(
     make_recipe: Callable[[], Recipe],
     data: Mapping[str, list[Any]],
+    *,
+    dtype_casts: Mapping[str, type[nw.dtypes.DType]] | None = None,
 ) -> None:
     """Assert a step produces identical output on pandas and polars.
 
@@ -107,10 +136,15 @@ def assert_backend_parity(
     on which backend it fitted and transformed on.
 
     ``make_recipe`` must return a *fresh, unfitted* recipe on each call so the
-    two backends do not share fitted estimates.
+    two backends do not share fitted estimates. ``dtype_casts`` names columns
+    to cast to a specific narwhals dtype on both backends before fitting --
+    see `_cast_columns`.
     """
-    pd_out = make_recipe().fit(pd.DataFrame(data)).transform(pd.DataFrame(data))
-    pl_out = make_recipe().fit(pl.DataFrame(data)).transform(pl.DataFrame(data))
+    casts = dtype_casts or {}
+    pd_df = _cast_columns(pd.DataFrame(data), casts)
+    pl_df = _cast_columns(pl.DataFrame(data), casts)
+    pd_out = make_recipe().fit(pd_df).transform(pd_df)
+    pl_out = make_recipe().fit(pl_df).transform(pl_df)
     pd_nw = nw.from_native(pd_out, eager_only=True)
     pl_nw = nw.from_native(pl_out, eager_only=True)
 
@@ -159,6 +193,14 @@ class StepConformanceTest:
     #: step's selector needs, and is materialized as both pandas and polars.
     training_data: ClassVar[Mapping[str, list[Any]]] = {}
 
+    #: Columns of `training_data` to cast to a specific narwhals dtype on both
+    #: backends before fitting. Needed for a dtype a plain Python list can't
+    #: materialize identically on both backends -- e.g. ``{"d": nw.Date}`` for
+    #: a step that only accepts Date columns (see `_cast_columns`). Empty for
+    #: every step whose `training_data` values already produce the same dtype
+    #: on both backends.
+    dtype_casts: ClassVar[Mapping[str, type[nw.dtypes.DType]]] = {}
+
     def make_step(self) -> Step:
         """Return a *fresh, unfitted* step. Called repeatedly, never reused."""
         raise NotImplementedError("conformance subclasses must implement make_step()")
@@ -193,7 +235,10 @@ class StepConformanceTest:
     # -- fixtures ----------------------------------------------------------
 
     def _frame(self) -> pd.DataFrame:
-        return pd.DataFrame(dict(self.training_data))
+        return cast(
+            "pd.DataFrame",
+            _cast_columns(pd.DataFrame(dict(self.training_data)), self.dtype_casts),
+        )
 
     def _fitted(self) -> tuple[FittedRecipe, pd.DataFrame]:
         train = self._frame()
@@ -354,7 +399,9 @@ class StepConformanceTest:
     def test_pandas_and_polars_output_match(self) -> None:
         """fit + transform yields identical output (schema and values) on both backends."""
         assert_backend_parity(
-            lambda: Recipe(steps=[self.make_step()]), dict(self.training_data)
+            lambda: Recipe(steps=[self.make_step()]),
+            dict(self.training_data),
+            dtype_casts=self.dtype_casts,
         )
 
     def test_isolated_fit_matches_recipe(self) -> None:
