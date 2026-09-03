@@ -59,7 +59,15 @@ class TestEndToEnd:
     def test_all_null_column_warns_and_passes_through(
         self, snapshot: SnapshotAssertion
     ) -> None:
-        df = pd.DataFrame({"a": [1.0, None, 3.0], "empty": [None, None, None]})
+        # 'empty' is typed float explicitly: an untyped all-null pandas column
+        # is object-backed, which narwhals reports as String and the recipe's
+        # dtype check then (correctly) rejects for a numeric-only step.
+        df = pd.DataFrame(
+            {
+                "a": [1.0, None, 3.0],
+                "empty": pd.Series([None, None, None], dtype="float64"),
+            }
+        )
         recipe = Recipe(steps=[StepImputeMean(["a", "empty"])])
         with pytest.warns(UserWarning) as record:
             fitted = recipe.fit(df)

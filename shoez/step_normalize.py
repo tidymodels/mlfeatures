@@ -20,6 +20,7 @@ import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez._frame import as_float
+from shoez._numeric_one_to_one import schema_out_for_touched
 from shoez.step import Step
 from shoez.types import (
     NUMERIC_DTYPES,
@@ -129,6 +130,9 @@ class StepNormalize(Step):
     unit variance; they are dropped from the normalization (with a warning) and
     pass through ``transform`` untouched.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
@@ -140,7 +144,9 @@ class StepNormalize(Step):
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     id
-        Stable step identifier. Default ``"normalize"``.
+        Stable step identifier. Defaults to ``"normalize"``; a second step
+        of this type in the same recipe becomes ``"normalize_2"``, and
+        passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -186,13 +192,11 @@ class StepNormalize(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         id: str | None = None,
     ):
         self.columns = columns
-        self.id = id if id is not None else "normalize"
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "normalize")
         # Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
         self._estimates: dict[str, tuple[float, float]] | None = None
         self._schema_in: ColSchema | None = None
@@ -223,12 +227,7 @@ class StepNormalize(Step):
         """Schema of the produced columns: same names, normalized ones now float."""
         if self._schema_in is None or self._estimates is None:
             raise RuntimeError("StepNormalize.schema_out() called before fit()")
-        normalized = set(self._estimates)
-        dtypes = {
-            col: ("Float64" if col in normalized else self._schema_in.dtypes[col])
-            for col in self._schema_in.columns
-        }
-        return ColSchema(columns=self._schema_in.columns, dtypes=dtypes)
+        return schema_out_for_touched(self._schema_in, set(self._estimates))
 
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Normalization is only meaningful on numeric columns."""

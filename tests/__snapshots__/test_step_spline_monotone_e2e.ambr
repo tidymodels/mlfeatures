@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestEndToEnd.test_constant_column_warns_and_is_left_unchanged
+  "1 column(s) had fewer than 2 distinct values and were not expanded: ['const']"
+# ---
+# name: TestEndToEnd.test_constant_column_warns_and_is_left_unchanged.1
+  "column 'const' has fewer than 2 unique values; no monotone spline expansion was applied"
+# ---
+# name: TestStepSplineMonotoneUnit.test_invalid_deg_free_raises_at_fit
+  "'deg_free' must be an integer greater than or equal to 4, got 2"
+# ---

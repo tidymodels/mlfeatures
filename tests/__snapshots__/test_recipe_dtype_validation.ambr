@@ -1,0 +1,13 @@
+# serializer version: 1
+# name: TestDtypeRejection.test_categorical_step_rejects_float_column
+  "step 'dummy' (step_dummy) does not accept column(s) ['a'] with dtype(s) ['Float64']"
+# ---
+# name: TestDtypeRejection.test_error_lists_every_offending_column
+  "step 'normalize' (step_normalize) does not accept column(s) ['flag', 'label'] with dtype(s) ['Boolean', 'String']"
+# ---
+# name: TestDtypeRejection.test_error_names_a_custom_step_id
+  "step 'my_step' (step_normalize) does not accept column(s) ['label'] with dtype(s) ['String']"
+# ---
+# name: TestDtypeRejection.test_numeric_step_rejects_string_column
+  "step 'normalize' (step_normalize) does not accept column(s) ['label'] with dtype(s) ['String']"
+# ---

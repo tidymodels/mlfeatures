@@ -14,11 +14,13 @@ Tooling is managed with [`uv`](https://docs.astral.sh/uv/); always invoke tools 
 uv run pytest                  # tests (add --cov --cov-report=term-missing for coverage)
 uv run ruff check .            # lint
 uv run ruff format --check .   # format check (drop --check to apply)
-uv run mypy shoez              # type-check (strict)
+uv run mypy shoez extras       # type-check (strict)
 uv run pyright                 # type-check (strict)
 ```
 
-Both type-checkers run in strict mode over `shoez/` (tests are excluded). New code must be fully typed and pass both. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
+Both type-checkers run in strict mode over `shoez/` and `extras/` (tests are excluded). New code must be fully typed and pass both.
+
+`extras/shoez_demo_step/` is an out-of-tree step written the way a plugin author would write one. It is not shipped; it exists so the public API cannot quietly stop being sufficient to write a step. It must import only from the top-level `shoez` namespace, and [`tests/test_out_of_tree_step.py`](tests/test_out_of_tree_step.py) fails if it reaches into a private module or imports a name absent from `shoez.__all__`. When a new name becomes necessary to author or annotate a step, export it rather than relaxing that test. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
 
 When adding a new step, also add its `tests/test_step_x_infrastructure.py` subclassing `shoez.testing.StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass the contract before merging. The subclass supplies only `make_step()` and `training_data`; the checks themselves are written once in [`shoez/testing.py`](shoez/testing.py).
 
@@ -48,7 +50,7 @@ uv run great-docs preview    # build and serve at localhost:3000
 
 `great-docs` is in the `docs` dependency group and requires Python ≥3.11 (the package itself still supports ≥3.10). On push to `main`, [`.github/workflows/docs.yml`](.github/workflows/docs.yml) builds and deploys to GitHub Pages.
 
-Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy.
+Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy. The same test covers the cells in the `user_guide/` pages.
 
 ### Vocabulary
 
@@ -84,7 +86,7 @@ A step's class docstring is its reference page, so it is written for someone usi
       are meaningful here.
   ```
 
-- **Say which dtypes are meaningful, not that others are rejected.** `accepts_dtypes()` is declared per step but nothing calls it, so a wrong dtype surfaces as a backend error rather than a shoez one. Until that is wired up, docstrings must not claim validation.
+- **Say which dtypes are meaningful.** `accepts_dtypes()` is enforced by the recipe before `fit()`, so a wrong dtype raises a shoez `TypeError` naming the step and column. A docstring may say which dtypes a step works on; it does not need to spell out the rejection, which is a universal contract described once on `Step`.
 - **Leave out what the reader can already see.** A filter not touching columns, or a constant column having nothing to estimate, does not need a paragraph.
 
 ### Example style

@@ -45,11 +45,12 @@ else:
 #: against this via `shoez._frame`. See ``design/ecosystem.md``.
 Frame: TypeAlias = nw.DataFrame[Any]
 
-#: How a step names the columns it operates on: a single column name, an explicit
-#: list of names, a narwhals selector (`NwSelector`, e.g.
-#: ``narwhals.selectors.numeric()``), or a polars selector (`PlSelector`,
-#: ``polars.selectors``). Any selector is resolved against the frame's schema at
-#: fit time, for any backend. See ``design/selectors.md``.
+#: The type of every step's ``columns`` parameter: a single column name, an
+#: explicit list of names, a shoez selector such as
+#: ``Selectors.numeric_features()`` (see `Selectors` for the full set), or a
+#: narwhals or polars selector (``narwhals.selectors.numeric()``,
+#: ``polars.selectors.numeric()``). Any selector is resolved against the frame's
+#: schema at fit time, so the same selector works on any backend.
 Selector: TypeAlias = Union[
     str, Sequence[str], NwSelector, "PlSelector", "ShoezSelector"
 ]
@@ -316,6 +317,12 @@ NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.Decimal,
 }
 
+#: Dtypes valid for a step whose logic is level-based (an imputed mode, a
+#: recoded "unknown"/"other" level) rather than numeric or general discrete.
+#: Shared by ``step_impute_mode``, ``step_unknown``, and ``step_other``, which
+#: previously each redefined this set verbatim.
+_CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
+
 
 class Mode(Enum):
     """Shape of a step's input/output relationship.
@@ -345,3 +352,56 @@ class Mode(Enum):
     ADDING = "adding"
     ROW_OP = "row_op"
     UNCONSTRAINED = "unconstrained"
+
+
+class KeepOriginals(Enum):
+    """Whether a step's ``keep_original_cols`` is fixed or up to the caller.
+
+    A step does not declare this: it follows from `Mode`, via
+    `KeepOriginals.for_mode`. A step that turns its input columns into derived
+    ones (``ONE_TO_MANY``, ``MANY_TO_MANY``) is ``CONFIGURABLE``, because keeping
+    the sources beside the derived columns is a legitimate thing to want; every
+    other mode has only one sensible answer, so ``Step.__init__`` fixes the value
+    and ``keep_original_cols`` is read-only. See ``design/step-contract.md``.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from shoez import KeepOriginals, Mode, StepDummy
+    ```
+
+    ```{python}
+    KeepOriginals.for_mode(StepDummy.mode), KeepOriginals.for_mode(Mode.ROW_OP)
+    ```
+    """
+
+    #: The step always retains its input columns.
+    KEEP = "keep"
+    #: The step always drops or consumes its input columns.
+    DISCARD = "discard"
+    #: The caller chooses, through a ``keep_original_cols`` constructor argument.
+    CONFIGURABLE = "configurable"
+
+    @classmethod
+    def for_mode(cls, mode: Mode) -> "KeepOriginals":
+        """The policy that a step of ``mode`` must follow."""
+        return _KEEP_POLICY[mode]
+
+    def fixed_value(self) -> bool | None:
+        """The mandated ``keep_original_cols``, or ``None`` if configurable."""
+        if self is KeepOriginals.CONFIGURABLE:
+            return None
+        return self is KeepOriginals.KEEP
+
+
+_KEEP_POLICY: dict[Mode, KeepOriginals] = {
+    Mode.ONE_TO_ONE: KeepOriginals.DISCARD,
+    Mode.REMOVING: KeepOriginals.DISCARD,
+    Mode.ADDING: KeepOriginals.KEEP,
+    Mode.ROW_OP: KeepOriginals.KEEP,
+    Mode.UNCONSTRAINED: KeepOriginals.KEEP,
+    Mode.ONE_TO_MANY: KeepOriginals.CONFIGURABLE,
+    Mode.MANY_TO_MANY: KeepOriginals.CONFIGURABLE,
+}

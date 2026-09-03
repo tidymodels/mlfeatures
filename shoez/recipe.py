@@ -18,6 +18,7 @@ applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
 from __future__ import annotations
 
 import copy
+import warnings
 
 from shoez import _frame
 from shoez.ptype import (
@@ -26,7 +27,12 @@ from shoez.ptype import (
 )
 from shoez.schema import Schema
 from shoez.selectors import ShoezSelector
-from shoez.step import RowOp, Step, StepError
+from shoez.step import (
+    RowOp,
+    Step,
+    StepError,
+    _step_type_label,  # pyright: ignore[reportPrivateUsage]
+)
 from shoez.types import (
     DataFrame,
     Frame,
@@ -36,6 +42,30 @@ from shoez.types import (
 )
 
 __all__ = ["Recipe", "FittedRecipe"]
+
+
+def _check_accepted_dtypes(step: Step, data: Frame, selected: list[str]) -> None:
+    """Reject a step whose selection includes a dtype it does not accept.
+
+    The framework-side half of ``Step.accepts_dtypes()``: it runs at the recipe
+    boundary, after the selector has resolved and before ``step.fit()``, so a
+    step never sees a column it declared itself invalid for and a mismatch is
+    reported by shoez rather than by whatever narwhals, polars, or pandas
+    happens to raise from inside the step. A step returning ``ANY_DTYPE`` opts
+    out (the sentinel contains every dtype).
+    """
+    accepted = step.accepts_dtypes()
+    schema = data.schema
+    offenders = {
+        name: schema[name] for name in selected if type(schema[name]) not in accepted
+    }
+    if offenders:
+        columns = sorted(offenders)
+        dtypes = [str(offenders[name]) for name in columns]
+        raise TypeError(
+            f"step {step.id!r} ({_step_type_label(step)}) does not accept "
+            f"column(s) {columns} with dtype(s) {dtypes}"
+        )
 
 
 def _format_recipe(
@@ -77,6 +107,42 @@ def _format_recipe(
     return "\n".join(lines)
 
 
+def _resolve_step_ids(existing: list[Step], incoming: tuple[Step, ...]) -> list[Step]:
+    """Return ``incoming`` with ids made unique against ``existing``.
+
+    Step ids key the lineage DAG, ``SchemaInfo.producing_steps``, the
+    ``has_source`` selectors, and step-level error messages, so two steps
+    sharing one id turn those lookups into wrong answers rather than errors.
+    Uniqueness is enforced here, at the earliest point it is detectable.
+
+    A *defaulted* id (the step type's short name) is disambiguated silently by
+    appending the lowest free ``_n`` suffix, so ``StepDummy`` twice in a recipe
+    yields ``"dummy"`` and ``"dummy_2"``. Renaming is done on a copy, keeping
+    ``add()`` pure with respect to the caller's step objects. An id the caller
+    passed explicitly is never rewritten: a duplicate there is a mistake about
+    a name the caller intends to use for lookups, so it raises.
+    """
+    taken = {step.id for step in existing}
+    resolved: list[Step] = []
+    for step in incoming:
+        if step.id not in taken:
+            taken.add(step.id)
+            resolved.append(step)
+            continue
+        if step._id_explicit:  # pyright: ignore[reportPrivateUsage]
+            raise ValueError(
+                f"duplicate step id {step.id!r}; ids must be unique within a recipe"
+            )
+        n = 2
+        while f"{step.id}_{n}" in taken:
+            n += 1
+        renamed = copy.copy(step)
+        renamed.id = f"{step.id}_{n}"
+        taken.add(renamed.id)
+        resolved.append(renamed)
+    return resolved
+
+
 class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
@@ -115,7 +181,9 @@ class Recipe:
         features: str | list[str] | None = None,
         case_weights: str | list[str] | None = None,
     ):
-        self.steps: list[Step] = list(steps) if steps is not None else []
+        self.steps: list[Step] = (
+            _resolve_step_ids([], tuple(steps)) if steps is not None else []
+        )
         # The optional prototype frame backs column-existence checks during role
         # assignment and the pre-fit ``summary()``. It is never mutated, so
         # clones share the reference. The lineage DAG is derived from it on
@@ -163,6 +231,12 @@ class Recipe:
     def add(self, *steps: Step) -> "Recipe":
         """Return a new recipe with ``steps`` appended (steps are pure).
 
+        Step ids are kept unique within the recipe. A step that did not get an
+        explicit ``id`` and whose default collides with an earlier step's is
+        appended under a suffixed id instead (``"dummy"``, then ``"dummy_2"``),
+        so the two are addressable separately. Passing an ``id`` that a step
+        already in the recipe uses raises ``ValueError``.
+
         Examples
         --------
         Each ``add()`` returns a new recipe, so steps chain into a pipeline
@@ -185,7 +259,7 @@ class Recipe:
         ```
         """
         new = self._clone()
-        new.steps = [*self.steps, *steps]
+        new.steps = [*self.steps, *_resolve_step_ids(self.steps, steps)]
         return new
 
     def set_roles(
@@ -429,6 +503,12 @@ class Recipe:
                 step.trained = True
                 fitted_steps.append(step)
                 continue
+            # Dtype validation, also at the recipe boundary and also before the
+            # step runs: a step declares what it accepts, the framework enforces
+            # it (see design/step-contract.md). Only at fit time — the ptype
+            # already pins dtypes at transform time.
+            if has_selector:
+                _check_accepted_dtypes(step, current, selected)
             # Only the step's own ``fit``/``transform`` calls are wrapped in a
             # StepError; the recipe-side name-collision guard and schema/role
             # bookkeeping raise their own errors and are left unwrapped.
@@ -582,8 +662,17 @@ class FittedRecipe:
         """Re-fitting an already-fitted recipe is a no-op: returns ``self``.
 
         The stored statistics are never re-estimated, so ``rec.fit().fit()`` is
-        cheap and yields the same object. ``data`` is ignored.
+        cheap and yields the same object. ``data`` is ignored, which differs
+        from a scikit-learn estimator (whose ``fit()`` re-estimates), so this
+        warns to make the discarded data visible. Fit the untrained ``Recipe``
+        again to estimate from new data.
         """
+        warnings.warn(
+            "the recipe is already fitted; fit() is a no-op and the data passed "
+            "was ignored, so no statistics were re-estimated; fit the untrained "
+            "recipe to estimate from this data",
+            stacklevel=2,
+        )
         return self
 
     def transform(self, data: DataFrame) -> DataFrame:

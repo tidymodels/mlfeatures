@@ -1,8 +1,9 @@
-"""Broad numeric-dtype coverage for the five numeric-accepting steps.
+"""Broad numeric-dtype coverage for the numeric-accepting steps.
 
-``step_normalize``, ``step_polynomial``, ``step_class_distance``,
-``step_impute_mean``, and ``step_impute_median`` all declare acceptance of every
-dtype in ``NUMERIC_DTYPES`` (``types.py``), but their per-step tests only
+``step_normalize``, ``step_range``, ``step_log``, ``step_polynomial``,
+``step_class_distance``, ``step_impute_mean``, and ``step_impute_median`` all
+declare acceptance of every dtype in ``NUMERIC_DTYPES`` (``types.py``), but
+their per-step tests only
 exercise ``Float64`` + ``Int64``. This module closes that gap by running each
 step over its accepted numeric dtypes and asserting the expected output dtype.
 
@@ -44,8 +45,10 @@ from shoez import (
     StepClassDistance,
     StepImputeMean,
     StepImputeMedian,
+    StepLog,
     StepNormalize,
     StepPolynomial,
+    StepRange,
 )
 
 # The 10 dtypes that round-trip through numpy/pandas (the sklearn surface).
@@ -93,6 +96,20 @@ SCENARIOS: list[Scenario] = [
         ALL_NUMERIC,
         lambda dt: pl.DataFrame({"x": _num(dt, [1, 2, 3, 4])}),
         lambda: StepNormalize(["x"]),
+        ["x"],
+    ),
+    (
+        "range",
+        ALL_NUMERIC,
+        lambda dt: pl.DataFrame({"x": _num(dt, [1, 2, 3, 4])}),
+        lambda: StepRange(["x"]),
+        ["x"],
+    ),
+    (
+        "log",
+        ALL_NUMERIC,
+        lambda dt: pl.DataFrame({"x": _num(dt, [1, 2, 3, 4])}),
+        lambda: StepLog(["x"]),
         ["x"],
     ),
     (

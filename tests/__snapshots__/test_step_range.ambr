@@ -1,0 +1,19 @@
+# serializer version: 1
+# name: TestConstantColumns.test_constant_column_is_omitted
+  "1 column(s) had a zero range (constant) and were not rescaled: ['c']"
+# ---
+# name: TestConstantColumns.test_warning_names_the_columns
+  "1 column(s) had a zero range (constant) and were not rescaled: ['c']"
+# ---
+# name: TestGuards.test_min_not_less_than_max_raises
+  "'min' must be less than 'max'; got min=1.0 and max=0.0"
+# ---
+# name: TestInfiniteValues.test_constant_and_infinite_columns_warn_separately
+  list([
+    "1 column(s) had a zero range (constant) and were not rescaled: ['c']",
+    "1 column(s) had an infinite bound; rescaling them will produce NaN: ['i']",
+  ])
+# ---
+# name: TestInfiniteValues.test_warning_names_the_columns
+  "1 column(s) had an infinite bound; rescaling them will produce NaN: ['i']"
+# ---

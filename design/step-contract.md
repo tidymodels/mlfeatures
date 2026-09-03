@@ -19,8 +19,20 @@ from abc import ABC, abstractmethod
 class Step(ABC):
     id: str                      # content-derived, stable, user-overridable
     trained: bool
-    keep_original_cols: bool
+    mode: ClassVar[Mode]         # declared by every concrete step
     output_role: str | None      # role assigned to new columns produced by this step
+
+    @property
+    def keep_original_cols(self) -> bool: ...   # read-only; settled at construction
+
+    def __init__(
+        self,
+        id: str | None,
+        default_id: str,
+        *,
+        keep_original_cols: bool | None = None,   # None means "not stated"
+        output_role: str | None = None,
+    ) -> None: ...
 
     @abstractmethod
     def fit(self, training_data: DataFrame, info: SchemaInfo) -> "Step": ...
@@ -63,9 +75,11 @@ Every step constructor must accept:
 | selector(s)                   | `Selector`          | Resolved at fit time against schema. Usable in **every** column-naming arg — see [selectors.md](selectors.md). |
 | step-specific hyperparameters | varies              | Type-validated at construction time.                                                                           |
 | `role`                        | `str \| None`       | Role assigned to *new* columns.                                                                                |
-| `keep_original_cols`          | `bool`              | Whether to retain the source columns.                                                                          |
+| `keep_original_cols`          | `bool`              | Whether to retain the source columns. Only on a step whose `mode` makes it configurable — see [`keep_original_cols` applicability](#what-recording-this-information-enables). |
 | `prefix` / `name_fn`          | `str \| callable`   | Controls generated column names.                                                                               |
 | `id`                          | `str`               | Stable identifier; auto-generated if not provided.                                                             |
+
+**Only required arguments may be positional; every optional argument is keyword-only.** A `*` goes immediately after the required argument or arguments (`columns`, or `columns, target` for `StepClassDistance`, or `mutations` / `predicate`), so everything with a default, `id` included, must be passed by name. `StepIntercept` has no required argument and is therefore keyword-only throughout. This keeps the whole catalog callable the same way and lets an option be reordered or renamed without changing the meaning of existing calls. `StepConformanceTest.test_optional_arguments_are_keyword_only` enforces it by asserting that no `POSITIONAL_OR_KEYWORD` parameter has a default, which needs no per-step allowlist.
 
 These are constructor arguments on the concrete step, not slots on the `Step` base class. The selector is stored as an instance attribute on the concrete step and resolved against the schema during `fit()` — the base class has no knowledge of which columns were selected.
 
@@ -73,24 +87,46 @@ All declared arguments are type-validated at construction. No silent coercions. 
 
 The stronger goal is to avoid environment-dependent settings entirely. Every behaviour that affects output should be an explicit constructor argument. Capturing from the environment at fit time is a fallback for cases where that is genuinely impractical — it should not be the default approach.
 
+### Constructors
+
+A step's `__init__` stores its own arguments and then calls `super().__init__()` for the four attributes the framework owns (`id`, `trained`, `keep_original_cols`, `output_role`). The class also declares its `mode`, which the base class reads:
+
+```python
+class StepNormalize(Step):
+    mode = Mode.ONE_TO_ONE
+
+    def __init__(self, columns: Selector, *, id: str | None = None):
+        self.columns = columns
+        super().__init__(id, "normalize")
+        self._estimates: dict[str, tuple[float, float]] | None = None
+```
+
+`super().__init__()` takes the caller's `id` (or `None`) plus the step type's short name to default it to, and keyword-only `keep_original_cols` and `output_role`. A step whose mode makes `keep_original_cols` configurable forwards its constructor argument (`super().__init__(id, "pca", keep_original_cols=keep_original_cols, output_role=role)`); every other step passes nothing, because the base class derives the fixed value from `mode` and raises if a step tries to contradict it.
+
+A `RowOp` subclass does not declare a `mode` either: `RowOp` sets `Mode.ROW_OP` for it.
+
+Routing `id` through the base class is what records whether it was defaulted or explicit, which is what makes the collision rules in [Step IDs](#step-ids) possible. Delegating rather than assigning `self.id` also means the requirement is discoverable from the public API: a step author reads `Step.__init__`'s signature instead of having to know about a protected helper. `trained` is always `False` at construction, so a step never passes it; the recipe sets it after `fit()` returns.
+
+Any future framework-owned attribute belongs in `super().__init__()` too, with a default, so existing steps and out-of-tree steps keep working unchanged.
+
 ---
 
 ## `accepts_dtypes()`
 
-Each step declares the set of column dtypes it is valid to apply to. The framework checks this against the schema **before `fit()` runs only** — if any selected column has a dtype not in the declared set, an error is raised immediately rather than failing deep inside the step's fitting code.
+Each step declares the set of column dtypes it is valid to apply to. `Recipe.fit()` checks the resolved selection against that declaration **before `fit()` runs only** — if any selected column has a dtype not in the declared set, a `TypeError` naming the step, the offending column(s), and their dtypes is raised immediately rather than failing deep inside the step's fitting code. The check is skipped for a step with no `columns` selector and for a selection that resolved to zero columns (the identity case).
 
 This check does not run at `transform()` time. By then, the ptype snapshot already guarantees that incoming column dtypes match what was seen during `fit()` — a second dtype check would be redundant. See [lifecycle.md](lifecycle.md).
 
-The return type is `AcceptedDtypes`, an alias for `set[str] | _AnyDtype` — either an explicit set of dtype names, or the `ANY_DTYPE` sentinel. (A plain `set[str]` annotation would be inconsistent, since `ANY_DTYPE` is not a set.)
+The return type is `AcceptedDtypes`, an alias for `set[type[nw.dtypes.DType]] | _AnyDtype` — either an explicit set of narwhals dtype classes, or the `ANY_DTYPE` sentinel. (A plain `set` annotation would be inconsistent, since `ANY_DTYPE` is not a set.) `NUMERIC_DTYPES` is the ready-made set for numeric-only steps.
 
 ```python
 # e.g. step_normalize only makes sense on numeric columns
 def accepts_dtypes(self) -> AcceptedDtypes:
-    return {"float", "int"}
+    return set(NUMERIC_DTYPES)
 
 # e.g. step_dummy only makes sense on categorical columns
 def accepts_dtypes(self) -> AcceptedDtypes:
-    return {"categorical"}
+    return {nw.Categorical, nw.Enum, nw.String}
 
 # e.g. step_zv works on anything — use the ANY sentinel
 def accepts_dtypes(self) -> AcceptedDtypes:
@@ -152,7 +188,9 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 - **Feature provenance.** The lineage DAG records which input columns produced which output columns. Tracing PCA components or dummy columns back to their source is possible programmatically. This is the core problem identified in [tidymodels/recipes#1158](https://github.com/tidymodels/recipes/issues/1158).
 - **`has_source()` selector.** Users can select all columns produced by a given step or step type — e.g. `has_source(step_type=step_dummy)`. See [selectors.md](selectors.md).
 - **Naming contract enforcement.** The framework validates that generated column names are unique — both against the existing schema and within the step — before each step runs, via `produced_columns()` and `Schema.check_additions`. Steps do not self-check.
-- **`keep_original_cols` applicability.** Every `ONE_TO_MANY` and `MANY_TO_MANY` step exposes `keep_original_cols` as a constructor argument defaulting to `False`, since keeping the source columns beside the derived ones is a legitimate thing to want. Steps in the other modes fix the value in `__init__`: `ONE_TO_ONE` and `REMOVING` steps to `False`, `ADDING`, `ROW_OP`, and `UNCONSTRAINED` steps to `True`.
+- **`keep_original_cols` applicability.** Every `ONE_TO_MANY` and `MANY_TO_MANY` step exposes `keep_original_cols` as a constructor argument defaulting to `False`, since keeping the source columns beside the derived ones is a legitimate thing to want. Steps in the other modes have no such argument, and the value is fixed: `False` for `ONE_TO_ONE` and `REMOVING`, `True` for `ADDING`, `ROW_OP`, and `UNCONSTRAINED`.
+
+  The rule is enforced rather than merely documented. `KeepOriginals.for_mode(mode)` is the single table encoding it; `Step.__init__` consults it, so a step in a fixed mode never states the value itself. The base parameter defaults to `None` rather than `False` precisely so "not stated" is distinguishable from "stated as `False`": a fixed-mode step that passes *either* value against its mode raises, in both directions. The attribute is a **read-only property** over `_keep_original_cols`, so reassigning it after construction (which would silently break a step whose correctness depends on the fixed value) is an `AttributeError` at runtime and an error under both type-checkers. `StepConformanceTest` checks both halves: that the value matches the mode's policy and that only a configurable step exposes the constructor argument.
 
 ---
 
@@ -188,6 +226,8 @@ Steps with **no input selector** (e.g. `step_intercept`, an `ADDING` step with n
 
 Because the no-op lives in the recipe, individual steps' `fit()` code must **not** add their own empty-selection guards — `fit()` is guaranteed a non-empty selection.
 
+One case is carved out of the rule, in the selector rather than in the recipe: `has_source` / `has_ancestor` given a step id or `step_type=` that names no step earlier in the recipe raises instead of resolving to zero columns (issue #220). The rule holds where matching nothing depends on the data; a step id or type is knowable from the recipe alone, so failing to match is a typo. See [selectors.md](selectors.md).
+
 ---
 
 ## `StepConformanceTest`
@@ -206,6 +246,8 @@ class TestMyStepConformance(StepConformanceTest):
 
 Every step must pass it before merging:
 
+- Every optional constructor argument is keyword-only; only required arguments may be passed positionally (see [Constructor requirements](#constructor-requirements)).
+- The constructor delegates to `Step.__init__()`, so `id`, `trained`, `keep_original_cols`, and `output_role` are all set on a freshly built step (see [Constructors](#constructors)).
 - Empty selection returns empty output without error (handled structurally by the recipe — see [Empty selection ⇒ identity](#empty-selection--identity-structural); the step's own `fit()` is never called on an empty selection).
 - 0-row and 1-row `transform()` produce schema-correct output.
 - `fit()` is idempotent given the same training data.
@@ -225,8 +267,20 @@ Not yet covered: constructor arguments are not type-validated by the suite.
 
 ## Step IDs
 
-Every step has a stable, content-derived `id` by default (e.g. `"normalize_1a2b3c"`), user-overridable. All inspection and tuning APIs key on `id`, never on position. Position-based indexing is deprecated from the start.
-IDs must **not** use randomness. The suffix is derived deterministically from the step's type and hyperparameters — e.g. a hash of the constructor arguments. The same step type with the same arguments must produce the same `id` across sessions. This is what makes IDs stable and useful as handles in tuning and inspection APIs.
+Every step has a stable `id`, defaulting to the step type's short name (`"normalize"`) and user-overridable via the `id` constructor argument. All inspection and tuning APIs key on `id`, never on position. Position-based indexing is deprecated from the start.
+
+IDs must **not** use randomness: the same recipe, written the same way, must produce the same ids across sessions. That is what makes them usable as handles in tuning and inspection APIs, and it is what lets a `Selectors.has_source("dummy")` be written by hand against a recipe you can read.
+
+Ids are unique within a recipe, enforced by `Recipe.add` (and by the `Recipe(steps=[...])` constructor, which is the same thing) at the earliest point a collision is detectable. Uniqueness matters because the id is the key for the lineage DAG's `source` field, `SchemaInfo.producing_steps`, the `has_source` / `has_ancestor` selectors, and step-level error messages; two steps sharing an id turn each of those into a wrong answer rather than an error.
+
+Two steps of the same type are resolved differently depending on where the id came from:
+
+| Id | On collision |
+| --- | --- |
+| Defaulted (the type's short name) | Silently suffixed with the lowest free `_n`: `"dummy"`, then `"dummy_2"`. The renaming is done on a copy, so `add()` stays pure with respect to the caller's step objects. |
+| Passed explicitly | `ValueError`. The caller named the step in order to refer to it, so a duplicate is a mistake about that name, not something to paper over. |
+
+`Step.__init__()` records which of the two a step's id is; a concrete step passes the caller's `id` (or `None`) and the type's short name to `super().__init__()` rather than assigning `self.id` directly. See [Constructors](#constructors).
 
 ---
 

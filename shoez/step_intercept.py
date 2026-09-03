@@ -70,6 +70,9 @@ class StepIntercept(Step):
     A single constant column is added, by default a column of ones named
     ``"intercept"``.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     value
@@ -81,7 +84,9 @@ class StepIntercept(Step):
     role
         Role assigned to the new column (see `Roles`). Default ``"feature"``.
     id
-        Stable step identifier. Default ``"intercept"``.
+        Stable step identifier. Defaults to ``"intercept"``; a second step
+        of this type in the same recipe becomes ``"intercept_2"``, and
+        passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -133,6 +138,7 @@ class StepIntercept(Step):
 
     def __init__(
         self,
+        *,
         value: float = 1.0,
         name: str = "intercept",
         role: str | None = "feature",
@@ -140,10 +146,7 @@ class StepIntercept(Step):
     ):
         self.value = value
         self.name = name
-        self.id = id if id is not None else "intercept"
-        self.trained = False
-        self.keep_original_cols = True  # ADDING never drops the source columns.
-        self.output_role = role
+        super().__init__(id, "intercept", output_role=role)
         # Populated by ``fit()``.
         self._schema_out: ColSchema | None = None
         self._output_parents: dict[str, list[str]] | None = None

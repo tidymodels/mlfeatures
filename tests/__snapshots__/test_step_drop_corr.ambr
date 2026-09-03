@@ -1,11 +1,11 @@
 # serializer version: 1
-# name: TestInputValidation.test_invalid_method_raises
+# name: TestConstructorValidation.test_invalid_method_raises
   "'method' must be 'pearson' or 'spearman', got 'kendall'"
 # ---
-# name: TestInputValidation.test_threshold_above_1_raises
+# name: TestConstructorValidation.test_threshold_above_1_raises
   "'threshold' must be between 0 and 1, got 1.1"
 # ---
-# name: TestInputValidation.test_threshold_below_0_raises
+# name: TestConstructorValidation.test_threshold_below_0_raises
   "'threshold' must be between 0 and 1, got -0.1"
 # ---
 # name: TestNaNHandling.test_sporadic_nan_warns_and_drops_expected

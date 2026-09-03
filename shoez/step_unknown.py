@@ -17,14 +17,22 @@ its level set is deferred until the schema subsystem lands.
 
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
 from shoez import _frame
+from shoez._level_recode import warn_level_collision
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo, Selector
+from shoez.types import (
+    _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+    Selector,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -33,9 +41,6 @@ __all__ = ["fit_unknown", "apply_unknown", "StepUnknown"]
 
 #: Default level used to replace missing categorical values.
 DEFAULT_UNKNOWN_LEVEL = "unknown"
-
-#: Dtypes ``step_unknown`` is valid on — categorical-like columns.
-_CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
 
 
 def fit_unknown(
@@ -68,12 +73,7 @@ def fit_unknown(
         for col in selected.columns
         if bool((selected[col].cast(nw.String) == new_level).any())
     ]
-    if collisions:
-        warnings.warn(
-            f"the level {new_level!r} already exists in {len(collisions)} "
-            f"column(s); recoded nulls will be merged with it: {collisions!r}",
-            stacklevel=2,
-        )
+    warn_level_collision(new_level, collisions, merges="recoded nulls")
     return list(selected.columns)
 
 
@@ -120,6 +120,9 @@ class StepUnknown(Step):
     Each selected categorical column has its nulls replaced in place by
     ``new_level``.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
@@ -135,7 +138,9 @@ class StepUnknown(Step):
         emitted if a selected column already contains this level, since the
         recoded rows then become indistinguishable from real ones.
     id
-        Stable step identifier. Default ``"unknown"``.
+        Stable step identifier. Defaults to ``"unknown"``; a second step of
+        this type in the same recipe becomes ``"unknown_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -191,15 +196,13 @@ class StepUnknown(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         new_level: str = DEFAULT_UNKNOWN_LEVEL,
         id: str | None = None,
     ):
         self.columns = columns
         self.new_level = new_level
-        self.id = id if id is not None else "unknown"
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "unknown")
         # Populated by ``fit()``. ``_schema_in.columns`` is the resolved
         # selection — every selected column is recoded, so no separate list is
         # needed.

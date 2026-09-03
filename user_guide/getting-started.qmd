@@ -98,7 +98,8 @@ def plot_pairs(frame):
 Importing `shoez.polars` registers a `shz` namespace on polars DataFrames. Each
 `df.shz.step_*()` call fits that step on the frame, applies it, and returns a
 new frame, so a pipeline reads as a plain chain of transformations: drop
-constant columns, center and scale, then project onto 4 principal components.
+constant columns, rank-normalize each measurement onto a standard normal,
+center and scale, then project onto 4 principal components.
 
 ```{python}
 import shoez.polars  # registers the `df.shz` accessor
@@ -106,7 +107,7 @@ from shoez import Selectors as s
 
 bean_pcs = (
     beans.shz.step_drop_zero_variance(s.numeric_features())
-    # .shz.step_order_norm(s.numeric_features())  # TODO: planned, see issue #211
+    .shz.step_order_norm(s.numeric_features())
     .shz.step_normalize(s.numeric_features())
     .shz.step_pca(s.numeric_features(), num_comp=4)
 )
@@ -139,18 +140,18 @@ bean_train, bean_validation = train_test_split(
 )
 ```
 
-**Specify** the recipe. It is the same three steps, declared against the
+**Specify** the recipe. It is the same four steps, declared against the
 training data's schema, with `class` given the `target` role. Building it
 computes nothing; printing it shows each step `[untrained]`, its selector still
 unresolved.
 
 ```{python}
-from shoez import Recipe, StepDropZeroVariance, StepNormalize, StepPca
+from shoez import Recipe, StepDropZeroVariance, StepNormalize, StepOrderNorm, StepPca
 
 recipe = (
     Recipe(data=bean_train, target="class")
     .add(StepDropZeroVariance(s.numeric_features()))
-    # .add(StepOrderNorm(s.numeric_features()))  # TODO: planned, see issue #211
+    .add(StepOrderNorm(s.numeric_features()))
     .add(StepNormalize(s.numeric_features()))
     .add(StepPca(s.numeric_features(), num_comp=4))
 )
@@ -158,8 +159,8 @@ recipe
 ```
 
 **Fit** it on the training data. This is where statistics are estimated: which
-columns are constant, each column's mean and standard deviation, and the
-principal axes. The fitted recipe prints each step `[trained]` with the
+columns are constant, each column's rank mapping, mean, and standard
+deviation, and the principal axes. The fitted recipe prints each step `[trained]` with the
 concrete columns it resolved to.
 
 ```{python}
@@ -218,27 +219,12 @@ the full list in the [API reference](../reference/index.qmd).
 | Wrangle | `StepDummy` | expand a categorical column into *k−1* indicator columns |
 | | `StepOneHot` | expand into all *k* indicator columns |
 | Model prep | `StepNormalize` | center and scale each column to mean 0, sd 1 |
+| | `StepOrderNorm` | rank-normalize each column onto a standard normal |
 | | `StepPolynomial` | polynomial basis expansion of a numeric column |
 | Multivariate transforms | `StepPca` | project numeric columns onto principal components |
 | Filters | `StepDropZeroVariance` | drop constant or all-missing columns |
 | | `StepDropCorr` | drop one of each highly correlated pair |
 | Escape hatches | `StepMutate`, `StepFilter` | arbitrary column expressions and row filters |
-
-The catalog is still growing toward R `recipes`' coverage. Steps that are
-planned but not yet built are tracked on the
-[step roadmap](https://github.com/tidymodels/shoez/issues/203); a few of the
-nearest-term ones:
-
-| Stage | Planned step | Issue |
-|-------|--------------|-------|
-| Handle missing values | `step_indicate_na`: add missing-data indicator columns | [#209](https://github.com/tidymodels/shoez/issues/209) |
-| | `step_other`: collapse infrequent categorical levels | [#204](https://github.com/tidymodels/shoez/issues/204) |
-| | `step_novel`: absorb unseen levels at transform time | [#205](https://github.com/tidymodels/shoez/issues/205) |
-| Wrangle | `step_log`: logarithmic transform | [#208](https://github.com/tidymodels/shoez/issues/208) |
-| | `step_orderNorm`: ordered-quantile normalization | [#211](https://github.com/tidymodels/shoez/issues/211) |
-| Model prep | `step_interact`: interaction columns | [#206](https://github.com/tidymodels/shoez/issues/206) |
-| | `step_spline_natural`: natural spline basis | [#214](https://github.com/tidymodels/shoez/issues/214) |
-| Multivariate transforms | `step_pls`: partial least squares | [#213](https://github.com/tidymodels/shoez/issues/213) |
 
 ## Use with polars (`.shz`)
 

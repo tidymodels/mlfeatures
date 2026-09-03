@@ -25,15 +25,20 @@ import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo, Selector
+from shoez.types import (
+    _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    Mode,
+    SchemaInfo,
+    Selector,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
 __all__ = ["fit_impute_mode", "apply_impute_mode", "StepImputeMode"]
-
-#: Dtypes ``step_impute_mode`` is valid on — categorical-like columns.
-_CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.String}
 
 
 def fit_impute_mode(selected: Frame) -> dict[str, Any]:
@@ -129,6 +134,9 @@ class StepImputeMode(Step):
     A column that is entirely null at fit time has no mode; it is left unchanged
     (not dropped) with a warning, and passes through ``transform`` untouched.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
@@ -140,7 +148,9 @@ class StepImputeMode(Step):
         fitted, so the same selector works on any backend. Only categorical
         columns are meaningful here.
     id
-        Stable step identifier. Default ``"impute_mode"``.
+        Stable step identifier. Defaults to ``"impute_mode"``; a second step
+        of this type in the same recipe becomes ``"impute_mode_2"``, and
+        passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -188,13 +198,11 @@ class StepImputeMode(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         id: str | None = None,
     ):
         self.columns = columns
-        self.id = id if id is not None else "impute_mode"
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__(id, "impute_mode")
         # Populated by ``fit()``: {column: mode} over the imputable columns.
         self._estimates: dict[str, Any] | None = None
         self._schema_in: ColSchema | None = None

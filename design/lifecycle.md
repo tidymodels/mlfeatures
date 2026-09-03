@@ -112,7 +112,7 @@ A significant design goal is that step authors should only need to implement the
 | Selector resolution | Each step called tidyselect internals | Framework resolves before calling `step.fit()` |
 | Skip on new data (row ops) | `skip=TRUE` convention, routinely missed | Structural — `RowOp` subclass, framework enforces |
 | Error messages with step identity | Each step wrapped errors, or didn't | Framework wraps all `fit()`/`transform()` calls |
-| `keep_original_cols` | Implemented separately in each step, with an arbitrary per-step interface | Implemented in each step, but the contract fixes which modes expose it and what it defaults to |
+| `keep_original_cols` | Implemented separately in each step, with an arbitrary per-step interface | Derived from the step's `Mode` by the base class, read-only, and checked by the conformance contract |
 | Output column name uniqueness | Each step checked, or collisions happened silently | Framework validates `produced_columns()` before each step runs |
 | Lineage DAG update | Not tracked at all | Framework updates from `schema_out()` after each step |
 | Sparse propagation | Each step handled or silently densified | Framework tracks through lineage DAG |
@@ -145,7 +145,7 @@ def fit(self, data):
         resolved_cols = step.selector.resolve(self._schema)
 
         # check that selected columns match the step's accepted dtypes
-        step.accepts_dtypes_check(resolved_cols, self._schema)
+        check_accepted_dtypes(step, current_data, resolved_cols)
 
         # fit the step on the current data
         fitted_step = step.fit(current_data, info=self._schema)

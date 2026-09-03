@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestStepDatetimeFeaturesUnit.test_categorical_not_in_eligible_set_message
+  "'categorical' must be a subset of ['dow', 'month'], got ['hour']"
+# ---
+# name: TestStepDatetimeFeaturesUnit.test_categorical_not_requested_in_features_message
+  "'categorical' entries must also be requested in 'features'; not requested: ['month']"
+# ---
+# name: TestStepDatetimeFeaturesUnit.test_invalid_feature_message
+  "'features' must be a subset of ['day', 'dow', 'doy', 'hour', 'minute', 'month', 'second', 'year'], got ['not_a_feature']"
+# ---

@@ -189,6 +189,9 @@ class StepPca(Step):
     Rows with a missing value are excluded when the components are computed, and
     such a row gets ``NaN`` for every component.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
@@ -211,7 +214,9 @@ class StepPca(Step):
         Role assigned to the new component columns (see `Roles`). Default
         ``"feature"``.
     id
-        Stable step identifier. Default ``"pca"``.
+        Stable step identifier. Defaults to ``"pca"``; a second step of this
+        type in the same recipe becomes ``"pca_2"``, and passing an ``id``
+        already used in the recipe is an error.
 
     Examples
     --------
@@ -286,10 +291,9 @@ class StepPca(Step):
         self.columns = columns
         self.num_comp = num_comp
         self.prefix = prefix
-        self.id = id if id is not None else "pca"
-        self.trained = False
-        self.keep_original_cols = keep_original_cols
-        self.output_role = role
+        super().__init__(
+            id, "pca", keep_original_cols=keep_original_cols, output_role=role
+        )
         # Populated by ``fit()``.
         self._estimates: PcaFit | None = None
         self._schema_in: ColSchema | None = None

@@ -1,4 +1,7 @@
-"""Execute every ``{python}`` docstring example cell and fail if one errors.
+"""Execute every ``{python}`` example cell and fail if one errors.
+
+Covers both places we write them: docstrings under ``shoez/`` and the narrative
+pages under ``user_guide/``.
 
 great-docs (via Quarto) *runs* ```` ```{python} ```` example cells at build
 time and embeds their real output, so a broken example is a build failure
@@ -26,6 +29,7 @@ from pathlib import Path
 import pytest
 
 PACKAGE_DIR = Path(__file__).resolve().parent.parent / "shoez"
+USER_GUIDE_DIR = Path(__file__).resolve().parent.parent / "user_guide"
 
 # ```{python}\n ... \n``` — the fenced executable cell great-docs runs. The
 # ``{python}`` marker (with braces) is what distinguishes an executable cell
@@ -78,7 +82,23 @@ def _collect_cells() -> list[tuple[str, str]]:
     return cases
 
 
+def _collect_guide_cells() -> list[tuple[str, str]]:
+    """The same collection for the narrative pages under ``user_guide/``.
+
+    Quarto runs a guide page's cells in one kernel, top to bottom, exactly as it
+    does a reference page's, so each page is one case: its cells concatenated in
+    source order.
+    """
+    cases: list[tuple[str, str]] = []
+    for path in sorted(USER_GUIDE_DIR.glob("*.qmd")):
+        cells = _CELL_RE.findall(path.read_text())
+        if cells:
+            cases.append((path.name, "\n".join(cells)))
+    return cases
+
+
 _CASES = _collect_cells()
+_GUIDE_CASES = _collect_guide_cells()
 
 
 def test_docstring_examples_were_found() -> None:
@@ -100,3 +120,23 @@ def test_docstring_example_executes(source: str) -> None:
     """
     namespace: dict[str, object] = {}
     exec(compile(source, "<docstring-example>", "exec"), namespace)
+
+
+def test_guide_examples_were_found() -> None:
+    """Guard the guide collector the same way, for the same reason."""
+    assert _GUIDE_CASES, "no ```{python}``` cells were discovered under user_guide/"
+
+
+@pytest.mark.parametrize(
+    "source", [c[1] for c in _GUIDE_CASES], ids=[c[0] for c in _GUIDE_CASES]
+)
+def test_guide_example_executes(source: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each user-guide page's ``{python}`` cells run without raising.
+
+    Runs with the page's directory as the working directory, matching how
+    quarto executes the cells, so pages may read sibling files (e.g. the
+    ``examples/data/`` parquets) by relative path.
+    """
+    monkeypatch.chdir(USER_GUIDE_DIR)
+    namespace: dict[str, object] = {}
+    exec(compile(source, "<guide-example>", "exec"), namespace)

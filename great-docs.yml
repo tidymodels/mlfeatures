@@ -69,6 +69,21 @@ authors:
 #   homepage: https://posit.co
 #   ror: https://ror.org/03wc8by49
 
+# User Guide Structure
+# --------------------
+# Pages in user_guide/ are auto-discovered, but the implicit order is by
+# filename, which would put a new page ahead of getting-started.qmd. The
+# explicit form below fixes the order: the tour first, then the pages that
+# only matter once you are using a particular backend or ecosystem.
+user_guide:
+  - section: "User Guide"
+    contents:
+      - getting-started.qmd
+      - common-step-arguments.qmd
+      - polars-extension.qmd
+      - sklearn-pipelines.qmd
+      - vocabulary.qmd
+
 # API Reference Structure
 # -----------------------
 # Customize the sections below to organize your API documentation.
@@ -101,11 +116,25 @@ reference:
     contents:
       - name: StepNormalize
         members: false
+      - name: StepOrderNorm
+        members: false
+      - name: StepRange
+        members: false
+      - name: StepLog
+        members: false
       - name: StepPolynomial
+        members: false
+      - name: StepSplineNatural
+        members: false
+      - name: StepSplineMonotone
         members: false
       - name: StepClassDistance
         members: false
+      - name: StepGeoDistance
+        members: false
       - name: StepIntercept
+        members: false
+      - name: StepInteract
         members: false
 
   - title: "Steps: categorical features"
@@ -114,6 +143,18 @@ reference:
       - name: StepDummy
         members: false
       - name: StepOneHot
+        members: false
+      - name: StepOther
+        members: false
+
+  - title: "Steps: date and datetime features"
+    desc: Expand Date and Datetime columns into calendar-part feature columns.
+    contents:
+      - name: StepDateFeatures
+        members: false
+      - name: StepDatetimeFeatures
+        members: false
+      - name: StepHoliday
         members: false
 
   - title: "Steps: missing data"
@@ -127,15 +168,23 @@ reference:
         members: false
       - name: StepUnknown
         members: false
+      - name: StepIndicateNa
+        members: false
 
   - title: "Steps: dimensionality reduction"
     desc: Reduce dimensionality, or filter columns that carry no signal.
     contents:
       - name: StepDropZeroVariance
         members: false
+      - name: StepDropNearZeroVariance
+        members: false
       - name: StepPca
         members: false
+      - name: StepPls
+        members: false
       - name: StepDropCorr
+        members: false
+      - name: StepDrop
         members: false
 
   - title: "Steps: general expressions"
@@ -207,6 +256,7 @@ reference:
     contents:
       - name: Selectors
         members: true
+      - Selector
       - name: ColSchema
         members: false
       - name: SchemaInfo
@@ -215,6 +265,10 @@ reference:
         members: false
       - name: Mode
         members: false
+      - name: KeepOriginals
+        members: false
+      - KeepOriginals.for_mode
+      - KeepOriginals.fixed_value
       - name: Ptype
         members: false
       - Ptype.check
@@ -222,6 +276,7 @@ reference:
       - Frame
       - ANY_DTYPE
       - NUMERIC_DTYPES
+      - AcceptedDtypes
 
   - title: Developing
     desc: >-
@@ -235,12 +290,20 @@ reference:
         members: false
       - Step.fit
       - Step.transform
+      - Step.resolve_selection
+      - Step.update_roles
       - Step.schema_in
       - Step.schema_out
       - Step.output_parents
       - Step.accepts_dtypes
+      - Step.produces_sparse
+      - Step.produced_columns
+      - Step.keep_original_cols
       - Step.required_pkgs
       - Step.check_required_pkgs
+      - Step.to_state
+      - Step.from_state
+      - Step.minimize
       - name: RowOp
         members: false
       - name: StepError

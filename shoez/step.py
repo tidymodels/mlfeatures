@@ -13,9 +13,20 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Roles, SchemaInfo, Selector
+from shoez.types import (
+    AcceptedDtypes,
+    ColSchema,
+    Frame,
+    KeepOriginals,
+    Mode,
+    Roles,
+    SchemaInfo,
+    Selector,
+)
 
 if TYPE_CHECKING:
+    from typing import ClassVar
+
     from typing_extensions import Self
 
 
@@ -106,16 +117,40 @@ class Step(ABC):
     ``Step`` subclasses always run at transform time; `RowOp` subclasses never
     run on new data. There is intentionally no ``skip`` flag — whether a step
     runs at transform time is determined structurally by its type.
+
+    A subclass' ``__init__`` stores its own arguments and then calls
+    ``super().__init__()`` to hand the framework-owned ones to the base class:
+
+    ```python
+    class StepMaxAbs(Step):
+        mode = Mode.ONE_TO_ONE
+
+        def __init__(self, columns: Selector, *, id: str | None = None):
+            self.columns = columns
+            super().__init__(id, "max_abs")
+    ```
+
+    See ``__init__`` for the arguments it takes.
     """
 
-    #: Stable, content-derived identifier (user-overridable). All inspection and
-    #: tuning APIs key on ``id``, never on position.
+    #: Stable identifier, defaulting to the step type's short name
+    #: (user-overridable). All inspection and tuning APIs key on ``id``, never
+    #: on position. Ids are unique within a recipe: a default id that would
+    #: collide with an earlier step's is suffixed (``"dummy"``, ``"dummy_2"``),
+    #: while an explicitly passed duplicate is rejected. See ``__init__``.
     id: str
+    #: Whether ``id`` was passed by the caller rather than defaulted. Only the
+    #: defaulted ones may be renamed to resolve a collision.
+    _id_explicit: bool = False
     #: Whether this step has been fitted. Set by ``recipe.fit()`` after
     #: ``step.fit()`` returns — not by the step itself.
     trained: bool
-    #: Whether to retain the source columns alongside any produced columns.
-    keep_original_cols: bool
+    #: The shape of this step's input/output relationship. Declared by every
+    #: concrete step; the framework reads it for lineage and to decide whether
+    #: ``keep_original_cols`` is fixed or configurable.
+    mode: "ClassVar[Mode]"
+    #: Backing store for the read-only ``keep_original_cols`` property.
+    _keep_original_cols: bool
     #: Role assigned to new columns produced by this step.
     output_role: str | None
     #: The step's primary input selector. Present on every selector-taking step
@@ -130,6 +165,87 @@ class Step(ABC):
     #: convention — mirroring how `RowOp` makes the transform-time skip
     #: structural. Defaults to ``False``.
     _empty_selection: bool = False
+
+    def __init__(
+        self,
+        id: str | None,
+        default_id: str,
+        *,
+        keep_original_cols: bool | None = None,
+        output_role: str | None = None,
+    ) -> None:
+        """Initialize the attributes every step shares.
+
+        A concrete step stores its own arguments, then calls this with the
+        framework-owned ones; it never assigns ``id``, ``trained``,
+        ``keep_original_cols``, or ``output_role`` directly. Routing ``id``
+        through here is what lets the recipe tell a defaulted id from a
+        caller-supplied one, and that distinction is what lets `Recipe` silently
+        disambiguate two same-type steps while still rejecting an explicit
+        duplicate.
+
+        Parameters
+        ----------
+        id
+            The ``id`` the caller passed to the step, or ``None`` if they
+            omitted it.
+        default_id
+            The step type's short name, used as ``id`` when the caller passed
+            none (e.g. ``"normalize"``).
+        keep_original_cols
+            Whether the step retains its source columns alongside any columns it
+            produces. Only meaningful for a step whose `Mode` makes it
+            configurable (``ONE_TO_MANY``, ``MANY_TO_MANY``), which forwards its
+            own constructor argument here. Every other mode has a fixed value,
+            derived from the mode; such a step omits the argument, and passing
+            anything but that fixed value is an error. Defaults to ``None``,
+            meaning "not stated".
+        output_role
+            Role assigned to the columns the step produces, or ``None`` for a
+            step that produces no new columns. Defaults to ``None``.
+        """
+        self.id = default_id if id is None else id
+        self._id_explicit = id is not None
+        self.trained = False
+        self._keep_original_cols = self._resolve_keep_original_cols(keep_original_cols)
+        self.output_role = output_role
+
+    def _resolve_keep_original_cols(self, requested: bool | None) -> bool:
+        """The ``keep_original_cols`` this step's `Mode` allows it to have."""
+        mode = self._declared_mode()
+        fixed = KeepOriginals.for_mode(mode).fixed_value()
+        if fixed is None:
+            # A configurable step always forwards its own argument, which has
+            # its own ``False`` default, so ``None`` cannot reach here.
+            return bool(requested)
+        if requested is not None and requested != fixed:
+            raise ValueError(
+                f"{type(self).__name__} has mode {mode.value!r}; "
+                f"'keep_original_cols' is fixed at {fixed!r} and cannot be "
+                f"set to {requested!r}"
+            )
+        return fixed
+
+    def _declared_mode(self) -> Mode:
+        """This step class's `Mode`, with a pointed error when it is missing."""
+        mode = getattr(type(self), "mode", None)
+        if not isinstance(mode, Mode):
+            raise TypeError(
+                f"{type(self).__name__} must declare a 'mode' class attribute "
+                "naming one of the 'Mode' members"
+            )
+        return mode
+
+    @property
+    def keep_original_cols(self) -> bool:
+        """Whether to retain the source columns alongside any produced columns.
+
+        Read-only: the value is settled when the step is constructed, and for
+        every mode but ``ONE_TO_MANY`` and ``MANY_TO_MANY`` it is fixed by the
+        mode rather than chosen. Reassigning it would silently break the step,
+        so rebuild the step instead of mutating it.
+        """
+        return self._keep_original_cols
 
     @abstractmethod
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
@@ -200,8 +316,14 @@ class Step(ABC):
     def accepts_dtypes(self) -> AcceptedDtypes:
         """Dtypes this step is valid to apply to.
 
-        Checked against the schema before ``fit()`` runs. Return
-        `ANY_DTYPE` to skip dtype validation entirely.
+        Return a set of narwhals dtype classes (`NUMERIC_DTYPES` is ready-made
+        for numeric-only steps), or `ANY_DTYPE` to skip dtype validation
+        entirely. The recipe checks the resolved selection's dtypes against this
+        set before ``fit()`` runs and raises a ``TypeError`` naming the step, the
+        offending column(s), and their dtypes, so a step never sees a column it
+        declared itself invalid for. The check does not run again at
+        ``transform()`` time: the ptype snapshot already pins new data's dtypes
+        to what was seen at fit.
         """
         raise NotImplementedError
 
@@ -212,18 +334,33 @@ class Step(ABC):
         raise NotImplementedError
 
     def resolve_selection(self, data: Frame, info: SchemaInfo) -> list[str]:
-        """Resolve this step's primary input selector to concrete column names.
+        """Resolve this step's ``columns`` selector to concrete column names.
 
-        Called by ``recipe.fit()`` *before* ``fit()`` so the recipe can detect
-        an empty selection and treat the step as the identity transform (see
-        ``_empty_selection``). The default resolves ``self.columns`` against the
-        current frame, which is correct for every selector-taking step —
-        including multi-selector steps like ``StepClassDistance`` whose primary
-        (feature) selector is ``columns``. Steps with no input selector are
-        special-cased by the recipe and never reach this method.
+        This is the supported way for a step to find out which columns it was
+        pointed at. Call it at the top of ``fit()`` and select from the frame
+        with the names it returns; narwhals' own ``frame.schema`` then gives the
+        dtypes:
 
-        Takes ``data`` (not just ``info``) because narwhals / polars selectors
-        resolve against the frame's schema.
+        ```python
+        def fit(self, training_data, info):
+            names = self.resolve_selection(training_data, info)
+            selected = training_data.select(names)
+            dtypes = {name: str(dt) for name, dt in selected.schema.items()}
+            ...
+        ```
+
+        The default resolves ``self.columns``, which is right for every
+        selector-taking step, including ones that take a second selector for a
+        different purpose: the primary input selector is always ``columns``.
+        Override only if a step's primary input is named something else.
+
+        Takes ``data`` as well as ``info`` because narwhals and polars selectors
+        resolve against the frame's schema rather than against the schema
+        snapshot alone.
+
+        The recipe also calls this before ``fit()`` so that a selection matching
+        no columns makes the step the identity transform; a step that resolves
+        its own selection therefore never has to handle the empty case itself.
         """
         from shoez import _frame
 
@@ -294,6 +431,11 @@ class Step(ABC):
 
         step = cls.__new__(cls)
         for key, value in state.items():
+            # ``keep_original_cols`` used to be a plain attribute and is now a
+            # read-only property over ``_keep_original_cols``; redirect the old
+            # key so a payload written before the change still loads.
+            if key == "keep_original_cols":
+                key = "_keep_original_cols"
             setattr(step, key, _decode(value))
         return step
 
@@ -353,4 +495,9 @@ class RowOp(Step):
     ``fit()`` (e.g. filtering or shuffling training rows). The behaviour is
     structural: because the framework dispatches on type, a ``RowOp`` can never
     accidentally run at transform time.
+
+    The mode follows from the base class, so a ``RowOp`` subclass does not
+    declare one.
     """
+
+    mode = Mode.ROW_OP

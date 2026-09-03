@@ -29,7 +29,7 @@ from shoez import (
     serialization,
 )
 from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, SchemaInfo
+from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo
 
 
 def _multi_step() -> tuple[FittedRecipe, pd.DataFrame]:
@@ -138,6 +138,44 @@ class TestNoClosures:
         pt.assert_frame_equal(restored.transform(df), rec.transform(df))
 
 
+def _zero_arg_selector_names() -> list[str]:
+    """Every ``Selectors`` constructor that a no-argument call actually builds.
+
+    ``has_source``/``has_ancestor`` have all-default signatures but reject the
+    empty call (they need exactly one of 'step'/'step_type'), so they drop out.
+    """
+    names: list[str] = []
+    for name in dir(Selectors):
+        if name.startswith("_"):
+            continue
+        factory = getattr(Selectors, name)
+        if not callable(factory):
+            continue
+        try:
+            factory()
+        except (TypeError, ValueError):
+            continue
+        names.append(name)
+    return names
+
+
+class TestEverySelectorRoundTrips:
+    """Every zero-argument ``Selectors`` constructor survives a JSON round-trip.
+
+    The dtype-category selectors (``numeric()``, ``integer()``, ``double()``) once
+    encoded to a name the decoder had no entry for (issue #195); enumerating the
+    constructors is what caught it, so the test enumerates them too.
+    """
+
+    @pytest.mark.parametrize("name", _zero_arg_selector_names())
+    def test_roundtrip(self, name: str) -> None:
+        df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
+        selector = getattr(Selectors, name)()
+        rec = Recipe().add(StepNormalize(selector)).fit(df)
+        restored = FittedRecipe.from_json(rec.to_json())
+        pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+
+
 class TestForeignSelectorRejected:
     """A raw polars/narwhals selector cannot be serialized; the error is clear."""
 
@@ -161,6 +199,31 @@ class TestNaNRoundTrip:
         assert np.isnan(restored_est["a"])
 
 
+class TestKeepOriginalColsRoundTrip:
+    """``keep_original_cols`` survives serialization despite being read-only (#176)."""
+
+    def test_fixed_value_survives_and_stays_read_only(self) -> None:
+        df = pd.DataFrame({"a": [1.0, 2.0, 3.0]})
+        rec = Recipe().add(StepNormalize(["a"])).fit(df)
+        restored = FittedRecipe.from_json(rec.to_json())
+        step = restored.steps[0]
+        assert step.keep_original_cols is False
+        with pytest.raises(AttributeError):
+            step.keep_original_cols = True  # type: ignore[misc]
+
+    def test_configured_value_survives(self) -> None:
+        df = pd.DataFrame({"x": ["a", "b", "a"]})
+        rec = Recipe().add(StepDummy(["x"], keep_original_cols=True)).fit(df)
+        restored = FittedRecipe.from_json(rec.to_json())
+        assert restored.steps[0].keep_original_cols is True
+
+    def test_a_payload_written_before_the_property_still_loads(self) -> None:
+        # The attribute used to serialize under its public name; a stored recipe
+        # from then must not trip over the read-only property on the way back in.
+        step = StepNormalize.from_state({"columns": ["a"], "keep_original_cols": True})
+        assert step.keep_original_cols is True
+
+
 class TestNdarrayNonFiniteRoundTrip:
     """A float ndarray holding NaN / +-inf serializes to valid JSON and round-trips."""
 
@@ -175,12 +238,11 @@ class TestNdarrayNonFiniteRoundTrip:
 class _HeavyStep(Step):
     """A throwaway step that retains a fit-only artifact and drops it in minimize()."""
 
+    mode = Mode.ONE_TO_ONE
+
     def __init__(self) -> None:
         self.columns = ["a"]
-        self.id = "heavy"
-        self.trained = False
-        self.keep_original_cols = False
-        self.output_role = None
+        super().__init__("heavy", "heavy")
         self._artifact: list[float] | None = None
         self._schema_in: ColSchema | None = None
 

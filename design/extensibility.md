@@ -29,14 +29,55 @@ The core never relies on import order for correctness. Each plugin step declares
 ## Base classes
 
 ```python
-from shoez import Step, Check, RowOp
+from shoez import Step, RowOp
 ```
 
 - `Step` — base for all transformation steps. See [step-contract.md](step-contract.md) for the full ABC.
-- `Check` — base for validation steps (pure functions; must not mutate state).
 - `RowOp(Step)` — base for row-altering steps; skipped at transform time automatically.
 
 **Compose-don't-subclass** is the recommended extension pattern, but implementing the `Step` ABC directly is fully supported and documented. Subclassing `Step` subclasses is explicitly not supported (R explicitly refused it [#1058]); extend by implementing the ABC.
+
+---
+
+## Initializing a step
+
+A step's `__init__` stores its own arguments and delegates the framework-owned ones to `Step.__init__()`, which sets `id`, `trained`, `output_role`, and the value behind the read-only `keep_original_cols`. The class also declares its `mode`, which the base class reads; a step that omits it cannot be constructed.
+
+```python
+from shoez import Mode, Selector, Step
+
+class StepMyThing(Step):
+    mode = Mode.ONE_TO_ONE
+
+    def __init__(self, columns: Selector, *, id: str | None = None) -> None:
+        self.columns = columns
+        super().__init__(id, "my_thing")
+```
+
+The second argument is the id to default to when the caller passes none; `keep_original_cols` and `output_role` are keyword-only and both default to `None`. A plugin never assigns those attributes itself, and needs no private name to set them.
+
+`keep_original_cols` is worth passing only from a step whose `mode` is `ONE_TO_MANY` or `MANY_TO_MANY`; for any other mode the base class derives the value from the mode and the attribute is read-only, so a step neither states it nor can change it later. See [Constructors](step-contract.md#constructors) for the full rules.
+
+---
+
+## Resolving a step's own selection
+
+A step's `columns` argument holds a selector, not column names, so `fit()` has to resolve it. `Step.resolve_selection()` is the supported route; narwhals' own `frame.schema` supplies the dtypes:
+
+```python
+from shoez import Frame, SchemaInfo, Step
+
+class StepMyThing(Step):
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "StepMyThing":
+        names = self.resolve_selection(training_data, info)
+        selected = training_data.select(names)
+        dtypes = {name: str(dt) for name, dt in selected.schema.items()}
+        ...
+```
+
+shoez's own steps reach for the private `shoez._frame` here instead, for historical reasons. **A plugin does not need it**, and should not import it: `resolve_selection()` covers the selector half and `frame.schema` covers the dtype half. The path above is the one that type-checks under `mypy --strict` and `pyright --strict` using only public names.
+
+Annotating the ABC's methods needs two type aliases that are exported alongside the base classes: `Selector` (the type of every step's `columns` parameter) and `AcceptedDtypes` (the return type of `accepts_dtypes()`).
 
 ---
 

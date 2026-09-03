@@ -147,7 +147,7 @@ class _FakeReduce(Step):
         self._parent_override = parent_override
         self.id = id
         self.trained = False
-        self.keep_original_cols = False
+        self._keep_original_cols = False
         self.output_role = "feature"
         self._inputs: list[str] = []
 

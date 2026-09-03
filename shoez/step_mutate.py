@@ -82,6 +82,9 @@ class StepMutate(Step):
     to infer which inputs a mutation read. This is the deliberate trade-off of
     an escape hatch — full flexibility, coarse lineage.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     mutations
@@ -93,7 +96,9 @@ class StepMutate(Step):
         Columns overwritten in place keep their existing role. Default
         ``"feature"``.
     id
-        Stable step identifier. Default ``"mutate"``.
+        Stable step identifier. Defaults to ``"mutate"``; a second step of
+        this type in the same recipe becomes ``"mutate_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -156,10 +161,7 @@ class StepMutate(Step):
                     f"mutation {name!r} must be callable; got {type(fn).__name__!r}"
                 )
         self.mutations = dict(mutations)
-        self.id = id if id is not None else "mutate"
-        self.trained = False
-        self.keep_original_cols = True
-        self.output_role = role
+        super().__init__(id, "mutate", output_role=role)
         # Populated by ``fit()``.
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None

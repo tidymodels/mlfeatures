@@ -9,6 +9,7 @@ side effect.
 from __future__ import annotations
 
 import inspect
+from typing import ClassVar
 
 import polars as pl
 import pytest
@@ -26,9 +27,11 @@ from shoez.step_impute_mean import StepImputeMean
 from shoez.step_impute_median import StepImputeMedian
 from shoez.step_impute_mode import StepImputeMode
 from shoez.step_intercept import StepIntercept
+from shoez.step_log import StepLog
 from shoez.step_normalize import StepNormalize
 from shoez.step_one_hot import StepOneHot
 from shoez.step_polynomial import StepPolynomial
+from shoez.step_range import StepRange
 from shoez.step_unknown import StepUnknown
 
 
@@ -88,6 +91,8 @@ class TestRegistration:
         ("step_drop_zero_variance", StepDropZeroVariance, (["x", "const"],)),
         ("step_intercept", StepIntercept, ()),
         ("step_normalize", StepNormalize, (["x"],)),
+        ("step_range", StepRange, (["x"],)),
+        ("step_log", StepLog, (["x"],)),
         ("step_class_distance", StepClassDistance, (["x", "x2"], "color")),
         ("step_impute_mean", StepImputeMean, (["x"],)),
         ("step_impute_median", StepImputeMedian, (["x"],)),
@@ -179,3 +184,58 @@ class TestWrapperStepParity:
         assert not orphaned, (
             f"`ShzNamespace` wrapper(s) with no matching public step: {orphaned}"
         )
+
+    #: Per-step type aliases that are private to their module (not in
+    #: `shoez.__all__`), so a wrapper cannot reference them by name and instead
+    #: spells out the expansion. Keyed by the alias name a step's annotation may
+    #: use, mapped to the literal expansion a wrapper is expected to write instead.
+    _PRIVATE_ALIAS_EXPANSIONS: ClassVar[dict[str, str]] = {
+        "Predicate": "Callable[[Frame], Any]",
+        "Mapping[str, Mutation]": "Mapping[str, Callable[[Frame], Any]]",
+    }
+
+    def test_wrapper_signature_mirrors_step_constructor(self) -> None:
+        """A wrapper's parameters must match the step's, name/kind/default/type alike.
+
+        The wrapper is allowed to drop the step's `id` parameter (the accessor
+        discards the fitted step, so a caller-chosen handle is moot), and is
+        allowed to spell out a step-private type alias (`_PRIVATE_ALIAS_EXPANSIONS`)
+        since it cannot import a name that isn't in `shoez.__all__`. Nothing else
+        may differ: every other parameter must appear in the wrapper with the same
+        default and the same annotation. This catches both a wrapper silently
+        missing an entire argument and a wrapper typing `columns` narrower than
+        the step actually accepts (e.g. `list[str]` instead of `Selector`).
+        """
+        mismatches: list[str] = []
+        for step_cls in _public_step_classes():
+            label = _step_type_label(step_cls)
+            wrapper = getattr(ShzNamespace, label, None)
+            if wrapper is None:
+                continue  # reported by test_every_public_step_has_a_wrapper
+            step_params = inspect.signature(step_cls.__init__).parameters
+            wrapper_params = inspect.signature(wrapper).parameters
+            for name, step_param in step_params.items():
+                if name in ("self", "id"):
+                    continue
+                wrapper_param = wrapper_params.get(name)
+                if wrapper_param is None:
+                    mismatches.append(f"{label}: wrapper is missing parameter {name!r}")
+                    continue
+                step_annotation = self._PRIVATE_ALIAS_EXPANSIONS.get(
+                    step_param.annotation, step_param.annotation
+                )
+                if wrapper_param.annotation != step_annotation:
+                    mismatches.append(
+                        f"{label}.{name}: wrapper annotation "
+                        f"{wrapper_param.annotation!r} != step annotation "
+                        f"{step_param.annotation!r}"
+                    )
+                if wrapper_param.default != step_param.default:
+                    mismatches.append(
+                        f"{label}.{name}: wrapper default {wrapper_param.default!r} "
+                        f"!= step default {step_param.default!r}"
+                    )
+            extra = set(wrapper_params) - set(step_params) - {"self"}
+            if extra:
+                mismatches.append(f"{label}: wrapper has extra parameter(s) {extra}")
+        assert not mismatches, "\n".join(mismatches)

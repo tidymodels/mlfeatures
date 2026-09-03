@@ -16,6 +16,7 @@ import polars as pl
 import polars.selectors as cs
 import pytest
 from narwhals.exceptions import ColumnNotFoundError
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Recipe, Selectors, StepDummy, StepNormalize, _frame
 from shoez.types import Frame, Roles
@@ -437,16 +438,14 @@ class TestProvenance:
             "color_red",
         ]
 
-    def test_zero_match_is_silent_noop(self) -> None:
+    def test_unknown_step_type_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _dummy_data()
-        # No StepOneHot in the pipeline, so this matches nothing: identity.
-        out = (
-            Recipe()
-            .add(StepNormalize(Selectors.has_source(step_type=StepDummy)))
-            .fit(df)
-            .transform(df)
-        )
-        pd.testing.assert_frame_equal(out, df)
+        # No StepDummy in the pipeline: a mistake knowable from the recipe
+        # alone, so it fails loudly instead of becoming the identity transform.
+        recipe = Recipe().add(StepNormalize(Selectors.has_source(step_type=StepDummy)))
+        with pytest.raises(ValueError) as excinfo:
+            recipe.fit(df)
+        assert str(excinfo.value) == snapshot
 
     def test_resolution_without_dag_yields_nothing(self) -> None:
         # Outside a recipe fit there is no DAG; provenance resolves to empty.
@@ -468,18 +467,61 @@ class TestProvenance:
             "color_red",
         ]
 
-    def test_has_source_unknown_id_is_silent(self) -> None:
+    def test_has_source_unknown_id_raises(self, snapshot: SnapshotAssertion) -> None:
         df = _dummy_data()
-        # An id that matches no step in the pipeline: matches nothing, identity.
-        out = (
+        # An id that matches no step in the pipeline is a typo, not a selection
+        # that happens to be empty, so it is reported rather than skipped. The
+        # message lists the ids that were available.
+        recipe = (
             Recipe()
             .add(StepDummy(["color"], id="dummy"))
             .add(StepNormalize(Selectors.has_source("nonexistent")))
-            .fit(df)
-            .transform(df)
         )
-        # The dummies still exist; nothing was normalized away or dropped.
-        assert "color_green" in out.columns and "color_red" in out.columns
+        with pytest.raises(ValueError) as excinfo:
+            recipe.fit(df)
+        assert str(excinfo.value) == snapshot
+
+    def test_has_ancestor_unknown_id_raises(self, snapshot: SnapshotAssertion) -> None:
+        df = _dummy_data()
+        # The check lives in the shared _SourceSelector, so has_ancestor too.
+        recipe = (
+            Recipe()
+            .add(StepDummy(["color"], id="dummy"))
+            .add(StepNormalize(Selectors.has_ancestor("nonexistent")))
+        )
+        with pytest.raises(ValueError) as excinfo:
+            recipe.fit(df)
+        assert str(excinfo.value) == snapshot
+
+    def test_has_source_original_is_always_valid(self) -> None:
+        df = _dummy_data()
+        # "original" is not a step id but is a legitimate source: the input
+        # columns that survive to this point.
+        fitted = (
+            Recipe()
+            .add(
+                StepNormalize(
+                    Selectors.has_source("original") & Selectors.numeric_features(),
+                    id="capture",
+                )
+            )
+            .fit(df)
+        )
+        assert fitted.steps[-1].schema_in().columns == ["size"]
+
+    def test_id_of_a_later_step_raises(self, snapshot: SnapshotAssertion) -> None:
+        df = _dummy_data()
+        # Only steps fitted before this one are visible; a later step has
+        # produced no columns yet, so the id is reported as unavailable even
+        # though the recipe does contain it.
+        recipe = (
+            Recipe()
+            .add(StepNormalize(Selectors.has_source("dummy")))
+            .add(StepDummy(["color"], id="dummy"))
+        )
+        with pytest.raises(ValueError) as excinfo:
+            recipe.fit(df)
+        assert str(excinfo.value) == snapshot
 
     def test_requires_exactly_one_argument(self) -> None:
         # Validation lives in the shared _SourceSelector, so it applies to both

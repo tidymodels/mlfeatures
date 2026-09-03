@@ -1,0 +1,21 @@
+# serializer version: 1
+# name: TestConstructorValidation.test_base_one_raises
+  "'base' must be positive and not 1, got 1.0"
+# ---
+# name: TestConstructorValidation.test_zero_base_raises
+  "'base' must be positive and not 1, got 0"
+# ---
+# name: TestNonPositiveValues.test_fit_warns_and_names_the_columns
+  "1 column(s) had value(s) at or below the negated 'offset'; log will produce -inf or NaN: ['bad']"
+# ---
+# name: TestNonPositiveValues.test_fit_warns_once_for_several_columns
+  list([
+    "2 column(s) had value(s) at or below the negated 'offset'; log will produce -inf or NaN: ['a', 'b']",
+  ])
+# ---
+# name: TestNonPositiveValues.test_transform_warns_on_new_data_that_left_the_domain
+  "1 column(s) had value(s) at or below the negated 'offset'; log will produce -inf or NaN: ['x']"
+# ---
+# name: TestSigned.test_offset_with_signed_raises
+  "'offset' takes no part in the signed formula; got offset=1.0 with signed=True"
+# ---

@@ -14,7 +14,13 @@ import narwhals.stable.v2 as nw
 
 from shoez import _frame
 from shoez.step import Step
-from shoez.step_dummy import DISCRETE_DTYPES, apply_dummy
+from shoez.step_dummy import (
+    DISCRETE_DTYPES,
+    apply_dummy,
+    dummy_output_parents,
+    dummy_update_roles,
+    resolve_col_name,
+)
 from shoez.types import (
     AcceptedDtypes,
     ColSchema,
@@ -81,6 +87,9 @@ class StepOneHot(Step):
     is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
     the missing values. Unlike `StepDummy`, no reference level is dropped.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
@@ -98,7 +107,9 @@ class StepOneHot(Step):
         If ``True``, the source columns are kept alongside the indicators
         instead of being dropped. Default ``False``.
     id
-        Stable step identifier. Default ``"one_hot"``.
+        Stable step identifier. Defaults to ``"one_hot"``; a second step of
+        this type in the same recipe becomes ``"one_hot_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -152,16 +163,16 @@ class StepOneHot(Step):
     def __init__(
         self,
         columns: Selector,
+        *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
         id: str | None = None,
     ) -> None:
         self.columns = columns
         self.name_fn = name_fn
-        self.keep_original_cols = keep_original_cols
-        self.id = id if id is not None else "one_hot"
-        self.trained = False
-        self.output_role: str | None = "feature"
+        super().__init__(
+            id, "one_hot", keep_original_cols=keep_original_cols, output_role="feature"
+        )
         self._estimates: dict[str, list[Any]] | None = None
         self._schema_in: ColSchema | None = None
         self._schema_out: ColSchema | None = None
@@ -175,19 +186,9 @@ class StepOneHot(Step):
         self._estimates = fit_one_hot(selected)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
         self._schema_in = ColSchema(columns=selected.columns, dtypes=dtypes)
-        # Each indicator descends from exactly its source column. The ordered
-        # list preserves any duplicate name (which the parents map, keyed by
-        # name, would silently dedup).
-        produced = [
-            self._col_name(col, str(lvl))
-            for col, lvls in self._estimates.items()
-            for lvl in lvls
-        ]
-        self._output_parents = {
-            self._col_name(col, str(lvl)): [col]
-            for col, lvls in self._estimates.items()
-            for lvl in lvls
-        }
+        produced, self._output_parents = dummy_output_parents(
+            self._estimates, self._col_name
+        )
         self._schema_out = ColSchema(columns=produced)
         return self
 
@@ -228,14 +229,12 @@ class StepOneHot(Step):
     def update_roles(self, roles: Roles) -> None:
         if self._estimates is None:
             return
-        for source_col, levels in self._estimates.items():
-            source_roles = roles.of(source_col)
-            for role in source_roles:
-                for lvl in levels:
-                    roles.add(self._col_name(source_col, str(lvl)), role)
-            if not self.keep_original_cols:
-                for role in list(source_roles):
-                    roles.remove(source_col, role)
+        dummy_update_roles(
+            roles,
+            self._estimates,
+            self._col_name,
+            keep_original_cols=self.keep_original_cols,
+        )
 
     @property
     def produces_sparse(self) -> bool:
@@ -243,6 +242,4 @@ class StepOneHot(Step):
         return False
 
     def _col_name(self, col: str, level: str) -> str:
-        if self.name_fn is not None:
-            return self.name_fn(col, level)
-        return f"{col}_{level}"
+        return resolve_col_name(self.name_fn, col, level)

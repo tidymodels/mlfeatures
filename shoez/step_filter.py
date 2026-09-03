@@ -23,7 +23,6 @@ from shoez.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
-    Mode,
     SchemaInfo,
 )
 
@@ -76,13 +75,18 @@ class StepFilter(RowOp):
     given to it, because dropping rows from data being scored would silently
     lose predictions. So a recipe that filters is not a way to filter new data.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     predicate
         Callable taking the frame and returning a boolean narwhals expression or
         series, ``True`` for the rows to keep. Must be callable.
     id
-        Stable step identifier. Default ``"filter"``.
+        Stable step identifier. Defaults to ``"filter"``; a second step of
+        this type in the same recipe becomes ``"filter_2"``, and passing an
+        ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -122,11 +126,10 @@ class StepFilter(RowOp):
     ```
     """
 
-    mode = Mode.ROW_OP
-
     def __init__(
         self,
         predicate: Predicate,
+        *,
         id: str | None = None,
     ) -> None:
         if not callable(predicate):
@@ -134,12 +137,7 @@ class StepFilter(RowOp):
                 f"'predicate' must be callable; got {type(predicate).__name__!r}"
             )
         self.predicate = predicate
-        self.id = id if id is not None else "filter"
-        self.trained = False
-        # A row operation touches no columns, so keeping originals is the only
-        # sensible setting; there is nothing to drop.
-        self.keep_original_cols = True
-        self.output_role = None
+        super().__init__(id, "filter")
         # Populated by ``fit()``. A filter changes no columns, so ``schema_in``
         # and ``schema_out`` are the same frame schema.
         self._schema: ColSchema | None = None

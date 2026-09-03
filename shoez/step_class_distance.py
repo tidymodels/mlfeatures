@@ -369,6 +369,9 @@ class StepClassDistance(Step):
     ``keep_original_cols`` is ``True``. Each distance is computed from all the
     selected columns at once, so no distance column belongs to any one of them.
 
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
     Parameters
     ----------
     columns
@@ -401,7 +404,9 @@ class StepClassDistance(Step):
         Role assigned to the new distance columns (see `Roles`). Default
         ``"feature"``.
     id
-        Stable step identifier. Default ``"class_distance"``.
+        Stable step identifier. Defaults to ``"class_distance"``; a second
+        step of this type in the same recipe becomes ``"class_distance_2"``,
+        and passing an ``id`` already used in the recipe is an error.
 
     Examples
     --------
@@ -500,10 +505,12 @@ class StepClassDistance(Step):
         self.log_distance = log_distance
         self.eps = eps
         self.prefix = prefix
-        self.id = id if id is not None else "class_distance"
-        self.trained = False
-        self.keep_original_cols = keep_original_cols
-        self.output_role = role
+        super().__init__(
+            id,
+            "class_distance",
+            keep_original_cols=keep_original_cols,
+            output_role=role,
+        )
         # Populated by ``fit()`` — both schemas plus the fitted statistics.
         self._estimates: ClassDistanceFit | None = None
         self._schema_in: ColSchema | None = None

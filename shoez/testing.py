@@ -28,6 +28,7 @@ distinguishable from "forgotten".
 
 from __future__ import annotations
 
+import inspect
 import math
 import pickle
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
@@ -39,7 +40,7 @@ import pytest
 
 from shoez import _frame
 from shoez.recipe import FittedRecipe, Recipe
-from shoez.types import DataFrame, SchemaInfo
+from shoez.types import DataFrame, KeepOriginals, SchemaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -89,9 +90,38 @@ def _assert_columns_equal(
             )
 
 
+def _cast_columns(
+    df: pd.DataFrame | pl.DataFrame,
+    dtype_casts: Mapping[str, type[nw.dtypes.DType]],
+) -> Any:
+    """Cast ``dtype_casts``' columns to their declared narwhals dtype.
+
+    A plain Python list can't materialize some dtypes identically on both
+    backends -- e.g. a list of ``datetime.date`` becomes pandas ``Object``
+    (pandas can only represent narwhals' ``Date`` through a pyarrow-backed
+    column) but polars ``Date`` natively. Casting after construction, on both
+    backends alike, is what lets a Date-only step's fixture materialize as the
+    same dtype either way.
+    """
+    if not dtype_casts:
+        return df
+    frame = nw.from_native(df, eager_only=True)
+    frame = frame.with_columns(
+        # ``Expr.cast()``'s overloads only cover its own concrete dtype
+        # classes; `dtype_casts` is typed as the general
+        # `type[nw.dtypes.DType]` so a test can name any of them, so the cast
+        # here is wider than any single overload matches.
+        nw.col(name).cast(cast("Any", dtype))
+        for name, dtype in dtype_casts.items()
+    )
+    return frame.to_native()
+
+
 def assert_backend_parity(
     make_recipe: Callable[[], Recipe],
     data: Mapping[str, list[Any]],
+    *,
+    dtype_casts: Mapping[str, type[nw.dtypes.DType]] | None = None,
 ) -> None:
     """Assert a step produces identical output on pandas and polars.
 
@@ -106,10 +136,15 @@ def assert_backend_parity(
     on which backend it fitted and transformed on.
 
     ``make_recipe`` must return a *fresh, unfitted* recipe on each call so the
-    two backends do not share fitted estimates.
+    two backends do not share fitted estimates. ``dtype_casts`` names columns
+    to cast to a specific narwhals dtype on both backends before fitting --
+    see `_cast_columns`.
     """
-    pd_out = make_recipe().fit(pd.DataFrame(data)).transform(pd.DataFrame(data))
-    pl_out = make_recipe().fit(pl.DataFrame(data)).transform(pl.DataFrame(data))
+    casts = dtype_casts or {}
+    pd_df = _cast_columns(pd.DataFrame(data), casts)
+    pl_df = _cast_columns(pl.DataFrame(data), casts)
+    pd_out = make_recipe().fit(pd_df).transform(pd_df)
+    pl_out = make_recipe().fit(pl_df).transform(pl_df)
     pd_nw = nw.from_native(pd_out, eager_only=True)
     pl_nw = nw.from_native(pl_out, eager_only=True)
 
@@ -158,6 +193,14 @@ class StepConformanceTest:
     #: step's selector needs, and is materialized as both pandas and polars.
     training_data: ClassVar[Mapping[str, list[Any]]] = {}
 
+    #: Columns of `training_data` to cast to a specific narwhals dtype on both
+    #: backends before fitting. Needed for a dtype a plain Python list can't
+    #: materialize identically on both backends -- e.g. ``{"d": nw.Date}`` for
+    #: a step that only accepts Date columns (see `_cast_columns`). Empty for
+    #: every step whose `training_data` values already produce the same dtype
+    #: on both backends.
+    dtype_casts: ClassVar[Mapping[str, type[nw.dtypes.DType]]] = {}
+
     def make_step(self) -> Step:
         """Return a *fresh, unfitted* step. Called repeatedly, never reused."""
         raise NotImplementedError("conformance subclasses must implement make_step()")
@@ -192,13 +235,84 @@ class StepConformanceTest:
     # -- fixtures ----------------------------------------------------------
 
     def _frame(self) -> pd.DataFrame:
-        return pd.DataFrame(dict(self.training_data))
+        return cast(
+            "pd.DataFrame",
+            _cast_columns(pd.DataFrame(dict(self.training_data)), self.dtype_casts),
+        )
 
     def _fitted(self) -> tuple[FittedRecipe, pd.DataFrame]:
         train = self._frame()
         return Recipe(steps=[self.make_step()]).fit(train), train
 
     # -- the contract ------------------------------------------------------
+
+    def test_optional_arguments_are_keyword_only(self) -> None:
+        """Only required arguments are positional; every option is keyword-only.
+
+        Phrased as "no parameter with a default may be positional" so it needs no
+        per-step allowlist: required arguments (``columns``, ``target``,
+        ``mutations``, ``predicate``) have no default and stay positional, while
+        everything else, ``id`` included, must sit after the ``*``.
+        """
+        params = inspect.signature(type(self.make_step()).__init__).parameters
+        positional = [
+            name
+            for name, p in params.items()
+            if p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+            and p.default is not inspect.Parameter.empty
+        ]
+        assert not positional, (
+            f"optional parameter(s) {positional} can be passed positionally; "
+            "add a '*' after the required argument(s) so every option is "
+            "keyword-only"
+        )
+
+    def test_constructor_delegates_to_step_init(self) -> None:
+        """``__init__`` hands the framework-owned attributes to ``Step.__init__``.
+
+        ``id``, ``trained``, ``keep_original_cols``, and ``output_role`` are
+        annotated on ``Step`` without defaults, so a step that never calls
+        ``super().__init__()`` fails this with an ``AttributeError`` rather than
+        surfacing later as a missing attribute mid-fit.
+        """
+        step = self.make_step()
+        assert isinstance(step.id, str) and step.id
+        assert step.trained is False
+        assert isinstance(step.keep_original_cols, bool)
+        assert step.output_role is None or isinstance(step.output_role, str)
+
+    def test_keep_original_cols_follows_the_mode(self) -> None:
+        """The step's `Mode` decides whether ``keep_original_cols`` can vary.
+
+        ``ONE_TO_MANY`` and ``MANY_TO_MANY`` steps expose it as a constructor
+        argument defaulting to ``False``; every other mode fixes it (``True`` for
+        the modes that keep their inputs, ``False`` for the ones that consume
+        them) and must not offer the argument at all. This is the rule from
+        ``design/step-contract.md``, checked rather than merely written down.
+        """
+        step = self.make_step()
+        policy = KeepOriginals.for_mode(type(step).mode)
+        params = inspect.signature(type(step).__init__).parameters
+        param = params.get("keep_original_cols")
+        fixed = policy.fixed_value()
+        if fixed is None:
+            assert param is not None, (
+                f"a step with mode {type(step).mode.value!r} must expose "
+                "'keep_original_cols' as a constructor argument"
+            )
+            assert param.default is False
+        else:
+            assert param is None, (
+                f"a step with mode {type(step).mode.value!r} must not expose "
+                f"'keep_original_cols'; it is fixed at {fixed!r}"
+            )
+            assert step.keep_original_cols is fixed
+
+    def test_keep_original_cols_is_read_only(self) -> None:
+        """The value settles at construction; reassigning it would break the step."""
+        step = self.make_step()
+        with pytest.raises(AttributeError):
+            step.keep_original_cols = True  # type: ignore[misc]
 
     def test_empty_selection_is_noop(self) -> None:
         """An empty column selection is a no-op: the frame passes through unchanged."""
@@ -285,7 +399,9 @@ class StepConformanceTest:
     def test_pandas_and_polars_output_match(self) -> None:
         """fit + transform yields identical output (schema and values) on both backends."""
         assert_backend_parity(
-            lambda: Recipe(steps=[self.make_step()]), dict(self.training_data)
+            lambda: Recipe(steps=[self.make_step()]),
+            dict(self.training_data),
+            dtype_casts=self.dtype_casts,
         )
 
     def test_isolated_fit_matches_recipe(self) -> None:
@@ -322,6 +438,24 @@ class StepConformanceTest:
         """transform() is pure: re-transforming the same frame yields identical output."""
         fitted, train = self._fitted()
         pd.testing.assert_frame_equal(fitted.transform(train), fitted.transform(train))
+
+    def test_accepts_dtypes_is_well_formed(self) -> None:
+        """accepts_dtypes() returns ANY_DTYPE or a set of narwhals dtype classes.
+
+        The recipe enforces the declaration before ``fit()``, so a set holding
+        anything other than dtype *classes* (a dtype instance, a string name)
+        would silently reject every column instead.
+        """
+        from shoez.types import ANY_DTYPE
+
+        accepted = self.make_step().accepts_dtypes()
+        if accepted is ANY_DTYPE:
+            return
+        assert isinstance(accepted, set)
+        assert accepted
+        for dtype in accepted:
+            assert isinstance(dtype, type)
+            assert issubclass(dtype, nw.dtypes.DType)
 
     def test_produces_sparse_is_bool(self) -> None:
         """produces_sparse is a plain bool."""
