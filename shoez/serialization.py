@@ -36,6 +36,9 @@ Known limitations
   match the ptype snapshot after a JSON round-trip.
 - Raw polars / narwhals selectors are not serializable. Only shoez `Selectors`
   and plain name lists are; a native selector raises a clear ``TypeError``.
+- ``dateutil.rrule.rrule`` / ``rruleset`` instances are not serializable
+  (`StepHoliday`'s ``rules``); a step storing one raises a clear ``TypeError``
+  from `to_json` / `to_yaml` rather than silently dropping the rule.
 """
 
 # This module is the one place that deliberately reaches into the internal
@@ -59,6 +62,7 @@ from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 import numpy as np
+from dateutil.rrule import rrule, rruleset
 
 if TYPE_CHECKING:
     from shoez.recipe import FittedRecipe
@@ -258,6 +262,12 @@ def _encode(value: Any) -> Any:
         }
     if isinstance(value, ShoezSelector):
         return {"__selector__": _encode_selector(value)}
+    if isinstance(value, (rrule, rruleset)):
+        raise TypeError(
+            "cannot serialize a 'dateutil.rrule.rrule'/'rruleset' instance; a "
+            "step storing one (e.g. StepHoliday's 'rules') does not support "
+            "JSON serialization"
+        )
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         cls = type(value)
         return {
