@@ -29,6 +29,8 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, cast
 
+from dateutil.rrule import rrule, rruleset
+
 from shoez._dependencies import import_optional
 from shoez.recipe import Recipe
 from shoez.step import Step
@@ -382,16 +384,18 @@ class ShzNamespace:
             "Labor Day",
             "Christmas Day",
         ),
+        rules: Mapping[str, rrule | rruleset] | None = None,
         country: str = "US",
         subdiv: str | None = None,
         keep_original_cols: bool = False,
         role: str | None = "feature",
     ) -> pl.DataFrame:
-        """Add binary indicator columns flagging named holidays. See `StepHoliday`."""
+        """Add binary indicator columns flagging named holidays and custom recurrences. See `StepHoliday`."""
         return self.apply(
             StepHoliday(
                 columns,
                 holidays=holidays,
+                rules=rules,
                 country=country,
                 subdiv=subdiv,
                 keep_original_cols=keep_original_cols,
