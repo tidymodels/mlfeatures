@@ -1,0 +1,4 @@
+# serializer version: 1
+# name: TestEndToEnd.test_to_json_raises_for_rules
+  "cannot serialize a 'dateutil.rrule.rrule'/'rruleset' instance; a step storing one (e.g. StepHoliday's 'rules') does not support JSON serialization"
+# ---

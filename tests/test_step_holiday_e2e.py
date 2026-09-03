@@ -14,6 +14,8 @@ from typing import Any
 import pandas as pd
 import polars as pl
 import pytest
+from dateutil.rrule import SA, SU, WEEKLY, rrule
+from syrupy.assertion import SnapshotAssertion
 
 from shoez import Recipe, StepHoliday, StepNormalize
 
@@ -124,6 +126,33 @@ class TestEndToEnd:
             _pandas_data()
         )
         assert all(step.trained for step in fitted.steps)
+
+    def test_holidays_and_rules_combine_on_the_same_column(self) -> None:
+        df = pl.DataFrame(_polars_data())
+        weekend = rrule(WEEKLY, byweekday=(SA, SU), dtstart=date(2023, 1, 1))
+        out = (
+            Recipe()
+            .add(
+                StepHoliday(
+                    ["d"], holidays=["Christmas Day"], rules={"weekend": weekend}
+                )
+            )
+            .fit(df)
+            .transform(df)
+        )
+        assert list(out.columns) == ["d_christmas_day", "d_weekend", "n"]
+        # _dates(): Dec 24 (Sun), Dec 25 (Mon), Jan 1 (Sun)
+        assert out["d_christmas_day"].to_list() == [0, 1, 0]
+        assert out["d_weekend"].to_list() == [1, 0, 1]
+
+    def test_to_json_raises_for_rules(self, snapshot: SnapshotAssertion) -> None:
+        weekend = rrule(WEEKLY, byweekday=(SA, SU), dtstart=date(2023, 1, 1))
+        fitted = Recipe(
+            steps=[StepHoliday(["d"], holidays=[], rules={"weekend": weekend})]
+        ).fit(_pandas_data())
+        with pytest.raises(TypeError) as excinfo:
+            fitted.to_json()
+        assert str(excinfo.value) == snapshot
 
     def test_new_data_beyond_training_years_is_still_classified(self) -> None:
         train = _pandas_data()
