@@ -17,8 +17,8 @@ repos:
     hooks:
       - id: uv-lock
 
-  # ruff and mypy run out of the project venv (`uv run`) rather than as
-  # pre-commit-managed repos, so the hook, the documented local command, and
+  # ruff, mypy, and pyright run out of the project venv (`uv run`) rather than
+  # as pre-commit-managed repos, so the hook, the documented local command, and
   # CI all resolve the same tool versions from uv.lock and cannot disagree.
   - repo: local
     hooks:
@@ -35,11 +35,20 @@ repos:
         entry: uv run ruff format --force-exclude
         language: system
         types: [python]
+      # Both type-checkers, over the same paths CI checks (`extras/` holds the
+      # out-of-tree step fixture). They take the paths from the command line
+      # and pyproject.toml respectively, so pre-commit passes no filenames.
       - id: mypy
         name: mypy --strict
-        entry: uv run mypy shoez
+        entry: uv run mypy shoez extras
         language: system
-        files: ^shoez/
+        files: ^(shoez|extras)/
+        pass_filenames: false
+      - id: pyright
+        name: pyright (strict)
+        entry: uv run pyright
+        language: system
+        files: ^(shoez|extras)/
         pass_filenames: false
 
   - repo: local

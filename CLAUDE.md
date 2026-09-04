@@ -8,7 +8,7 @@ The full design specification lives in [`design/README.md`](design/README.md). R
 
 ## Development
 
-Tooling is managed with [`uv`](https://docs.astral.sh/uv/); always invoke tools via `uv run` so they use the project venv. The first `uv run` on a fresh clone creates `.venv` and installs the project plus all dev tooling from the committed `uv.lock` — no setup step or extra flags needed. Run these checks after writing or changing code — they mirror the CI pipeline in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (CI runs the same commands with `UV_LOCKED=1`, so it fails if the lockfile is stale), so passing them locally means CI should pass:
+Tooling is managed with [`uv`](https://docs.astral.sh/uv/); always invoke tools via `uv run` so they use the project venv. The first `uv run` on a fresh clone creates `.venv` and installs the project plus all dev tooling from the committed `uv.lock` — no setup step or extra flags needed. Run these checks after writing or changing code — they mirror the CI pipeline in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (CI runs the same commands with `UV_LOCKED=1`, so it fails if the lockfile is stale), so passing them locally means CI should pass for the Python version tested locally. CI also lints and type-checks on Python 3.10, the oldest supported version, where mypy and pyright can reach different verdicts (a `# type: ignore` that is needed under one interpreter's stubs can be `unused-ignore` under the other's), so a 3.10-only failure surfaces there:
 
 ```bash
 uv run pytest                  # tests (add --cov --cov-report=term-missing for coverage)
@@ -20,7 +20,7 @@ uv run pyright                 # type-check (strict)
 
 Both type-checkers run in strict mode over `shoez/` and `extras/` (tests are excluded). New code must be fully typed and pass both.
 
-`extras/shoez_demo_step/` is an out-of-tree step written the way a plugin author would write one. It is not shipped; it exists so the public API cannot quietly stop being sufficient to write a step. It must import only from the top-level `shoez` namespace, and [`tests/test_out_of_tree_step.py`](tests/test_out_of_tree_step.py) fails if it reaches into a private module or imports a name absent from `shoez.__all__`. When a new name becomes necessary to author or annotate a step, export it rather than relaxing that test. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff and mypy into git hooks; `uv run pre-commit run --all-files` runs them all at once.
+`extras/shoez_demo_step/` is an out-of-tree step written the way a plugin author would write one. It is not shipped; it exists so the public API cannot quietly stop being sufficient to write a step. It must import only from the top-level `shoez` namespace, and [`tests/test_out_of_tree_step.py`](tests/test_out_of_tree_step.py) fails if it reaches into a private module or imports a name absent from `shoez.__all__`. When a new name becomes necessary to author or annotate a step, export it rather than relaxing that test. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) wires ruff, mypy, and pyright into git hooks; `uv run pre-commit run --all-files` runs them all at once.
 
 When adding a new step, also add its `tests/test_step_x_infrastructure.py` subclassing `shoez.testing.StepConformanceTest` (see [`design/step-contract.md`](design/step-contract.md)) — every step must pass the contract before merging. The subclass supplies only `make_step()` and `training_data`; the checks themselves are written once in [`shoez/testing.py`](shoez/testing.py).
 
@@ -33,6 +33,8 @@ Dependency versions are governed by [`uv.lock`](uv.lock). Never edit the lockfil
 ```bash
 uv lock --upgrade-package narwhals   # reviewable diff; CI fails if the lock is stale
 ```
+
+Because CI installs from the lock, the locked jobs test one point in the declared ranges. [`.github/workflows/dependency-extremes.yml`](.github/workflows/dependency-extremes.yml) runs on every PR alongside them and checks both ends: the `newest` job discards the lock, resolves every dependency to the newest version the ranges allow, and runs the type-checkers and tests; the `oldest` job installs the runtime dependencies at their declared floors on Python 3.10 and runs the tests. Both fail the PR like any other job, so a narwhals or polars release that breaks shoez, or a floor shoez no longer supports, is seen and fixed by whoever is already looking at the PR.
 
 ## Error and warning messages
 
