@@ -5,11 +5,32 @@ format:
     mermaid-format: svg
 ---
 
-A `Recipe` specifies each step for a pre-processing pipeline.
+A `Recipe` specifies each step for a pre-processing pipeline, using `.step_*()` methods.
 It's then `.fit()` to training data (e.g. a Polars DataFrame), and used `.transform()` test data.
 
-* Steps operate on DataFrames, using polars selectors to choose columsn to operate on.
+* Steps operate on DataFrames, using polars selectors to choose columns to operate on.
 * Shoez extends the selection process with roles.
-* Each step applies to the "output" of the previous step.
+* Each step applies to the "output" data of the previous step.
+* Shoez fits and transforms the training data, but only transforms test data.
+* Shoez handles pre-processing, and plugs in to scikit pipelines for final model fitting.
 
 {{< include ../_includes/workflow-diagram.qmd >}}
+
+## Specifying recipe roles and steps
+
+* simple example
+* basic role with selector
+* a couple steps (capture dynamic output of one step fed to next)
+* nothing fit yet, so recipe just represents a specification
+
+Info box: with polars you can use the .shz accessor
+
+## Fitting training data
+
+* could be same example, now calling .fit()
+* training data gets both fit and transformed (since result of previous step needed for next step)
+
+## Transforming test data
+
+* could be same example, now calling .transform()
+* another example, feeding a scikit pipeline

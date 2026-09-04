@@ -2,4 +2,11 @@
 title: "Fit and transform"
 ---
 
-*Stub — content to come.*
+
+* fitting stores parameters on the step object
+* selectors resolve at fit time
+* transform skips RowOps
+* recipes do not mutate (.fit() returns a new, FittedRecipe)
+* FitRecipe object important to know
+* Transform applies to training, validation, and production
+* serializing to apply transform anywhere
