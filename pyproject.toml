@@ -85,6 +85,10 @@ dev = [
     "twine>=3.4",
     "pyyaml",
     "types-PyYAML",
+    # `python-dateutil` itself is a transitive hard dependency (via pandas), so
+    # `StepHoliday`'s `rules` parameter imports it unconditionally; only its
+    # type stubs need declaring here for mypy.
+    "types-python-dateutil",
     # Lets pandas represent narwhals' `Date` dtype (via `pd.ArrowDtype`), so
     # `StepDateFeatures`'s pandas-backed tests can actually construct one.
     "pyarrow>=13.0.0",
