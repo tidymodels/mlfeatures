@@ -22,6 +22,7 @@ DATA_INIT = Path(shoez.data.__file__)
 # (rows, columns) per dataset; the spec's table.
 EXPECTED_SHAPES: dict[str, tuple[int, int]] = {
     "ames": (2930, 74),
+    "ames_mini": (2930, 11),
     "beans": (13611, 17),
     "concrete": (1030, 9),
     "credit": (4454, 14),
@@ -83,3 +84,40 @@ def test_every_dataset_has_an_attribute_docstring() -> None:
     assert not missing, f"datasets without a docstring: {sorted(missing)}"
     for name, text in docs.items():
         assert text.strip(), f"empty docstring for {name!r}"
+
+
+AMES_MINI_COLUMNS = [
+    "Neighborhood",
+    "Bldg_Type",
+    "Exterior_1st",
+    "Street",
+    "Gr_Liv_Area",
+    "Year_Built",
+    "Garage_Cars",
+    "Garage_Area",
+    "Latitude",
+    "Longitude",
+    "Sale_Price",
+]
+
+
+def test_ames_mini_has_the_curated_columns_in_order() -> None:
+    assert shoez.data.ames_mini.columns == AMES_MINI_COLUMNS
+
+
+def test_ames_mini_is_an_untransformed_projection_of_ames() -> None:
+    projected = shoez.data.ames.select(AMES_MINI_COLUMNS)
+    assert projected.equals(shoez.data.ames_mini)
+
+
+def test_regenerate_ames_mini_is_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regenerating into a scratch directory reproduces the shipped file."""
+    scratch = tmp_path / "data"
+    scratch.mkdir()
+    shoez.data.ames.write_parquet(scratch / "ames.parquet")
+    monkeypatch.setattr(shoez.data, "_DATA_DIR", scratch)
+    shoez.data._regenerate_ames_mini()
+    rebuilt = pl.read_parquet(scratch / "ames_mini.parquet")
+    assert rebuilt.equals(shoez.data.ames_mini)

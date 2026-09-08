@@ -25,7 +25,7 @@ from pathlib import Path
 
 import polars as pl
 
-__all__ = ["ames", "beans", "concrete", "credit"]
+__all__ = ["ames", "ames_mini", "beans", "concrete", "credit"]
 
 _DATA_DIR = Path(__file__).resolve().parent
 
@@ -40,6 +40,21 @@ workhorse regression example in Tidy Modeling with R.
 
 Source: R ``modeldata::ames`` (De Cock, 2011),
 https://modeldata.tidymodels.org/reference/ames.html
+"""
+
+ames_mini: pl.DataFrame
+"""A teaching subset of ``ames``: 2,930 sales x 11 columns.
+
+Target: ``Sale_Price``. The columns Tidy Modeling with R uses in its Ames
+recipes (``Neighborhood``, ``Bldg_Type``, ``Gr_Liv_Area``, ``Year_Built``,
+``Latitude``, ``Longitude``) plus four chosen to show common preprocessing
+problems in one screen: ``Street`` is near-zero variance (12 of 2,930 rows
+are ``"Grvl"``), ``Garage_Cars`` and ``Garage_Area`` are highly correlated,
+``Neighborhood`` has 7 levels under 1% of rows, and ``Exterior_1st`` has a
+level rare enough to land only in a test split. Values are untransformed;
+``Sale_Price`` is in dollars.
+
+Source: derived from ``ames``; see ``_regenerate_ames_mini``.
 """
 
 beans: pl.DataFrame
@@ -87,3 +102,30 @@ def __getattr__(name: str) -> pl.DataFrame:
         raise AttributeError(f"no dataset named {name!r}")
     raw = files(__name__).joinpath(f"{name}.parquet").read_bytes()
     return pl.read_parquet(io.BytesIO(raw))
+
+
+# ---------------------------------------------------------------------------
+# Regeneration of the derived datasets. Never called at import time; run by
+# hand when the source data or the column list changes.
+
+_AMES_MINI_COLUMNS: tuple[str, ...] = (
+    "Neighborhood",
+    "Bldg_Type",
+    "Exterior_1st",
+    "Street",
+    "Gr_Liv_Area",
+    "Year_Built",
+    "Garage_Cars",
+    "Garage_Area",
+    "Latitude",
+    "Longitude",
+    "Sale_Price",
+)
+
+
+def _regenerate_ames_mini() -> None:  # pyright: ignore[reportUnusedFunction]
+    """Rewrite ``ames_mini.parquet`` from the packaged ``ames.parquet``."""
+    full = pl.read_parquet(_DATA_DIR / "ames.parquet")
+    full.select(_AMES_MINI_COLUMNS).write_parquet(
+        _DATA_DIR / "ames_mini.parquet", compression="zstd"
+    )
