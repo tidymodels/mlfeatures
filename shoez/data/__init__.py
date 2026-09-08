@@ -7,7 +7,8 @@ Each name below is a dataset, loaded on access as a polars ``DataFrame``::
     credit.head()
 
 The files ship inside the package, so a cell copied out of the documentation
-runs anywhere shoez is installed. Every access reads the parquet file afresh;
+runs anywhere shoez is installed. They add about 2 MB to the installed
+package, most of it ``beans``. Every access reads the parquet file afresh;
 bind the result to a name rather than reaching for the attribute repeatedly.
 pandas users can call ``.to_pandas()`` on the result.
 
@@ -20,14 +21,13 @@ functions at the bottom of this module.
 from __future__ import annotations
 
 import io
+import sys
 from importlib.resources import files
 from pathlib import Path
 
 import polars as pl
 
 __all__ = ["ames", "ames_mini", "beans", "concrete", "credit", "hotels"]
-
-_DATA_DIR = Path(__file__).resolve().parent
 
 ames: pl.DataFrame
 """Ames, Iowa housing sales: 2,930 sales x 74 columns.
@@ -83,10 +83,10 @@ credit: pl.DataFrame
 """Credit applications: 4,454 applications x 14 columns.
 
 Target: ``Status`` (``"good"``/``"bad"``). 9 numeric and 4 string
-features with missing values in both (``Income`` has 381 nulls, ``Home``,
-``Marital``, and ``Job`` a handful each), so it exercises imputation and
-missing-level handling before encoding. Note ``Home`` already has a level
-named ``"other"``.
+features with missing values in both (``Income`` has 381 nulls, ``Assets``
+and ``Debt`` a few dozen each, and ``Home``, ``Marital``, and ``Job`` a
+handful each), so it exercises imputation and missing-level handling
+before encoding. Note ``Home`` already has a level named ``"other"``.
 
 Source: R ``modeldata::credit_data``,
 https://modeldata.tidymodels.org/reference/credit_data.html
@@ -113,7 +113,9 @@ def __dir__() -> list[str]:
 
 def __getattr__(name: str) -> pl.DataFrame:
     if name not in __all__:
-        raise AttributeError(f"no dataset named {name!r}")
+        raise AttributeError(
+            f"no dataset named {name!r}", name=name, obj=sys.modules[__name__]
+        )
     raw = files(__name__).joinpath(f"{name}.parquet").read_bytes()
     return pl.read_parquet(io.BytesIO(raw))
 
@@ -121,6 +123,11 @@ def __getattr__(name: str) -> pl.DataFrame:
 # ---------------------------------------------------------------------------
 # Regeneration of the derived datasets. Never called at import time; run by
 # hand when the source data or the column list changes.
+
+
+def _data_dir() -> Path:
+    return Path(__file__).resolve().parent
+
 
 _AMES_MINI_COLUMNS: tuple[str, ...] = (
     "Neighborhood",
@@ -139,9 +146,10 @@ _AMES_MINI_COLUMNS: tuple[str, ...] = (
 
 def _regenerate_ames_mini() -> None:  # pyright: ignore[reportUnusedFunction]
     """Rewrite ``ames_mini.parquet`` from the packaged ``ames.parquet``."""
-    full = pl.read_parquet(_DATA_DIR / "ames.parquet")
+    data_dir = _data_dir()
+    full = pl.read_parquet(data_dir / "ames.parquet")
     full.select(_AMES_MINI_COLUMNS).write_parquet(
-        _DATA_DIR / "ames_mini.parquet", compression="zstd"
+        data_dir / "ames_mini.parquet", compression="zstd"
     )
 
 
@@ -155,4 +163,4 @@ def _regenerate_hotels() -> None:  # pyright: ignore[reportUnusedFunction]
     with urlopen(_HOTELS_URL) as response:  # noqa: S310
         raw = response.read()
     frame = pl.read_csv(io.BytesIO(raw), null_values="NA", try_parse_dates=True)
-    frame.write_parquet(_DATA_DIR / "hotels.parquet", compression="zstd")
+    frame.write_parquet(_data_dir() / "hotels.parquet", compression="zstd")

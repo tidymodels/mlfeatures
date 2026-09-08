@@ -92,6 +92,9 @@ dev = [
     "scipy>=1.10",
     # `StepHoliday`'s tests exercise the real holidays dependency.
     "holidays>=0.40",
+    # `tests/test_data.py`'s packaging guard reads pyproject.toml; `tomllib` is
+    # stdlib from 3.11, so 3.10 needs this backport.
+    "tomli>=2.0 ; python_version < '3.11'",
 ]
 
 examples = [

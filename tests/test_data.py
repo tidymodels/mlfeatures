@@ -12,12 +12,18 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+try:
+    import tomllib  # Python 3.11+; on 3.10 fall back to tomli
+except ModuleNotFoundError:
+    import tomli as tomllib
+
 import polars as pl
 import pytest
 
 import shoez.data
 
 DATA_INIT = Path(shoez.data.__file__)
+PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
 
 # (rows, columns) per dataset; the spec's table.
 EXPECTED_SHAPES: dict[str, tuple[int, int]] = {
@@ -42,7 +48,7 @@ def test_dataset_loads_as_polars_with_expected_shape(name: str) -> None:
 
 
 def test_each_access_returns_a_fresh_frame() -> None:
-    """No caching: mutating one load must not leak into the next."""
+    """No caching: two accesses yield two distinct frame objects."""
     first = shoez.data.credit
     second = shoez.data.credit
     assert first is not second
@@ -54,7 +60,7 @@ def test_unknown_name_raises_attribute_error_naming_it() -> None:
 
 
 def test_dir_lists_the_datasets() -> None:
-    assert set(dir(shoez.data)) >= set(shoez.data.__all__)
+    assert dir(shoez.data) == sorted(shoez.data.__all__)
 
 
 def _attribute_docstrings(source: str) -> dict[str, str]:
@@ -118,7 +124,7 @@ def test_regenerate_ames_mini_is_idempotent(
     scratch = tmp_path / "data"
     scratch.mkdir()
     shoez.data.ames.write_parquet(scratch / "ames.parquet")
-    monkeypatch.setattr(shoez.data, "_DATA_DIR", scratch)
+    monkeypatch.setattr(shoez.data, "_data_dir", lambda: scratch)
     shoez.data._regenerate_ames_mini()
     rebuilt = pl.read_parquet(scratch / "ames_mini.parquet")
     assert rebuilt.equals(shoez.data.ames_mini)
@@ -129,3 +135,10 @@ def test_hotels_arrival_date_is_a_date_column() -> None:
     assert hotels["arrival_date"].dtype == pl.Date
     assert hotels["children"].unique().sort().to_list() == ["children", "none"]
     assert hotels.null_count().sum_horizontal().item() == 0
+
+
+def test_pyproject_ships_the_parquet_files() -> None:
+    """CI installs editable, so a dropped package-data glob would only surface at release."""
+    config = tomllib.loads(PYPROJECT.read_text())
+    package_data = config["tool"]["setuptools"]["package-data"]["shoez"]
+    assert "data/*.parquet" in package_data

@@ -52,6 +52,8 @@ uv run great-docs preview    # build and serve at localhost:3000
 
 Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy. The same test covers the cells in the `user_guide/` pages.
 
+To add a bundled dataset, drop its parquet file into `shoez/data/`, then add the annotated name plus its docstring to [`shoez/data/__init__.py`](shoez/data/__init__.py) and the name to that module's `__all__`. Add a matching row to `EXPECTED_SHAPES` in [`tests/test_data.py`](tests/test_data.py) so the shape is pinned. `great-docs.yml` needs no edit for this: the `Datasets` section already lists the module with `members: true`, so a new annotated name is picked up automatically.
+
 ### Vocabulary
 
 shoez follows scikit-learn's vocabulary, not R `recipes`', wherever the two disagree. The full translation table lives in [`user_guide/vocabulary.qmd`](user_guide/vocabulary.qmd); the rules that come up most:
