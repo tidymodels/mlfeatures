@@ -196,21 +196,24 @@ def apply_dummy(
         # Null-source rows → null indicator.
         # Unseen-level rows → null indicator (treated the same as unknown).
         # Matching rows → 1; all other known rows → 0.
+        # Written as a nested when/otherwise rather than a chained
+        # ``.when().then().when()``: narwhals only gained the chained form in
+        # 2.20, and the declared floor is 2.19. A null source value compares as
+        # null (never equal to a level), so testing for unknown rows first is
+        # equivalent to the chained order.
+        is_unknown = nw.col(col).is_null()
+        if unseen:
+            is_unknown = is_unknown | nw.col(col).is_in(unseen)
         exprs: list[Any] = []
         for lvl, out_name in zip(retained_levels, out_names):
-            when_chain = (
-                nw.when(nw.col(col) == lvl)
-                .then(nw.lit(1))
-                .when(nw.col(col).is_null())
+            indicator = (
+                nw.when(is_unknown)
                 .then(nw.lit(None))
-            )
-            if unseen:
-                when_chain = when_chain.when(nw.col(col).is_in(unseen)).then(
-                    nw.lit(None)
+                .otherwise(
+                    nw.when(nw.col(col) == lvl).then(nw.lit(1)).otherwise(nw.lit(0))
                 )
-            exprs.append(
-                when_chain.otherwise(nw.lit(0)).cast(indicator_dtype).alias(out_name)
             )
+            exprs.append(indicator.cast(indicator_dtype).alias(out_name))
         frame = frame.with_columns(exprs)
 
     if not keep_original_cols:
