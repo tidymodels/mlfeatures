@@ -120,7 +120,7 @@ where = ["."]
 include = ["shoez*"]
 
 [tool.setuptools.package-data]
-shoez = ["py.typed"]
+shoez = ["py.typed", "data/*.parquet"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
