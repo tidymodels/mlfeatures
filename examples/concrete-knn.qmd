@@ -22,8 +22,8 @@ PARITY NOTES:
    all-pairs step_interact does not (GAP) — variant left commented, as in R.
  - concrete exported from R on first run: data/concrete.csv.
 ```
-*Docs version loads vendored parquet from `examples/data/`; the research
-originals export these datasets from R's modeldata at first run.*
+*Docs version loads the dataset from `shoez.data`; the research originals
+export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
@@ -39,7 +39,7 @@ from shoez import Selectors as s
 
 # ── Data + the leakage beat (pre-recipe, matching the book)
 
-concrete = pl.read_parquet("data/concrete.parquet")
+from shoez.data import concrete
 # Replicate mixtures averaged BEFORE splitting so one mixture can't appear in
 # both train and test. 1,030 rows -> 992.
 ingredients = [c for c in concrete.columns if c != "compressive_strength"]

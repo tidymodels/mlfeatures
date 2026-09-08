@@ -66,9 +66,8 @@ measurements for 13,611 beans of 7 varieties. The full port is in
 [Beans PCA](../examples/beans-pca.qmd).
 
 ```{python}
-import polars as pl
+from shoez.data import beans
 
-beans = pl.read_parquet("../examples/data/beans.parquet")
 beans.head()
 ```
 

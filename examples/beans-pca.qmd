@@ -23,8 +23,8 @@ PARITY NOTES:
    re-prepping; shoez has no incremental fit — declared whole, fit once.
  - beans exported from R on first run: data/beans.csv.
 ```
-*Docs version loads vendored parquet from `examples/data/`; the research
-originals export these datasets from R's modeldata at first run.*
+*Docs version loads the dataset from `shoez.data`; the research originals
+export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
@@ -38,7 +38,7 @@ from shoez import Selectors as s
 
 # ── Data
 
-beans = pl.read_parquet("data/beans.parquet")  # 13,611 x 17
+from shoez.data import beans  # 13,611 x 17
 
 # ── 3-way split (75 / 12.5 / 12.5, stratified by class)
 
