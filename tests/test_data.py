@@ -26,6 +26,7 @@ EXPECTED_SHAPES: dict[str, tuple[int, int]] = {
     "beans": (13611, 17),
     "concrete": (1030, 9),
     "credit": (4454, 14),
+    "hotels": (50000, 23),
 }
 
 
@@ -121,3 +122,10 @@ def test_regenerate_ames_mini_is_idempotent(
     shoez.data._regenerate_ames_mini()
     rebuilt = pl.read_parquet(scratch / "ames_mini.parquet")
     assert rebuilt.equals(shoez.data.ames_mini)
+
+
+def test_hotels_arrival_date_is_a_date_column() -> None:
+    hotels = shoez.data.hotels
+    assert hotels["arrival_date"].dtype == pl.Date
+    assert hotels["children"].unique().sort().to_list() == ["children", "none"]
+    assert hotels.null_count().sum_horizontal().item() == 0

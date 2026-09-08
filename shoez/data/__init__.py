@@ -25,7 +25,7 @@ from pathlib import Path
 
 import polars as pl
 
-__all__ = ["ames", "ames_mini", "beans", "concrete", "credit"]
+__all__ = ["ames", "ames_mini", "beans", "concrete", "credit", "hotels"]
 
 _DATA_DIR = Path(__file__).resolve().parent
 
@@ -92,6 +92,20 @@ Source: R ``modeldata::credit_data``,
 https://modeldata.tidymodels.org/reference/credit_data.html
 """
 
+hotels: pl.DataFrame
+"""Hotel bookings: 50,000 stays x 23 columns.
+
+Target: ``children`` (``"children"``/``"none"``, about 8% with children).
+Booking details for two Portuguese hotels: lead time, nights, meal plan,
+``country`` (155 levels), market segment, room types, deposit type, daily
+rate, and an ``arrival_date`` column of dtype ``Date``. No missing values.
+The tidymodels "predictive modeling case study" data, so it is the natural
+home for date, holiday, and rare-level steps.
+
+Source: https://tidymodels.org/start/case-study/ (Antonio, Almeida & Nunes,
+2019, "Hotel booking demand datasets", Data in Brief).
+"""
+
 
 def __dir__() -> list[str]:
     return sorted(__all__)
@@ -129,3 +143,16 @@ def _regenerate_ames_mini() -> None:  # pyright: ignore[reportUnusedFunction]
     full.select(_AMES_MINI_COLUMNS).write_parquet(
         _DATA_DIR / "ames_mini.parquet", compression="zstd"
     )
+
+
+_HOTELS_URL = "https://tidymodels.org/start/case-study/hotels.csv"
+
+
+def _regenerate_hotels() -> None:  # pyright: ignore[reportUnusedFunction]
+    """Rewrite ``hotels.parquet`` from the tidymodels.org CSV (needs network)."""
+    from urllib.request import urlopen
+
+    with urlopen(_HOTELS_URL) as response:  # noqa: S310
+        raw = response.read()
+    frame = pl.read_csv(io.BytesIO(raw), null_values="NA", try_parse_dates=True)
+    frame.write_parquet(_DATA_DIR / "hotels.parquet", compression="zstd")
