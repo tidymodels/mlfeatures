@@ -2,7 +2,12 @@
 title: "Fit and transform"
 ---
 
+Fitting a recipe estimates everything its steps need from the training data
+and hands back a separate `FittedRecipe`. That object is what you keep: it
+transforms training, validation, and production data the same way, and it
+can be serialized to do so anywhere.
 
+::: {.callout-note collapse="true" title="Key points"}
 * fitting stores parameters on the step object
 * selectors resolve at fit time
 * transform skips RowOps
@@ -10,3 +15,89 @@ title: "Fit and transform"
 * FitRecipe object important to know
 * Transform applies to training, validation, and production
 * serializing to apply transform anywhere
+:::
+
+## Setup
+
+```{python}
+import polars as pl
+from sklearn.model_selection import train_test_split
+
+from shoez import Recipe, StepFilter, StepImputeMedian, StepNormalize, from_json, to_json
+from shoez import Selectors as s
+from shoez.data import credit
+
+credit_train, credit_validation = train_test_split(
+    credit, train_size=0.75, stratify=credit["Status"], random_state=1
+)
+```
+
+## Fitting returns a new FittedRecipe
+
+`recipe.fit(training_data)` returns a `FittedRecipe` and leaves the recipe
+itself untouched, so one specification can be fitted to different frames.
+Fitting is also when selectors are resolved: each step lists the concrete
+columns it matched, and it holds the estimates it made (here the medians,
+then the means and standard deviations).
+
+```{python}
+recipe = (
+    Recipe(data=credit_train, target="Status")
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepNormalize(s.numeric_features()))
+)
+fitted = recipe.fit(credit_train)
+fitted
+```
+
+The recipe is still the untrained specification:
+
+```{python}
+recipe
+```
+
+## Row filters run only at fit
+
+A row filter such as `StepFilter` drops rows when the recipe is fitted and
+none when it transforms, because dropping rows from data being scored would
+silently lose predictions. Use it to choose which training rows the other
+steps learn from, not to filter new data.
+
+```{python}
+recipe = (
+    Recipe(data=credit_train, target="Status")
+    .add(StepFilter(lambda df: ~df["Income"].is_null()))  # fit only
+    .add(StepNormalize(s.numeric_features()))
+)
+fitted = recipe.fit(credit_train)
+fitted.transform(credit_validation).filter(pl.col("Income").is_null()).head()
+```
+
+The means were estimated without the null-income rows, but the validation
+rows with a null income all come back.
+
+## Transform training, validation, and production data
+
+`fitted.transform(frame)` applies the stored estimates to any frame with the
+same columns. Training data, a validation split, and rows arriving in
+production all get the training medians and means, which is what makes
+their transformed values comparable.
+
+```{python}
+fitted.transform(credit_validation).head()
+```
+
+## Serialize to transform anywhere
+
+`to_json(fitted)` writes the fitted recipe, estimates included, and
+`from_json()` restores it, so the transform can run in another process or on
+another machine without the training data. `to_yaml()` and `from_yaml()` do
+the same in YAML.
+
+```{python}
+restored = from_json(to_json(fitted))
+restored.transform(credit_validation).head()
+```
+
+See [Serializing recipes](../extra/serializing-recipes.qmd) for the file
+format and for `minimize()`, which strips fit-only artifacts before saving.

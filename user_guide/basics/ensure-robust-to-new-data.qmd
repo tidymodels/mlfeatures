@@ -2,14 +2,114 @@
 title: "Ensure robust to new data"
 ---
 
+A fitted recipe is a model of the training data, applied to data it has
+never seen. Some of the failure modes that come with that are handled for
+you, and two are yours to prevent: missing values and category levels the
+training data lacked.
+
+::: {.callout-note collapse="true" title="Key points"}
 * Discuss how training data is used to fit a pre-processing models that transform test data.
 * Common failure modes when transforming test data.
-
-
 * Things Recipes does for you
   - Apply normalization fit from training to test
   - Data leakage in general
-
 * Things you should do w/ Recipes:
   - Missing values (impute)
   - Rare / Missing category levels
+:::
+
+## Setup
+
+```{python}
+import polars as pl
+from sklearn.model_selection import train_test_split
+
+from shoez import Recipe, StepDummy, StepImputeMedian, StepNormalize, StepOther, StepUnknown
+from shoez import Selectors as s
+from shoez.data import ames_mini, credit
+
+credit_train, credit_validation = train_test_split(
+    credit, train_size=0.75, stratify=credit["Status"], random_state=1
+)
+ames_train, ames_validation = train_test_split(ames_mini, train_size=0.8, random_state=502)
+```
+
+## Training data fits, new data is transformed
+
+Everything a recipe estimates comes from the frame passed to `fit()`, and
+`transform()` reuses those estimates on every other frame. That is the
+guard against data leakage: the validation set never influences the
+statistics that transform it. After normalizing with the training means, the
+validation mean is close to zero but not exactly zero.
+
+```{python}
+recipe = (
+    Recipe(data=credit_train, target="Status")
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepNormalize(s.numeric_features()))
+)
+fitted = recipe.fit(credit_train)
+fitted.transform(credit_validation).select(pl.col("Income").mean())
+```
+
+The same holds for every step: the medians used to fill gaps, the levels a
+dummy step expands, and the axes a PCA step projects onto are all fixed at
+fit time.
+
+## Missing values: impute first
+
+Steps do not fill missing values for you. A normalize step passes nulls
+through, a dummy step turns a null level into a row of null indicators, and
+most models refuse either. Put `StepImputeMedian` (or `StepImputeMean`) and
+`StepUnknown` before anything else so the later steps see complete columns.
+
+Without them, the transformed validation set still carries the gaps:
+
+```{python}
+recipe = (
+    Recipe(data=credit_train, target="Status")
+    .add(StepNormalize(s.numeric_features()))
+    .add(StepDummy(s.nominal_features()))
+)
+fitted = recipe.fit(credit_train)
+fitted.transform(credit_validation).null_count()
+```
+
+With imputation first, and `StepUnknown` giving missing categoricals their
+own `"unknown"` level, nothing is left for a model to trip on:
+
+```{python}
+recipe = (
+    Recipe(data=credit_train, target="Status")
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepUnknown(s.nominal_features()))
+    .add(StepNormalize(s.numeric_features()))
+    .add(StepDummy(s.nominal_features()))
+)
+fitted = recipe.fit(credit_train)
+fitted.transform(credit_validation).null_count()
+```
+
+## Rare and unseen category levels
+
+A dummy step learns its levels at fit time, so a level that first appears in
+new data gets a row of all-zero indicators, silently. `StepOther(columns,
+threshold=...)` prevents that: it pools levels rarer than the threshold into
+one `"other"` level when fitted, and sends any level it has never seen to
+the same place when transforming. In this split, `"Stone"` exterior appears
+only in the validation rows:
+
+```{python}
+recipe = (
+    Recipe(data=ames_train, target="Sale_Price")
+    .add(StepOther(s.col("Exterior_1st"), threshold=0.01))
+    .add(StepDummy(s.col("Exterior_1st")))
+)
+fitted = recipe.fit(ames_train)
+stone = ames_validation.filter(pl.col("Exterior_1st") == "Stone")
+fitted.transform(stone).select(pl.col("^Exterior_1st_.*$"))
+```
+
+Both rows land in `Exterior_1st_other`, a column the model has seen, rather
+than in no column at all. Rare levels pooled at fit time also stop a dummy
+step from producing near-empty indicator columns for them.

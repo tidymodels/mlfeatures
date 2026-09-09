@@ -2,15 +2,81 @@
 title: "Composing steps"
 ---
 
+Steps run in order, and each one selects from the frame as the previous step
+left it. That is what lets a later step pick up columns an earlier step
+created, and shoez tracks which step produced each column so a selector can
+ask for exactly those.
+
+::: {.callout-note collapse="true" title="Key points"}
 * Steps operate on the output of the previous step.
-* There are some useful dynamics Emil mentioned.
+* `s.has_source(step_type=StepDummy)` selects the columns a step produced;
+  `s.has_ancestor()` follows that lineage through later steps.
+* `s.has_source("some_id")` selects by step id; a second step of the same
+  type is numbered automatically (`dummy_2`), or name it with `id=`.
+:::
 
-E.g.
+## Setup
 
-```python
-rec = (
-    Recipe(data=df, target="label", features=[...])
+```{python}
+from shoez import Recipe, StepDummy, StepImputeMode, StepNormalize
+from shoez import Selectors as s
+from shoez.data import credit
+```
+
+## Each step sees the previous step's output
+
+A selector is resolved against the frame as it exists when its step runs, so
+a step placed after `StepDummy` can select the indicator columns it created.
+Here the normalize step's `s.numeric_features()` matches the original
+numerics and every new indicator column:
+
+```{python}
+recipe = (
+    Recipe(data=credit, target="Status")
+    .add(StepImputeMode(s.nominal_features()))
+    .add(StepDummy(s.nominal_features()))
+    .add(StepNormalize(s.numeric_features()))
+)
+fitted = recipe.fit(credit)
+fitted
+```
+
+## Selecting by source step
+
+Use `s.has_source(step_type=SomeStep)` to select only the columns a step
+produced. This normalizes the indicator columns and leaves the original
+numerics as they were:
+
+```{python}
+recipe = (
+    Recipe(data=credit, target="Status")
+    .add(StepImputeMode(s.nominal_features()))
     .add(StepDummy(s.nominal_features()))
     .add(StepNormalize(s.has_source(step_type=StepDummy)))
 )
+fitted = recipe.fit(credit)
+fitted
+```
+
+`s.has_source()` matches a column's immediate producer. `s.has_ancestor()`
+matches any column that traces back to the step, even through later steps
+that transformed it again.
+
+## Selecting by step id
+
+`s.has_source("some_id")` selects the output of one step by its id. Every
+step has one: it defaults to the step's short name (`"dummy"`), a second
+step of the same type is numbered (`"dummy_2"`), and `id=` lets you name a
+step yourself.
+
+```{python}
+recipe = (
+    Recipe(data=credit, target="Status")
+    .add(StepImputeMode(s.nominal_features()))
+    .add(StepDummy(s.col("Home")))  # id "dummy"
+    .add(StepDummy(s.col("Marital")))  # id "dummy_2"
+    .add(StepNormalize(s.has_source("dummy_2")))
+)
+fitted = recipe.fit(credit)
+fitted
 ```

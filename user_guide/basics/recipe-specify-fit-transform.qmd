@@ -5,32 +5,137 @@ format:
     mermaid-format: svg
 ---
 
-A `Recipe` specifies each step for a pre-processing pipeline, using `.step_*()` methods.
-It's then `.fit()` to training data (e.g. a Polars DataFrame), and used `.transform()` test data.
+A `Recipe` is a pre-processing pipeline with three phases. You **specify** it
+as a sequence of steps, **fit** it to training data, and **transform** any
+frame with what it learned.
 
+::: {.callout-note collapse="true" title="Key points"}
 * Steps operate on DataFrames, using polars selectors to choose columns to operate on.
 * Shoez extends the selection process with roles.
 * Each step applies to the "output" data of the previous step.
 * Shoez fits and transforms the training data, but only transforms test data.
 * Shoez handles pre-processing, and plugs in to scikit pipelines for final model fitting.
+:::
 
 {{< include ../_includes/workflow-diagram.qmd >}}
 
+## Setup
+
+The credit data has a categorical target, `Status`, and a mix of numeric and
+string features with a few missing values in each. Hold out a test set before
+anything is estimated.
+
+```{python}
+from sklearn.model_selection import train_test_split
+
+from shoez import Recipe, StepDummy, StepImputeMedian, StepImputeMode, StepNormalize
+from shoez import Selectors as s
+from shoez.data import credit
+
+credit_train, credit_test = train_test_split(
+    credit, train_size=0.75, stratify=credit["Status"], random_state=1
+)
+credit_train.head()
+```
+
 ## Specifying recipe roles and steps
 
-* simple example
-* basic role with selector
-* a couple steps (capture dynamic output of one step fed to next)
-* nothing fit yet, so recipe just represents a specification
+Start a recipe with `Recipe(data=training_data, target="SomeColumn")` and chain
+steps on with `.add()`, each choosing its columns with a selector. Nothing is
+computed yet: the recipe is a specification, and every step shows its
+selector as written.
 
-Info box: with polars you can use the .shz accessor
+```{python}
+recipe = (
+    Recipe(data=credit_train, target="Status")
+    .add(StepImputeMedian(s.numeric_features()))
+    .add(StepImputeMode(s.nominal_features()))
+    .add(StepDummy(s.nominal_features()))
+    .add(StepNormalize(s.numeric_features()))
+)
+recipe
+```
+
+`target=` gives `Status` the `target` role, and every other column is a
+feature. That is what keeps `Status` out of `s.nominal_features()`, so it is
+not imputed or turned into indicator columns with the real string features,
+and it is what lets a scikit-learn pipeline hand the recipe its `y` later.
+`data=` lets the recipe check column names as steps are added.
+
+::: {.callout-tip title="Exploring with polars"}
+Importing `shoez.polars` registers a `shz` accessor on polars frames, and
+every step becomes a `.shz.step_*()` call that fits on the frame and applies
+right there:
+
+```python
+import shoez.polars
+
+result = (
+    credit_train.shz.step_impute_median(s.numeric_features())
+    .shz.step_impute_mode(s.nominal_features())
+    .shz.step_dummy(s.nominal_features())
+    .shz.step_normalize(s.numeric_features())
+)
+```
+
+That is convenient while exploring, but the estimates are gone as soon as
+the frame is. A recipe keeps them, so the same medians, modes, and means
+can be applied to any other frame. See
+[With polars extension (.shz)](../polars-extension.qmd).
+:::
 
 ## Fitting training data
 
-* could be same example, now calling .fit()
-* training data gets both fit and transformed (since result of previous step needed for next step)
+`recipe.fit(training_data)` runs the steps in order, and each step estimates
+what it needs from the data as it goes: the medians, the modes, the levels
+of each string column, the means and standard deviations. Fitting also
+transforms the training frame step by step, so each selector is resolved
+against the output of the step before it.
+
+```{python}
+fitted = recipe.fit(credit_train)
+fitted
+```
+
+Every step is now `[trained]` and lists the concrete columns it resolved
+to. The dummy step produced indicator columns from `Home`, `Marital`,
+`Records`, and `Job`, and the normalize step's `numeric_features()` selector,
+resolved after it, picked those up along with the original numerics.
 
 ## Transforming test data
 
-* could be same example, now calling .transform()
-* another example, feeding a scikit pipeline
+`fitted.transform(frame)` applies the stored estimates to any frame with the
+same columns and re-estimates nothing: the test set is filled with the
+training medians and modes and scaled by the training means.
+
+```{python}
+result = fitted.transform(credit_test)
+result.head()
+```
+
+Wrap the recipe in `RecipeTransformer` to make it the first step of a
+scikit-learn `Pipeline`, so the model gets the same guarantee. scikit-learn
+keeps `X` and `y` apart while shoez finds the target by role, so the adapter
+re-joins `y` under the target's name at fit time and hands the model only
+the features.
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+from shoez import RecipeTransformer
+
+pipe = Pipeline(
+    [
+        ("recipe", RecipeTransformer(recipe)),
+        ("model", LogisticRegression(max_iter=1000)),
+    ]
+)
+pipe.fit(credit_train.drop("Status"), credit_train["Status"])
+pipe.score(credit_test.drop("Status"), credit_test["Status"])
+```
+
+`pipe.fit` fits the recipe and then the model on the training split;
+`pipe.score` only transforms the test split with the stored estimates before
+scoring it. Cross-validation, tuning, and feature names are covered in
+[With scikit-learn pipelines](../sklearn-pipelines.qmd).
