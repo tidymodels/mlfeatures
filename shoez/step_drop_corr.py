@@ -8,7 +8,7 @@ their pairwise absolute correlation exceeds a threshold.  Zero-variance
 from __future__ import annotations
 
 import warnings
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import narwhals as nw
 import numpy as np
@@ -114,8 +114,11 @@ def fit_drop_corr(
     # one with the broadest correlation to others is removed first.
     avg_corr = np.mean(np.abs(corr), axis=0)
 
-    # Dense rank.
-    _, inv = np.unique(avg_corr, return_inverse=True)
+    # Dense rank. The numpy 2.2 stubs (the newest available on Python 3.10)
+    # leave the `return_inverse` result partially unknown to pyright; the cast
+    # pins it.
+    _, inv_raw = np.unique(avg_corr, return_inverse=True)  # pyright: ignore[reportUnknownVariableType]
+    inv = cast("np.ndarray[Any, Any]", inv_raw)
     ranks = inv + 1  # 1-based
 
     # Consider only the upper triangle (each pair counted once).

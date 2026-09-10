@@ -65,14 +65,21 @@ NUMPY_REPRESENTABLE = [
     pl.Float64,
 ]
 
-# polars-native numeric dtypes with no numpy equivalent. Decimal needs a scale.
-DECIMAL = pl.Decimal(scale=0)
-INT128_DTYPES = [pl.Int128, pl.UInt128]
+# polars-native numeric dtypes with no numpy equivalent, gated on the polars
+# version because polars' own support for them grew over 1.x while the declared
+# floor is 1.0. Int128/UInt128 were added in 1.18, so on older polars they
+# cannot occur at all. Decimal exists from 1.0, but ``std`` on it only works
+# from 1.5, ``n_unique`` from 1.25, and ``fill_null`` with a float only promotes
+# it to Float64 (which the impute steps' ``schema_out`` promises) from 1.34;
+# below that the steps raise inside polars or return a Decimal column.
+_POLARS_VERSION = tuple(int(part) for part in pl.__version__.split(".")[:2])
+INT128_DTYPES = [pl.Int128, pl.UInt128] if hasattr(pl, "Int128") else []
+DECIMAL_DTYPES = [pl.Decimal(scale=0)] if _POLARS_VERSION >= (1, 34) else []
 
 # Every numeric-accepting step handles all of NUMERIC_DTYPES: the polars-native
 # steps directly, the numpy-backed steps via the _frame upcast of Int128/UInt128
 # to Float64 before the numpy boundary (issue #108).
-ALL_NUMERIC = [*NUMPY_REPRESENTABLE, *INT128_DTYPES, DECIMAL]
+ALL_NUMERIC = [*NUMPY_REPRESENTABLE, *INT128_DTYPES, *DECIMAL_DTYPES]
 NUMPY_BACKED = ALL_NUMERIC
 
 

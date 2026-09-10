@@ -1,4 +1,13 @@
 # serializer version: 1
+# name: TestFitHoliday.test_duplicate_slug_between_holiday_and_rule_raises
+  "'holidays' and 'rules' produce duplicate column name(s) ['christmas_day']"
+# ---
+# name: TestFitHoliday.test_duplicate_slug_between_two_rules_raises
+  "'holidays' and 'rules' produce duplicate column name(s) ['pay_day']"
+# ---
+# name: TestFitHoliday.test_non_rule_value_raises
+  "'rules' values must be dateutil.rrule.rrule or dateutil.rrule.rruleset instances; got 'str' for 'weekend'"
+# ---
 # name: TestFitHoliday.test_unknown_holiday_name_raises
   "'holidays' must be holiday names in the 'US' calendar for 2023-2023; got unknown name(s) ['Not A Real Holiday']"
 # ---

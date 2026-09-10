@@ -26,11 +26,7 @@ jobs:
           python -m pip install uv
           # --extra examples: the executable examples/ pages import xgboost
           # and pyarrow at docs build
-          uv sync --extra examples
-          uv pip install great-docs
-          # StepHoliday's docstring Examples call fit()/transform(), which need
-          # the holidays package; `uv sync` alone only installs the base deps.
-          uv pip install holidays
+          uv sync --locked --group docs --extra examples
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2

@@ -7,12 +7,13 @@ via pyarrow and `shoez.testing`'s `dtype_casts` hook).
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 import narwhals.stable.v2 as nw
 import polars as pl
 import pytest
+from dateutil.rrule import SA, SU, WEEKLY, rrule
 from syrupy.assertion import SnapshotAssertion
 
 from shoez import Mode, SchemaInfo
@@ -37,6 +38,10 @@ def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
     return nw.from_native(pl.DataFrame(data))
 
 
+def _weekend_rule(dtstart: date = date(2023, 1, 1)) -> rrule:
+    return rrule(WEEKLY, byweekday=(SA, SU), dtstart=dtstart)
+
+
 # ---------------------------------------------------------------------------
 # fit_holiday / apply_holiday
 # ---------------------------------------------------------------------------
@@ -51,6 +56,7 @@ class TestFitHoliday:
             holidays=("Christmas Day",),
             country="US",
             subdiv=None,
+            rules={},
             dtypes={"d": nw.Date()},
         )
 
@@ -64,6 +70,60 @@ class TestFitHoliday:
         frame = _df({"d": pl.Series("d", [None, None], dtype=pl.Date)})
         result = fit_holiday(frame, ("Not A Real Holiday",), "US")
         assert result.holidays == ("Not A Real Holiday",)
+
+    def test_rules_default_to_empty_dict(self) -> None:
+        frame = _df({"d": _dates()})
+        result = fit_holiday(frame, (), "US")
+        assert result.rules == {}
+
+    def test_records_rules(self) -> None:
+        frame = _df({"d": _dates()})
+        rule = _weekend_rule()
+        result = fit_holiday(frame, (), "US", rules={"weekend": rule})
+        assert result.rules == {"weekend": rule}
+
+    def test_non_rule_value_raises(self, snapshot: SnapshotAssertion) -> None:
+        frame = _df({"d": _dates()})
+        with pytest.raises(TypeError) as excinfo:
+            fit_holiday(frame, (), "US", rules={"weekend": "not a rule"})  # type: ignore[dict-item]
+        assert str(excinfo.value) == snapshot
+
+    def test_duplicate_slug_between_holiday_and_rule_raises(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        frame = _df({"d": _dates()})
+        with pytest.raises(ValueError) as excinfo:
+            fit_holiday(
+                frame,
+                ("Christmas Day",),
+                "US",
+                rules={"Christmas Day": _weekend_rule()},
+            )
+        assert str(excinfo.value) == snapshot
+
+    def test_duplicate_slug_between_two_rules_raises(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        frame = _df({"d": _dates()})
+        with pytest.raises(ValueError) as excinfo:
+            fit_holiday(
+                frame,
+                (),
+                "US",
+                rules={"Pay Day": _weekend_rule(), "pay day": _weekend_rule()},
+            )
+        assert str(excinfo.value) == snapshot
+
+    def test_rules_only_skips_holidays_package_import(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fail_import(module_name: str, *, purpose: str | None = None) -> Any:
+            raise AssertionError("holidays package should not be imported")
+
+        monkeypatch.setattr("shoez.step_holiday.import_optional", fail_import)
+        frame = _df({"d": _dates()})
+        result = fit_holiday(frame, (), "US", rules={"weekend": _weekend_rule()})
+        assert result.holidays == ()
 
 
 class TestApplyHoliday:
@@ -120,6 +180,42 @@ class TestApplyHoliday:
         out = apply_holiday(new_frame, fit_result).to_native()
         assert out["d_christmas_day"].to_list() == [1, 0]
 
+    def test_rule_only_produces_indicator_column(self) -> None:
+        frame = _df({"d": _dates()})
+        fit_result = fit_holiday(frame, (), "US", rules={"weekend": _weekend_rule()})
+        out = apply_holiday(frame, fit_result).to_native()
+        assert out["d_weekend"].to_list() == [1, 0, 1, 0]
+
+    def test_combined_holidays_and_rules_columns_in_order(self) -> None:
+        frame = _df({"d": _dates()})
+        fit_result = fit_holiday(
+            frame, ("Christmas Day",), "US", rules={"weekend": _weekend_rule()}
+        )
+        out = apply_holiday(frame, fit_result).to_native()
+        assert list(out.columns) == ["d_christmas_day", "d_weekend"]
+
+    def test_timezone_aware_rule_does_not_crash(self) -> None:
+        rule = rrule(
+            WEEKLY,
+            byweekday=(SA, SU),
+            dtstart=datetime(2023, 1, 1, tzinfo=timezone.utc),
+        )
+        frame = _df({"d": _dates()})
+        fit_result = fit_holiday(frame, (), "US", rules={"weekend": rule})
+        out = apply_holiday(frame, fit_result).to_native()
+        assert out["d_weekend"].to_list() == [1, 0, 1, 0]
+
+    def test_new_data_outside_fit_year_range_is_still_classified_by_rule(self) -> None:
+        fit_result = fit_holiday(
+            _df({"d": [date(2020, 1, 1)]}),
+            (),
+            "US",
+            rules={"weekend": _weekend_rule(date(2020, 1, 1))},
+        )
+        new_frame = _df({"d": [date(2030, 1, 5), date(2030, 1, 7)]})
+        out = apply_holiday(new_frame, fit_result).to_native()
+        assert out["d_weekend"].to_list() == [1, 0]
+
 
 # ---------------------------------------------------------------------------
 # StepHoliday — unit-level invariants
@@ -148,6 +244,14 @@ class TestStepHolidayUnit:
 
     def test_default_subdiv_is_none(self) -> None:
         assert StepHoliday(["d"]).subdiv is None
+
+    def test_default_rules_is_empty_dict(self) -> None:
+        assert StepHoliday(["d"]).rules == {}
+
+    def test_default_rules_not_shared_between_instances(self) -> None:
+        first = StepHoliday(["d"])
+        first.rules["weekend"] = _weekend_rule()
+        assert StepHoliday(["d"]).rules == {}
 
     def test_default_role_is_feature(self) -> None:
         assert StepHoliday(["d"]).output_role == "feature"
@@ -216,11 +320,38 @@ class TestStepHolidayUnit:
             "d_new_years_day": ["d"],
         }
 
+    def test_schema_out_lists_rule_indicator_columns(self) -> None:
+        step = StepHoliday(
+            ["d"], holidays=["Christmas Day"], rules={"weekend": _weekend_rule()}
+        )
+        step.fit(_df(_data()), SchemaInfo())
+        assert step.schema_out().columns == ["d_christmas_day", "d_weekend"]
+        assert step.schema_out().dtypes == {
+            "d_christmas_day": "Int32",
+            "d_weekend": "Int32",
+        }
+
+    def test_produced_columns_matches_schema_out(self) -> None:
+        step = StepHoliday(
+            ["d"], holidays=["Christmas Day"], rules={"weekend": _weekend_rule()}
+        )
+        step.fit(_df(_data()), SchemaInfo())
+        assert step.produced_columns() == ["d_christmas_day", "d_weekend"]
+
+    def test_output_parents_includes_rule_columns(self) -> None:
+        step = StepHoliday(["d"], holidays=[], rules={"weekend": _weekend_rule()})
+        step.fit(_df(_data()), SchemaInfo())
+        assert step.output_parents() == {"d_weekend": ["d"]}
+
     def test_not_sparse(self) -> None:
         assert StepHoliday(["d"]).produces_sparse is False
 
     def test_required_pkgs_names_holidays(self) -> None:
         assert StepHoliday(["d"]).required_pkgs() == ["holidays"]
+
+    def test_required_pkgs_empty_when_no_holidays(self) -> None:
+        step = StepHoliday(["d"], holidays=[], rules={"weekend": _weekend_rule()})
+        assert step.required_pkgs() == []
 
     def test_missing_holidays_package_raises_friendly_error(
         self, monkeypatch: pytest.MonkeyPatch
