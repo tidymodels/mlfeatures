@@ -66,8 +66,6 @@ jobs:
       - name: Install dependencies
         # the examples extra too: test_doc_examples.py executes the user_guide/
         # pages, and the getting-started guide plots with seaborn
-        run: |
-          uv venv --python ${{ matrix.python-version }}
-          uv pip install -e ".[dev,examples]"
+        run: uv sync --locked --extra examples
       - name: Run tests with coverage
         run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
