@@ -37,6 +37,10 @@ else:
     class PlSelector(AbstractBackend):
         # ``isinstance(x, PlSelector)`` is True for a ``polars.selectors.Selector``
         # without importing polars unless it is already loaded (see _databackend).
+        # That public class only exists from polars 1.32, so runtime detection
+        # goes through ``shoez._frame._is_polars_selector`` (which uses the
+        # ``is_selector()`` function, public since polars 1.0); this class is the
+        # type-level name for annotations and the ``Selector`` union.
         _backends = [("polars.selectors", "Selector")]
 
 

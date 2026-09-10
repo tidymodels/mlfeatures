@@ -16,8 +16,9 @@ only at the sklearn boundary (the output of ``Recipe.transform``).
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import narwhals.stable.v2 as nw
 import numpy as np
@@ -115,26 +116,51 @@ def select(
         return frame.select([names])
     if isinstance(names, NwSelector):
         return frame.select(names)
-    if isinstance(names, PlSelector):
-        return frame.select(_expand_polars_selector(frame, names))
-    return frame.select(list(names))
+    if _is_polars_selector(names):
+        return frame.select(_expand_polars_selector(frame, cast("PlSelector", names)))
+    # Only a sequence of names is left; the cast is because the polars branch is
+    # a function check rather than an ``isinstance``, so it narrows nothing.
+    return frame.select(list(cast("Sequence[str]", names)))
+
+
+def _is_polars_selector(obj: object) -> bool:
+    """Return whether ``obj`` is a polars selector, without importing polars.
+
+    Checked against the selector class looked up by name rather than through
+    ``isinstance(obj, PlSelector)`` or ``polars.selectors.is_selector()``: the
+    public ``Selector`` class only exists from polars 1.32 (before that the
+    class was the private ``_selector_proxy_``), and ``is_selector()`` on those
+    older versions also requires a private ``_attrs`` attribute that a
+    ``copy.deepcopy`` drops, which is exactly what `Recipe.fit` does to each
+    step. Like the databackend hook, polars is consulted only if it is already
+    loaded, since a polars selector cannot exist otherwise.
+    """
+    cs = sys.modules.get("polars.selectors")
+    if cs is None:
+        return False
+    selector_cls = getattr(cs, "Selector", None) or getattr(cs, "_selector_proxy_")
+    return isinstance(obj, selector_cls)
 
 
 def _expand_polars_selector(frame: Frame, selector: PlSelector) -> list[str]:
     """Resolve a polars selector to concrete column names against ``frame``.
 
-    Polars selectors are not understood by narwhals, so the selector is expanded
-    against the frame's schema converted to a polars schema via
-    `narwhals.Schema.to_polars()`. This is pure name resolution that touches
-    no data and works for any backend (the schema is normalized by narwhals).
+    Polars selectors are not understood by narwhals, so the selector is applied
+    to an empty polars frame carrying the frame's schema (via
+    `narwhals.Schema.to_polars()`) and the resulting column names are taken.
+    This is pure name resolution that touches no data and works for any backend
+    (the schema is normalized by narwhals). An empty-frame ``select`` is used
+    instead of ``polars.selectors.expand_selector`` because, before polars 1.32,
+    the latter refuses a selector that has been through ``copy.deepcopy`` (see
+    `_is_polars_selector`), while ``select`` accepts it on every version.
     """
-    # Reached only when ``names`` is already a PlSelector instance, which the
-    # databackend hook matches only if polars is loaded — so polars is guaranteed
-    # importable here and this never raises. Routed through import_optional anyway
-    # so the package's sanctioned runtime-backend imports are uniform/greppable.
-    cs = import_optional("polars.selectors", purpose="to resolve a polars selector")
+    # Reached only when ``_is_polars_selector`` matched ``names``, which it does
+    # only if polars is loaded — so polars is guaranteed importable here and
+    # this never raises. Routed through import_optional anyway so the package's
+    # sanctioned runtime-backend imports are uniform/greppable.
+    pl = import_optional("polars", purpose="to resolve a polars selector")
 
-    return list(cs.expand_selector(frame.schema.to_polars(), selector))
+    return list(pl.DataFrame(schema=frame.schema.to_polars()).select(selector).columns)
 
 
 def drop(frame: Frame, names: str | Sequence[str]) -> Frame:

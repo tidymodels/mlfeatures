@@ -1,0 +1,78 @@
+name: Newest and oldest dependencies
+
+# CI installs exactly what uv.lock says (UV_LOCKED=1), so the locked jobs test
+# one point in the version ranges pyproject.toml declares. For a
+# dataframe-agnostic library both ends of those ranges are real signal: a new
+# narwhals or polars release that breaks shoez, and a declared floor that
+# shoez no longer actually supports. This workflow checks both ends on every
+# pull request and fails it like any other job (narwhals does the same with
+# its nightlies and minimum-versions jobs), so a break is seen and fixed by
+# whoever is already looking at the PR. The linter and type-checkers are
+# pinned exactly in the dev group, so the toolchain itself never moves here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  newest:
+    name: Newest versions (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Same ends of the supported range as the lint job in ci.yml.
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Throws the lockfile away, re-resolves every package to its newest
+      # allowed version, and prints what moved. Deliberately not UV_LOCKED.
+      - name: Resolve dependencies fresh
+        run: uv lock --upgrade
+      - name: mypy --strict
+        run: uv run mypy shoez extras
+      - name: pyright (strict)
+        run: uv run pyright
+      - name: Run tests
+        run: uv run pytest
+
+  oldest:
+    name: Oldest versions (Python 3.10)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # The oldest supported interpreter is the only one the floors
+          # (numpy 1.24, pandas 2.0, ...) ship wheels for.
+          python-version: "3.10"
+      # Two steps on purpose. `uv sync --resolution lowest-direct` would also
+      # drag the dev group down to its floors (syrupy 0.0.1, pytest-cov 0.6),
+      # so the test tooling comes from the lock and only the package's own
+      # runtime dependencies and extras are re-installed at their floors.
+      # `--upgrade` is what makes uv re-resolve: without it an installed
+      # numpy 2.x already satisfies `numpy>=1.24` and nothing is downgraded.
+      - name: Install test tooling from the lock
+        run: uv sync --locked
+      - name: Install runtime dependencies at their declared floors
+        run: uv pip install --upgrade --resolution lowest-direct ".[pyarrow,scipy,holidays]"
+      - name: Show resolved versions
+        run: uv pip freeze | grep -iE '^(numpy|pandas|polars|scikit-learn|narwhals|pyarrow|scipy|holidays)=='
+      # `--no-sync`, or `uv run` would put the locked versions back.
+      - name: Run tests
+        run: uv run --no-sync pytest
