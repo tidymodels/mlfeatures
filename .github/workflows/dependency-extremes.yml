@@ -46,7 +46,9 @@ jobs:
       - name: pyright (strict)
         run: uv run pyright
       - name: Run tests
-        run: uv run pytest
+        # --extra examples: test_doc_examples.py executes the user_guide/
+        # pages, and the getting-started guide plots with seaborn
+        run: uv run --extra examples pytest
 
   oldest:
     name: Oldest versions (Python 3.10)
@@ -70,7 +72,7 @@ jobs:
       - name: Install test tooling from the lock
         run: uv sync --locked
       - name: Install runtime dependencies at their declared floors
-        run: uv pip install --upgrade --resolution lowest-direct ".[pyarrow,scipy,holidays]"
+        run: uv pip install --upgrade --resolution lowest-direct ".[pyarrow,scipy,holidays,examples]"
       - name: Show resolved versions
         run: uv pip freeze | grep -iE '^(numpy|pandas|polars|scikit-learn|narwhals|pyarrow|scipy|holidays)=='
       # `--no-sync`, or `uv run` would put the locked versions back.
