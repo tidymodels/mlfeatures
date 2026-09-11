@@ -1,0 +1,11 @@
+---
+title: "Dropping columns"
+---
+
+Dropping columns removes model variables that might lead to underidentified models, or models that take a long time to fit.
+
+* Correlated variables - model may not fit otherwise
+* Near zero variance
+
+
+* Related idea: missing values screwing up models (more row / observation oriented).

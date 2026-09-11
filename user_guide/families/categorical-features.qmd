@@ -1,0 +1,21 @@
+---
+title: "Categorical features"
+---
+
+Steps that manage a categorical column's levels and turn them into numbers
+(the grouping follows [Feature Engineering A–Z](https://feaz-book.com/)). In
+the [eight-position ordering](../basics/four-stages-eight-steps.qmd) these fill
+[Missing: category levels](../four-stages/missing-category-levels.qmd) and
+[Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd).
+
+Three steps to know:
+
+- `StepDummy` — expand levels into drop-one indicator columns (`StepOneHot`
+  keeps all levels).
+- `StepUnknown` — give missing categorical values their own level before
+  encoding.
+- `StepOther` — collapse infrequent levels into a single ``"other"`` level;
+  merged on main ([#236](https://github.com/tidymodels/shoez/pull/236)) and
+  not yet in this build.
+
+*Stub — content to come.*

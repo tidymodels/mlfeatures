@@ -1,0 +1,106 @@
+---
+title: "Concrete + KNN: scale is the admission ticket"
+---
+
+A distance model without a shared scale lets the widest column own the metric. One-step recipe; ports 1:1 and runs in shoez today. Ported from [Tidy Modeling with R, ch. 15](https://www.tmwr.org/workflow-sets).
+
+**Compare with R:** [side-by-side R ↔ Python](sbs/tmwr14-r-vs-py.html){target="_blank"} · R original: test rmse 8.57 MPa.
+
+::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
+```
+THE MOST PORTABLE candidate: the recipe is one StepNormalize. First run
+(pandas version) confirmed: ran clean, test rmse 7.94 vs R's 8.57.
+
+PARITY NOTES:
+ - The leakage beat (averaging replicate mixtures BEFORE splitting) is
+   data-layer work in both languages: dplyr group_by/summarize -> polars
+   group_by/agg. Deliberately outside the recipe in both.
+ - Model mapping is approximate: kknn tunes neighbors/dist_power/weight_func
+   (kernel weights); KNeighborsRegressor's analogs are n_neighbors/p/weights
+   (only "uniform"/"distance") — same idea, coarser space.
+ - The book's poly/interact variant: StepPolynomial exists ✓ but the
+   all-pairs step_interact does not (GAP) — variant left commented, as in R.
+ - concrete exported from R on first run: data/concrete.csv.
+```
+*Docs version loads vendored parquet from `examples/data/`; the research
+originals export these datasets from R's modeldata at first run.*
+:::
+
+## Specify
+```{python}
+import numpy as np
+import polars as pl
+from sklearn.model_selection import GridSearchCV, KFold, train_test_split
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.pipeline import Pipeline
+
+from shoez import Recipe, RecipeTransformer, StepNormalize
+from shoez import Selectors as s
+
+# ── Data + the leakage beat (pre-recipe, matching the book)
+
+concrete = pl.read_parquet("data/concrete.parquet")
+# Replicate mixtures averaged BEFORE splitting so one mixture can't appear in
+# both train and test. 1,030 rows -> 992.
+ingredients = [c for c in concrete.columns if c != "compressive_strength"]
+concrete = (concrete.group_by(ingredients)
+                    .agg(pl.col("compressive_strength").mean())
+                    .sort(ingredients))  # group_by output is unordered —
+                                         # sort makes the split deterministic
+
+# ── Split (stratified by target quartile, mirroring initial_split)
+
+strata = (concrete["compressive_strength"]
+          .qcut(4, labels=["q1", "q2", "q3", "q4"]))
+concrete_train, concrete_test = train_test_split(
+    concrete, train_size=0.75, stratify=strata, random_state=1501
+)
+
+# ── Recipe (ports 1:1 — the whole story for KNN is the shared scale)
+
+normalized_rec = (
+    Recipe(data=concrete_train, target="compressive_strength")
+    .add(StepNormalize(s.features()))
+)
+
+# Variant (the book's response-surface recipe; the glmnet story, not KNN's):
+# poly_recipe = normalized_rec.add(StepPolynomial(s.features(), degree=2))
+#     # .add(StepInteract(s.features() * s.features()))   # 🧪 GAP: all-pairs
+
+# ── Model + workflow + tune
+
+pipe = Pipeline([
+    ("recipe", RecipeTransformer(normalized_rec)),
+    ("model", KNeighborsRegressor()),
+])
+
+param_grid = {
+    "model__n_neighbors": [4, 8, 12, 16],       # ~ neighbors = tune()
+    "model__weights": ["uniform", "distance"],  # ~ weight_func (coarser)
+    "model__p": [1, 2],                         # ~ dist_power
+}
+cv = KFold(n_splits=5, shuffle=True, random_state=1502)
+```
+## Fit
+```{python}
+X_train = concrete_train.drop("compressive_strength")
+y_train = concrete_train["compressive_strength"]
+search = GridSearchCV(pipe, param_grid, cv=cv,
+                      scoring="neg_root_mean_squared_error", refit=True)
+search.fit(X_train, y_train)
+fitted = normalized_rec.fit(concrete_train)   # the recipe alone
+```
+## Report
+```{python}
+print("--- best CV config ---")
+print(search.best_params_, f"cv rmse: {-search.best_score_:.2f}")
+print("\n--- transformed test head (z-scored ingredients) ---")
+print(fitted.transform(concrete_test).head())
+
+X_test = concrete_test.drop("compressive_strength")
+y_test = concrete_test["compressive_strength"]
+pred = search.predict(X_test)
+rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
+print(f"\ntest rmse: {rmse:.2f} MPa")
+# R run result for comparison: test rmse 8.57 MPa
+```

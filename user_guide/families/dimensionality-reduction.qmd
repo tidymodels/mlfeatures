@@ -1,0 +1,20 @@
+---
+title: "Dimensionality reduction"
+---
+
+Steps that consume many columns at once and emit a few informative ones (the
+grouping follows [Feature Engineering A–Z](https://feaz-book.com/)). In the
+[eight-position ordering](../basics/four-stages-eight-steps.qmd) these are
+[Multivariate transforms](../four-stages/multivariate-transforms.qmd), the
+whole of stage 4 — they run last, on the finished, scaled matrix.
+
+Three steps to know:
+
+- `StepPca` — project numeric columns onto principal components.
+- `StepClassDistance` — replace numeric columns with each sample's distance to
+  every class centroid; one of the few steps that uses the target.
+- Partial least squares, a supervised projection that picks components for
+  predicting the target — planned, see
+  [#213](https://github.com/tidymodels/shoez/issues/213).
+
+*Stub — content to come.*

@@ -1,0 +1,16 @@
+---
+title: "Composing steps"
+---
+
+* Steps operate on the output of the previous step.
+* There are some useful dynamics Emil mentioned.
+
+E.g.
+
+```python
+rec = (
+    Recipe(data=df, target="label", features=[...])
+    .add(StepDummy(s.nominal_features()))
+    .add(StepNormalize(s.has_source(step_type=StepDummy)))
+)
+```

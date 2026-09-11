@@ -1,0 +1,18 @@
+---
+title: "Numeric features"
+---
+
+Steps that reshape numeric columns, one column at a time (the grouping follows
+[Feature Engineering A–Z](https://feaz-book.com/)). In the
+[eight-position ordering](../basics/four-stages-eight-steps.qmd) these fill
+[Wrangle: transforms](../four-stages/wrangle-transforms.qmd) and
+[Model prep: normalize](../four-stages/model-prep-normalize.qmd).
+
+Three steps to know:
+
+- `StepNormalize` — center and scale to z-scores.
+- `StepPolynomial` — expand a column into polynomial basis features.
+- A log transform for skewed columns — planned, see
+  [#208](https://github.com/tidymodels/shoez/issues/208).
+
+*Stub — content to come.*

@@ -63,5 +63,9 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        # the examples extra too: test_doc_examples.py executes the user_guide/
+        # pages, and the getting-started guide plots with seaborn
+        run: uv sync --locked --extra examples
       - name: Run tests with coverage
         run: uv run pytest --cov --cov-report=term-missing --cov-report=xml

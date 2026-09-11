@@ -1,0 +1,44 @@
+---
+title: "Four stages, eight steps"
+format:
+  html:
+    mermaid-format: svg
+---
+
+{{< include ../_includes/workflow-diagram.qmd >}}
+
+Steps run in sequence, and the order is load-bearing. The recommended order
+comes from the R recipes package's
+[Ordering vignette](https://recipes.tidymodels.org/articles/Ordering.html):
+8 positions, grouping into 4 stages. Each position has its own page, with the
+shoez steps that fill it today:
+
+| # | Position | shoez steps |
+|---|---|---|
+| **Stage 1 · Handle missing values** | | |
+| 1 | [Missing: impute](../four-stages/missing-impute.qmd) | `StepImputeMean`, `StepImputeMedian`, `StepImputeMode` |
+| 2 | [Missing: category levels](../four-stages/missing-category-levels.qmd) | `StepUnknown` |
+| **Stage 2 · Wrangle** | | |
+| 3 | [Wrangle: transforms](../four-stages/wrangle-transforms.qmd) | *planned* |
+| 4 | [Wrangle: discretize](../four-stages/wrangle-discretize.qmd) | *none; rarely advisable* |
+| 5 | [Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd) | `StepDummy`, `StepOneHot` |
+| **Stage 3 · Model prep** | | |
+| 6 | [Model prep: interactions](../four-stages/model-prep-interactions.qmd) | `StepPolynomial` |
+| 7 | [Model prep: normalize](../four-stages/model-prep-normalize.qmd) | `StepNormalize` |
+| **Stage 4 · Multivariate transforms** | | |
+| 8 | [Multivariate transforms](../four-stages/multivariate-transforms.qmd) | `StepPca`, `StepClassDistance` |
+
+Each stage exists so the next one works: handle missing first — impute the
+numeric gaps and give missing categorical levels an explicit value — because
+every later step wants complete columns, and the guard levels must exist
+before the dummy step freezes its vocabulary; wrangle everything into numbers
+next; model prep after, so interactions can cross indicator columns with
+numerics
+and normalize catches the freshly created columns; multivariate transforms
+last, because they want the finished, scaled matrix.
+
+The ordering is deliberately silent on the filter steps (`StepDropZeroVariance`,
+`StepDropCorr`) — [dropping columns](dropping-columns.qmd) is not a stage. In
+practice filters run as two passes: after stage 1, to drop dead or redundant
+raw columns before effort is spent encoding and scaling them, and again after
+the dummy step, where a rare level can produce an all-zero indicator column.

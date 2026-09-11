@@ -130,7 +130,13 @@ def test_guide_examples_were_found() -> None:
 @pytest.mark.parametrize(
     "source", [c[1] for c in _GUIDE_CASES], ids=[c[0] for c in _GUIDE_CASES]
 )
-def test_guide_example_executes(source: str) -> None:
-    """Each user-guide page's ``{python}`` cells run without raising."""
+def test_guide_example_executes(source: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each user-guide page's ``{python}`` cells run without raising.
+
+    Runs with the page's directory as the working directory, matching how
+    quarto executes the cells, so pages may read sibling files (e.g. the
+    ``examples/data/`` parquets) by relative path.
+    """
+    monkeypatch.chdir(USER_GUIDE_DIR)
     namespace: dict[str, object] = {}
     exec(compile(source, "<guide-example>", "exec"), namespace)

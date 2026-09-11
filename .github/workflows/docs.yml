@@ -24,12 +24,29 @@ jobs:
       - name: Install package and dependencies
         run: |
           python -m pip install uv
-          uv sync --locked --group docs
+          # --extra examples: the executable examples/ pages import xgboost
+          # and pyarrow at docs build
+          uv sync --locked --group docs --extra examples
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
+      - name: Install chrome-headless-shell
+        # Two guide pages set `mermaid-format: svg`, which Quarto pre-renders
+        # through headless Chrome. With the runner's full Chrome that render
+        # hung indefinitely on most runs: Quarto waits only 3 seconds for the
+        # browser's debugging port and then blocks forever on the still-running
+        # process (quarto-cli#13704; upstream closed it by moving their own CI
+        # to chrome-headless-shell, which starts fast enough to make the window).
+        run: quarto install chrome-headless-shell --no-prompt
+
       - name: Build docs
+        # normal builds take ~4-5 min on the runner; the cap turns a render
+        # hang into a fast failure instead of a stuck job. The hang seen on
+        # 2026-08-13 and 2026-08-24 was the mermaid pre-render (see the
+        # chrome-headless-shell step above); if it recurs, flip this step
+        # back to the direct-quarto debug mode in git history (014a53c).
+        timeout-minutes: 15
         run: uv run great-docs build
 
       - name: Save docs artifact

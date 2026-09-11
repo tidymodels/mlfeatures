@@ -1,0 +1,5 @@
+---
+title: "Serializing recipes"
+---
+
+*Stub — content to come.*

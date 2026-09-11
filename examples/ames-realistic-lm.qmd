@@ -1,0 +1,111 @@
+---
+title: "Ames realistic: the canonical linear-model recipe"
+---
+
+The workhorse recipe TMwR grows step by motivated step. The runnable subset here trails the R metrics — the delta measures the not-yet-built steps. Ported from [Tidy Modeling with R, ch. 8](https://www.tmwr.org/recipes).
+
+**Compare with R:** [side-by-side R ↔ Python](sbs/tmwr03-r-vs-py.html){target="_blank"} · R original (full recipe): CV rmse 0.0791, test rsq 0.798.
+
+::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
+```
+THE BIGGEST-GAP PORT, deliberately: this is the example that best *sells*
+shoez's provenance selectors, and it cannot fully run until three steps land.
+
+PARITY NOTES:
+ - GAP: step_log -> pre-recipe polars (static, safe; outside replay boundary).
+ - GAP: step_other(Neighborhood, 0.01) -> StepOther is unbuilt (backlog
+   priority 3). Omitted — and the first run PROVED the cost: rare fold-level
+   'Landmark' nulled CV predictions (cross_val_score = nan). The gap breaks
+   CV, not just accuracy.
+ - GAP: step_interact -> StepInteract unbuilt (the has_source showcase);
+   target form shown commented in place.
+ - GAP: step_ns -> no spline steps. Omitted.
+ => The runnable subset (log + dummy + lm) trails the R metrics — that
+    delta is a *measurement of the gaps*.
+```
+*Docs version loads vendored parquet from `examples/data/`; the research
+originals export these datasets from R's modeldata at first run.*
+:::
+
+## Specify
+```{python}
+#| warning: false
+import numpy as np
+import polars as pl
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+
+from shoez import Recipe, RecipeTransformer, StepDummy
+from shoez import Selectors as s
+
+# ── Data + target transform (outside the recipe, per TMwR Ch. 5)
+
+ames = pl.read_parquet("data/ames.parquet")
+ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
+                    "Latitude", "Longitude", "Sale_Price"])
+ames = ames.with_columns(
+    pl.col("Sale_Price").log(base=10),
+    pl.col("Gr_Liv_Area").log(base=10),   # GAP workaround (step_log)
+)
+
+# ── Split (stratified 80/20 by target quartile)
+
+strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
+ames_train, ames_test = train_test_split(
+    ames, train_size=0.80, stratify=strata, random_state=502
+)
+
+# ── Recipe (the runnable subset of ames_rec; gaps marked in place)
+
+ames_rec = (
+    Recipe(data=ames_train, target="Sale_Price")
+    # .add(StepOther(s.col("Neighborhood"), threshold=0.01))          # 🧪 GAP
+    .add(StepDummy(s.nominal_features()))
+    # .add(StepInteract(s.col("Gr_Liv_Area") * s.starts_with("Bldg_Type_")))
+    #                                       # 🧪 GAP — the has_source showcase
+    # .add(StepSplineNatural(s.col("Latitude", "Longitude"), deg_free=20))
+    #                                       # 🧪 GAP — no spline steps yet
+)
+
+# ── Model + workflow
+
+lm_wflow = Pipeline([
+    ("recipe", RecipeTransformer(ames_rec)),
+    ("model", LinearRegression()),
+])
+```
+## Fit
+```{python}
+#| warning: false
+X_train = ames_train.drop("Sale_Price")
+y_train = ames_train["Sale_Price"]
+
+# Resampled performance (5-fold, mirroring fit_resamples):
+cv = KFold(n_splits=5, shuffle=True, random_state=1001)
+cv_rmse = -cross_val_score(lm_wflow, X_train, y_train, cv=cv,
+                           scoring="neg_root_mean_squared_error")
+print(f"--- 5-fold CV rmse: {cv_rmse.mean():.4f} (+/- {cv_rmse.std():.4f}) ---")
+# First run: nan — unseen fold-level ('Landmark') nulled predictions.
+# R avoids this precisely because step_other pools rare levels first.
+
+# Final fit on the full training set:
+lm_wflow.fit(X_train, y_train)
+fitted = ames_rec.fit(ames_train)
+```
+## Report
+```{python}
+print("\n--- transformed test head ---")
+print(fitted.transform(ames_test).head())
+
+# ── Holdout metrics
+
+X_test = ames_test.drop("Sale_Price")
+y_test = ames_test["Sale_Price"]
+pred = lm_wflow.predict(X_test)
+rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
+rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
+            .select(pl.corr("y", "pred")).item() ** 2)
+print(f"\nrmse: {rmse:.4f}   rsq: {rsq:.3f}")
+# R run (full recipe): test rmse 0.0791, rsq 0.798
+```

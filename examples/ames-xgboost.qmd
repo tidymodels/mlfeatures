@@ -1,0 +1,133 @@
+---
+title: "Ames + xgboost: the model flips the recipe"
+---
+
+Same data and features as the realistic linear model, entirely different recipe — for boosting, preprocessing shrinks to encode-and-guard. Ported from [Tidy Modeling with R, ch. 13](https://www.tmwr.org/grid-search).
+
+**Compare with R:** [side-by-side R ↔ Python](sbs/tmwr11-r-vs-py.html){target="_blank"} · R original: test rmse 0.0730.
+
+::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
+```
+Mirrors the R script section-for-section: same data, same 6 features, same
+recipe shape (novel -> one-hot -> zv), same tuned params (trees, learn_rate)
+over the same 2x3 grid on 5-fold CV. sklearn Pipeline + GridSearchCV stand in
+for workflow() + tune_grid(), via shoez's RecipeTransformer bridge.
+
+PARITY NOTES (differences from example.R that are structural, not bugs):
+ - GAP (the reason this example was chosen): R's step_novel() has no shoez
+   analog yet — StepNovel is designed-but-unbuilt, and StepUnknown fills only
+   *nulls*, not unseen levels. This port simply omits the guard; shoez's
+   StepOneHot/StepDummy warn and emit nulls for unseen levels at transform
+   time instead of encoding a "new" bucket. When StepNovel lands, add
+   .add(StepNovel(s.nominal_features())) ahead of the one-hot.
+ - Seeds cannot match across languages: same design (stratified 80/20 by
+   target quartile; 5-fold shuffle), different rows.
+ - xgboost defaults differ slightly between the R engine and XGBRegressor;
+   metric magnitudes land near the R run (test rmse 0.0730), not identically.
+ - Ames exported from R on first run: data/ames.csv (null_values="NA" —
+   polars does not auto-parse R's "NA" strings).
+```
+*Docs version loads vendored parquet from `examples/data/`; the research
+originals export these datasets from R's modeldata at first run.*
+:::
+
+## Specify
+```{python}
+import numpy as np
+import polars as pl
+from sklearn.model_selection import GridSearchCV, KFold, train_test_split
+from sklearn.pipeline import Pipeline
+from xgboost import XGBRegressor
+
+from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
+from shoez import Selectors as s
+
+# ── Data + target transform (outside the recipe, per TMwR Ch. 5)
+
+FEATURES = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
+              "Latitude", "Longitude"]
+
+ames = pl.read_parquet("data/ames.parquet")
+ames = ames.select(FEATURES + ["Sale_Price"])
+ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
+
+# ── Split (stratified 80/20 by target quartile, mirroring initial_split)
+
+strata = ames["Sale_Price"].qcut(4, labels=["q1", "q2", "q3", "q4"])
+ames_train, ames_test = train_test_split(
+    ames, train_size=0.80, stratify=strata, random_state=502
+)
+
+# ── Recipe (shoez port of the usemodels::use_xgboost() recipe)
+
+# R:  step_novel(all_nominal_predictors()) %>%        <- GAP, omitted (see header)
+#     step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
+#     step_zv(all_predictors())
+xgboost_recipe = (
+    Recipe(data=ames_train, target="Sale_Price")
+    .add(StepOneHot(s.nominal_features()))
+    .add(StepDropZeroVariance(s.features()))
+)
+
+# ── Model spec + workflow (sklearn Pipeline via RecipeTransformer)
+
+pipe = Pipeline([
+    ("recipe", RecipeTransformer(xgboost_recipe)),
+    ("model", XGBRegressor(objective="reg:squarederror", random_state=69305)),
+])
+
+# ── Small regular grid: 2 x 3 = 6 candidates (as in example.R)
+
+param_grid = {
+    "model__n_estimators": [500, 1000],        # trees
+    "model__learning_rate": [0.01, 0.05, 0.1], # learn_rate
+}
+cv = KFold(n_splits=5, shuffle=True, random_state=1001)
+```
+## Fit
+```{python}
+#| warning: false
+X_train = ames_train.drop("Sale_Price")
+y_train = ames_train["Sale_Price"]
+
+# CV folds warn: rare Neighborhood levels (e.g. 'Landmark') land in held-out
+# folds unseen at fit; the one-hot emits nulls for them, and xgboost handles
+# nulls natively — exactly why boosting's recipe can skip the novel guard.
+search = GridSearchCV(
+    pipe, param_grid, cv=cv,
+    scoring="neg_root_mean_squared_error",
+    refit=True, n_jobs=1,
+)
+search.fit(X_train, y_train)
+
+fitted = xgboost_recipe.fit(ames_train)   # the recipe alone
+```
+## Report
+```{python}
+results = (
+    pl.DataFrame({
+        "trees": search.cv_results_["param_model__n_estimators"],
+        "learn_rate": search.cv_results_["param_model__learning_rate"],
+        "rmse": -search.cv_results_["mean_test_score"],
+        "std": search.cv_results_["std_test_score"],
+    })
+    .sort("rmse")
+)
+print("--- top tuning results (5-fold CV rmse, log10 units) ---")
+print(results.head())
+
+X_test = ames_test.drop("Sale_Price")
+y_test = ames_test["Sale_Price"]
+pred = search.predict(X_test)
+rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
+rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
+            .select(pl.corr("y", "pred")).item() ** 2)
+print(f"\n--- test metrics (best: {search.best_params_}) ---")
+print(f"rmse: {rmse:.4f}   rsq: {rsq:.3f}")
+
+# Baked head: proof the recipe works standalone, sans sklearn.
+print("\n--- transformed training head (shoez fit/transform, no pipeline) ---")
+print(fitted.transform(ames_train).head())
+print("\n--- lineage: columns the one-hot step produced ---")
+print(fitted.schema.columns_from_source("one_hot")[:8])
+```

@@ -24,3 +24,7 @@ htmlcov/
 # great-docs (ephemeral build output)
 great-docs/
 .quarto/
+# freeze cache: only examples/ results are committed (they're the slow,
+# deliberately-cached pages); reference + user-guide re-execute every build
+_freeze/*
+!_freeze/examples

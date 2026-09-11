@@ -1,0 +1,15 @@
+---
+title: "Ensure robust to new data"
+---
+
+* Discuss how training data is used to fit a pre-processing models that transform test data.
+* Common failure modes when transforming test data.
+
+
+* Things Recipes does for you
+  - Apply normalization fit from training to test
+  - Data leakage in general
+
+* Things you should do w/ Recipes:
+  - Missing values (impute)
+  - Rare / Missing category levels
