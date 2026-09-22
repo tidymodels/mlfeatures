@@ -10,10 +10,22 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Install exactly what uv.lock says, and fail if it is stale relative to
+  # pyproject.toml. Locally the same commands run without this, so a
+  # dependency edit just refreshes the lock instead of erroring.
+  UV_LOCKED: "1"
+
 jobs:
   lint:
-    name: Lint & type-check
+    name: Lint & type-check (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest and newest supported Python: mypy and pyright verdicts can
+        # differ per interpreter version, so check both ends of the range.
+        python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,10 +34,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Install dependencies
-        run: |
-          uv venv --python 3.12
-          uv pip install -e ".[dev]"
+          python-version: ${{ matrix.python-version }}
       - name: Ruff (lint)
         run: uv run ruff check .
       - name: Ruff (format)
@@ -53,11 +62,10 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         # the examples extra too: test_doc_examples.py executes the user_guide/
         # pages, and the getting-started guide plots with seaborn
-        run: |
-          uv venv --python ${{ matrix.python-version }}
-          uv pip install -e ".[dev,examples]"
+        run: uv sync --locked --extra examples
       - name: Run tests with coverage
         run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
