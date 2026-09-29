@@ -28,8 +28,8 @@ PARITY NOTES:
  - roc_auc event level pinned: Status maps to bad=1 (R scores "bad", the
    first factor level).
 ```
-*Docs version loads vendored parquet from `examples/data/`; the research
-originals export these datasets from R's modeldata at first run.*
+*Docs version loads the dataset from `shoez.data`; the research originals
+export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
@@ -47,7 +47,7 @@ from shoez import Selectors as s
 
 # ── Data + split
 
-credit = pl.read_parquet("data/credit.parquet")  # 4,454 x 14, NAs
+from shoez.data import credit  # 4,454 x 14, NAs
 credit = credit.with_columns(
     (pl.col("Status") == "bad").cast(pl.Int8).alias("Status")  # event = bad
 )

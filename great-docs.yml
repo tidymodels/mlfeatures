@@ -278,6 +278,15 @@ reference:
       - NUMERIC_DTYPES
       - AcceptedDtypes
 
+  - title: Datasets
+    desc: >-
+      Example datasets bundled with the package, loaded on access as polars
+      frames (`from shoez.data import credit`). Used throughout the user
+      guide and the examples.
+    contents:
+      - name: data
+        members: true
+
   - title: Developing
     desc: >-
       The abstract Step base class and its lifecycle methods, for authoring new

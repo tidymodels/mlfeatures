@@ -2,30 +2,136 @@
 title: "Selectors and roles"
 ---
 
-
 Recipe steps operate on columns of data, which are specified using Polars selectors.
 While Polars selectors can specify pieces like all numeric columns (`cs.numeric()`),
 they can't target modelling pieces like all "feature" columns.
 shoez enables this by adding Roles, modelling specific labels for columns and selectors to target them.
 
+::: {.callout-note collapse="true" title="Key points"}
+- A step accepts a column name, a list of names, a polars or narwhals
+  selector, or a shoez selector from `Selectors`, imported as `s`.
+- shoez selectors choose by name, type, role, or the step that produced a
+  column, and compose with `&`, `|`, `~`, and `-`.
+- `Recipe(..., target="col")` gives a column the `target` role, which keeps it
+  out of feature selectors like `s.numeric_features()`.
+- `Recipe.summary()` lists every column with its dtype, roles, and the step
+  that produced it.
+- Every non-target column is a feature by default; `features=` names them
+  explicitly, and `case_weights` columns are never features.
+- `set_roles()` attaches custom roles, and `s.has_role()` selects by them.
+:::
+
+## Setup
+
+The examples use two datasets from `shoez.data`: the credit data, whose
+target is a string, and a small Ames housing subset, whose target is
+numeric.
+
+```{python}
+import polars as pl
+import polars.selectors as cs
+
+from shoez import Recipe, StepDummy, StepImputeMedian, StepNormalize
+from shoez import Selectors as s
+from shoez.data import ames_mini, credit
+```
+
 ## Selector basics
 
-- polars.selectors as cs example
-- shoez.Selectors example
+Pass a polars selector, or a shoez selector from `s`, wherever a step takes
+columns. shoez selectors cover the same name and type checks
+(`s.numeric()`, `s.starts_with()`, `s.col()`) and compose with set
+operators, so "every numeric column except `Price`" is one expression.
+
+```{python}
+recipe = (
+    Recipe(data=credit, target="Status")
+    .add(StepImputeMedian(cs.numeric()))  # polars selector
+    .add(StepNormalize(s.numeric() - s.col("Price")))  # shoez selector
+)
+fitted = recipe.fit(credit)
+fitted
+```
+
+A selector is resolved when the recipe is fitted, against the columns that
+exist at that point in the pipeline. That is why the fitted recipe lists
+concrete names, why the same selector works on any backend, and why a later
+step can pick up columns an earlier step created. The full set is on the
+`Selectors` reference page.
 
 ## Roles: features and targets
 
-* Roles add a new dimension for selection.
-  - "feature"
-  - "target"
-  - "case_weights" (doesn't matter yet)
+Use `Recipe(..., target="col")` to give a column the `target` role, which
+excludes it from the shoez feature selectors such as `s.numeric_features()`.
+A polars selector like `cs.numeric()` knows nothing about roles, so it
+includes the target:
 
+```{python}
+recipe = (
+    Recipe(data=ames_mini, target="Sale_Price")
+    .add(StepNormalize(s.numeric_features()))  # excludes target
+    .add(StepNormalize(cs.numeric()))  # includes target
+)
+fitted = recipe.fit(ames_mini)
+fitted
+```
+
+`s.numeric_features()` is simply `s.numeric()` restricted to the `feature`
+role. The `_features` variants exist for each type (`s.nominal_features()`,
+`s.date_features()`, and so on), and `s.features()` and `s.targets()` select
+by role alone.
+
+## Roles: specifying features
+
+Every column that is not the target is a feature by default, so a feature
+selector sees all of them. Pass `features=` to name the features yourself:
+the other columns then carry no role, so selectors ignore them, and
+`transform()` passes them through unchanged.
+
+```{python}
+recipe = Recipe(
+    data=ames_mini,
+    target="Sale_Price",
+    features=["Gr_Liv_Area", "Year_Built", "Neighborhood"],
+).add(StepNormalize(s.numeric_features()))
+fitted = recipe.fit(ames_mini)
+fitted
+```
+
+The default is applied when the recipe is fitted, which is why an untrained
+recipe with only a target reports just that target. One standard role is
+never a feature: a column declared `case_weights=` holds per-sample weights
+and is left out of every feature selector.
 
 ## Displaying role information
 
-- Equivalent of glimpse showing roles
+`Recipe.summary()` lists one row per column with its dtype, its roles, and
+the step that produced it, so after a dummy step the indicator columns show
+up as features whose source is `dummy`:
+
+```{python}
+recipe = (
+    Recipe(data=ames_mini, target="Sale_Price")
+    .add(StepDummy(s.nominal_features()))
+    .add(StepNormalize(s.numeric_features()))
+)
+fitted = recipe.fit(ames_mini)
+fitted.summary()
+```
 
 ## Custom roles
 
-- https://recipes.tidymodels.org/articles/Roles.html?q=role#role-inheritance
-- (may not be relevant yet)
+`set_roles(name=[...])` attaches any custom role, a column can carry several
+roles at once, and `s.has_role()` selects by one. Tagging `Latitude` and
+`Longitude` as `geo` keeps them out of normalization while they stay
+features:
+
+```{python}
+recipe = (
+    Recipe(data=ames_mini, target="Sale_Price")
+    .set_roles(geo=["Latitude", "Longitude"])
+    .add(StepNormalize(s.numeric_features() - s.has_role("geo")))
+)
+fitted = recipe.fit(ames_mini)
+fitted.summary().filter(pl.col("roles").str.contains("geo"))
+```

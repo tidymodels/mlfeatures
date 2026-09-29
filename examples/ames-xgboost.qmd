@@ -27,8 +27,8 @@ PARITY NOTES (differences from example.R that are structural, not bugs):
  - Ames exported from R on first run: data/ames.csv (null_values="NA" —
    polars does not auto-parse R's "NA" strings).
 ```
-*Docs version loads vendored parquet from `examples/data/`; the research
-originals export these datasets from R's modeldata at first run.*
+*Docs version loads the dataset from `shoez.data`; the research originals
+export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
@@ -47,7 +47,7 @@ from shoez import Selectors as s
 FEATURES = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
               "Latitude", "Longitude"]
 
-ames = pl.read_parquet("data/ames.parquet")
+from shoez.data import ames
 ames = ames.select(FEATURES + ["Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
 

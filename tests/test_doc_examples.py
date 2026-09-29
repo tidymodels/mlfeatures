@@ -133,9 +133,9 @@ def test_guide_examples_were_found() -> None:
 def test_guide_example_executes(source: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Each user-guide page's ``{python}`` cells run without raising.
 
-    Runs with the page's directory as the working directory, matching how
-    quarto executes the cells, so pages may read sibling files (e.g. the
-    ``examples/data/`` parquets) by relative path.
+    Runs with ``user_guide/`` as the working directory, matching how quarto
+    executes the cells, so a page may still read a sibling file by relative
+    path. Datasets themselves come from ``shoez.data``, which needs no path.
     """
     monkeypatch.chdir(USER_GUIDE_DIR)
     namespace: dict[str, object] = {}

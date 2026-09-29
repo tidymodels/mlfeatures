@@ -62,6 +62,8 @@ uv run great-docs preview    # build and serve at localhost:3000
 
 Write docstring `Examples` as executable ```` ```{python} ```` cells, never `>>>` doctest blocks (great-docs runs the cells and embeds their real output; `>>>` blocks render verbatim and drift silently). See `shoez/schema.py` for the pattern. Those cells are executed on every run of the test suite by [`tests/test_doc_examples.py`](tests/test_doc_examples.py), which discovers each `{python}` cell and asserts it runs without raising, so a broken example fails a normal PR check rather than only the `main` docs deploy. The same test covers the cells in the `user_guide/` pages.
 
+To add a bundled dataset, drop its parquet file into `shoez/data/`, then add the annotated name plus its docstring to [`shoez/data/__init__.py`](shoez/data/__init__.py) and the name to that module's `__all__`. Add a matching row to `EXPECTED_SHAPES` in [`tests/test_data.py`](tests/test_data.py) so the shape is pinned. `great-docs.yml` needs no edit for this: the `Datasets` section already lists the module with `members: true`, so a new annotated name is picked up automatically.
+
 ### Vocabulary
 
 shoez follows scikit-learn's vocabulary, not R `recipes`', wherever the two disagree. The full translation table lives in [`user_guide/vocabulary.qmd`](user_guide/vocabulary.qmd); the rules that come up most:
@@ -104,6 +106,7 @@ A step's class docstring is its reference page, so it is written for someone usi
 These conventions apply to every example we write: docstring `Examples` cells, [`README.qmd`](README.qmd), and the snippets in `design/`.
 
 - **Import selectors as `s`**: `from shoez import Selectors as s`, then `s.numeric_features()`. This is the house style everywhere, and it keeps the shoez namespace clear of `cs`, the conventional alias for `polars.selectors`. Prose cross-references to the API still use the real name (`Selectors.wrap`).
+- **Load data through `shoez.data`**, never by file path: `from shoez.data import credit`. The datasets ship with the package, so a cell copied out of the docs runs anywhere shoez is installed, and a page never depends on its own directory.
 - **Select columns with selectors, not literal names.** Pass `s.numeric_features()` rather than a hardcoded list like `["a", "b", "c"]`; the selector says what the step is for, and the example keeps working when the frame changes.
 - **Build recipes by chaining `.add()`** rather than `Recipe(steps=[...])`, binding the recipe to a name and fitting on the next line. A single step stays on one line (`recipe = Recipe().add(StepNormalize(s.numeric_features()))`); a step's own docstring needs only that step. In overview examples (the README, `Recipe`) show at least two steps, one per line inside a parenthesized expression, so the chained shape is the thing being demonstrated:
 

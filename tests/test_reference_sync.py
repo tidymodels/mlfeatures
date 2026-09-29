@@ -22,6 +22,11 @@ GREAT_DOCS_YML = Path(__file__).resolve().parent.parent / "great-docs.yml"
 # ``__version__`` is a module attribute, not an API object with a page.
 _NOT_DOCUMENTED = {"__version__"}
 
+# Submodules documented on their own reference page. They are reached as
+# ``shoez.<name>`` and are deliberately not in ``shoez.__all__`` (which is the
+# step-authoring API), so the reverse-direction check must allow them.
+_SUBMODULES = {"data"}
+
 
 def _documented_names() -> set[str]:
     """Collect every top-level name referenced in ``great-docs.yml``.
@@ -62,7 +67,7 @@ def test_no_reference_page_for_a_deleted_export() -> None:
     ``reference:`` entry that only surfaces as a docs-build failure on ``main``.
     """
     documented = _documented_names()
-    extra = documented - set(shoez.__all__)
+    extra = documented - set(shoez.__all__) - _SUBMODULES
     assert not extra, (
         f"great-docs.yml documents names that are not in shoez.__all__: "
         f"{sorted(extra)}. Remove the entry, or re-export the name."
@@ -98,4 +103,11 @@ def test_step_authoring_methods_are_all_documented() -> None:
         f"public Step methods missing from the `Developing` section of "
         f"great-docs.yml: {sorted(missing)}. A plugin author needs each one; "
         f"add a `Step.<name>` row."
+    )
+
+
+def test_data_submodule_has_a_reference_page() -> None:
+    """``shoez.data`` is not in ``__all__``, so the forward check skips it."""
+    assert "data" in _documented_names(), (
+        "add a `Datasets` section to great-docs.yml listing `data`"
     )

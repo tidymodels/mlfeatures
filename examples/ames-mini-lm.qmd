@@ -20,8 +20,8 @@ PARITY NOTES:
    polars gotcha: null_values="NA" is required — polars does not auto-parse
    R's "NA" strings as nulls (pandas does).
 ```
-*Docs version loads vendored parquet from `examples/data/`; the research
-originals export these datasets from R's modeldata at first run.*
+*Docs version loads the dataset from `shoez.data`; the research originals
+export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
@@ -37,7 +37,7 @@ from shoez import Selectors as s
 
 # ── Data + target transform (outside the recipe, per TMwR Ch. 5)
 
-ames = pl.read_parquet("data/ames.parquet")
+from shoez.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Sale_Price"])
 ames = ames.with_columns(

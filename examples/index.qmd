@@ -31,7 +31,10 @@ uv sync --extra examples
 uv run quarto render examples   # or: great-docs build
 ```
 
-Datasets are vendored under `examples/data/` as parquet (exported from R's
-[modeldata](https://modeldata.tidymodels.org/) package: `ames`, `concrete`,
-`credit_data`, and the dry-beans data from Koklu & Ozkan via the
-[beans](https://github.com/tidymodels/beans) package).
+Datasets ship with the package and load from `shoez.data`
+(`from shoez.data import ames`). They were exported from R's
+[modeldata](https://modeldata.tidymodels.org/) package (`ames`, `concrete`,
+`credit_data`) and the dry-beans data from Koklu & Ozkan via the
+[beans](https://github.com/tidymodels/beans) package; see the
+[`shoez.data`](../reference/data.qmd) reference page for each dataset's
+shape, target, and source.

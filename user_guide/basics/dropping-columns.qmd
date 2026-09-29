@@ -3,9 +3,70 @@ title: "Dropping columns"
 ---
 
 Dropping columns removes model variables that might lead to underidentified models, or models that take a long time to fit.
+shoez has three filter steps for it: one for correlated columns and two for
+columns with little or no variance.
 
+::: {.callout-note collapse="true" title="Key points"}
 * Correlated variables - model may not fit otherwise
 * Near zero variance
+* Filters are not a stage of the [eight-step order](four-stages-eight-steps.qmd);
+  they run after stage 1 and again after the dummy step.
+:::
 
+## Setup
 
-* Related idea: missing values screwing up models (more row / observation oriented).
+```{python}
+from shoez import Recipe, StepDropCorr, StepDropNearZeroVariance, StepDropZeroVariance
+from shoez import Selectors as s
+from shoez.data import ames_mini, beans
+```
+
+## Drop one of each highly correlated pair
+
+`StepDropCorr(columns, threshold=...)` drops one column from each pair whose
+correlation exceeds the threshold, keeping the other. In the Ames subset,
+`Garage_Cars` and `Garage_Area` say nearly the same thing (correlation 0.89),
+so one of them goes:
+
+```{python}
+recipe = Recipe(data=ames_mini, target="Sale_Price").add(
+    StepDropCorr(s.numeric_features(), threshold=0.8)
+)
+fitted = recipe.fit(ames_mini)
+fitted.transform(ames_mini).columns
+```
+
+The default threshold is 0.9. The dry beans data shows how much a
+correlated set can collapse: its 16 shape measurements lose 9 of their
+number.
+
+```{python}
+recipe = Recipe(data=beans, target="class").add(StepDropCorr(s.numeric_features()))
+fitted = recipe.fit(beans)
+fitted.transform(beans).columns
+```
+
+## Drop columns with little or no variance
+
+`StepDropNearZeroVariance(columns)` drops columns that are nearly constant,
+which a model can only overfit to. `Street` is the case here: 12 of 2,930
+houses are on a gravel road.
+
+```{python}
+recipe = Recipe(data=ames_mini, target="Sale_Price").add(
+    StepDropNearZeroVariance(s.features())
+)
+fitted = recipe.fit(ames_mini)
+fitted.transform(ames_mini).columns
+```
+
+`StepDropZeroVariance` is the strict version: it drops only columns that are
+completely constant or all missing. Its usual place is right after a dummy
+step, where a level that is present in the schema but absent from the
+training rows becomes an all-zero indicator column.
+
+## Missing values are a row problem
+
+Filters remove columns. Rows with missing values are a different problem,
+handled by imputation rather than removal, and they are covered on
+[Ensure robust to new data](ensure-robust-to-new-data.qmd).
