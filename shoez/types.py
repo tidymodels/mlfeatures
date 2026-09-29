@@ -21,6 +21,7 @@ from ._databackend import AbstractBackend
 if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
+    from polars import Expr as PlExpr
     from polars.selectors import Selector as PlSelector
 
     from shoez.schema import Schema
@@ -38,10 +39,15 @@ else:
         # ``isinstance(x, PlSelector)`` is True for a ``polars.selectors.Selector``
         # without importing polars unless it is already loaded (see _databackend).
         # That public class only exists from polars 1.32, so runtime detection
-        # goes through ``shoez._frame._is_polars_selector`` (which uses the
-        # ``is_selector()`` function, public since polars 1.0); this class is the
-        # type-level name for annotations and the ``Selector`` union.
+        # goes through ``shoez._frame._is_polars_expr`` (a selector is an
+        # ``Expr`` on every version); this class is the type-level name for
+        # annotations and the ``Selector`` union.
         _backends = [("polars.selectors", "Selector")]
+
+    class PlExpr(AbstractBackend):
+        # A polars expression; accepted as a selector when it is a plain column
+        # selection such as ``polars.col("a")``.
+        _backends = [("polars", "Expr")]
 
 
 #: The internal frame type that flows between steps. A backend-agnostic narwhals
@@ -53,16 +59,17 @@ Frame: TypeAlias = nw.DataFrame[Any]
 #: explicit list of names, a shoez selector such as
 #: ``Selectors.numeric_features()`` (see `Selectors` for the full set), or a
 #: narwhals or polars selector (``narwhals.selectors.numeric()``,
-#: ``polars.selectors.numeric()``). Any selector is resolved against the frame's
-#: schema at fit time, so the same selector works on any backend.
+#: ``polars.selectors.numeric()``). A polars column selection such as
+#: ``polars.col("a")`` is accepted too. Any selector is resolved against the
+#: frame's schema at fit time, so the same selector works on any backend.
 Selector: TypeAlias = Union[
-    str, Sequence[str], NwSelector, "PlSelector", "ShoezSelector"
+    str, Sequence[str], NwSelector, "PlSelector", "PlExpr", "ShoezSelector"
 ]
 
 # Listed so the selector aliases (``NwSelector`` is a renamed import; ``PlSelector``
-# is a conditional import under TYPE_CHECKING) count as explicit re-exports for
-# strict type-checkers; the other names are module-level definitions and
-# re-exportable regardless.
+# and ``PlExpr`` are conditional imports under TYPE_CHECKING) count as explicit
+# re-exports for strict type-checkers; the other names are module-level
+# definitions and re-exportable regardless.
 __all__ = [
     "ANY_DTYPE",
     "NUMERIC_DTYPES",
@@ -72,6 +79,7 @@ __all__ = [
     "Frame",
     "Mode",
     "NwSelector",
+    "PlExpr",
     "PlSelector",
     "SchemaInfo",
     "Selector",

@@ -25,7 +25,7 @@ import numpy as np
 
 from shoez._dependencies import import_optional
 from shoez.selectors import ShoezSelector
-from shoez.types import DataFrame, Frame, NwSelector, PlSelector, Roles, Selector
+from shoez.types import DataFrame, Frame, NwSelector, PlExpr, Roles, Selector
 
 if TYPE_CHECKING:
     from shoez.schema import Schema
@@ -103,8 +103,9 @@ def select(
 
     ``names`` may be a single column name, a sequence of names (kept in the
     given order), a narwhals selector (e.g. ``narwhals.selectors.numeric()``),
-    a polars selector (``polars.selectors``), or a `ShoezSelector`.
-    A polars selector is resolved against the frame's schema, so it works
+    a polars selector (``polars.selectors``) or column-selection expression
+    (``polars.col("a")``), or a `ShoezSelector`. A polars selector or
+    expression is resolved against the frame's schema, so it works
     regardless of the frame's backend. A ``ShoezSelector`` additionally uses
     ``roles`` to filter by role, and — for provenance selectors — the live
     lineage DAG ``schema`` and id→step map ``steps`` when the recipe supplies
@@ -116,51 +117,60 @@ def select(
         return frame.select([names])
     if isinstance(names, NwSelector):
         return frame.select(names)
-    if _is_polars_selector(names):
-        return frame.select(_expand_polars_selector(frame, cast("PlSelector", names)))
+    if _is_polars_expr(names):
+        return frame.select(_expand_polars_expr(frame, cast("PlExpr", names)))
     # Only a sequence of names is left; the cast is because the polars branch is
     # a function check rather than an ``isinstance``, so it narrows nothing.
     return frame.select(list(cast("Sequence[str]", names)))
 
 
-def _is_polars_selector(obj: object) -> bool:
-    """Return whether ``obj`` is a polars selector, without importing polars.
+def _is_polars_expr(obj: object) -> bool:
+    """Return whether ``obj`` is a polars expression, without importing polars.
 
-    Checked against the selector class looked up by name rather than through
-    ``isinstance(obj, PlSelector)`` or ``polars.selectors.is_selector()``: the
-    public ``Selector`` class only exists from polars 1.32 (before that the
-    class was the private ``_selector_proxy_``), and ``is_selector()`` on those
-    older versions also requires a private ``_attrs`` attribute that a
-    ``copy.deepcopy`` drops, which is exactly what `Recipe.fit` does to each
-    step. Like the databackend hook, polars is consulted only if it is already
-    loaded, since a polars selector cannot exist otherwise.
+    This is the switch into polars handling: a polars selector is an ``Expr``
+    subclass on every supported version, so one check covers both selectors
+    (``polars.selectors.numeric()``) and plain column selections
+    (``polars.col("a")``). Whether the expression actually *is* a column
+    selection is decided by `_expand_polars_expr`. Like the databackend hook,
+    polars is consulted only if it is already loaded, since a polars expression
+    cannot exist otherwise.
     """
-    cs = sys.modules.get("polars.selectors")
-    if cs is None:
+    pl = sys.modules.get("polars")
+    if pl is None:
         return False
-    selector_cls = getattr(cs, "Selector", None) or getattr(cs, "_selector_proxy_")
-    return isinstance(obj, selector_cls)
+    return isinstance(obj, pl.Expr)
 
 
-def _expand_polars_selector(frame: Frame, selector: PlSelector) -> list[str]:
-    """Resolve a polars selector to concrete column names against ``frame``.
+def _expand_polars_expr(frame: Frame, expr: PlExpr) -> list[str]:
+    """Resolve a polars selector or column selection to names against ``frame``.
 
-    Polars selectors are not understood by narwhals, so the selector is applied
-    to an empty polars frame carrying the frame's schema (via
-    `narwhals.Schema.to_polars()`) and the resulting column names are taken.
-    This is pure name resolution that touches no data and works for any backend
-    (the schema is normalized by narwhals). An empty-frame ``select`` is used
-    instead of ``polars.selectors.expand_selector`` because, before polars 1.32,
-    the latter refuses a selector that has been through ``copy.deepcopy`` (see
-    `_is_polars_selector`), while ``select`` accepts it on every version.
+    Polars expressions are not understood by narwhals, so the expression is
+    expanded by ``polars.selectors.expand_selector`` against the frame's schema
+    (via `narwhals.Schema.to_polars()`). This is pure name resolution that
+    touches no data and works for any backend (the schema is normalized by
+    narwhals).
+
+    ``strict=False`` is what admits a plain column selection such as
+    ``polars.col("a")`` alongside true selectors; polars still refuses an
+    expression that computes or renames (``polars.col("a") + 1``,
+    ``.alias()``), which has no meaning as a selection. It is also what makes
+    this safe for a selector that has been through ``copy.deepcopy``, as every
+    step's is in `Recipe.fit`: before polars 1.32 the strict check relies on a
+    private attribute that a deep copy drops.
     """
-    # Reached only when ``_is_polars_selector`` matched ``names``, which it does
+    # Reached only when ``_is_polars_expr`` matched ``names``, which it does
     # only if polars is loaded — so polars is guaranteed importable here and
     # this never raises. Routed through import_optional anyway so the package's
     # sanctioned runtime-backend imports are uniform/greppable.
-    pl = import_optional("polars", purpose="to resolve a polars selector")
+    cs = import_optional("polars.selectors", purpose="to resolve a polars selector")
 
-    return list(pl.DataFrame(schema=frame.schema.to_polars()).select(selector).columns)
+    try:
+        return list(cs.expand_selector(frame.schema.to_polars(), expr, strict=False))
+    except TypeError as exc:
+        raise TypeError(
+            f"polars expression {str(expr)!r} is not a column selection; "
+            "pass a selection such as pl.col('a') or a polars selector"
+        ) from exc
 
 
 def drop(frame: Frame, names: str | Sequence[str]) -> Frame:
