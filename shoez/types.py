@@ -39,14 +39,16 @@ else:
         # ``isinstance(x, PlSelector)`` is True for a ``polars.selectors.Selector``
         # without importing polars unless it is already loaded (see _databackend).
         # That public class only exists from polars 1.32, so runtime detection
-        # goes through ``shoez._frame._is_polars_expr`` (a selector is an
-        # ``Expr`` on every version); this class is the type-level name for
-        # annotations and the ``Selector`` union.
+        # goes through ``isinstance(x, PlExpr)`` (a selector is an ``Expr`` on
+        # every version); this class is the type-level name for annotations and
+        # the ``Selector`` union.
         _backends = [("polars.selectors", "Selector")]
 
     class PlExpr(AbstractBackend):
-        # A polars expression; accepted as a selector when it is a plain column
-        # selection such as ``polars.col("a")``.
+        # ``isinstance(x, PlExpr)`` is True for a polars expression, selectors
+        # included, without importing polars unless it is already loaded. It is
+        # accepted as a selector when it is a plain column selection such as
+        # ``polars.col("a")``.
         _backends = [("polars", "Expr")]
 
 

@@ -16,9 +16,8 @@ only at the sklearn boundary (the output of ``Recipe.transform``).
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 import numpy as np
@@ -117,28 +116,15 @@ def select(
         return frame.select([names])
     if isinstance(names, NwSelector):
         return frame.select(names)
-    if _is_polars_expr(names):
-        return frame.select(_expand_polars_expr(frame, cast("PlExpr", names)))
-    # Only a sequence of names is left; the cast is because the polars branch is
-    # a function check rather than an ``isinstance``, so it narrows nothing.
-    return frame.select(list(cast("Sequence[str]", names)))
-
-
-def _is_polars_expr(obj: object) -> bool:
-    """Return whether ``obj`` is a polars expression, without importing polars.
-
-    This is the switch into polars handling: a polars selector is an ``Expr``
-    subclass on every supported version, so one check covers both selectors
-    (``polars.selectors.numeric()``) and plain column selections
-    (``polars.col("a")``). Whether the expression actually *is* a column
-    selection is decided by `_expand_polars_expr`. Like the databackend hook,
-    polars is consulted only if it is already loaded, since a polars expression
-    cannot exist otherwise.
-    """
-    pl = sys.modules.get("polars")
-    if pl is None:
-        return False
-    return isinstance(obj, pl.Expr)
+    # The switch into polars handling: a polars selector is an ``Expr`` subclass
+    # on every supported version, so one check covers both selectors
+    # (``polars.selectors.numeric()``) and plain column selections
+    # (``polars.col("a")``). ``PlExpr`` consults polars only if it is already
+    # loaded, since a polars expression cannot exist otherwise.
+    if isinstance(names, PlExpr):
+        return frame.select(_expand_polars_expr(frame, names))
+    # Only a sequence of names is left.
+    return frame.select(list(names))
 
 
 def _expand_polars_expr(frame: Frame, expr: PlExpr) -> list[str]:
@@ -158,7 +144,7 @@ def _expand_polars_expr(frame: Frame, expr: PlExpr) -> list[str]:
     step's is in `Recipe.fit`: before polars 1.32 the strict check relies on a
     private attribute that a deep copy drops.
     """
-    # Reached only when ``_is_polars_expr`` matched ``names``, which it does
+    # Reached only when ``names`` is a polars expression, which it can be
     # only if polars is loaded — so polars is guaranteed importable here and
     # this never raises. Routed through import_optional anyway so the package's
     # sanctioned runtime-backend imports are uniform/greppable.
