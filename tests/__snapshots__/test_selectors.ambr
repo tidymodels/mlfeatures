@@ -1,4 +1,10 @@
 # serializer version: 1
+# name: TestPolarsEscapeHatch.test_non_selection_expression_raises[alias]
+  'polars expression \'col("x1").alias("renamed")\' is not a column selection; pass a selection such as pl.col(\'a\') or a polars selector'
+# ---
+# name: TestPolarsEscapeHatch.test_non_selection_expression_raises[computed]
+  'polars expression \'[(col("x1")) + (dyn int: 1)]\' is not a column selection; pass a selection such as pl.col(\'a\') or a polars selector'
+# ---
 # name: TestProvenance.test_has_ancestor_unknown_id_raises
   "no step with id 'nonexistent' before this one; earlier step id(s) ['dummy']"
 # ---
