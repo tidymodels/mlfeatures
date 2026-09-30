@@ -5,31 +5,30 @@ toc: true
 
 `shoez` separates feature engineering into three phases:
 
-1. **Specify** — declare a sequence of steps. No data is touched.
-2. **Fit** — estimate any required statistics from a training dataset.
-3. **Transform** — apply the fitted recipe identically to training, test, or
-   new data.
+1. **Specify**: declare the `Recipe`, a sequence of pre-processing steps.
+2. **Fit**: estimate any required statistics from a training dataset.
+3. **Transform**: apply the fitted recipe identically to new data.
 
-Along with that lifecycle you get:
+It's designed to support common Python modeling workflows:
 
-- **DataFrame-agnostic.** Recipes are written against
-  [narwhals](https://narwhals-dev.github.io/narwhals/), so pandas in means
-  pandas out, and polars in means polars out.
-- **Roles and selectors.** Columns carry roles such as `target` and `feature`,
-  and steps pick columns with role-aware selectors like
-  `Selectors.numeric_features()`, or with polars and narwhals selectors, so a
-  step never touches the target by accident.
-- **Steps organized by the workflow.** Each step does one job, and the built-in
-  steps follow the [four stages, eight steps](basics/four-stages-eight-steps.qmd)
-  order: handle missing values, wrangle everything into numbers, prepare for
-  the model (normalize, expand), then multivariate transforms such as PCA. Alongside them
-  sit filters that [drop columns](basics/dropping-columns.qmd): zero-variance
-  ones, or one of each highly correlated pair.
-- **Two doors into other ecosystems.** `df.shz` applies steps straight to a
-  polars frame; `RecipeTransformer` drops a recipe into a scikit-learn
-  `Pipeline`.
+- **DataFrame-agnostic.** Works with pandas or polars (thanks to [narwhals](https://narwhals-dev.github.io/narwhals/)).
+- **Column selectors.** Use Polars selectors to target columns for pre-processing.
+- **Steps for all kinds of workflows.** Many built-in steps to support pre-processing data for a wide range of models. Organized into a [four stages, eight steps workflow](basics/four-stages-eight-steps.qmd).
+- **Polars .shz accessor**: Run steps directly on a polars DataFrame.
+- **Sci-kit learn support**: Recipes plug into scikit-learn pipelines.
+
+## Installing
+
+Install shoez using your package manager of choice:
+
+```bash
+pip install mlfeatures
+```
+
 
 ## Quickstart
+
+Here is a quick snippet that normalize numeric columns and then runs PCA on a Polars DataFrame (using the `.shz` accessor).
 
 ```python
 import shoez.polars  # registers the `df.shz` accessor
@@ -42,6 +41,10 @@ result = (
     .shz.step_pca(s.numeric_features(), num_comp=4)
 )
 ```
+
+While the code above runs on a single DataFrame, modelling workflows often split data into test and training sets.
+Use a `Recipe` to fit on training data, and transform test data.
+This is shown below.
 
 ```python
 from shoez import Recipe, StepNormalize, StepPca
@@ -58,12 +61,12 @@ fitted = recipe.fit(df_train)
 result = fitted.transform(df_test)
 ```
 
-## The example data
 
-Both examples below use the dry beans data from
-[Tidy Modeling with R, ch. 16](https://www.tmwr.org/dimensionality): 16 shape
-measurements for 13,611 beans of 7 varieties. The full port is in
-[Beans PCA](../examples/beans-pca.qmd).
+
+## Setting up examples
+
+We'll use two examples to illustrate using shoez with polars and scikit-learn.
+Both examples use the dry beans data packaged with shoez.
 
 ```{python}
 from shoez.data import beans
@@ -71,8 +74,7 @@ from shoez.data import beans
 beans.head()
 ```
 
-A small helper draws a scatterplot matrix of principal components, one color
-per variety, so both examples can end on the same picture:
+We'll also use a small helper to draw a scatterplot matrix:
 
 ```{python}
 import seaborn as sns
@@ -81,7 +83,7 @@ sns.set_theme(palette="colorblind")
 
 
 def plot_pairs(frame):
-    """Scatterplot matrix of the principal components, one color per class."""
+    """Scatterplot matrix, one color per level of class column."""
     sns.pairplot(
         frame.to_pandas(),
         hue="class",
@@ -96,9 +98,9 @@ def plot_pairs(frame):
 
 Importing `shoez.polars` registers a `shz` namespace on polars DataFrames. Each
 `df.shz.step_*()` call fits that step on the frame, applies it, and returns a
-new frame, so a pipeline reads as a plain chain of transformations: drop
-constant columns, rank-normalize each measurement onto a standard normal,
-center and scale, then project onto 4 principal components.
+new frame. 
+
+For example, the code below drops constant, normalizes each measurement, then projects onto 4 principal components.
 
 ```{python}
 import shoez.polars  # registers the `df.shz` accessor
@@ -113,39 +115,37 @@ bean_pcs = (
 bean_pcs.head()
 ```
 
-The 16 measurements are gone, replaced by 4 components. `class` is not numeric,
-so the selector never picked it up and it passes through untouched.
+Notice that the output has reduced the data to 4 components. `class` is not numeric,
+so the `s.numeric_features()` selector didn't try to normalize it.
 
 ```{python}
 plot_pairs(bean_pcs)
 ```
 
-The first two components already separate most varieties. Each `shz` call
-estimated its step on `beans` and applied it right there, which is all you need
-while exploring. What it cannot do is apply *those same estimates* to a
-different frame; that is what a recipe is for.
+Each `shz` call estimated its step on `beans` and applied it right there, which is useful for exploring data.
+However, modelling usually involves fitting pre-processing on a training set, and the using that to transform a test set.
+To handle this workflow, shoez provides a `Recipe` class for specifying steps, fitting, and transforming.
 
 ## Example: sklearn Recipe PCA
 
-A model is fit on training data and judged on data it has never seen, and the
-preprocessing has to follow the same rule: estimated on the training set,
-applied unchanged everywhere else. Start with a stratified split:
+While the previous example used a single DataFrame, this example splits it into a training and test frames.
+It uses the `Recipe` class to specify the pre-processing, fit to the training frame, and then transform the test frame.
+Then, it shows how the `Recipe` can be used in a scikit-pipeline.
+
+### Split data and specify Recipe
 
 ```{python}
 from sklearn.model_selection import train_test_split
+from shoez import Recipe, StepDropZeroVariance, StepNormalize, StepOrderNorm, StepPca
+
+# split training and test ---------------------
 
 bean_train, bean_validation = train_test_split(
     beans, train_size=0.75, stratify=beans["class"], random_state=1601
 )
-```
 
-**Specify** the recipe. It is the same four steps, declared against the
-training data's schema, with `class` given the `target` role. Building it
-computes nothing; printing it shows each step `[untrained]`, its selector still
-unresolved.
 
-```{python}
-from shoez import Recipe, StepDropZeroVariance, StepNormalize, StepOrderNorm, StepPca
+# specify recipe -----------------------------
 
 recipe = (
     Recipe(data=bean_train, target="class")
@@ -154,37 +154,20 @@ recipe = (
     .add(StepNormalize(s.numeric_features()))
     .add(StepPca(s.numeric_features(), num_comp=4))
 )
-recipe
 ```
 
-**Fit** it on the training data. This is where statistics are estimated: which
-columns are constant, each column's rank mapping, mean, and standard
-deviation, and the principal axes. The fitted recipe prints each step `[trained]` with the
-concrete columns it resolved to.
+
 
 ```{python}
 fitted = recipe.fit(bean_train)
-fitted
-```
-
-**Transform** the validation set. The stored estimates are applied as they are;
-nothing is re-estimated from the new data.
-
-```{python}
 scores = fitted.transform(bean_validation)
 scores.head()
 ```
 
-```{python}
-plot_pairs(scores)
-```
+### Pass to a scikit-learn pipeline
 
-These are validation beans projected onto components learned from the training
-beans only, which is exactly what a model downstream would see. To put one
-there, wrap the recipe in `RecipeTransformer` and it behaves like any
-scikit-learn transformer. scikit-learn keeps `X` and `y` apart while `shoez`
-finds the target by role, so the adapter re-joins `y` under the target's name
-at fit time and returns only the features from `transform`.
+In order to use the `Recipe` object in a scikit pipeline, wrap it in `RecipeTransformer`.
+For example, the code below uses our pre-processing steps as part of fitting a logistic regression.
 
 ```{python}
 from sklearn.linear_model import LogisticRegression
@@ -202,14 +185,16 @@ pipe.fit(bean_train.drop("class"), bean_train["class"])
 pipe.score(bean_validation.drop("class"), bean_validation["class"])
 ```
 
-`pipe.fit` fits the recipe and the model on the training split; `pipe.score`
-only transforms the validation split with the stored estimates before scoring.
+Note two key pieces:
+
+* `pipe.fit()` fits the recipe and the model on the training split
+* `pipe.score()` only pre-processes the test split using the stored estimates before scoring.
 
 ## Available steps
 
 The steps above are a few of the built-in ones. Each does one job, and they
-fall into the stages of the workflow; here is a representative subset, with
-the full list in the [API reference](../reference/index.qmd).
+fall into the [four stages, eight steps workflow](basics/four-stages-eight-steps.qmd).
+Here is a representative subset of each kind of step:
 
 | Stage | Step | What it does |
 |-------|------|--------------|
@@ -221,32 +206,34 @@ the full list in the [API reference](../reference/index.qmd).
 | | `StepOrderNorm` | rank-normalize each column onto a standard normal |
 | | `StepPolynomial` | polynomial basis expansion of a numeric column |
 | Multivariate transforms | `StepPca` | project numeric columns onto principal components |
-| Filters | `StepDropZeroVariance` | drop constant or all-missing columns |
-| | `StepDropCorr` | drop one of each highly correlated pair |
-| Escape hatches | `StepMutate`, `StepFilter` | arbitrary column expressions and row filters |
+
+In addition, you'll likely drop columns throughout using `StepDropZeroVariance` and `StepDropCorr`.
+More general transforming and dropping can be done with `StepMutate` and `StepFilter`, respectively.
+
 
 ## Use with polars (`.shz`)
 
-Import `shoez.polars` and every step is one call away on a polars frame. Each
-call fits the step on that frame, applies it, and returns a fresh frame, so
-calls chain and the result is ordinary polars.
+Import `shoez.polars` to use the `polars.DataFrame.shz`accessor.
+Each method of the accessor returns a new DataFrame.
 
 ```{python}
 beans.shz.step_pca(s.numeric_features(), num_comp=2).head()
 ```
 
-Reach for it when exploring; reach for a `Recipe` when the same estimates must
-be applied to data the step has not seen. See
-[With polars extension (.shz)](polars-extension.qmd).
+For more details, see [With polars extension (.shz)](polars-extension.qmd).
 
 ## Use in a scikit-learn pipeline
 
-`RecipeTransformer` wraps an unfitted recipe as a scikit-learn transformer.
-Give the recipe a `target` role and it slots into a `Pipeline`: `Pipeline.fit`
-estimates the recipe on the training data, and every later `predict` or `score`
-applies those estimates to new data.
+The `RecipeTransformer` class wraps a `Recipe` for use in a scikit-learn `Pipeline`:
 
 ```{python}
+from shoez import Recipe, RecipeTransformer
+
+recipe = (
+    Recipe(data=bean_train, target="class")
+    .add(StepDropZeroVariance(s.numeric_features()))
+)
+
 Pipeline(
     [
         ("recipe", RecipeTransformer(recipe)),
@@ -255,5 +242,12 @@ Pipeline(
 )
 ```
 
-See [With scikit-learn pipelines](sklearn-pipelines.qmd) for cross-validation,
-tuning, feature names, and the `set_output` API.
+Note that the output above is how scikit-learn represents a `Pipeline`, with the top box being the Recipe pre-processing, and the bottom box (LogisticRegression) being the scikit model fitting piece.
+
+For more details on using with cross-validation, tuning, and more, see [With scikit-learn pipelines](sklearn-pipelines.qmd).
+
+## Next steps
+
+* Jump to the basics: [Fit, specify, transform](basics/recipe-specify-fit-transform.qmd)
+* Learn more about [the Polars accessor](polars-extension.qmd) or using [in scikit-learn pipelines](sklearn-pipelines.qmd)
+* [Browse the API reference](/reference)
