@@ -5,26 +5,14 @@ toc: true
 
 `shoez` ships an opt-in [polars](https://docs.pola.rs/) accessor for fitting
 and applying steps in one expression, without building a `Recipe`. Importing
-`shoez.polars` registers a `shz` namespace on polars DataFrames:
+`shoez.polars` to register the `shz` accessor on polars DataFrames:
 
 ```{python}
 import polars as pl
+import polars.selectors as cs
 
 import shoez.polars  # registers the `df.shz` accessor
-from shoez import Selectors as s
-```
 
-Each `df.shz.step_*(...)` call fits the step on `df`, applies it, and returns a
-fresh polars DataFrame — so calls chain, and the result is just another polars
-frame. It is thin sugar over the recipe lifecycle
-(`Recipe(...).fit(df).transform(df)`), and it is the one place `shoez` depends
-on polars directly, which is why you opt in with an explicit import.
-
-Every step has a matching `step_*` method whose arguments mirror the step's
-constructor. The three below cover the most common feature-engineering jobs;
-this small frame gives each one something to do:
-
-```{python}
 orders = pl.DataFrame(
     {
         "city": ["NYC", "LA", "NYC", "SF", "LA", "SF"],
@@ -32,8 +20,15 @@ orders = pl.DataFrame(
         "qty": [2, 1, 5, 1, 3, 4],
     }
 )
-orders
+
+# drop any numeric columns with no variance
+# TODO: fix PlExpr selection
+#orders.shz.step_dummy(pl.col("city"))
 ```
+
+Notice that `.step_dummy()` returned a new DataFrame with a column for each level in the `city` column.
+In the following sections we'll show some of the more useful steps to use directly on a Polars DataFrame.
+
 
 ## Handle missing values: `step_impute_median`
 
@@ -41,17 +36,10 @@ orders
 and `step_impute_mode` are the other flavors):
 
 ```{python}
-filled = orders.shz.step_impute_median(s.numeric_features())
+#| eval: false
+# TODO: pl.col() does not work here
+filled = orders.shz.step_impute_median(pl.col("price"))
 filled
-```
-
-## Make everything numeric: `step_dummy`
-
-`step_dummy` expands nominal columns into numeric indicator columns, dropping
-the first level as the reference:
-
-```{python}
-orders.shz.step_dummy(s.nominal())
 ```
 
 ## Multivariate feature engineering: `step_pca`
@@ -60,22 +48,12 @@ orders.shz.step_dummy(s.nominal())
 components (here on the imputed frame, since PCA needs complete data):
 
 ```{python}
-filled.shz.step_pca(s.numeric_features(), num_comp=2)
-```
+#| eval: false
 
-## Beyond these three
-
-Because each call returns a polars frame, the steps compose into a pipeline by
-chaining — impute, dummy-encode, then project:
-
-```{python}
+# TODO: fix
 (
     orders
-    .shz.step_impute_median(s.numeric_features())
-    .shz.step_dummy(s.nominal())
-    .shz.step_pca(s.numeric_features(), num_comp=2)
+    .shz.step_impute_median(pl.col("price"))
+    .shz.step_pca(cs.numeric(), num_comp=2)
 )
 ```
-
-The accessor has a `step_*` method for every public step, plus a generic
-`df.shz.apply(*steps)` that runs any `Step` instances in one shot.
