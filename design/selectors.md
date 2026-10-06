@@ -156,6 +156,18 @@ import polars.selectors as cs
 StepNormalize(cs.numeric())   # accepted; resolves fine on pandas- or polars-backed frames
 ```
 
+A polars **column-selection expression** is accepted the same way, since `pl.col()` is what a polars user reaches for first:
+
+```python
+import polars as pl
+
+StepNormalize(pl.col("a"))              # accepted
+StepNormalize(pl.all().exclude("id"))   # accepted
+StepNormalize(pl.col("a") + 1)          # TypeError: not a column selection
+```
+
+Both go through `polars.selectors.expand_selector(..., strict=False)`, so polars itself decides what counts as a selection: an expression that computes or renames is refused.
+
 ### Cross-family composition has a hard limit
 
 polars and narwhals selectors compose cleanly *within their own family*, and native shoez selectors compose cleanly with each other. **Mixing the two families with `&` / `|` / `~` is asymmetric and only works when a shoez selector leads**, because shoez does not control polars'/narwhals' operators:

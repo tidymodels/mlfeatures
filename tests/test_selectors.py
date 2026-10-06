@@ -9,6 +9,8 @@ cannot lead a cross-family expression.
 
 from __future__ import annotations
 
+import copy
+
 import narwhals.selectors as ncs
 import narwhals.stable.v2 as nw
 import pandas as pd
@@ -539,6 +541,57 @@ class TestPolarsEscapeHatch:
         out = Recipe(steps=[StepNormalize(cs.numeric())]).fit(df).transform(df)
         assert isinstance(out, pl.DataFrame)
         assert abs(nw.from_native(out)["a"].mean()) < 1e-9
+
+    @pytest.mark.parametrize(
+        ("selector", "expected"),
+        [
+            (pl.col("x1"), ["x1"]),
+            (pl.col("x1", "count"), ["x1", "count"]),
+            (pl.col(pl.Float64), ["x1", "x2", "y"]),
+            (pl.all().exclude("label", "y"), ["x1", "x2", "count"]),
+            (cs.numeric() - cs.by_name("y"), ["x1", "x2", "count"]),
+        ],
+        ids=["col", "col-names", "col-dtype", "all-exclude", "selector"],
+    )
+    def test_column_selection_expression_resolves(
+        self, selector: pl.Expr, expected: list[str]
+    ) -> None:
+        # The fixture frame is pandas-backed: resolution is against the schema,
+        # so a polars expression works whatever the frame's backend.
+        frame, roles = _frame_with_roles()
+        assert _resolve(selector, frame, roles) == expected
+
+    @pytest.mark.parametrize(
+        "selector", [pl.col("x1"), cs.by_name("x1")], ids=["col", "selector"]
+    )
+    def test_resolves_after_deepcopy(self, selector: pl.Expr) -> None:
+        # `Recipe.fit` deep-copies each step, and so its selector.
+        frame, roles = _frame_with_roles()
+        assert _resolve(copy.deepcopy(selector), frame, roles) == ["x1"]
+
+    @pytest.mark.parametrize(
+        "selector",
+        [pl.col("x1") + 1, pl.col("x1").alias("renamed")],
+        ids=["computed", "alias"],
+    )
+    def test_non_selection_expression_raises(
+        self, selector: pl.Expr, snapshot: SnapshotAssertion
+    ) -> None:
+        frame, roles = _frame_with_roles()
+        with pytest.raises(TypeError) as excinfo:
+            _resolve(selector, frame, roles)
+        assert str(excinfo.value) == snapshot
+
+    def test_shoez_leads_coerces_column_expression(self) -> None:
+        frame, roles = _frame_with_roles()
+        result = _resolve(Selectors.features() & pl.col("x1", "y"), frame, roles)
+        assert result == ["x1"]
+
+    def test_column_expression_in_recipe(self) -> None:
+        df = pl.DataFrame({"a": [1.0, 2.0], "b": [3.0, 4.0]})
+        out = Recipe().add(StepNormalize(pl.col("a"))).fit(df).transform(df)
+        assert abs(nw.from_native(out)["a"].mean()) < 1e-9
+        assert out["b"].to_list() == [3.0, 4.0]
 
 
 class TestInRecipe:
