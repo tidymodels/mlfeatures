@@ -1,4 +1,4 @@
-# shoez
+# mlfeatures
 
 
 <!-- README.md is generated from README.qmd. Edit that file, then run:
@@ -14,7 +14,7 @@ pipelines — a Python port of the R
 
 ## Lifecycle
 
-`shoez` separates feature engineering into three phases:
+`mlfeatures` separates feature engineering into three phases:
 
 1.  **Specify** — declare a sequence of steps against a schema of
     variables. No data is touched.
@@ -24,8 +24,8 @@ pipelines — a Python port of the R
 
 ``` python
 import pandas as pd
-from shoez import Recipe, StepDropCorr, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, StepDropCorr, StepNormalize
+from mlfeatures import Selectors as s
 
 df = pd.DataFrame(
     {
@@ -64,7 +64,7 @@ uv sync --extra dev   # install the package + dev tooling
 
 uv run ruff check .          # lint
 uv run ruff format --check . # formatting
-uv run mypy shoez            # type check (strict)
+uv run mypy mlfeatures            # type check (strict)
 uv run pyright               # type check (strict)
 uv run pytest --cov          # tests + coverage
 ```

@@ -10,7 +10,7 @@ import narwhals.stable.v2 as nw
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import (
+from mlfeatures import (
     ANY_DTYPE,
     ColSchema,
     KeepOriginals,
@@ -20,8 +20,8 @@ from shoez import (
     Step,
     StepDummy,
 )
-from shoez._dependencies import MissingDependencyError
-from shoez.types import AcceptedDtypes, _AnyDtype
+from mlfeatures._dependencies import MissingDependencyError
+from mlfeatures.types import AcceptedDtypes, _AnyDtype
 
 
 class _ConcreteStep(Step):
@@ -120,7 +120,7 @@ class _MissingPkgStep(_ConcreteStep):
     default_id = "needs_zzz"
 
     def required_pkgs(self) -> list[str]:
-        return ["shoez_no_such_dependency_zzz"]
+        return ["mlfeatures_no_such_dependency_zzz"]
 
 
 def test_check_required_pkgs_passes_when_nothing_is_declared() -> None:
@@ -131,7 +131,7 @@ def test_check_required_pkgs_reports_the_step_and_the_package() -> None:
     with pytest.raises(MissingDependencyError) as excinfo:
         _MissingPkgStep().check_required_pkgs()
     message = str(excinfo.value)
-    assert "shoez_no_such_dependency_zzz" in message
+    assert "mlfeatures_no_such_dependency_zzz" in message
     assert "needs_zzz" in message
     assert "pip install" in message
 

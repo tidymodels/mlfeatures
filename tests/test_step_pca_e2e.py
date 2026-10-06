@@ -11,7 +11,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Mode, Recipe, StepNormalize, StepPca
+from mlfeatures import Mode, Recipe, StepNormalize, StepPca
 
 
 def _data() -> dict[str, list[float]]:

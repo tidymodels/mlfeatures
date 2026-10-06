@@ -1,0 +1,250 @@
+"""Fitting logic for the correlation-drop step.
+
+``fit_drop_corr`` identifies which numeric columns should be dropped because
+their pairwise absolute correlation exceeds a threshold.  Zero-variance
+(all-NaN correlation) columns are dropped rather than silently excluded.
+"""
+
+from __future__ import annotations
+
+import warnings
+from typing import Any, Literal, cast
+
+import narwhals as nw
+import numpy as np
+
+from mlfeatures._drop import ColumnDropStep
+from mlfeatures.types import NUMERIC_DTYPES, AcceptedDtypes, Frame, Selector
+
+__all__ = ["fit_drop_corr", "StepDropCorr"]
+
+
+def fit_drop_corr(
+    selected: nw.DataFrame[Any],
+    threshold: float = 0.9,
+    method: Literal["pearson", "spearman"] = "pearson",
+) -> list[str]:
+    """Identify columns to remove due to high pairwise correlation.
+
+    Parameters
+    ----------
+    selected:
+        A narwhals DataFrame whose columns are all numeric. Passed in by the
+        step's ``fit()`` method after selector resolution.
+    threshold:
+        Pairs with |r| strictly above this value trigger removal. Default 0.9.
+    method:
+        Correlation method: ``"pearson"`` or ``"spearman"``.  Kendall is not
+        supported by ``nw.corr()``.
+
+    Returns
+    -------
+    list[str] — column names to drop.  Empty list if nothing exceeds the
+    threshold and every column has a usable correlation.  Columns whose
+    correlations are all missing (constant or all-null columns) are always
+    included, even when no pair exceeds the threshold.
+
+    Notes
+    -----
+    Uses pairwise-complete observations via ``nw.corr()``, which delegates NaN
+    handling to the underlying backend.  When two columns in a correlated pair
+    must be chosen for removal, the one with the higher mean absolute
+    correlation across all columns is dropped; ties go to the row variable.
+
+    Zero-variance / all-NaN columns are added to the drop list rather than
+    silently excluded from the filter.
+    """
+    col_names = selected.columns
+    n = len(col_names)
+
+    if n < 2 or selected.shape[0] == 0:
+        return []
+
+    # Build symmetric correlation matrix via pairwise nw.corr() calls.
+    # nw.corr() uses pairwise-complete observations through the backend.
+    corr = np.full((n, n), np.nan)
+    np.fill_diagonal(corr, 1.0)
+    for i in range(n):
+        for j in range(i + 1, n):
+            val = selected.select(
+                nw.corr(col_names[i], col_names[j], method=method)
+            ).item()
+            corr[i, j] = float(val)
+            corr[j, i] = float(val)
+
+    # Detect all-NA columns: every off-diagonal entry is NaN.
+    # These arise from zero-variance or all-null input columns.
+    off_diag = ~np.eye(n, dtype=bool)
+    all_na = np.all(np.isnan(corr) | ~off_diag, axis=0)
+
+    # Drop all-NA columns rather than keeping them.
+    na_drop: list[str] = [col_names[i] for i in range(n) if all_na[i]]
+    if na_drop:
+        warnings.warn(
+            f"the correlation matrix has missing values; "
+            f"{len(na_drop)} column(s) were removed from the data: {na_drop!r}",
+            stacklevel=2,
+        )
+        corr[all_na, :] = 0.0
+        corr[:, all_na] = 0.0
+        np.fill_diagonal(corr, 1.0)
+
+    # If fewer than 2 non-NA columns remain, skip the correlation filter.
+    n_remaining = int((~all_na).sum())
+    if n_remaining < 2:
+        warnings.warn(
+            f"only {n_remaining} usable column(s) remain after dropping all-NA "
+            f"column(s) {na_drop!r}; skipping correlation filter",
+            stacklevel=2,
+        )
+        return na_drop
+
+    # Zero out sporadic NaN (pairs where one column had partial nulls).
+    if np.any(np.isnan(corr)):
+        sporadic = [col_names[i] for i in range(n) if np.isnan(corr[i]).any()]
+        warnings.warn(
+            f"the correlation matrix has sporadic missing values; "
+            f"column(s) {sporadic!r} were excluded from the filter",
+            stacklevel=2,
+        )
+        corr[np.isnan(corr)] = 0.0
+        np.fill_diagonal(corr, 1.0)
+
+    # Average absolute correlation per column — used to rank columns so the
+    # one with the broadest correlation to others is removed first.
+    avg_corr = np.mean(np.abs(corr), axis=0)
+
+    # Dense rank. The numpy 2.2 stubs (the newest available on Python 3.10)
+    # leave the `return_inverse` result partially unknown to pyright; the cast
+    # pins it.
+    _, inv_raw = np.unique(avg_corr, return_inverse=True)  # pyright: ignore[reportUnknownVariableType]
+    inv = cast("np.ndarray[Any, Any]", inv_raw)
+    ranks = inv + 1  # 1-based
+
+    # Consider only the upper triangle (each pair counted once).
+    upper = np.abs(corr).astype(float)
+    upper[np.tril_indices(n)] = np.nan
+
+    rows_idx, cols_idx = np.where(upper > threshold)
+
+    corr_drop: set[int] = set()
+    for r, c in zip(rows_idx, cols_idx):
+        if ranks[c] > ranks[r]:
+            corr_drop.add(int(c))
+        else:
+            corr_drop.add(int(r))
+
+    corr_drop_names = [col_names[i] for i in sorted(corr_drop)]
+
+    # Combine zero-variance drops and correlation-based drops, preserving
+    # original column order and deduplicating.
+    return list(dict.fromkeys(na_drop + corr_drop_names))
+
+
+class StepDropCorr(ColumnDropStep):
+    """Remove numeric columns whose pairwise absolute correlation is too high.
+
+    The selected columns that exceed ``threshold`` are dropped, as are columns
+    with no usable correlation at all (constant or all-null), and no new
+    columns are produced.
+
+    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
+    for the arguments this step shares with the others.
+
+    Parameters
+    ----------
+    columns
+        Columns to consider for removal. Accepts a single column name, a list
+        of names, a mlfeatures selector such as ``Selectors.numeric_features()``
+        (see `Selectors` for the full set), or a narwhals or polars selector
+        (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+        Selectors are resolved against the frame's schema when the recipe is
+        fitted, so the same selector works on any backend. Only numeric columns
+        are meaningful here.
+    threshold
+        Pairs whose absolute correlation is strictly above this value trigger a
+        removal. Default ``0.9``.
+    method
+        Correlation method: ``"pearson"`` (default) or ``"spearman"``.
+    id
+        Stable step identifier. Defaults to ``"corr"``; a second step of this
+        type in the same recipe becomes ``"corr_2"``, and passing an ``id``
+        already used in the recipe is an error.
+
+    Examples
+    --------
+    ``a`` and ``b`` are almost perfectly correlated, so one of them is dropped;
+    the uncorrelated ``c`` is kept:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    import pandas as pd
+    from mlfeatures import Recipe, StepDropCorr
+    from mlfeatures import Selectors as s
+    ```
+
+    ```{python}
+    df = pd.DataFrame(
+        {
+            "a": [1.0, 2.0, 3.0, 4.0],
+            "b": [1.0, 2.0, 3.0, 4.1],
+            "c": [4.0, 1.0, 3.0, 2.0],
+        }
+    )
+    df
+    ```
+
+    Specifying the step touches no data:
+
+    ```{python}
+    recipe = Recipe().add(StepDropCorr(s.numeric_features(), threshold=0.9))
+    recipe
+    ```
+
+    `fit()` computes the correlation matrix and picks the columns to drop:
+
+    ```{python}
+    fitted = recipe.fit(df)
+    fitted
+    ```
+
+    `transform()` drops them:
+
+    ```{python}
+    fitted.transform(df)
+    ```
+
+    A ``threshold`` above their correlation keeps both:
+
+    ```{python}
+    recipe = Recipe().add(StepDropCorr(s.numeric_features(), threshold=0.9999))
+    fitted = recipe.fit(df)
+    fitted.transform(df)
+    ```
+    """
+
+    def __init__(
+        self,
+        columns: Selector,
+        *,
+        threshold: float = 0.9,
+        method: Literal["pearson", "spearman"] = "pearson",
+        id: str | None = None,
+    ):
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError(f"'threshold' must be between 0 and 1, got {threshold!r}")
+        if method not in ("pearson", "spearman"):
+            raise ValueError(
+                f"'method' must be 'pearson' or 'spearman', got {method!r}"
+            )
+        self.threshold = threshold
+        self.method: Literal["pearson", "spearman"] = method
+        super().__init__(columns, id=id, default_id="corr")
+
+    def _drop_candidates(self, selected: Frame) -> list[str]:
+        return fit_drop_corr(selected, self.threshold, self.method)
+
+    def accepts_dtypes(self) -> AcceptedDtypes:
+        """Correlation is only meaningful on numeric columns."""
+        return set(NUMERIC_DTYPES)

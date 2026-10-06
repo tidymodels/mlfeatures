@@ -11,10 +11,10 @@ frame with what it learned.
 
 ::: {.callout-note collapse="true" title="Key points"}
 * Steps operate on DataFrames, using polars selectors to choose columns to operate on.
-* Shoez extends the selection process with roles.
+* mlfeatures extends the selection process with roles.
 * Each step applies to the "output" data of the previous step.
-* Shoez fits and transforms the training data, but only transforms test data.
-* Shoez handles pre-processing, and plugs in to scikit pipelines for final model fitting.
+* mlfeatures fits and transforms the training data, but only transforms test data.
+* mlfeatures handles pre-processing, and plugs in to scikit pipelines for final model fitting.
 :::
 
 {{< include ../_includes/workflow-diagram.qmd >}}
@@ -28,9 +28,9 @@ anything is estimated.
 ```{python}
 from sklearn.model_selection import train_test_split
 
-from shoez import Recipe, StepDummy, StepImputeMedian, StepImputeMode, StepNormalize
-from shoez import Selectors as s
-from shoez.data import credit
+from mlfeatures import Recipe, StepDummy, StepImputeMedian, StepImputeMode, StepNormalize
+from mlfeatures import Selectors as s
+from mlfeatures.data import credit
 
 credit_train, credit_test = train_test_split(
     credit, train_size=0.75, stratify=credit["Status"], random_state=1
@@ -63,25 +63,25 @@ and it is what lets a scikit-learn pipeline hand the recipe its `y` later.
 `data=` lets the recipe check column names as steps are added.
 
 ::: {.callout-tip title="Exploring with polars"}
-Importing `shoez.polars` registers a `shz` accessor on polars frames, and
-every step becomes a `.shz.step_*()` call that fits on the frame and applies
+Importing `mlfeatures.polars` registers a `mlf` accessor on polars frames, and
+every step becomes a `.mlf.step_*()` call that fits on the frame and applies
 right there:
 
 ```python
-import shoez.polars
+import mlfeatures.polars
 
 result = (
-    credit_train.shz.step_impute_median(s.numeric_features())
-    .shz.step_impute_mode(s.nominal_features())
-    .shz.step_dummy(s.nominal_features())
-    .shz.step_normalize(s.numeric_features())
+    credit_train.mlf.step_impute_median(s.numeric_features())
+    .mlf.step_impute_mode(s.nominal_features())
+    .mlf.step_dummy(s.nominal_features())
+    .mlf.step_normalize(s.numeric_features())
 )
 ```
 
 That is convenient while exploring, but the estimates are gone as soon as
 the frame is. A recipe keeps them, so the same medians, modes, and means
 can be applied to any other frame. See
-[With polars extension (.shz)](../polars-extension.qmd).
+[With polars extension (.mlf)](../polars-extension.qmd).
 :::
 
 ## Fitting training data
@@ -115,7 +115,7 @@ result.head()
 
 Wrap the recipe in `RecipeTransformer` to make it the first step of a
 scikit-learn `Pipeline`, so the model gets the same guarantee. scikit-learn
-keeps `X` and `y` apart while shoez finds the target by role, so the adapter
+keeps `X` and `y` apart while mlfeatures finds the target by role, so the adapter
 re-joins `y` under the target's name at fit time and hands the model only
 the features.
 
@@ -123,7 +123,7 @@ the features.
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
-from shoez import RecipeTransformer
+from mlfeatures import RecipeTransformer
 
 pipe = Pipeline(
     [

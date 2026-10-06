@@ -16,7 +16,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Ptype, Recipe, Selectors, StepNormalize
+from mlfeatures import Ptype, Recipe, Selectors, StepNormalize
 
 
 def _train() -> dict[str, list[float]]:

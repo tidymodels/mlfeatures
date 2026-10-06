@@ -1,4 +1,4 @@
-"""Tests for :mod:`shoez.step_datetime_features`.
+"""Tests for :mod:`mlfeatures.step_datetime_features`.
 
 Datetime columns are natively representable on both pandas (``datetime64``)
 and polars (``Datetime``) from a plain list of ``datetime.datetime`` objects,
@@ -16,8 +16,8 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, SchemaInfo
-from shoez.step_datetime_features import (
+from mlfeatures import Mode, SchemaInfo
+from mlfeatures.step_datetime_features import (
     DatetimeFeaturesFit,
     StepDatetimeFeatures,
     apply_datetime_features,
@@ -237,7 +237,7 @@ class TestStepDatetimeFeaturesUnit:
         assert step.schema_out().dtypes["dt_month"].startswith("Enum(")
 
     def test_update_roles_with_no_output_role(self) -> None:
-        from shoez.types import Roles
+        from mlfeatures.types import Roles
 
         step = StepDatetimeFeatures(["dt"], features=["year"], role=None)
         step.fit(_df(_data()), SchemaInfo())

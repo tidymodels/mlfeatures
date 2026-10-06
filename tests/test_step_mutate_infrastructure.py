@@ -1,14 +1,14 @@
 """Conformance tests for StepMutate.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepMutate belongs in ``test_step_mutate.py`` and ``test_step_mutate_e2e.py``.
 """
 
 from __future__ import annotations
 
-from shoez import StepMutate
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepMutate
+from mlfeatures.testing import StepConformanceTest
 
 
 def _double_a(df: object) -> object:

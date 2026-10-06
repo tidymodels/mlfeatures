@@ -3,7 +3,7 @@ title: "With scikit-learn pipelines"
 toc: true
 ---
 
-A `shoez` recipe handles feature engineering; the model that consumes those
+A `mlfeatures` recipe handles feature engineering; the model that consumes those
 features lives downstream in [scikit-learn](https://scikit-learn.org/). The
 `RecipeTransformer` adapter bridges the two: it wraps a recipe so it behaves
 like any other scikit-learn transformer and drops straight into a
@@ -23,14 +23,14 @@ X, y = load_breast_cancer(return_X_y=True, as_frame=True)
 X.iloc[:5, :3]
 ```
 
-scikit-learn keeps the features `X` and the target `y` apart, while `shoez`
+scikit-learn keeps the features `X` and the target `y` apart, while `mlfeatures`
 identifies the target by its **role**. Build the recipe with the target role
 assigned; the adapter re-joins `y` onto `X` under that name at fit time and
 strips it back out of the transformed output, so `transform` returns the feature
 matrix only.
 
 ```{python}
-from shoez import Recipe, StepNormalize
+from mlfeatures import Recipe, StepNormalize
 
 features = list(X.columns)
 
@@ -50,7 +50,7 @@ engineered features:
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
-from shoez import RecipeTransformer
+from mlfeatures import RecipeTransformer
 
 pipe = Pipeline(
     [

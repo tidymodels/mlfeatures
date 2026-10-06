@@ -1,6 +1,6 @@
 """Execute every ``{python}`` example cell and fail if one errors.
 
-Covers both places we write them: docstrings under ``shoez/`` and the narrative
+Covers both places we write them: docstrings under ``mlfeatures/`` and the narrative
 pages under ``user_guide/``.
 
 great-docs (via Quarto) *runs* ```` ```{python} ```` example cells at build
@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE_DIR = Path(__file__).resolve().parent.parent / "shoez"
+PACKAGE_DIR = Path(__file__).resolve().parent.parent / "mlfeatures"
 USER_GUIDE_DIR = Path(__file__).resolve().parent.parent / "user_guide"
 
 # ```{python}\n ... \n``` — the fenced executable cell great-docs runs. The
@@ -107,7 +107,7 @@ def test_docstring_examples_were_found() -> None:
     If this drops to zero the discovery has silently broken (e.g. the fence
     format changed) and every per-example check below would vacuously pass.
     """
-    assert _CASES, "no ```{python}``` docstring cells were discovered under shoez/"
+    assert _CASES, "no ```{python}``` docstring cells were discovered under mlfeatures/"
 
 
 @pytest.mark.parametrize("source", [c[1] for c in _CASES], ids=[c[0] for c in _CASES])
@@ -135,7 +135,7 @@ def test_guide_example_executes(source: str, monkeypatch: pytest.MonkeyPatch) ->
 
     Runs with ``user_guide/`` as the working directory, matching how quarto
     executes the cells, so a page may still read a sibling file by relative
-    path. Datasets themselves come from ``shoez.data``, which needs no path.
+    path. Datasets themselves come from ``mlfeatures.data``, which needs no path.
     """
     monkeypatch.chdir(USER_GUIDE_DIR)
     namespace: dict[str, object] = {}

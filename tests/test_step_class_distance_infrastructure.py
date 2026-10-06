@@ -1,14 +1,14 @@
 """Conformance tests for StepClassDistance.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepClassDistance belongs in ``test_step_class_distance.py`` and ``test_step_class_distance_e2e.py``.
 """
 
 from __future__ import annotations
 
-from shoez import StepClassDistance
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepClassDistance
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestClassDistanceConformance(StepConformanceTest):

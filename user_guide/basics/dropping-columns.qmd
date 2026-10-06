@@ -3,7 +3,7 @@ title: "Dropping columns"
 ---
 
 Dropping columns removes model variables that might lead to underidentified models, or models that take a long time to fit.
-shoez has three filter steps for it: one for correlated columns and two for
+mlfeatures has three filter steps for it: one for correlated columns and two for
 columns with little or no variance.
 
 ::: {.callout-note collapse="true" title="Key points"}
@@ -16,9 +16,9 @@ columns with little or no variance.
 ## Setup
 
 ```{python}
-from shoez import Recipe, StepDropCorr, StepDropNearZeroVariance, StepDropZeroVariance
-from shoez import Selectors as s
-from shoez.data import ames_mini, beans
+from mlfeatures import Recipe, StepDropCorr, StepDropNearZeroVariance, StepDropZeroVariance
+from mlfeatures import Selectors as s
+from mlfeatures.data import ames_mini, beans
 ```
 
 ## Drop one of each highly correlated pair

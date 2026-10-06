@@ -1,4 +1,4 @@
-# Plan: `fit_filter_corr` in `shoez/step_corr.py`
+# Plan: `fit_filter_corr` in `mlfeatures/step_corr.py`
 
 ## Context
 
@@ -11,11 +11,11 @@ logic that decides which columns to drop — not the full `Step` class.
 
 | File | Action |
 |---|---|
-| `shoez/step_corr.py` | **Create** — contains `fit_filter_corr`; defines `__all__ = ["fit_filter_corr"]` |
+| `mlfeatures/step_corr.py` | **Create** — contains `fit_filter_corr`; defines `__all__ = ["fit_filter_corr"]` |
 | `pyproject.toml` | **Edit** — add `narwhals>=2.19.0`; extend mypy override to include narwhals |
 | `tests/test_step_corr.py` | **Create** — unit tests |
 
-`shoez/__init__.py` is **not** touched — `fit_filter_corr` is not a top-level public
+`mlfeatures/__init__.py` is **not** touched — `fit_filter_corr` is not a top-level public
 export yet; that is the future `Step` class's job.
 
 ---
@@ -38,7 +38,7 @@ ignore_missing_imports = true
 
 ---
 
-## `shoez/step_corr.py` — implementation
+## `mlfeatures/step_corr.py` — implementation
 
 ### Signature
 
@@ -152,8 +152,8 @@ No scipy, no pandas, no `numpy.typing` (return type is now `list[str]`).
 
 ```bash
 uv run pytest tests/test_step_corr.py -v
-uv run ruff check shoez/step_corr.py
-uv run ruff format --check shoez/step_corr.py
-uv run mypy shoez/step_corr.py
-uv run pyright shoez/step_corr.py
+uv run ruff check mlfeatures/step_corr.py
+uv run ruff format --check mlfeatures/step_corr.py
+uv run mypy mlfeatures/step_corr.py
+uv run pyright mlfeatures/step_corr.py
 ```

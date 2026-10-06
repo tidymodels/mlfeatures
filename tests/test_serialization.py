@@ -18,7 +18,7 @@ import polars.selectors as pcs
 import pytest
 from typing_extensions import Self
 
-from shoez import (
+from mlfeatures import (
     FittedRecipe,
     Recipe,
     Selectors,
@@ -28,8 +28,8 @@ from shoez import (
     StepPca,
     serialization,
 )
-from shoez.step import Step
-from shoez.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo
+from mlfeatures.step import Step
+from mlfeatures.types import AcceptedDtypes, ColSchema, Frame, Mode, SchemaInfo
 
 
 def _multi_step() -> tuple[FittedRecipe, pd.DataFrame]:
@@ -71,7 +71,7 @@ class TestFullRecipeRoundTrip:
         rec, _ = _multi_step()
         payload = rec.to_dict()
         assert payload["format_version"] == serialization.FORMAT_VERSION
-        assert isinstance(payload["shoez_version"], str)
+        assert isinstance(payload["mlfeatures_version"], str)
 
 
 class TestYamlRoundTrip:
@@ -264,7 +264,7 @@ class _HeavyStep(Step):
         return self._schema_in
 
     def accepts_dtypes(self) -> AcceptedDtypes:
-        from shoez.types import NUMERIC_DTYPES
+        from mlfeatures.types import NUMERIC_DTYPES
 
         return set(NUMERIC_DTYPES)
 

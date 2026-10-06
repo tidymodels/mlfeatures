@@ -11,8 +11,8 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import StepLog
-from shoez.step_log import apply_log, fit_log
+from mlfeatures import StepLog
+from mlfeatures.step_log import apply_log, fit_log
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

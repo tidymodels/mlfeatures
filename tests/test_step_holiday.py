@@ -1,8 +1,8 @@
-"""Tests for :mod:`shoez.step_holiday`.
+"""Tests for :mod:`mlfeatures.step_holiday`.
 
 Built as polars frames throughout; ``StepHoliday`` itself is backend-agnostic
 (see `test_step_holiday_infrastructure.py`, which exercises the pandas side
-via pyarrow and `shoez.testing`'s `dtype_casts` hook).
+via pyarrow and `mlfeatures.testing`'s `dtype_casts` hook).
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ import pytest
 from dateutil.rrule import SA, SU, WEEKLY, rrule
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, SchemaInfo
-from shoez._dependencies import MissingDependencyError
-from shoez.step_holiday import (
+from mlfeatures import Mode, SchemaInfo
+from mlfeatures._dependencies import MissingDependencyError
+from mlfeatures.step_holiday import (
     HolidayFit,
     StepHoliday,
     apply_holiday,
@@ -120,7 +120,7 @@ class TestFitHoliday:
         def fail_import(module_name: str, *, purpose: str | None = None) -> Any:
             raise AssertionError("holidays package should not be imported")
 
-        monkeypatch.setattr("shoez.step_holiday.import_optional", fail_import)
+        monkeypatch.setattr("mlfeatures.step_holiday.import_optional", fail_import)
         frame = _df({"d": _dates()})
         result = fit_holiday(frame, (), "US", rules={"weekend": _weekend_rule()})
         assert result.holidays == ()
@@ -302,7 +302,7 @@ class TestStepHolidayUnit:
         }
 
     def test_update_roles_with_no_output_role(self) -> None:
-        from shoez.types import Roles
+        from mlfeatures.types import Roles
 
         step = StepHoliday(["d"], holidays=["Christmas Day"], role=None)
         step.fit(_df(_data()), SchemaInfo())
@@ -363,7 +363,9 @@ class TestStepHolidayUnit:
                 f"`{module_name}` is required but not installed"
             )
 
-        monkeypatch.setattr("shoez.step_holiday.import_optional", fake_import_optional)
+        monkeypatch.setattr(
+            "mlfeatures.step_holiday.import_optional", fake_import_optional
+        )
         step = StepHoliday(["d"], holidays=["Christmas Day"])
         with pytest.raises(MissingDependencyError):
             step.fit(_df(_data()), SchemaInfo())

@@ -232,10 +232,10 @@ One case is carved out of the rule, in the selector rather than in the recipe: `
 
 ## `StepConformanceTest`
 
-Implemented as `shoez.testing.StepConformanceTest`. It ships **inside the package**, not under `tests/`, so a third-party step can be held to the same contract as a first-party one. Subclass it, supply `make_step()` and `training_data`, and pytest collects the whole contract:
+Implemented as `mlfeatures.testing.StepConformanceTest`. It ships **inside the package**, not under `tests/`, so a third-party step can be held to the same contract as a first-party one. Subclass it, supply `make_step()` and `training_data`, and pytest collects the whole contract:
 
 ```python
-from shoez.testing import StepConformanceTest
+from mlfeatures.testing import StepConformanceTest
 
 class TestMyStepConformance(StepConformanceTest):
     training_data = {"a": [1.0, 2.0, 3.0], "g": ["x", "y", "x"]}

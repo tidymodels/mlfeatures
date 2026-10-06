@@ -1,4 +1,4 @@
-# Plan: `step_dummy` and `step_one_hot` in `shoez/`
+# Plan: `step_dummy` and `step_one_hot` in `mlfeatures/`
 
 ## Context
 
@@ -22,9 +22,9 @@ utility function `apply_dummy` that lives in `step_dummy.py` and is imported by
 
 | File | Action |
 |---|---|
-| `shoez/step_dummy.py` | **Create** — `fit_dummy`, `apply_dummy` (utility), `StepDummy` |
-| `shoez/step_one_hot.py` | **Create** — `fit_one_hot`, `StepOneHot` (calls `apply_dummy`) |
-| `shoez/__init__.py` | **Edit** — add `StepDummy`, `StepOneHot`, `fit_dummy`, `fit_one_hot` to `__all__` |
+| `mlfeatures/step_dummy.py` | **Create** — `fit_dummy`, `apply_dummy` (utility), `StepDummy` |
+| `mlfeatures/step_one_hot.py` | **Create** — `fit_one_hot`, `StepOneHot` (calls `apply_dummy`) |
+| `mlfeatures/__init__.py` | **Edit** — add `StepDummy`, `StepOneHot`, `fit_dummy`, `fit_one_hot` to `__all__` |
 | `tests/test_step_dummy.py` | **Create** — unit tests for `fit_dummy` / `apply_dummy` / `StepDummy` |
 | `tests/test_step_one_hot.py` | **Create** — unit tests for `fit_one_hot` / `StepOneHot` |
 | `great-docs.yml` | **Edit** — add both steps to the `reference:` section |
@@ -189,7 +189,7 @@ retained. Raises `ValueError` the same way for single-level columns.
 
 ## `apply_dummy` — shared transform utility
 
-Lives in `shoez/step_dummy.py` and is imported by `shoez/step_one_hot.py`.
+Lives in `mlfeatures/step_dummy.py` and is imported by `mlfeatures/step_one_hot.py`.
 Both `StepDummy.transform()` and `StepOneHot.transform()` delegate to it.
 
 ### Signature
@@ -283,7 +283,7 @@ def _col_name(self, col: str, level: str) -> str:
 
 ## `StepOneHot` class
 
-Lives in `shoez/step_one_hot.py`. Imports `apply_dummy` from `shoez.step_dummy`.
+Lives in `mlfeatures/step_one_hot.py`. Imports `apply_dummy` from `mlfeatures.step_dummy`.
 
 ```python
 class StepOneHot(Step):
@@ -305,7 +305,7 @@ Same as `StepDummy.fit()` but calls `fit_one_hot(features)`.
 ### `transform()`
 
 ```python
-from shoez.step_dummy import apply_dummy
+from mlfeatures.step_dummy import apply_dummy
 return apply_dummy(new_data, self._levels, self._col_name, self.keep_original_cols)
 ```
 
@@ -424,8 +424,8 @@ because they are covered by the `apply_dummy` unit tests in
 
 ```bash
 uv run pytest tests/test_step_dummy.py tests/test_step_one_hot.py -v
-uv run ruff check shoez/step_dummy.py shoez/step_one_hot.py
-uv run ruff format --check shoez/step_dummy.py shoez/step_one_hot.py
-uv run mypy shoez/step_dummy.py shoez/step_one_hot.py
-uv run pyright shoez/step_dummy.py shoez/step_one_hot.py
+uv run ruff check mlfeatures/step_dummy.py mlfeatures/step_one_hot.py
+uv run ruff format --check mlfeatures/step_dummy.py mlfeatures/step_one_hot.py
+uv run mypy mlfeatures/step_dummy.py mlfeatures/step_one_hot.py
+uv run pyright mlfeatures/step_dummy.py mlfeatures/step_one_hot.py
 ```

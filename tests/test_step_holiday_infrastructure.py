@@ -1,6 +1,6 @@
 """Conformance tests for StepHoliday.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepHoliday belongs in ``test_step_holiday.py`` and ``test_step_holiday_e2e.py``.
 
@@ -15,8 +15,8 @@ from datetime import date
 
 import narwhals.stable.v2 as nw
 
-from shoez import StepHoliday
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepHoliday
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestHolidayConformance(StepConformanceTest):

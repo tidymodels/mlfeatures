@@ -3,7 +3,7 @@
 Mirrors the structure of ``tests/test_step_class_distance.py``: pytest with
 class-based grouping, a tiny ``_df`` helper, narwhals frames built from
 pandas. The functions under test operate on the internal narwhals
-:data:`~shoez.types.Frame` type; the public contract is narwhals-in,
+:data:`~mlfeatures.types.Frame` type; the public contract is narwhals-in,
 narwhals-out and is backend-agnostic by construction, so we don't
 parametrise pandas vs polars at this layer (the end-to-end test does that
 for the ``StepGeoDistance`` wrapper).
@@ -19,7 +19,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from shoez.step_geo_distance import GeoDistanceFit, apply_geo_distance, fit_geo_distance
+from mlfeatures.step_geo_distance import (
+    GeoDistanceFit,
+    apply_geo_distance,
+    fit_geo_distance,
+)
 
 
 def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:

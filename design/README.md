@@ -1,4 +1,4 @@
-# Design: `shoez`
+# Design: `mlfeatures`
 
 A Python port of the R `recipes` package — a framework for **declaring** a pipeline of feature-engineering operations, **estimating** any required statistics from a training set, and **applying** those operations identically to new data.
 

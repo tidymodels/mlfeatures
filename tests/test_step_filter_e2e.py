@@ -11,7 +11,7 @@ from __future__ import annotations
 import pandas as pd
 import polars as pl
 
-from shoez import Mode, Recipe, StepFilter, StepNormalize
+from mlfeatures import Mode, Recipe, StepFilter, StepNormalize
 
 
 def _data() -> dict[str, list[float]]:
@@ -57,7 +57,7 @@ class TestStepFilter:
         assert StepFilter(lambda d: d["age"] > 0).mode is Mode.ROW_OP
 
     def test_is_row_op_subclass(self) -> None:
-        from shoez import RowOp
+        from mlfeatures import RowOp
 
         assert isinstance(StepFilter(lambda d: d["age"] > 0), RowOp)
 

@@ -17,7 +17,7 @@ Extensions register steps using Python's standard `importlib.metadata` entry poi
 
 ```toml
 # In a plugin package's pyproject.toml:
-[project.entry-points."shoez.steps"]
+[project.entry-points."mlfeatures.steps"]
 step_woe = "mypackage.steps:WoeStep"
 step_embed = "mypackage.steps:EmbedStep"
 ```
@@ -29,7 +29,7 @@ The core never relies on import order for correctness. Each plugin step declares
 ## Base classes
 
 ```python
-from shoez import Step, RowOp
+from mlfeatures import Step, RowOp
 ```
 
 - `Step` — base for all transformation steps. See [step-contract.md](step-contract.md) for the full ABC.
@@ -44,7 +44,7 @@ from shoez import Step, RowOp
 A step's `__init__` stores its own arguments and delegates the framework-owned ones to `Step.__init__()`, which sets `id`, `trained`, `output_role`, and the value behind the read-only `keep_original_cols`. The class also declares its `mode`, which the base class reads; a step that omits it cannot be constructed.
 
 ```python
-from shoez import Mode, Selector, Step
+from mlfeatures import Mode, Selector, Step
 
 class StepMyThing(Step):
     mode = Mode.ONE_TO_ONE
@@ -65,7 +65,7 @@ The second argument is the id to default to when the caller passes none; `keep_o
 A step's `columns` argument holds a selector, not column names, so `fit()` has to resolve it. `Step.resolve_selection()` is the supported route; narwhals' own `frame.schema` supplies the dtypes:
 
 ```python
-from shoez import Frame, SchemaInfo, Step
+from mlfeatures import Frame, SchemaInfo, Step
 
 class StepMyThing(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "StepMyThing":
@@ -75,7 +75,7 @@ class StepMyThing(Step):
         ...
 ```
 
-shoez's own steps reach for the private `shoez._frame` here instead, for historical reasons. **A plugin does not need it**, and should not import it: `resolve_selection()` covers the selector half and `frame.schema` covers the dtype half. The path above is the one that type-checks under `mypy --strict` and `pyright --strict` using only public names.
+mlfeatures's own steps reach for the private `mlfeatures._frame` here instead, for historical reasons. **A plugin does not need it**, and should not import it: `resolve_selection()` covers the selector half and `frame.schema` covers the dtype half. The path above is the one that type-checks under `mypy --strict` and `pyright --strict` using only public names.
 
 Annotating the ABC's methods needs two type aliases that are exported alongside the base classes: `Selector` (the type of every step's `columns` parameter) and `AcceptedDtypes` (the return type of `accepts_dtypes()`).
 
@@ -87,18 +87,18 @@ Namespace-reserved plugin packages — see [steps-catalog.md](steps-catalog.md):
 
 | Package               | Covers                                             |
 | --------------------- | -------------------------------------------------- |
-| `shoez-embed`     | Supervised/target encoders, WoE, entity embeddings |
-| `shoez-text`      | Tokenization, hashing, NLP steps                   |
-| `shoez-imbalance` | Upsampling, downsampling, class-balance steps      |
+| `mlfeatures-embed`     | Supervised/target encoders, WoE, entity embeddings |
+| `mlfeatures-text`      | Tokenization, hashing, NLP steps                   |
+| `mlfeatures-imbalance` | Upsampling, downsampling, class-balance steps      |
 
 ---
 
 ## Conformance
 
-`shoez.testing.StepConformanceTest` ships inside the package, so a plugin runs the same contract shoez's own steps do:
+`mlfeatures.testing.StepConformanceTest` ships inside the package, so a plugin runs the same contract mlfeatures's own steps do:
 
 ```python
-from shoez.testing import StepConformanceTest
+from mlfeatures.testing import StepConformanceTest
 
 class TestMyStepConformance(StepConformanceTest):
     training_data = {"a": [1.0, 2.0, 3.0], "g": ["x", "y", "x"]}
@@ -107,7 +107,7 @@ class TestMyStepConformance(StepConformanceTest):
         return StepMyThing(["a"])
 ```
 
-It needs pytest, which shoez does not require at runtime: install the `test` extra (`pip install shoez[test]`). See [step-contract.md](step-contract.md) for the checks and the opt-out hooks.
+It needs pytest, which mlfeatures does not require at runtime: install the `test` extra (`pip install mlfeatures[test]`). See [step-contract.md](step-contract.md) for the checks and the opt-out hooks.
 
 ---
 
@@ -131,7 +131,7 @@ Each entry is a requirement string: a bare package name, or one carrying a versi
 `Step.check_required_pkgs()` turns the declaration into a check. The recipe calls it at the two points where a step actually runs: `Recipe.fit()` and `FittedRecipe.transform()`. Building a recipe, inspecting it, and serializing it never need the package, so they are not gated; and checking at both ends means a recipe deserialized somewhere the original environment's packages are absent still fails with the actionable error rather than an `ImportError` from inside a step. A missing package raises `MissingDependencyError` naming the step, the package, and the `pip install` that fixes it:
 
 ```
-`shoez_woe` is required by step 'woe_1' (step_woe) but is not installed; install with `pip install shoez_woe`.
+`mlfeatures_woe` is required by step 'woe_1' (step_woe) but is not installed; install with `pip install mlfeatures_woe`.
 ```
 
-Version constraints are reported in the hint but not enforced: shoez does not vendor a version parser, and a wrong-version library fails at the call site anyway. See [dependencies.md](dependencies.md) for the lazy-import tools a step's body uses to reach those packages.
+Version constraints are reported in the hint but not enforced: mlfeatures does not vendor a version parser, and a wrong-version library fails at the call site anyway. See [dependencies.md](dependencies.md) for the lazy-import tools a step's body uses to reach those packages.

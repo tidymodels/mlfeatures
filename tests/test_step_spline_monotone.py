@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_spline_monotone import (
+from mlfeatures.step_spline_monotone import (
     SplineMonotoneFit,
     apply_spline_monotone,
     fit_spline_monotone,

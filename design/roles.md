@@ -7,7 +7,7 @@
 > **Note:** Code examples in this document are illustrative and not final — API names, signatures, and patterns may change before implementation.
 
 
-Roles are a first-class concept and are what makes `shoez` different from a typical sklearn `Pipeline`. Every column in the recipe carries **zero or more** role names stored as a `set[str]`.
+Roles are a first-class concept and are what makes `mlfeatures` different from a typical sklearn `Pipeline`. Every column in the recipe carries **zero or more** role names stored as a `set[str]`.
 
 ---
 
@@ -76,7 +76,7 @@ rec = (
 )
 ```
 
-In R `recipes`, role management is technically applied to the original data before any steps run, regardless of where it appears in the code. This caused persistent confusion — users expected role changes to take effect at the point they wrote them, and were surprised when they didn't [#437, #778]. In `shoez`, the order is respected: a role change takes effect from that point in the pipeline forward, affecting which columns subsequent selectors resolve to.
+In R `recipes`, role management is technically applied to the original data before any steps run, regardless of where it appears in the code. This caused persistent confusion — users expected role changes to take effect at the point they wrote them, and were surprised when they didn't [#437, #778]. In `mlfeatures`, the order is respected: a role change takes effect from that point in the pipeline forward, affecting which columns subsequent selectors resolve to.
 
 Role management also operates on **any** column in the schema — including columns produced by earlier steps — since the lineage DAG is updated after each operation. See [schema.md](schema.md).
 

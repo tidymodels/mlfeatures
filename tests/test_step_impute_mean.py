@@ -12,7 +12,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_impute_mean import apply_impute_mean, fit_impute_mean
+from mlfeatures.step_impute_mean import apply_impute_mean, fit_impute_mean
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

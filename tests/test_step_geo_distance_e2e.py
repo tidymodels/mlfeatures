@@ -14,7 +14,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, Recipe, SchemaInfo, StepGeoDistance
+from mlfeatures import Mode, Recipe, SchemaInfo, StepGeoDistance
 
 UNION_STATION = (38.8986312, -77.0062457)
 

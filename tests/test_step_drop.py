@@ -11,8 +11,8 @@ import narwhals as nw
 import pandas as pd
 import pytest
 
-from shoez import Mode, Recipe, SchemaInfo, StepDrop
-from shoez import Selectors as s
+from mlfeatures import Mode, Recipe, SchemaInfo, StepDrop
+from mlfeatures import Selectors as s
 
 
 def _data() -> dict[str, list[object]]:

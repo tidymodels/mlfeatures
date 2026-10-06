@@ -14,7 +14,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, Recipe, SchemaInfo, StepNormalize, StepPolynomial
+from mlfeatures import Mode, Recipe, SchemaInfo, StepNormalize, StepPolynomial
 
 
 def _data() -> dict[str, list[float]]:

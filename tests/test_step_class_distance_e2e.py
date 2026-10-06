@@ -14,7 +14,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Mode, Recipe, SchemaInfo, StepClassDistance
+from mlfeatures import Mode, Recipe, SchemaInfo, StepClassDistance
 
 
 def _data() -> dict[str, list[float] | list[str]]:

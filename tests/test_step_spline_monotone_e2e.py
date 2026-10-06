@@ -14,7 +14,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, Recipe, SchemaInfo, StepNormalize, StepSplineMonotone
+from mlfeatures import Mode, Recipe, SchemaInfo, StepNormalize, StepSplineMonotone
 
 X_1_TO_10 = list(range(1, 11))
 

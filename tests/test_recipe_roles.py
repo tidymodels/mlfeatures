@@ -11,8 +11,8 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, Roles, StepDropCorr, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, Roles, StepDropCorr, StepNormalize
+from mlfeatures import Selectors as s
 
 
 def _df() -> pd.DataFrame:

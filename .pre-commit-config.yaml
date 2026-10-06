@@ -23,7 +23,7 @@ repos:
   - repo: local
     hooks:
       # `--force-exclude` makes ruff honor its `extend-exclude` (the vendored
-      # `shoez/_databackend.py`) even for filenames pre-commit passes
+      # `mlfeatures/_databackend.py`) even for filenames pre-commit passes
       # explicitly; the managed ruff-pre-commit hook added it implicitly.
       - id: ruff
         name: ruff (lint)
@@ -40,15 +40,15 @@ repos:
       # and pyproject.toml respectively, so pre-commit passes no filenames.
       - id: mypy
         name: mypy --strict
-        entry: uv run mypy shoez extras
+        entry: uv run mypy mlfeatures extras
         language: system
-        files: ^(shoez|extras)/
+        files: ^(mlfeatures|extras)/
         pass_filenames: false
       - id: pyright
         name: pyright (strict)
         entry: uv run pyright
         language: system
-        files: ^(shoez|extras)/
+        files: ^(mlfeatures|extras)/
         pass_filenames: false
 
   - repo: local

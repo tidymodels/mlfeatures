@@ -8,7 +8,7 @@ import narwhals as nw
 import pandas as pd
 import polars as pl
 
-from shoez.step_intercept import add_intercept
+from mlfeatures.step_intercept import add_intercept
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

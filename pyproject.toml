@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 
 [project]
-name = "shoez"
+name = "mlfeatures"
 dynamic = ["version"]
 description = "A framework for declaring, estimating, and applying feature-engineering pipelines"
 readme = "README.md"
@@ -58,7 +58,7 @@ scipy = [
 holidays = [
     "holidays>=0.40",
 ]
-# `shoez.testing` (the StepConformanceTest suite) imports pytest, so a plugin
+# `mlfeatures.testing` (the StepConformanceTest suite) imports pytest, so a plugin
 # author running the step contract needs it. The rest of the package does not.
 test = [
     "pytest>=7.0",
@@ -76,7 +76,7 @@ Homepage = "https://github.com/tidymodels/shoez"
 Repository = "https://github.com/tidymodels/shoez"
 "Bug Tracker" = "https://github.com/tidymodels/shoez/issues"
 
-[project.entry-points."shoez.steps"]
+[project.entry-points."mlfeatures.steps"]
 # Third-party step plugins register here
 
 [dependency-groups]
@@ -129,14 +129,14 @@ docs = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["shoez*"]
+include = ["mlfeatures*"]
 
 [tool.setuptools.package-data]
-shoez = ["py.typed", "data/*.parquet"]
+mlfeatures = ["py.typed", "data/*.parquet"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# `extras/` holds the out-of-tree step fixture (`shoez_demo_step`), which lives
+# `extras/` holds the out-of-tree step fixture (`mlfeatures_demo_step`), which lives
 # outside `tests/` because `tests/` is excluded from both type-checkers and the
 # whole point of the fixture is that it type-checks under strict mode.
 pythonpath = ["extras"]
@@ -149,7 +149,7 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = ["shoez"]
+source = ["mlfeatures"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -179,7 +179,7 @@ extend-exclude = [
     # Vendored verbatim from https://github.com/machow/databackend (MIT) — kept
     # byte-identical to upstream, so it is not linted/formatted or type-checked
     # here.
-    "shoez/_databackend.py",
+    "mlfeatures/_databackend.py",
     # The design and plan docs hold illustrative pseudo-code, not source; ruff
     # >=0.16 formats Python blocks inside Markdown and would rewrite it.
     "*.md",
@@ -207,7 +207,7 @@ pythonVersion = "3.10"
 typeCheckingMode = "strict"
 # `extras` holds the out-of-tree step fixture; it is type-checked precisely
 # because proving a plugin can be written under strict mode is its job.
-include = ["shoez", "extras"]
+include = ["mlfeatures", "extras"]
 exclude = [
     "**/__pycache__",
     "**/.venv",
@@ -215,11 +215,11 @@ exclude = [
     "**/dist",
     "tests",
     # Vendored verbatim from machow/databackend (MIT); not type-checked here.
-    "shoez/_databackend.py",
+    "mlfeatures/_databackend.py",
     # Test-support code: it drives pandas frames and pytest directly, neither of
     # which ships stubs, so strict mode reports their symbols as partially
     # unknown. Excluded on the same grounds as `tests/`; mypy still checks it.
-    "shoez/testing.py",
+    "mlfeatures/testing.py",
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false
@@ -246,17 +246,17 @@ module = ["pandas", "polars", "narwhals", "narwhals.*"]
 ignore_missing_imports = true
 
 # scikit-learn's base classes resolve to Any under strict mode; allow the sklearn
-# adapter in shoez.compat to subclass them without tripping disallow_subclassing_any.
+# adapter in mlfeatures.compat to subclass them without tripping disallow_subclassing_any.
 [[tool.mypy.overrides]]
 module = ["sklearn.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["shoez.compat"]
+module = ["mlfeatures.compat"]
 disallow_subclassing_any = false
 
 # Vendored verbatim from machow/databackend (MIT); its dynamic ABCMeta pattern is
 # not worth diverging from upstream to satisfy strict mode, so skip its errors.
 [[tool.mypy.overrides]]
-module = ["shoez._databackend"]
+module = ["mlfeatures._databackend"]
 ignore_errors = true

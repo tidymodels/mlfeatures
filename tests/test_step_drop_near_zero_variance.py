@@ -1,11 +1,11 @@
-"""Tests for :func:`shoez.step_drop_near_zero_variance.fit_drop_near_zero_variance`.
+"""Tests for :func:`mlfeatures.step_drop_near_zero_variance.fit_drop_near_zero_variance`.
 
 Every test is parametrized over a *backend* factory so the same logic
 runs against both pandas and polars — that's the contract the narwhals
 abstraction is supposed to give us. Native frames are wrapped via
-:func:`shoez._frame.from_native` before the fitter sees them, matching
+:func:`mlfeatures._frame.from_native` before the fitter sees them, matching
 the lifecycle (the recipe boundary does the wrapping; steps only ever
-see a :data:`~shoez.types.Frame`).
+see a :data:`~mlfeatures.types.Frame`).
 """
 
 from typing import Any, Callable
@@ -14,8 +14,8 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import _frame as f
-from shoez.step_drop_near_zero_variance import fit_drop_near_zero_variance
+from mlfeatures import _frame as f
+from mlfeatures.step_drop_near_zero_variance import fit_drop_near_zero_variance
 
 FrameFactory = Callable[[dict[str, list[Any]]], Any]
 

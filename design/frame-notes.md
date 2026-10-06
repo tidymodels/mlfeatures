@@ -4,7 +4,7 @@
 
 ---
 
-Findings from building `shoez/_frame.py` (the narwhals boundary) and prototyping
+Findings from building `mlfeatures/_frame.py` (the narwhals boundary) and prototyping
 `step_normalize`'s data ops over pandas and polars (issue #15). This is the
 "document any coverage gaps" deliverable — the early-warning signal for the
 fallback to a concrete internal frame type.

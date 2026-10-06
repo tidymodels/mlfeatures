@@ -112,7 +112,7 @@ pipe = Pipeline([("pre", pre), ("model", ...)])
   numeric features", no "everything starting with `geo_`".
 - Output is a bare array — provenance and a train/serve column contract are gone.
 
-## The shoez way
+## The mlfeatures way
 
 ```python
 rec = (

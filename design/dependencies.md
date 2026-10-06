@@ -1,15 +1,15 @@
 # Optional dependencies
 
-shoez keeps a **small required core** and treats heavier libraries as
+mlfeatures keeps a **small required core** and treats heavier libraries as
 *optional*. Only `narwhals` (the internal dataframe representation — see
 [ecosystem.md](ecosystem.md)) is unconditionally required. `numpy`, `pandas`,
 `polars`, and `scikit-learn` are optional: a user who only needs a subset of the
-steps should not be forced to install all of them, and `import shoez` should
+steps should not be forced to install all of them, and `import mlfeatures` should
 never fail merely because one of them is absent.
 
-The single place this is coordinated is [`shoez/_dependencies.py`](../shoez/_dependencies.py).
+The single place this is coordinated is [`mlfeatures/_dependencies.py`](../mlfeatures/_dependencies.py).
 This document is the guide for **step authors**: how to depend on an optional
-library from inside a step without breaking `import shoez` for users who do not
+library from inside a step without breaking `import mlfeatures` for users who do not
 have it installed.
 
 > **Status (transitional).** The machinery described here is in place and
@@ -21,7 +21,7 @@ have it installed.
 
 ## The two tools
 
-`shoez._dependencies` exposes two ways to reach an optional library, for two
+`mlfeatures._dependencies` exposes two ways to reach an optional library, for two
 different situations.
 
 ### 1. Lazy module proxy — for ordinary `np.<...>` call sites
@@ -31,18 +31,18 @@ Import the proxy instead of the real module:
 ```python
 from __future__ import annotations
 
-from shoez._dependencies import numpy as np
+from mlfeatures._dependencies import numpy as np
 ```
 
 The proxy is transparent: every `np.asarray(...)`, `np.mean(...)`, etc. works
 exactly as before. The real `numpy` import is deferred until the **first
 attribute access** — i.e. until a step actually runs — so importing the step
-module (and therefore `import shoez`) stays cheap and succeeds even when numpy
+module (and therefore `import mlfeatures`) stays cheap and succeeds even when numpy
 is not installed. If numpy *is* missing, the first `np.<...>` raises a
 `MissingDependencyError` with an install hint:
 
 ```
-`numpy` is required but is not installed; install it with `pip install 'shoez[numpy]'` (or `pip install numpy`).
+`numpy` is required but is not installed; install it with `pip install 'mlfeatures[numpy]'` (or `pip install numpy`).
 ```
 
 Use this for the common case where a step calls top-level functions on the
@@ -103,12 +103,12 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
 **A sanctioned runtime backend import.** The core is backend-agnostic and must
 not `import polars` / `import pandas` at runtime to branch on backend (see
 `design/ecosystem.md`, boundary rule #5). The few *deliberate* exceptions —
-e.g. the opt-in `shoez.polars` accessor, and resolving a polars selector in
-`shoez._frame` — route through `import_optional` rather than a bare `import`:
+e.g. the opt-in `mlfeatures.polars` accessor, and resolving a polars selector in
+`mlfeatures._frame` — route through `import_optional` rather than a bare `import`:
 
 ```python
 else:  # runtime; TYPE_CHECKING branch does `import polars as pl` for the checkers
-    pl = import_optional("polars", purpose="for the `df.shz` accessor")
+    pl = import_optional("polars", purpose="for the `df.mlf` accessor")
 ```
 
 This is as much for **auditability** as for the friendly error: it makes every
@@ -120,7 +120,7 @@ already loaded; the call is kept uniform anyway, with a comment saying so.)
 
 ## Declaring what a step needs
 
-Reaching for a library lazily keeps `import shoez` cheap, but it means a user only learns the library is missing once the step runs. A step therefore also *declares* its heavy dependencies via `required_pkgs()`, and the recipe checks them up front (at `fit()` and at `transform()`) so the failure arrives before any work happens. See [extensibility.md](extensibility.md#required_pkgs) for the declaration format and the error it produces; the two mechanisms are complementary, and a step using an optional library should do both.
+Reaching for a library lazily keeps `import mlfeatures` cheap, but it means a user only learns the library is missing once the step runs. A step therefore also *declares* its heavy dependencies via `required_pkgs()`, and the recipe checks them up front (at `fit()` and at `transform()`) so the failure arrives before any work happens. See [extensibility.md](extensibility.md#required_pkgs) for the declaration format and the error it produces; the two mechanisms are complementary, and a step using an optional library should do both.
 
 ## Type annotations
 
@@ -138,14 +138,14 @@ if TYPE_CHECKING:
 def fit_thing(...) -> "npt.NDArray[Any]": ...
 ```
 
-`shoez._dependencies` itself imports the real `numpy` under `TYPE_CHECKING`, so
-`from shoez._dependencies import numpy as np` gives mypy and pyright (both run in
+`mlfeatures._dependencies` itself imports the real `numpy` under `TYPE_CHECKING`, so
+`from mlfeatures._dependencies import numpy as np` gives mypy and pyright (both run in
 strict mode) the true module types while the runtime gets the lazy proxy.
 
 ## Adding a new optional dependency
 
 1. Add the top-level module name to `_EXTRAS` in
-   [`shoez/_dependencies.py`](../shoez/_dependencies.py), mapping it to the pip
+   [`mlfeatures/_dependencies.py`](../mlfeatures/_dependencies.py), mapping it to the pip
    *extra* that will provide it. This makes the install hint correct.
 2. If it is a "call lots of top-level functions" library like numpy, add a lazy
    proxy next to `numpy` (`mylib = _lazy_import("mylib")`) and list it in

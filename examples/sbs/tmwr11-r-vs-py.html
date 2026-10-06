@@ -46,7 +46,7 @@ ul.idx { line-height:1.9; }
 <p class="nav"><a href="sbs-index.html">index</a> · <a href="tmwr01-r-vs-py.html">TMWR-01</a> <a href="tmwr03-r-vs-py.html">TMWR-03</a> <a class="here" href="tmwr11-r-vs-py.html">TMWR-11</a> <a href="tmwr14-r-vs-py.html">TMWR-14</a> <a href="tmwr16-r-vs-py.html">TMWR-16</a> <a href="kuhn-r-vs-py.html">KUHN</a></p>
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
-explain what changes; <span style="color:var(--gap)">red = shoez gap</span>.
+explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
 Lightly condensed from <code>candidates/</code> — R: test rmse 0.0730 (best CV 0.0773) · Python ran: test 0.0771 / rsq 0.800.</p>
 <div class="cols">
 <div class="pane r"><h2>example.R — tidymodels (run)</h2>
@@ -159,19 +159,19 @@ final_res %&gt;%
   bake(new_data = ames_test) %&gt;%
   head()
 </pre></div>
-<div class="pane py"><h2>example.py — shoez + sklearn (run)</h2>
+<div class="pane py"><h2>example.py — mlfeatures + sklearn (run)</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="df"># DIFF: tidymodels is one meta-package; Python assembles polars + sklearn</span>
-<span class="df"># + xgboost + shoez (xgboost&#x27;s polars path needs pyarrow).</span>
+<span class="df"># + xgboost + mlfeatures (xgboost&#x27;s polars path needs pyarrow).</span>
 
 import numpy as np
 import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
-from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
-from shoez import Selectors as s
+from mlfeatures import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
+from mlfeatures import Selectors as s
 
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Ames housing; log10 the target BEFORE the recipe (target transforms</span>
@@ -199,7 +199,7 @@ ames_train, ames_test = train_test_split(
 <span class="bn"># Recipe -------------------------------------------------------------------</span>
 <span class="cm"># The usemodels &quot;minimal preprocessing for xgboost&quot;: guard unseen levels,</span>
 <span class="cm"># one-hot encode, drop zero-variance columns.</span>
-<span class="gp"># DIFF (GAP): step_novel() has no shoez analog yet — StepNovel is unbuilt and</span>
+<span class="gp"># DIFF (GAP): step_novel() has no mlfeatures analog yet — StepNovel is unbuilt and</span>
 <span class="gp"># StepUnknown fills only nulls. Omitted here; StepOneHot warns and emits</span>
 <span class="gp"># nulls for unseen levels at transform instead.</span>
 <span class="df"># DIFF: Recipe(target=...) roles replace the R formula; selectors pick</span>
@@ -261,7 +261,7 @@ print(rmse)                 # ran: 0.0771 (R test: 0.0730)
 
 <span class="bn"># Proof the recipe stands alone --------------------------------------------</span>
 <span class="cm"># Transform new data with no model attached.</span>
-<span class="gp"># DIFF (shoez-only): the lineage query — which columns did the one-hot step</span>
+<span class="gp"># DIFF (mlfeatures-only): the lineage query — which columns did the one-hot step</span>
 <span class="gp"># produce? — has no recipes equivalent (name-prefix matching is the R workaround).</span>
 
 fitted = xgboost_recipe.fit(ames_train)

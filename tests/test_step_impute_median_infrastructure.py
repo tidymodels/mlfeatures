@@ -1,14 +1,14 @@
 """Conformance tests for StepImputeMedian.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepImputeMedian belongs in ``test_step_impute_median.py`` and ``test_step_impute_median_e2e.py``.
 """
 
 from __future__ import annotations
 
-from shoez import StepImputeMedian
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepImputeMedian
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestImputeMedianConformance(StepConformanceTest):

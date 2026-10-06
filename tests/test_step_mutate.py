@@ -9,7 +9,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez.step_mutate import StepMutate, apply_mutate
+from mlfeatures.step_mutate import StepMutate, apply_mutate
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

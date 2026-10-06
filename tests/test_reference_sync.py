@@ -1,4 +1,4 @@
-"""Guard that the docs reference cannot drift from ``shoez.__all__``.
+"""Guard that the docs reference cannot drift from ``mlfeatures.__all__``.
 
 ``CLAUDE.md`` requires the ``reference:`` section in ``great-docs.yml`` to
 mirror the public API. great-docs ``contents:`` does not support regex/glob
@@ -15,7 +15,7 @@ from typing import Any
 
 import yaml
 
-import shoez
+import mlfeatures
 
 GREAT_DOCS_YML = Path(__file__).resolve().parent.parent / "great-docs.yml"
 
@@ -23,7 +23,7 @@ GREAT_DOCS_YML = Path(__file__).resolve().parent.parent / "great-docs.yml"
 _NOT_DOCUMENTED = {"__version__"}
 
 # Submodules documented on their own reference page. They are reached as
-# ``shoez.<name>`` and are deliberately not in ``shoez.__all__`` (which is the
+# ``mlfeatures.<name>`` and are deliberately not in ``mlfeatures.__all__`` (which is the
 # step-authoring API), so the reverse-direction check must allow them.
 _SUBMODULES = {"data"}
 
@@ -51,7 +51,7 @@ def _all_entries() -> set[str]:
 
 
 def test_every_public_export_has_a_reference_page() -> None:
-    expected = set(shoez.__all__) - _NOT_DOCUMENTED
+    expected = set(mlfeatures.__all__) - _NOT_DOCUMENTED
     documented = _documented_names()
     missing = expected - documented
     assert not missing, (
@@ -67,9 +67,9 @@ def test_no_reference_page_for_a_deleted_export() -> None:
     ``reference:`` entry that only surfaces as a docs-build failure on ``main``.
     """
     documented = _documented_names()
-    extra = documented - set(shoez.__all__) - _SUBMODULES
+    extra = documented - set(mlfeatures.__all__) - _SUBMODULES
     assert not extra, (
-        f"great-docs.yml documents names that are not in shoez.__all__: "
+        f"great-docs.yml documents names that are not in mlfeatures.__all__: "
         f"{sorted(extra)}. Remove the entry, or re-export the name."
     )
 
@@ -90,7 +90,7 @@ def test_step_authoring_methods_are_all_documented() -> None:
     """
     own_methods = {
         name
-        for name, value in vars(shoez.Step).items()
+        for name, value in vars(mlfeatures.Step).items()
         if not name.startswith("_")
         and (
             inspect.isfunction(value)
@@ -107,7 +107,7 @@ def test_step_authoring_methods_are_all_documented() -> None:
 
 
 def test_data_submodule_has_a_reference_page() -> None:
-    """``shoez.data`` is not in ``__all__``, so the forward check skips it."""
+    """``mlfeatures.data`` is not in ``__all__``, so the forward check skips it."""
     assert "data" in _documented_names(), (
         "add a `Datasets` section to great-docs.yml listing `data`"
     )

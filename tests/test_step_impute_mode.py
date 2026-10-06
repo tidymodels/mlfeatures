@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_impute_mode import apply_impute_mode, fit_impute_mode
+from mlfeatures.step_impute_mode import apply_impute_mode, fit_impute_mode
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

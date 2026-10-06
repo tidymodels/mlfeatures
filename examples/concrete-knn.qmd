@@ -2,7 +2,7 @@
 title: "Concrete + KNN: scale is the admission ticket"
 ---
 
-A distance model without a shared scale lets the widest column own the metric. One-step recipe; ports 1:1 and runs in shoez today. Ported from [Tidy Modeling with R, ch. 15](https://www.tmwr.org/workflow-sets).
+A distance model without a shared scale lets the widest column own the metric. One-step recipe; ports 1:1 and runs in mlfeatures today. Ported from [Tidy Modeling with R, ch. 15](https://www.tmwr.org/workflow-sets).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/tmwr14-r-vs-py.html){target="_blank"} · R original: test rmse 8.57 MPa.
 
@@ -22,7 +22,7 @@ PARITY NOTES:
    all-pairs step_interact does not (GAP) — variant left commented, as in R.
  - concrete exported from R on first run: data/concrete.csv.
 ```
-*Docs version loads the dataset from `shoez.data`; the research originals
+*Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
 :::
 
@@ -34,12 +34,12 @@ from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 
-from shoez import Recipe, RecipeTransformer, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, RecipeTransformer, StepNormalize
+from mlfeatures import Selectors as s
 
 # ── Data + the leakage beat (pre-recipe, matching the book)
 
-from shoez.data import concrete
+from mlfeatures.data import concrete
 # Replicate mixtures averaged BEFORE splitting so one mixture can't appear in
 # both train and test. 1,030 rows -> 992.
 ingredients = [c for c in concrete.columns if c != "compressive_strength"]

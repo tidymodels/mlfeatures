@@ -1,6 +1,6 @@
 """Step-contract conformance for StepLog.
 
-The checks live in `shoez.testing.StepConformanceTest`; this file supplies only
+The checks live in `mlfeatures.testing.StepConformanceTest`; this file supplies only
 the step and its data. ``a`` is strictly positive so the out-of-domain warning
 does not fire during the contract run; that behaviour is covered in
 ``test_step_log.py``.
@@ -8,8 +8,8 @@ does not fire during the contract run; that behaviour is covered in
 
 from __future__ import annotations
 
-from shoez import StepLog
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepLog
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestLogConformance(StepConformanceTest):

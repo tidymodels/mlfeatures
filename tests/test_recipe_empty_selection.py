@@ -12,8 +12,8 @@ from __future__ import annotations
 import narwhals as nw
 import pandas as pd
 
-from shoez import Recipe, SchemaInfo, StepIntercept, StepNormalize
-from shoez.types import Frame
+from mlfeatures import Recipe, SchemaInfo, StepIntercept, StepNormalize
+from mlfeatures.types import Frame
 
 
 class _RaisingNormalize(StepNormalize):

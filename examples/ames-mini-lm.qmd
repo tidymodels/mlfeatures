@@ -9,7 +9,7 @@ The book's first recipe — the R formula's implicit preprocessing made explicit
 ::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
 ```
 PARITY NOTES:
- - GAP: step_log(Gr_Liv_Area, base = 10) has no shoez analog (no individual-
+ - GAP: step_log(Gr_Liv_Area, base = 10) has no mlfeatures analog (no individual-
    transform steps yet; StepMutate is backlog priority 1). Worked around
    PRE-recipe in polars — safe here because log is static (nothing learned),
    but it means the transform is NOT replayed by the fitted recipe: new
@@ -20,7 +20,7 @@ PARITY NOTES:
    polars gotcha: null_values="NA" is required — polars does not auto-parse
    R's "NA" strings as nulls (pandas does).
 ```
-*Docs version loads the dataset from `shoez.data`; the research originals
+*Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
 :::
 
@@ -32,17 +32,17 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
-from shoez import Recipe, RecipeTransformer, StepDummy
-from shoez import Selectors as s
+from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import Selectors as s
 
 # ── Data + target transform (outside the recipe, per TMwR Ch. 5)
 
-from shoez.data import ames
+from mlfeatures.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Sale_Price"])
 ames = ames.with_columns(
     pl.col("Sale_Price").log(base=10),
-    # GAP workaround: R does this inside the recipe as step_log(); shoez has
+    # GAP workaround: R does this inside the recipe as step_log(); mlfeatures has
     # no transform step yet, so it happens here, outside the replay boundary.
     pl.col("Gr_Liv_Area").log(base=10),
 )

@@ -5,12 +5,12 @@ title: "Selectors and roles"
 Recipe steps operate on columns of data, which are specified using Polars selectors.
 While Polars selectors can specify pieces like all numeric columns (`cs.numeric()`),
 they can't target modelling pieces like all "feature" columns.
-shoez enables this by adding Roles, modelling specific labels for columns and selectors to target them.
+mlfeatures enables this by adding Roles, modelling specific labels for columns and selectors to target them.
 
 ::: {.callout-note collapse="true" title="Key points"}
 - A step accepts a column name, a list of names, a polars or narwhals
-  selector, or a shoez selector from `Selectors`, imported as `s`.
-- shoez selectors choose by name, type, role, or the step that produced a
+  selector, or a mlfeatures selector from `Selectors`, imported as `s`.
+- mlfeatures selectors choose by name, type, role, or the step that produced a
   column, and compose with `&`, `|`, `~`, and `-`.
 - `Recipe(..., target="col")` gives a column the `target` role, which keeps it
   out of feature selectors like `s.numeric_features()`.
@@ -23,7 +23,7 @@ shoez enables this by adding Roles, modelling specific labels for columns and se
 
 ## Setup
 
-The examples use two datasets from `shoez.data`: the credit data, whose
+The examples use two datasets from `mlfeatures.data`: the credit data, whose
 target is a string, and a small Ames housing subset, whose target is
 numeric.
 
@@ -31,15 +31,15 @@ numeric.
 import polars as pl
 import polars.selectors as cs
 
-from shoez import Recipe, StepDummy, StepImputeMedian, StepNormalize
-from shoez import Selectors as s
-from shoez.data import ames_mini, credit
+from mlfeatures import Recipe, StepDummy, StepImputeMedian, StepNormalize
+from mlfeatures import Selectors as s
+from mlfeatures.data import ames_mini, credit
 ```
 
 ## Selector basics
 
-Pass a polars selector, or a shoez selector from `s`, wherever a step takes
-columns. shoez selectors cover the same name and type checks
+Pass a polars selector, or a mlfeatures selector from `s`, wherever a step takes
+columns. mlfeatures selectors cover the same name and type checks
 (`s.numeric()`, `s.starts_with()`, `s.col()`) and compose with set
 operators, so "every numeric column except `Price`" is one expression.
 
@@ -47,7 +47,7 @@ operators, so "every numeric column except `Price`" is one expression.
 recipe = (
     Recipe(data=credit, target="Status")
     .add(StepImputeMedian(cs.numeric()))  # polars selector
-    .add(StepNormalize(s.numeric() - s.col("Price")))  # shoez selector
+    .add(StepNormalize(s.numeric() - s.col("Price")))  # mlfeatures selector
 )
 fitted = recipe.fit(credit)
 fitted
@@ -62,7 +62,7 @@ step can pick up columns an earlier step created. The full set is on the
 ## Roles: features and targets
 
 Use `Recipe(..., target="col")` to give a column the `target` role, which
-excludes it from the shoez feature selectors such as `s.numeric_features()`.
+excludes it from the mlfeatures feature selectors such as `s.numeric_features()`.
 A polars selector like `cs.numeric()` knows nothing about roles, so it
 includes the target:
 

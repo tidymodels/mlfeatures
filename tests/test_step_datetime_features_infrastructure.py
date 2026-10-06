@@ -1,6 +1,6 @@
 """Conformance tests for StepDatetimeFeatures.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepDatetimeFeatures belongs in ``test_step_datetime_features.py`` and
 ``test_step_datetime_features_e2e.py``.
@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from shoez import StepDatetimeFeatures
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepDatetimeFeatures
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestDatetimeFeaturesConformance(StepConformanceTest):

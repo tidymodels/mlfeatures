@@ -1,4 +1,4 @@
-"""Tests for :mod:`shoez.step_date_features`.
+"""Tests for :mod:`mlfeatures.step_date_features`.
 
 Unlike Datetime, pandas cannot represent narwhals' ``Date`` dtype from a plain
 list of ``datetime.date`` objects without pyarrow (it infers ``object``
@@ -6,7 +6,7 @@ dtype instead) -- see ``tests/test_selectors.py``'s ``_typed_frame_with_roles``
 for the same limitation. These tests build inputs as polars frames, which
 represent ``Date`` natively; ``StepDateFeatures`` itself is backend-agnostic
 (see `test_step_date_features_infrastructure.py`, which exercises the pandas
-side via pyarrow and `shoez.testing`'s `dtype_casts` hook).
+side via pyarrow and `mlfeatures.testing`'s `dtype_casts` hook).
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, SchemaInfo
-from shoez.step_date_features import (
+from mlfeatures import Mode, SchemaInfo
+from mlfeatures.step_date_features import (
     DateFeaturesFit,
     StepDateFeatures,
     apply_date_features,
@@ -233,7 +233,7 @@ class TestStepDateFeaturesUnit:
         assert step.schema_out().dtypes["d_month"].startswith("Enum(")
 
     def test_update_roles_with_no_output_role(self) -> None:
-        from shoez.types import Roles
+        from mlfeatures.types import Roles
 
         step = StepDateFeatures(["d"], features=["year"], role=None)
         step.fit(_df(_data()), SchemaInfo())

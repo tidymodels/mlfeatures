@@ -1,6 +1,6 @@
-"""Tests for :mod:`shoez.step_interact`.
+"""Tests for :mod:`mlfeatures.step_interact`.
 
-The functions under test are written against the internal :data:`~shoez.types.Frame`
+The functions under test are written against the internal :data:`~mlfeatures.types.Frame`
 type (a narwhals ``DataFrame``), so these tests build inputs via
 :func:`narwhals.stable.v2.from_native` and inspect outputs as narwhals frames.
 """
@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_interact import InteractFit, apply_interact, fit_interact
+from mlfeatures.step_interact import InteractFit, apply_interact, fit_interact
 
 
 def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:

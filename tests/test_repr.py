@@ -13,8 +13,8 @@ from __future__ import annotations
 import pandas as pd
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, StepDummy, StepIntercept, StepNormalize
-from shoez import Selectors as cs
+from mlfeatures import Recipe, StepDummy, StepIntercept, StepNormalize
+from mlfeatures import Selectors as cs
 
 
 def _df() -> pd.DataFrame:

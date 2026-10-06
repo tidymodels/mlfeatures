@@ -1,4 +1,4 @@
-"""The bundled example datasets in ``shoez.data``.
+"""The bundled example datasets in ``mlfeatures.data``.
 
 Each dataset is a lazily loaded polars frame served by the module's
 ``__getattr__``; the tests pin the shapes, the polars dtype of the one date
@@ -20,9 +20,9 @@ except ModuleNotFoundError:
 import polars as pl
 import pytest
 
-import shoez.data
+import mlfeatures.data
 
-DATA_INIT = Path(shoez.data.__file__)
+DATA_INIT = Path(mlfeatures.data.__file__)
 PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
 
 # (rows, columns) per dataset; the spec's table.
@@ -37,30 +37,30 @@ EXPECTED_SHAPES: dict[str, tuple[int, int]] = {
 
 
 def test_all_lists_every_expected_dataset() -> None:
-    assert set(shoez.data.__all__) == set(EXPECTED_SHAPES)
+    assert set(mlfeatures.data.__all__) == set(EXPECTED_SHAPES)
 
 
 @pytest.mark.parametrize("name", sorted(EXPECTED_SHAPES))
 def test_dataset_loads_as_polars_with_expected_shape(name: str) -> None:
-    frame = getattr(shoez.data, name)
+    frame = getattr(mlfeatures.data, name)
     assert isinstance(frame, pl.DataFrame)
     assert frame.shape == EXPECTED_SHAPES[name]
 
 
 def test_each_access_returns_a_fresh_frame() -> None:
     """No caching: two accesses yield two distinct frame objects."""
-    first = shoez.data.credit
-    second = shoez.data.credit
+    first = mlfeatures.data.credit
+    second = mlfeatures.data.credit
     assert first is not second
 
 
 def test_unknown_name_raises_attribute_error_naming_it() -> None:
     with pytest.raises(AttributeError, match="no dataset named 'nope'"):
-        getattr(shoez.data, "nope")
+        getattr(mlfeatures.data, "nope")
 
 
 def test_dir_lists_the_datasets() -> None:
-    assert dir(shoez.data) == sorted(shoez.data.__all__)
+    assert dir(mlfeatures.data) == sorted(mlfeatures.data.__all__)
 
 
 def _attribute_docstrings(source: str) -> dict[str, str]:
@@ -87,7 +87,7 @@ def _attribute_docstrings(source: str) -> dict[str, str]:
 
 def test_every_dataset_has_an_attribute_docstring() -> None:
     docs = _attribute_docstrings(DATA_INIT.read_text())
-    missing = set(shoez.data.__all__) - set(docs)
+    missing = set(mlfeatures.data.__all__) - set(docs)
     assert not missing, f"datasets without a docstring: {sorted(missing)}"
     for name, text in docs.items():
         assert text.strip(), f"empty docstring for {name!r}"
@@ -109,12 +109,12 @@ AMES_MINI_COLUMNS = [
 
 
 def test_ames_mini_has_the_curated_columns_in_order() -> None:
-    assert shoez.data.ames_mini.columns == AMES_MINI_COLUMNS
+    assert mlfeatures.data.ames_mini.columns == AMES_MINI_COLUMNS
 
 
 def test_ames_mini_is_an_untransformed_projection_of_ames() -> None:
-    projected = shoez.data.ames.select(AMES_MINI_COLUMNS)
-    assert projected.equals(shoez.data.ames_mini)
+    projected = mlfeatures.data.ames.select(AMES_MINI_COLUMNS)
+    assert projected.equals(mlfeatures.data.ames_mini)
 
 
 def test_regenerate_ames_mini_is_idempotent(
@@ -123,15 +123,15 @@ def test_regenerate_ames_mini_is_idempotent(
     """Regenerating into a scratch directory reproduces the shipped file."""
     scratch = tmp_path / "data"
     scratch.mkdir()
-    shoez.data.ames.write_parquet(scratch / "ames.parquet")
-    monkeypatch.setattr(shoez.data, "_data_dir", lambda: scratch)
-    shoez.data._regenerate_ames_mini()
+    mlfeatures.data.ames.write_parquet(scratch / "ames.parquet")
+    monkeypatch.setattr(mlfeatures.data, "_data_dir", lambda: scratch)
+    mlfeatures.data._regenerate_ames_mini()
     rebuilt = pl.read_parquet(scratch / "ames_mini.parquet")
-    assert rebuilt.equals(shoez.data.ames_mini)
+    assert rebuilt.equals(mlfeatures.data.ames_mini)
 
 
 def test_hotels_arrival_date_is_a_date_column() -> None:
-    hotels = shoez.data.hotels
+    hotels = mlfeatures.data.hotels
     assert hotels["arrival_date"].dtype == pl.Date
     assert hotels["children"].unique().sort().to_list() == ["children", "none"]
     assert hotels.null_count().sum_horizontal().item() == 0
@@ -140,5 +140,5 @@ def test_hotels_arrival_date_is_a_date_column() -> None:
 def test_pyproject_ships_the_parquet_files() -> None:
     """CI installs editable, so a dropped package-data glob would only surface at release."""
     config = tomllib.loads(PYPROJECT.read_text())
-    package_data = config["tool"]["setuptools"]["package-data"]["shoez"]
+    package_data = config["tool"]["setuptools"]["package-data"]["mlfeatures"]
     assert "data/*.parquet" in package_data

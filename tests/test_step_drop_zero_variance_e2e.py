@@ -12,7 +12,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Mode, Recipe, SchemaInfo, StepDropZeroVariance
+from mlfeatures import Mode, Recipe, SchemaInfo, StepDropZeroVariance
 
 
 def _data() -> dict[str, list[float]]:

@@ -6,7 +6,7 @@ Steps that turn free-text columns into numeric features: token counts, TF-IDF
 weights, hashes, embeddings (the grouping follows
 [Feature Engineering A–Z](https://feaz-book.com/)).
 
-No shoez steps fill this family, and none are planned soon. Today the task
+No mlfeatures steps fill this family, and none are planned soon. Today the task
 lives at the recipe's boundary instead:
 
 - **Pre-compute simple text features** with polars or pandas string

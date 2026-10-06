@@ -7,7 +7,7 @@ from a plain list of ``datetime.date`` objects (it infers ``object`` dtype
 instead), the pandas fixture is built via a pyarrow-backed
 ``pd.array(..., dtype="date32[pyarrow]")`` -- see
 ``tests/test_step_date_features_infrastructure.py`` for the same pattern
-applied through `shoez.testing`'s `dtype_casts` hook.
+applied through `mlfeatures.testing`'s `dtype_casts` hook.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Recipe, StepDateFeatures, StepNormalize
+from mlfeatures import Recipe, StepDateFeatures, StepNormalize
 
 
 def _dates() -> list[date]:

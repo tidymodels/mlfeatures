@@ -2,7 +2,7 @@
 
 ## Context
 
-`shoez` is organised around a `Step` ABC with `fit` / `transform` methods (see
+`mlfeatures` is organised around a `Step` ABC with `fit` / `transform` methods (see
 `design/step-contract.md`). The catalog (`design/steps-catalog.md`) lists
 `step_zv` ("REMOVING mode: drop zero-variance columns") as the canonical
 zero-variance step, alongside other REMOVING-mode steps such as `step_corr`.
@@ -12,10 +12,10 @@ the offending columns, and a separate applier that drops them. Because
 *every* REMOVING-mode step ends in "drop these columns from the frame", the
 applier is shared rather than specific to zero-variance:
 
-- `fit_zero_variance(features)` lives in `shoez/step_zero_variance.py` (one
+- `fit_zero_variance(features)` lives in `mlfeatures/step_zero_variance.py` (one
   file per step, mirroring R `recipes`' `step_zv.R` convention) and is
   specific to the zero-variance rule.
-- `apply_filter(data, drop_cols)` lives in `shoez/apply_shared.py` and is
+- `apply_filter(data, drop_cols)` lives in `mlfeatures/apply_shared.py` and is
   reused by every REMOVING-mode fitter (`step_zv`, `step_corr`, future
   filters).
 
@@ -46,7 +46,7 @@ logic can later be wrapped in a Step without rewriting it.
 
 ## Files
 
-### `shoez/step_zero_variance.py`
+### `mlfeatures/step_zero_variance.py`
 
 One public function, `fit_zero_variance(features)`. Counts distinct non-null
 values per column using `frame[c].drop_nulls().n_unique()` and returns the
@@ -55,7 +55,7 @@ count as zero-variance (zero observed values, so no information either
 way). The result is forced to `dtype=np.str_` so the empty-list case still
 produces a string-typed array.
 
-### `shoez/apply_shared.py`
+### `mlfeatures/apply_shared.py`
 
 One public function, `apply_filter(data, drop_cols)`. Wraps the input via
 `nw.from_native(eager_only=True)`, filters `drop_cols` to names that are
@@ -65,7 +65,7 @@ calls `frame.drop(*present)`, and unwraps back via `nw.to_native`. The
 `IntoFrameT` generic in the return type guarantees the backend round-trips
 (pandas in produces pandas out, polars in produces polars out).
 
-### `shoez/__init__.py`
+### `mlfeatures/__init__.py`
 
 Both functions are added to the package's flat namespace and to `__all__`.
 
@@ -103,7 +103,7 @@ uv sync --extra dev
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy shoez
+uv run mypy mlfeatures
 uv run pyright
 ```
 
@@ -111,7 +111,7 @@ Quick manual smoke-test in a REPL:
 
 ```python
 import pandas as pd, polars as pl
-from shoez import fit_zero_variance, apply_filter
+from mlfeatures import fit_zero_variance, apply_filter
 
 data = {"a": [1, 1, 1], "b": [1, 2, 3], "c": ["x", "x", None]}
 

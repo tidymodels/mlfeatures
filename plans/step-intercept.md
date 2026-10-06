@@ -17,7 +17,7 @@ An intercept estimates nothing, so (unlike the REMOVING filters) it has no
 `fit_*` half: the logic function is the *apply* half, and `fit()` only records
 the produced column's schema.
 
-## Public surface — `shoez/step_intercept.py`
+## Public surface — `mlfeatures/step_intercept.py`
 
 ```python
 add_intercept(features: Frame, value: float = 1.0, name: str = "intercept") -> Frame
@@ -41,7 +41,7 @@ No `Recipe.step_*()` sugar exists; users compose via `Recipe(steps=[StepIntercep
 or `Recipe().add(StepIntercept())`.
 
 ## Wiring
-- Export `StepIntercept` from `shoez/__init__.py` `__all__` (mirrors the other steps).
+- Export `StepIntercept` from `mlfeatures/__init__.py` `__all__` (mirrors the other steps).
 - Add `StepIntercept` to the `reference:` Classes list in `great-docs.yml` (PR #52 example).
 
 ## Tests

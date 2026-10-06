@@ -2,8 +2,8 @@
 
 The taxonomy in ``design/schema.md`` (numeric/float/int, bool, str, categorical
 ordered/unordered, date, datetime, duration, list) is realized as **narwhals
-dtype classes** rather than a custom enum — see ``shoez/types.py`` and the
-predicates in ``shoez/_frame.py``. This module proves narwhals round-trips every
+dtype classes** rather than a custom enum — see ``mlfeatures/types.py`` and the
+predicates in ``mlfeatures/_frame.py``. This module proves narwhals round-trips every
 category correctly from **both** polars and pandas: each predicate fires for its
 own category and only its own, and ``dtype_category`` names it.
 
@@ -29,7 +29,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import _frame as f
+from mlfeatures import _frame as f
 
 Constructor = Callable[[dict[str, Any]], Any]
 

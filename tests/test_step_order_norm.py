@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_order_norm import apply_order_norm, fit_order_norm
+from mlfeatures.step_order_norm import apply_order_norm, fit_order_norm
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

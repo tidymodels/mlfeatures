@@ -3,7 +3,7 @@
 Mirrors the structure of ``tests/test_step_normalize.py`` and
 ``tests/test_step_polynomial.py``: pytest with class-based grouping, a tiny
 ``_df`` helper, narwhals frames built from pandas. The functions under test
-operate on the internal narwhals :data:`~shoez.types.Frame` type; the public
+operate on the internal narwhals :data:`~mlfeatures.types.Frame` type; the public
 contract is narwhals-in, narwhals-out and is backend-agnostic by construction,
 so we don't parametrise pandas vs polars at this layer (the end-to-end test
 does that for the ``StepClassDistance`` wrapper).
@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from shoez.step_class_distance import (
+from mlfeatures.step_class_distance import (
     ClassDistanceFit,
     apply_class_distance,
     fit_class_distance,

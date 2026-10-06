@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, StepDummy, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, StepDummy, StepNormalize
+from mlfeatures import Selectors as s
 
 
 def _data() -> dict[str, list[float] | list[str]]:

@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import StepRange
-from shoez.step_range import apply_range, fit_range
+from mlfeatures import StepRange
+from mlfeatures.step_range import apply_range, fit_range
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

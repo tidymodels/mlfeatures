@@ -1,11 +1,11 @@
-"""Tests for :mod:`shoez.step_polynomial`.
+"""Tests for :mod:`mlfeatures.step_polynomial`.
 
-The functions under test are written against the internal :data:`~shoez.types.Frame`
+The functions under test are written against the internal :data:`~mlfeatures.types.Frame`
 type (a narwhals ``DataFrame``), so these tests build inputs via
 :func:`narwhals.stable.v2.from_native` and inspect outputs as narwhals frames.
 We don't parametrize over pandas/polars here — the public contract is
 narwhals-in, narwhals-out, and the underlying ops in
-:mod:`shoez.step_polynomial` are backend-agnostic by construction.
+:mod:`mlfeatures.step_polynomial` are backend-agnostic by construction.
 
 Ground-truth values for the orthogonal-polynomial output come from R's
 :func:`stats::poly`; the matrices below are copied verbatim from
@@ -22,7 +22,7 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_polynomial import PolynomialFit, apply_polynomial, fit_polynomial
+from mlfeatures.step_polynomial import PolynomialFit, apply_polynomial, fit_polynomial
 
 
 def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:

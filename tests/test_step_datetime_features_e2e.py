@@ -14,7 +14,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Recipe, StepDatetimeFeatures, StepNormalize
+from mlfeatures import Recipe, StepDatetimeFeatures, StepNormalize
 
 
 def _data() -> dict[str, list[Any]]:

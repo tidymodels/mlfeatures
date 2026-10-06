@@ -1,6 +1,6 @@
 """Conformance tests for StepSplineMonotone.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this
 file only supplies the step and the data to run it against. Behaviour
 specific to StepSplineMonotone belongs in ``test_step_spline_monotone.py`` and
 ``test_step_spline_monotone_e2e.py``.
@@ -8,8 +8,8 @@ specific to StepSplineMonotone belongs in ``test_step_spline_monotone.py`` and
 
 from __future__ import annotations
 
-from shoez import StepSplineMonotone
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepSplineMonotone
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestSplineMonotoneConformance(StepConformanceTest):

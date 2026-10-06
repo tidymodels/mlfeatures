@@ -9,7 +9,7 @@ categorical features (the grouping follows
 levels they create flow into
 [Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd).
 
-No shoez step fills this family yet; three planned steps
+No mlfeatures step fills this family yet; three planned steps
 ([#61](https://github.com/tidymodels/shoez/issues/61),
 [#217](https://github.com/tidymodels/shoez/issues/217)):
 
