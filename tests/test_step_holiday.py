@@ -363,7 +363,9 @@ class TestStepHolidayUnit:
                 f"`{module_name}` is required but not installed"
             )
 
-        monkeypatch.setattr("mlfeatures.step_holiday.import_optional", fake_import_optional)
+        monkeypatch.setattr(
+            "mlfeatures.step_holiday.import_optional", fake_import_optional
+        )
         step = StepHoliday(["d"], holidays=["Christmas Day"])
         with pytest.raises(MissingDependencyError):
             step.fit(_df(_data()), SchemaInfo())

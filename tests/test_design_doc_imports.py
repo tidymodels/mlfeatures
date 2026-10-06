@@ -54,7 +54,9 @@ def _mlfeatures_imports(source: str) -> list[tuple[str, str | None]]:
                     found.append((alias.name, None))
         elif isinstance(node, ast.ImportFrom):
             module = node.module
-            if module is None or not (module == "mlfeatures" or module.startswith("mlfeatures.")):
+            if module is None or not (
+                module == "mlfeatures" or module.startswith("mlfeatures.")
+            ):
                 continue
             for alias in node.names:
                 found.append((module, alias.name))

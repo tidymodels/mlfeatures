@@ -66,7 +66,9 @@ def test_inspecting_a_recipe_does_not_check_required_pkgs(df: pd.DataFrame) -> N
 
 def test_fit_checks_required_pkgs(df: pd.DataFrame) -> None:
     recipe = Recipe().add(_MissingPkgStep())
-    with pytest.raises(MissingDependencyError, match="mlfeatures_no_such_dependency_zzz"):
+    with pytest.raises(
+        MissingDependencyError, match="mlfeatures_no_such_dependency_zzz"
+    ):
         recipe.fit(df)
 
 

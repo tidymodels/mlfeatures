@@ -414,7 +414,9 @@ class Step(ABC):
         recorded separately (by qualified name) by `mlfeatures.serialization`. See
         ``design/serialization.md``.
         """
-        from mlfeatures.serialization import _encode  # pyright: ignore[reportPrivateUsage]
+        from mlfeatures.serialization import (
+            _encode,  # pyright: ignore[reportPrivateUsage]
+        )
 
         return {k: _encode(v) for k, v in self.__dict__.items()}
 
@@ -427,7 +429,9 @@ class Step(ABC):
         keeps whatever a bare instance would carry, so within a major version an
         older payload loads cleanly without per-field shims.
         """
-        from mlfeatures.serialization import _decode  # pyright: ignore[reportPrivateUsage]
+        from mlfeatures.serialization import (
+            _decode,  # pyright: ignore[reportPrivateUsage]
+        )
 
         step = cls.__new__(cls)
         for key, value in state.items():

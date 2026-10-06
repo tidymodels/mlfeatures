@@ -145,8 +145,12 @@ class TestRequirePackages:
 
     def test_version_constraint_is_kept_in_the_hint(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
-            require_packages(["mlfeatures_no_such_dependency_zzz>=1.3"], purpose="by step")
-        assert "pip install 'mlfeatures_no_such_dependency_zzz>=1.3'" in str(excinfo.value)
+            require_packages(
+                ["mlfeatures_no_such_dependency_zzz>=1.3"], purpose="by step"
+            )
+        assert "pip install 'mlfeatures_no_such_dependency_zzz>=1.3'" in str(
+            excinfo.value
+        )
 
     def test_known_extra_is_used_for_a_bare_name(
         self, monkeypatch: pytest.MonkeyPatch

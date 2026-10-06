@@ -21,7 +21,10 @@ import numpy as np
 from numpy.polynomial.polynomial import polyvander
 
 from mlfeatures import _frame
-from mlfeatures._basis_expansion import expand_columns_schema, update_roles_for_expansion
+from mlfeatures._basis_expansion import (
+    expand_columns_schema,
+    update_roles_for_expansion,
+)
 from mlfeatures.step import Step
 from mlfeatures.types import (
     NUMERIC_DTYPES,

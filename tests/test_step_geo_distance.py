@@ -19,7 +19,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mlfeatures.step_geo_distance import GeoDistanceFit, apply_geo_distance, fit_geo_distance
+from mlfeatures.step_geo_distance import (
+    GeoDistanceFit,
+    apply_geo_distance,
+    fit_geo_distance,
+)
 
 
 def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:

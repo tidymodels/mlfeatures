@@ -35,7 +35,10 @@ import narwhals.stable.v2 as nw
 import numpy as np
 
 from mlfeatures import _frame, _spline
-from mlfeatures._basis_expansion import expand_columns_schema, update_roles_for_expansion
+from mlfeatures._basis_expansion import (
+    expand_columns_schema,
+    update_roles_for_expansion,
+)
 from mlfeatures.step import Step
 from mlfeatures.types import (
     NUMERIC_DTYPES,

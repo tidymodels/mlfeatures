@@ -152,7 +152,9 @@ class StepFilter(RowOp):
         behaves exactly as one that was never serialized: it filters no rows at
         ``transform`` time.
         """
-        from mlfeatures.serialization import _encode  # pyright: ignore[reportPrivateUsage]
+        from mlfeatures.serialization import (
+            _encode,  # pyright: ignore[reportPrivateUsage]
+        )
 
         return {k: _encode(v) for k, v in self.__dict__.items() if k != "predicate"}
 
