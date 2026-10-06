@@ -21,9 +21,7 @@ orders = pl.DataFrame(
     }
 )
 
-# drop any numeric columns with no variance
-# TODO: fix PlExpr selection
-#orders.shz.step_dummy(pl.col("city"))
+orders.shz.step_dummy(cs.string())
 ```
 
 Notice that `.step_dummy()` returned a new DataFrame with a column for each level in the `city` column.
@@ -36,9 +34,7 @@ In the following sections we'll show some of the more useful steps to use direct
 and `step_impute_mode` are the other flavors):
 
 ```{python}
-#| eval: false
-# TODO: pl.col() does not work here
-filled = orders.shz.step_impute_median(pl.col("price"))
+filled = orders.shz.step_impute_median(cs.by_name("price"))
 filled
 ```
 
@@ -48,12 +44,9 @@ filled
 components (here on the imputed frame, since PCA needs complete data):
 
 ```{python}
-#| eval: false
-
-# TODO: fix
 (
     orders
-    .shz.step_impute_median(pl.col("price"))
+    .shz.step_impute_median(cs.by_name("price"))
     .shz.step_pca(cs.numeric(), num_comp=2)
 )
 ```
