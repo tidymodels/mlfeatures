@@ -22,8 +22,8 @@ Two of the framework's stated goals constrain the surface syntax more than anyth
 Step constructors produce plain `Step` **instances**. The recipe is assembled from those objects — either passed as a list at construction, or appended with a builder method.
 
 ```python
-from shoez import Recipe
-from shoez.steps import ImputeMedian, Dummy, Normalize
+from mlfeatures import Recipe
+from mlfeatures.steps import ImputeMedian, Dummy, Normalize
 
 rec = Recipe(
     data=df_train,

@@ -1,5 +1,5 @@
 ---
-title: shoez
+title: mlfeatures
 format: gfm
 jupyter: python3
 ---
@@ -13,7 +13,7 @@ A framework for declaring, estimating, and applying feature-engineering pipeline
 
 ## Lifecycle
 
-`shoez` separates feature engineering into three phases:
+`mlfeatures` separates feature engineering into three phases:
 
 1. **Specify** — declare a sequence of steps against a schema of variables. No data is touched.
 2. **Fit** — estimate any required statistics from a training dataset.
@@ -21,8 +21,8 @@ A framework for declaring, estimating, and applying feature-engineering pipeline
 
 ```{python}
 import pandas as pd
-from shoez import Recipe, StepDropCorr, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, StepDropCorr, StepNormalize
+from mlfeatures import Selectors as s
 
 df = pd.DataFrame(
     {
@@ -52,7 +52,7 @@ uv sync --extra dev   # install the package + dev tooling
 
 uv run ruff check .          # lint
 uv run ruff format --check . # formatting
-uv run mypy shoez            # type check (strict)
+uv run mypy mlfeatures            # type check (strict)
 uv run pyright               # type check (strict)
 uv run pytest --cov          # tests + coverage
 ```

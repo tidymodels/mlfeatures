@@ -24,9 +24,9 @@ training data lacked.
 import polars as pl
 from sklearn.model_selection import train_test_split
 
-from shoez import Recipe, StepDummy, StepImputeMedian, StepNormalize, StepOther, StepUnknown
-from shoez import Selectors as s
-from shoez.data import ames_mini, credit
+from mlfeatures import Recipe, StepDummy, StepImputeMedian, StepNormalize, StepOther, StepUnknown
+from mlfeatures import Selectors as s
+from mlfeatures.data import ames_mini, credit
 
 credit_train, credit_validation = train_test_split(
     credit, train_size=0.75, stratify=credit["Status"], random_state=1

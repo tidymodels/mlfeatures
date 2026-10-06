@@ -23,7 +23,7 @@
 
 Decisions that must be made **before v0.1 ships**.
 
-1. **Package name.** `shoez` is the current working name — confirm it is available on PyPI and reserve it early.
+1. **Package name.** `mlfeatures` is the current working name — confirm it is available on PyPI and reserve it early.
 
 2. **Pandas vs. polars as primary boundary.** ~~Pick one as the canonical external-facing type; the other becomes an adapter.~~ **Resolved: narwhals is the internal representation** (see [ecosystem.md](ecosystem.md#dataframe-support)). Steps are written once against the narwhals API and run natively on whichever backend the user passes; no single internal frame type is committed to. Pandas/numpy remains the canonical type at the sklearn boundary.
 

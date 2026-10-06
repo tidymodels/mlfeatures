@@ -13,17 +13,17 @@ visually on the validation set. No estimator anywhere.
 
 PARITY NOTES:
  - GAP (blocking): step_pca -> StepPCA is designed-but-unbuilt (backlog
-   priority 2). Stopgap: shoez does zv -> normalize, then sklearn's PCA
+   priority 2). Stopgap: mlfeatures does zv -> normalize, then sklearn's PCA
    consumes fitted.transform(validation) OUTSIDE the recipe. When StepPCA
    lands, the sklearn block collapses into .add(StepPCA(..., num_comp=4)).
- - GAP: step_orderNorm (bestNormalize's ORQ transform) has no shoez analog
+ - GAP: step_orderNorm (bestNormalize's ORQ transform) has no mlfeatures analog
    at all. Omitted: skewed shape features stay skewed; first run measured
    the effect — PC1-4 variance 55.4/26.5/8.0/5.1%.
  - R composes by piping MORE steps onto an already-prep()ed recipe and
-   re-prepping; shoez has no incremental fit — declared whole, fit once.
+   re-prepping; mlfeatures has no incremental fit — declared whole, fit once.
  - beans exported from R on first run: data/beans.csv.
 ```
-*Docs version loads the dataset from `shoez.data`; the research originals
+*Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
 :::
 
@@ -33,12 +33,12 @@ import polars as pl
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 
-from shoez import Recipe, StepDropZeroVariance, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, StepDropZeroVariance, StepNormalize
+from mlfeatures import Selectors as s
 
 # ── Data
 
-from shoez.data import beans  # 13,611 x 17
+from mlfeatures.data import beans  # 13,611 x 17
 
 # ── 3-way split (75 / 12.5 / 12.5, stratified by class)
 
@@ -63,7 +63,7 @@ bean_rec = (
 ## Fit
 ```{python}
 # fit() ~ prep(); transform() ~ bake() — the chapter doubles as the book's
-# prep/bake tutorial, and this file doubles as shoez's fit/transform one.
+# prep/bake tutorial, and this file doubles as mlfeatures's fit/transform one.
 fitted = bean_rec.fit(bean_train)
 bean_val_processed = fitted.transform(bean_validation)
 

@@ -11,12 +11,12 @@ Same data and features as the realistic linear model, entirely different recipe 
 Mirrors the R script section-for-section: same data, same 6 features, same
 recipe shape (novel -> one-hot -> zv), same tuned params (trees, learn_rate)
 over the same 2x3 grid on 5-fold CV. sklearn Pipeline + GridSearchCV stand in
-for workflow() + tune_grid(), via shoez's RecipeTransformer bridge.
+for workflow() + tune_grid(), via mlfeatures's RecipeTransformer bridge.
 
 PARITY NOTES (differences from example.R that are structural, not bugs):
- - GAP (the reason this example was chosen): R's step_novel() has no shoez
+ - GAP (the reason this example was chosen): R's step_novel() has no mlfeatures
    analog yet — StepNovel is designed-but-unbuilt, and StepUnknown fills only
-   *nulls*, not unseen levels. This port simply omits the guard; shoez's
+   *nulls*, not unseen levels. This port simply omits the guard; mlfeatures's
    StepOneHot/StepDummy warn and emit nulls for unseen levels at transform
    time instead of encoding a "new" bucket. When StepNovel lands, add
    .add(StepNovel(s.nominal_features())) ahead of the one-hot.
@@ -27,7 +27,7 @@ PARITY NOTES (differences from example.R that are structural, not bugs):
  - Ames exported from R on first run: data/ames.csv (null_values="NA" —
    polars does not auto-parse R's "NA" strings).
 ```
-*Docs version loads the dataset from `shoez.data`; the research originals
+*Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
 :::
 
@@ -39,15 +39,15 @@ from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 
-from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
-from shoez import Selectors as s
+from mlfeatures import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
+from mlfeatures import Selectors as s
 
 # ── Data + target transform (outside the recipe, per TMwR Ch. 5)
 
 FEATURES = ["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
               "Latitude", "Longitude"]
 
-from shoez.data import ames
+from mlfeatures.data import ames
 ames = ames.select(FEATURES + ["Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
 
@@ -58,7 +58,7 @@ ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
 
-# ── Recipe (shoez port of the usemodels::use_xgboost() recipe)
+# ── Recipe (mlfeatures port of the usemodels::use_xgboost() recipe)
 
 # R:  step_novel(all_nominal_predictors()) %>%        <- GAP, omitted (see header)
 #     step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
@@ -126,7 +126,7 @@ print(f"\n--- test metrics (best: {search.best_params_}) ---")
 print(f"rmse: {rmse:.4f}   rsq: {rsq:.3f}")
 
 # Baked head: proof the recipe works standalone, sans sklearn.
-print("\n--- transformed training head (shoez fit/transform, no pipeline) ---")
+print("\n--- transformed training head (mlfeatures fit/transform, no pipeline) ---")
 print(fitted.transform(ames_train).head())
 print("\n--- lineage: columns the one-hot step produced ---")
 print(fitted.schema.columns_from_source("one_hot")[:8])

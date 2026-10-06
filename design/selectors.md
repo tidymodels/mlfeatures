@@ -21,7 +21,7 @@ R `recipes` only supported selectors in the leading `...` of steps, making secon
 
 ---
 
-The native DSL is exposed as factory methods on the `Selectors` namespace, conventionally imported as `from shoez import Selectors as s`. Every factory returns a `ShoezSelector` that composes with `&` / `|` / `~` / `-` and resolves to column names at fit time. The examples below use that `s.` prefix, which is the house style for all shoez examples; `s` also stays out of the way of `cs`, the conventional alias for `polars.selectors`.
+The native DSL is exposed as factory methods on the `Selectors` namespace, conventionally imported as `from mlfeatures import Selectors as s`. Every factory returns a `FeaturesSelector` that composes with `&` / `|` / `~` / `-` and resolves to column names at fit time. The examples below use that `s.` prefix, which is the house style for all mlfeatures examples; `s` also stays out of the way of `cs`, the conventional alias for `polars.selectors`.
 
 ## By name
 
@@ -74,7 +74,7 @@ This was impossible in R `recipes` because provenance was not tracked [tidymodel
 
 ### Direct vs. ancestral provenance — `has_source` vs `has_ancestor`
 
-The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. a dummy column that was subsequently passed through `StepNormalize`. Both are useful, and shoez exposes them as **two separate selectors** (the decision for issue #20's "Q3"):
+The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. a dummy column that was subsequently passed through `StepNormalize`. Both are useful, and mlfeatures exposes them as **two separate selectors** (the decision for issue #20's "Q3"):
 
 - **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Schema.columns_from_source`.
 - **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Schema.ancestors`.
@@ -99,7 +99,7 @@ s.date()
 s.datetime()
 ```
 
-Names follow Python and polars conventions, not R. The dtype check is an internal primitive (see `shoez._frame`) and is not part of the public surface. See [schema.md](schema.md) for the full type taxonomy.
+Names follow Python and polars conventions, not R. The dtype check is an internal primitive (see `mlfeatures._frame`) and is not part of the public surface. See [schema.md](schema.md) for the full type taxonomy.
 
 ---
 
@@ -148,7 +148,7 @@ At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolv
 
 The native `Selectors` DSL is the recommended surface: it covers name, type, role, and provenance in **one family** that always composes with `&` / `|` / `~` / `-`, and resolves against the lineage DAG.
 
-`shoez` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
+`mlfeatures` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
 
 ```python
 import polars.selectors as cs
@@ -170,23 +170,23 @@ Both go through `polars.selectors.expand_selector(..., strict=False)`, so polars
 
 ### Cross-family composition has a hard limit
 
-polars and narwhals selectors compose cleanly *within their own family*, and native shoez selectors compose cleanly with each other. **Mixing the two families with `&` / `|` / `~` is asymmetric and only works when a shoez selector leads**, because shoez does not control polars'/narwhals' operators:
+polars and narwhals selectors compose cleanly *within their own family*, and native mlfeatures selectors compose cleanly with each other. **Mixing the two families with `&` / `|` / `~` is asymmetric and only works when a mlfeatures selector leads**, because mlfeatures does not control polars'/narwhals' operators:
 
 | Expression | Behavior |
 | --- | --- |
-| shoez & shoez | ✅ native composition |
+| mlfeatures & mlfeatures | ✅ native composition |
 | polars & polars, narwhals & narwhals | ✅ their own native composition |
-| `shoez_sel & cs.numeric()` (shoez leads) | ✅ supported — shoez coerces the right operand |
-| `cs.numeric() & shoez_sel` (polars leads) | ❌ polars raises `TypeError` |
-| `ncs.numeric() & shoez_sel` (narwhals leads) | ❌ narwhals **silently** returns a broken `Expr` (no error) |
+| `mlfeatures_sel & cs.numeric()` (mlfeatures leads) | ✅ supported — mlfeatures coerces the right operand |
+| `cs.numeric() & mlfeatures_sel` (polars leads) | ❌ polars raises `TypeError` |
+| `ncs.numeric() & mlfeatures_sel` (narwhals leads) | ❌ narwhals **silently** returns a broken `Expr` (no error) |
 
-The narwhals case is the dangerous one: it produces no error at all, just a meaningless `Expr` that fails downstream. **Rule: a shoez-native selector must lead any cross-family expression.** To put a polars/narwhals selector first, lift it into shoez-land with `s.wrap`:
+The narwhals case is the dangerous one: it produces no error at all, just a meaningless `Expr` that fails downstream. **Rule: a mlfeatures-native selector must lead any cross-family expression.** To put a polars/narwhals selector first, lift it into mlfeatures-land with `s.wrap`:
 
 ```python
 s.wrap(cs.starts_with("x_")) & s.features()
 ```
 
-In practice the native DSL covers the name/type surface, so cross-family mixing is rarely needed — but when it is, lead with shoez or use `wrap`.
+In practice the native DSL covers the name/type surface, so cross-family mixing is rarely needed — but when it is, lead with mlfeatures or use `wrap`.
 
 ---
 

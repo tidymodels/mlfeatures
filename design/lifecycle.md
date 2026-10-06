@@ -105,7 +105,7 @@ This makes the skip behavior structural, not a boolean attribute. See [step-cont
 
 A significant design goal is that step authors should only need to implement the statistical logic of their step. Everything else is handled once, centrally, by the framework. In R `recipes`, each of the following had to be implemented (or forgotten) individually inside every step:
 
-| Concern | R `recipes` | `shoez` |
+| Concern | R `recipes` | `mlfeatures` |
 | --------------------------------- | ------------------------------------ | ------------------------------- |
 | Column presence at transform time | Each step checked, or silently broke | Ptype check before any step runs |
 | Dtype validation | Each step did its own or skipped it | `accepts_dtypes()` checked by framework before `fit()` |

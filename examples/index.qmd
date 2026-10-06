@@ -17,7 +17,7 @@ a line-matched [R ↔ Python side-by-side](sbs/sbs-index.html){target="_blank"}.
 | [Beans PCA](beans-pca.qmd) · [R↔Py](sbs/tmwr16-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 16](https://www.tmwr.org/dimensionality)</small> | none | — | zv†, orderNorm\* | normalize | PCA | |
 | [Credit glmnet](credit-glmnet.qmd) · [R↔Py](sbs/kuhn-r-vs-py.html){target="_blank"}<br/><small>from [recipes vignette](https://recipes.tidymodels.org/articles/recipes.html)</small> | glmnet | impute ×2 | other\*, dummy, zv† | normalize | — | |
 
-\* not yet built in shoez — the reports run the buildable subset, and the
+\* not yet built in mlfeatures — the reports run the buildable subset, and the
 side-by-sides mark each gap in red where it occurs.
 † zero-variance filter; filters sit beside the stages rather than in them,
 shown here where they run.
@@ -31,10 +31,10 @@ uv sync --extra examples
 uv run quarto render examples   # or: great-docs build
 ```
 
-Datasets ship with the package and load from `shoez.data`
-(`from shoez.data import ames`). They were exported from R's
+Datasets ship with the package and load from `mlfeatures.data`
+(`from mlfeatures.data import ames`). They were exported from R's
 [modeldata](https://modeldata.tidymodels.org/) package (`ames`, `concrete`,
 `credit_data`) and the dry-beans data from Koklu & Ozkan via the
 [beans](https://github.com/tidymodels/beans) package; see the
-[`shoez.data`](../reference/data.qmd) reference page for each dataset's
+[`mlfeatures.data`](../reference/data.qmd) reference page for each dataset's
 shape, target, and source.

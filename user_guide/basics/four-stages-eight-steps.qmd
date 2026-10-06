@@ -13,7 +13,7 @@ Each position has its own page (e.g. "Missing: impute").
 
 ## Overview of eight steps
 
-| Stage | Position | shoez steps |
+| Stage | Position | mlfeatures steps |
 |---|---|---|
 | 1. Handle missing values | [1. Missing: impute](../four-stages/missing-impute.qmd) | `StepImputeMean`, `StepImputeMedian`, `StepImputeMode`, `StepIndicateNa` |
 | | [2. Missing: category levels](../four-stages/missing-category-levels.qmd) | `StepUnknown`, `StepOther` |
@@ -45,7 +45,7 @@ a name *before* the dummy step, so its vocabulary includes `"unknown"` and
 ```{python}
 from sklearn.model_selection import train_test_split
 
-from shoez import (
+from mlfeatures import (
     Recipe,
     StepDropZeroVariance,
     StepDummy,
@@ -56,8 +56,8 @@ from shoez import (
     StepPca,
     StepUnknown,
 )
-from shoez import Selectors as s
-from shoez.data import credit
+from mlfeatures import Selectors as s
+from mlfeatures.data import credit
 
 credit_train, credit_validation = train_test_split(
     credit, train_size=0.75, stratify=credit["Status"], random_state=1

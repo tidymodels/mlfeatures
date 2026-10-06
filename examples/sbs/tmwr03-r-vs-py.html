@@ -46,7 +46,7 @@ ul.idx { line-height:1.9; }
 <p class="nav"><a href="sbs-index.html">index</a> · <a href="tmwr01-r-vs-py.html">TMWR-01</a> <a class="here" href="tmwr03-r-vs-py.html">TMWR-03</a> <a href="tmwr11-r-vs-py.html">TMWR-11</a> <a href="tmwr14-r-vs-py.html">TMWR-14</a> <a href="tmwr16-r-vs-py.html">TMWR-16</a> <a href="kuhn-r-vs-py.html">KUHN</a></p>
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
-explain what changes; <span style="color:var(--gap)">red = shoez gap</span>.
+explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
 Lightly condensed from <code>candidates/</code> — R: CV rmse 0.0791 · Python ran: test 0.0825, CV = nan — unseen fold-levels nulled predictions; the gaps broke CV itself (see py-run-results.md).</p>
 <div class="cols">
 <div class="pane r"><h2>example.R — tidymodels (run)</h2>
@@ -125,7 +125,7 @@ predict(lm_fit, ames_test) %&gt;%
   bind_cols(ames_test %&gt;% select(Sale_Price)) %&gt;%
   reg_metrics(truth = Sale_Price, estimate = .pred)
 </pre></div>
-<div class="pane py"><h2>example.py — shoez + sklearn (run)</h2>
+<div class="pane py"><h2>example.py — mlfeatures + sklearn (run)</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="df"># DIFF: adds cross-validation imports; otherwise as TMWR-01.</span>
@@ -135,8 +135,8 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
-from shoez import Recipe, RecipeTransformer, StepDummy
-from shoez import Selectors as s
+from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import Selectors as s
 
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Six features now (adds Latitude/Longitude); log10 the target pre-split.</span>
@@ -162,7 +162,7 @@ ames_train, ames_test = train_test_split(
 <span class="gp"># DIFF (GAP): step_other unbuilt — rare Neighborhoods keep their own dummies,</span>
 <span class="gp"># so the design matrix is wider and sparser than R&#x27;s.</span>
 <span class="gp"># DIFF (GAP): step_interact unbuilt — interactions over generated columns is</span>
-<span class="gp"># exactly shoez&#x27;s has_source pitch; target form shown in place.</span>
+<span class="gp"># exactly mlfeatures&#x27;s has_source pitch; target form shown in place.</span>
 <span class="gp"># DIFF (GAP): step_ns unbuilt — no spline steps at all.</span>
 
 ames_rec = (

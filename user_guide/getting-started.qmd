@@ -3,7 +3,7 @@ title: "Introduction"
 toc: true
 ---
 
-`shoez` separates feature engineering into three phases:
+`mlfeatures` separates feature engineering into three phases:
 
 1. **Specify**: declare the `Recipe`, a sequence of pre-processing steps.
 2. **Fit**: estimate any required statistics from a training dataset.
@@ -14,12 +14,12 @@ It's designed to support common Python modeling workflows:
 - **DataFrame-agnostic.** Works with pandas or polars (thanks to [narwhals](https://narwhals-dev.github.io/narwhals/)).
 - **Column selectors.** Use Polars selectors to target columns for pre-processing.
 - **Steps for all kinds of workflows.** Many built-in steps to support pre-processing data for a wide range of models. Organized into a [four stages, eight steps workflow](basics/four-stages-eight-steps.qmd).
-- **Polars .shz accessor**: Run steps directly on a polars DataFrame.
+- **Polars .mlf accessor**: Run steps directly on a polars DataFrame.
 - **Sci-kit learn support**: Recipes plug into scikit-learn pipelines.
 
 ## Installing
 
-Install shoez using your package manager of choice:
+Install mlfeatures using your package manager of choice:
 
 ```bash
 pip install mlfeatures
@@ -28,17 +28,17 @@ pip install mlfeatures
 
 ## Quickstart
 
-Here is a quick snippet that normalize numeric columns and then runs PCA on a Polars DataFrame (using the `.shz` accessor).
+Here is a quick snippet that normalize numeric columns and then runs PCA on a Polars DataFrame (using the `.mlf` accessor).
 
 ```python
-import shoez.polars  # registers the `df.shz` accessor
-from shoez import Selectors as s
+import mlfeatures.polars  # registers the `df.mlf` accessor
+from mlfeatures import Selectors as s
 
 # fit each step on `df` and apply it right there: center and scale the
 # numeric features, then project them onto 4 principal components
 result = (
-    df.shz.step_normalize(s.numeric_features())
-    .shz.step_pca(s.numeric_features(), num_comp=4)
+    df.mlf.step_normalize(s.numeric_features())
+    .mlf.step_pca(s.numeric_features(), num_comp=4)
 )
 ```
 
@@ -47,7 +47,7 @@ Use a `Recipe` to fit on training data, and transform test data.
 This is shown below.
 
 ```python
-from shoez import Recipe, StepNormalize, StepPca
+from mlfeatures import Recipe, StepNormalize, StepPca
 
 # a recipe fits the same steps on training data and applies them unchanged
 # to any other frame; `RecipeTransformer` drops one into a scikit-learn
@@ -65,11 +65,11 @@ result = fitted.transform(df_test)
 
 ## Setting up examples
 
-We'll use two examples to illustrate using shoez with polars and scikit-learn.
-Both examples use the dry beans data packaged with shoez.
+We'll use two examples to illustrate using mlfeatures with polars and scikit-learn.
+Both examples use the dry beans data packaged with mlfeatures.
 
 ```{python}
-from shoez.data import beans
+from mlfeatures.data import beans
 
 beans.head()
 ```
@@ -96,21 +96,21 @@ def plot_pairs(frame):
 
 ## Example: polars beans PCA
 
-Importing `shoez.polars` registers a `shz` namespace on polars DataFrames. Each
-`df.shz.step_*()` call fits that step on the frame, applies it, and returns a
+Importing `mlfeatures.polars` registers a `mlf` namespace on polars DataFrames. Each
+`df.mlf.step_*()` call fits that step on the frame, applies it, and returns a
 new frame. 
 
 For example, the code below drops constant, normalizes each measurement, then projects onto 4 principal components.
 
 ```{python}
-import shoez.polars  # registers the `df.shz` accessor
-from shoez import Selectors as s
+import mlfeatures.polars  # registers the `df.mlf` accessor
+from mlfeatures import Selectors as s
 
 bean_pcs = (
-    beans.shz.step_drop_zero_variance(s.numeric_features())
-    .shz.step_order_norm(s.numeric_features())
-    .shz.step_normalize(s.numeric_features())
-    .shz.step_pca(s.numeric_features(), num_comp=4)
+    beans.mlf.step_drop_zero_variance(s.numeric_features())
+    .mlf.step_order_norm(s.numeric_features())
+    .mlf.step_normalize(s.numeric_features())
+    .mlf.step_pca(s.numeric_features(), num_comp=4)
 )
 bean_pcs.head()
 ```
@@ -122,9 +122,9 @@ so the `s.numeric_features()` selector didn't try to normalize it.
 plot_pairs(bean_pcs)
 ```
 
-Each `shz` call estimated its step on `beans` and applied it right there, which is useful for exploring data.
+Each `mlf` call estimated its step on `beans` and applied it right there, which is useful for exploring data.
 However, modelling usually involves fitting pre-processing on a training set, and the using that to transform a test set.
-To handle this workflow, shoez provides a `Recipe` class for specifying steps, fitting, and transforming.
+To handle this workflow, mlfeatures provides a `Recipe` class for specifying steps, fitting, and transforming.
 
 ## Example: sklearn Recipe PCA
 
@@ -136,7 +136,7 @@ Then, it shows how the `Recipe` can be used in a scikit-pipeline.
 
 ```{python}
 from sklearn.model_selection import train_test_split
-from shoez import Recipe, StepDropZeroVariance, StepNormalize, StepOrderNorm, StepPca
+from mlfeatures import Recipe, StepDropZeroVariance, StepNormalize, StepOrderNorm, StepPca
 
 # split training and test ---------------------
 
@@ -173,7 +173,7 @@ For example, the code below uses our pre-processing steps as part of fitting a l
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
-from shoez import RecipeTransformer
+from mlfeatures import RecipeTransformer
 
 pipe = Pipeline(
     [
@@ -211,23 +211,23 @@ In addition, you'll likely drop columns throughout using `StepDropZeroVariance` 
 More general transforming and dropping can be done with `StepMutate` and `StepFilter`, respectively.
 
 
-## Use with polars (`.shz`)
+## Use with polars (`.mlf`)
 
-Import `shoez.polars` to use the `polars.DataFrame.shz`accessor.
+Import `mlfeatures.polars` to use the `polars.DataFrame.mlf`accessor.
 Each method of the accessor returns a new DataFrame.
 
 ```{python}
-beans.shz.step_pca(s.numeric_features(), num_comp=2).head()
+beans.mlf.step_pca(s.numeric_features(), num_comp=2).head()
 ```
 
-For more details, see [With polars extension (.shz)](polars-extension.qmd).
+For more details, see [With polars extension (.mlf)](polars-extension.qmd).
 
 ## Use in a scikit-learn pipeline
 
 The `RecipeTransformer` class wraps a `Recipe` for use in a scikit-learn `Pipeline`:
 
 ```{python}
-from shoez import Recipe, RecipeTransformer
+from mlfeatures import Recipe, RecipeTransformer
 
 recipe = (
     Recipe(data=bean_train, target="class")

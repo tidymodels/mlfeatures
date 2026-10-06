@@ -1,17 +1,17 @@
 ---
-title: "With polars extension (.shz)"
+title: "With polars extension (.mlf)"
 toc: true
 ---
 
-`shoez` ships an opt-in [polars](https://docs.pola.rs/) accessor for fitting
+`mlfeatures` ships an opt-in [polars](https://docs.pola.rs/) accessor for fitting
 and applying steps in one expression, without building a `Recipe`. Importing
-`shoez.polars` to register the `shz` accessor on polars DataFrames:
+`mlfeatures.polars` to register the `mlf` accessor on polars DataFrames:
 
 ```{python}
 import polars as pl
 import polars.selectors as cs
 
-import shoez.polars  # registers the `df.shz` accessor
+import mlfeatures.polars  # registers the `df.mlf` accessor
 
 orders = pl.DataFrame(
     {
@@ -21,7 +21,7 @@ orders = pl.DataFrame(
     }
 )
 
-orders.shz.step_dummy(cs.string())
+orders.mlf.step_dummy(cs.string())
 ```
 
 Notice that `.step_dummy()` returned a new DataFrame with a column for each level in the `city` column.
@@ -34,7 +34,7 @@ In the following sections we'll show some of the more useful steps to use direct
 and `step_impute_mode` are the other flavors):
 
 ```{python}
-filled = orders.shz.step_impute_median(cs.by_name("price"))
+filled = orders.mlf.step_impute_median(cs.by_name("price"))
 filled
 ```
 
@@ -46,7 +46,7 @@ components (here on the imputed frame, since PCA needs complete data):
 ```{python}
 (
     orders
-    .shz.step_impute_median(cs.by_name("price"))
-    .shz.step_pca(cs.numeric(), num_comp=2)
+    .mlf.step_impute_median(cs.by_name("price"))
+    .mlf.step_pca(cs.numeric(), num_comp=2)
 )
 ```

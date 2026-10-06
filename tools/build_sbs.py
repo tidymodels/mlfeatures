@@ -58,7 +58,9 @@ def render(lines):
         if "----" in line and line.startswith("# "):
             out.append(f'<span class="bn">{e}</span>')
             mode = None
-        elif line.startswith("# DIFF (GAP") or line.startswith("# DIFF (mlfeatures-only"):
+        elif line.startswith("# DIFF (GAP") or line.startswith(
+            "# DIFF (mlfeatures-only"
+        ):
             out.append(f'<span class="gp">{e}</span>')
             mode = "gp"
         elif line.startswith("# DIFF"):

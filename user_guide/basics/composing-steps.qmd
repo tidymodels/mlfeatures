@@ -4,7 +4,7 @@ title: "Composing steps"
 
 Steps run in order, and each one selects from the frame as the previous step
 left it. That is what lets a later step pick up columns an earlier step
-created, and shoez tracks which step produced each column so a selector can
+created, and mlfeatures tracks which step produced each column so a selector can
 ask for exactly those.
 
 ::: {.callout-note collapse="true" title="Key points"}
@@ -18,9 +18,9 @@ ask for exactly those.
 ## Setup
 
 ```{python}
-from shoez import Recipe, StepDummy, StepImputeMode, StepNormalize
-from shoez import Selectors as s
-from shoez.data import credit
+from mlfeatures import Recipe, StepDummy, StepImputeMode, StepNormalize
+from mlfeatures import Selectors as s
+from mlfeatures.data import credit
 ```
 
 ## Each step sees the previous step's output
