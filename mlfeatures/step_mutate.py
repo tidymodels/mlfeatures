@@ -17,9 +17,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     ANY_DTYPE,
     AcceptedDtypes,
     ColSchema,
@@ -48,7 +48,7 @@ def apply_mutate(selected: Frame, mutations: Mapping[str, Mutation]) -> Frame:
     ----------
     selected
         Internal `Frame` (narwhals). Native frames are wrapped via
-        `shoez._frame.from_native()` at the recipe boundary.
+        `mlfeatures._frame.from_native()` at the recipe boundary.
     mutations
         Mapping from output column name to a callable taking ``selected`` and
         returning that column's value (a narwhals expression or series). A name
@@ -78,7 +78,7 @@ class StepMutate(Step):
     the same expressions at transform time.
 
     New columns are attributed to no declared parents (``output_parents`` maps
-    each to ``[]``): the expressions are opaque callables, so shoez does not try
+    each to ``[]``): the expressions are opaque callables, so mlfeatures does not try
     to infer which inputs a mutation read. This is the deliberate trade-off of
     an escape hatch — full flexibility, coarse lineage.
 
@@ -109,7 +109,7 @@ class StepMutate(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepMutate
+    from mlfeatures import Recipe, StepMutate
     ```
 
     ```{python}

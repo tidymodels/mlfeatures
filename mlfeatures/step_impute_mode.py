@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
     AcceptedDtypes,
     ColSchema,
@@ -141,7 +141,7 @@ class StepImputeMode(Step):
     ----------
     columns
         Columns to impute. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_features()`` (see
+        mlfeatures selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -161,8 +161,8 @@ class StepImputeMode(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepImputeMode
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepImputeMode
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

@@ -1,4 +1,4 @@
-"""Tests for the internal narwhals frame boundary (:mod:`shoez._frame`).
+"""Tests for the internal narwhals frame boundary (:mod:`mlfeatures._frame`).
 
 Beyond exercising each boundary helper, this module carries the conformance
 workload for issue #15: a prototype of ``step_normalize``'s data ops written once
@@ -19,7 +19,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import _frame as f
+from mlfeatures import _frame as f
 
 # Each backend is a (name, constructor) pair; the constructor turns a plain
 # ``dict`` of columns into that backend's native frame. Tests parametrize over

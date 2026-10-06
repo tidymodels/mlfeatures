@@ -10,8 +10,8 @@ pass-through, not a newly produced column, so it is excluded from
 left once each step supplies its own per-column fit object and how to read
 its degree/deg_free off it. This module holds that shared logic.
 
-Not part of the public API: only ``shoez.step_polynomial``,
-``shoez.step_spline_natural``, and ``shoez.step_spline_monotone`` import
+Not part of the public API: only ``mlfeatures.step_polynomial``,
+``mlfeatures.step_spline_natural``, and ``mlfeatures.step_spline_monotone`` import
 from here.
 """
 
@@ -19,12 +19,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar
 
-from shoez.types import ColSchema
+from mlfeatures.types import ColSchema
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from shoez.types import Roles
+    from mlfeatures.types import Roles
 
 FitT = TypeVar("FitT")
 

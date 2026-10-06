@@ -22,13 +22,13 @@ from typing import TYPE_CHECKING, Any
 import narwhals.stable.v2 as nw
 import numpy as np
 
-from shoez._dependencies import import_optional
-from shoez.selectors import ShoezSelector
-from shoez.types import DataFrame, Frame, NwSelector, PlExpr, Roles, Selector
+from mlfeatures._dependencies import import_optional
+from mlfeatures.selectors import FeaturesSelector
+from mlfeatures.types import DataFrame, Frame, NwSelector, PlExpr, Roles, Selector
 
 if TYPE_CHECKING:
-    from shoez.schema import Schema
-    from shoez.step import Step
+    from mlfeatures.schema import Schema
+    from mlfeatures.step import Step
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
 
@@ -103,14 +103,14 @@ def select(
     ``names`` may be a single column name, a sequence of names (kept in the
     given order), a narwhals selector (e.g. ``narwhals.selectors.numeric()``),
     a polars selector (``polars.selectors``) or column-selection expression
-    (``polars.col("a")``), or a `ShoezSelector`. A polars selector or
+    (``polars.col("a")``), or a `FeaturesSelector`. A polars selector or
     expression is resolved against the frame's schema, so it works
-    regardless of the frame's backend. A ``ShoezSelector`` additionally uses
+    regardless of the frame's backend. A ``FeaturesSelector`` additionally uses
     ``roles`` to filter by role, and — for provenance selectors — the live
     lineage DAG ``schema`` and id→step map ``steps`` when the recipe supplies
     them at fit time.
     """
-    if isinstance(names, ShoezSelector):
+    if isinstance(names, FeaturesSelector):
         return frame.select(names.resolve(frame, roles or Roles(), schema, steps))
     if isinstance(names, str):
         return frame.select([names])

@@ -10,11 +10,11 @@ Each step function has its own series of test files. For a step `step_x`, there 
 
 ## Infrastructure test coverage
 
-The conformance contract lives in `shoez.testing.StepConformanceTest` and is written **once**. A `test_step_x_infrastructure.py` file supplies only the step and its data:
+The conformance contract lives in `mlfeatures.testing.StepConformanceTest` and is written **once**. A `test_step_x_infrastructure.py` file supplies only the step and its data:
 
 ```python
-from shoez import StepNormalize
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepNormalize
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestNormalizeConformance(StepConformanceTest):
@@ -24,7 +24,7 @@ class TestNormalizeConformance(StepConformanceTest):
         return StepNormalize(["a"])
 ```
 
-Uniformity is now structural — every step inherits the same checks, so there is nothing to keep in sync by hand and no `grep` to run. Adding a check to the contract means editing `shoez/testing.py` once, and every step picks it up.
+Uniformity is now structural — every step inherits the same checks, so there is nothing to keep in sync by hand and no `grep` to run. Adding a check to the contract means editing `mlfeatures/testing.py` once, and every step picks it up.
 
 If a check genuinely does not apply to a step, opt out through a hook and say why in a comment — never by omitting anything, since there is nothing to omit:
 
@@ -34,7 +34,7 @@ If a check genuinely does not apply to a step, opt out through a hook and say wh
 
 Each of these skips with an explicit reason, visible in `pytest -rs`, so "considered and not applicable" stays distinguishable from "forgotten".
 
-Because `shoez.testing` ships inside the package, third-party steps run this same contract; see `design/extensibility.md`.
+Because `mlfeatures.testing` ships inside the package, third-party steps run this same contract; see `design/extensibility.md`.
 
 ## Input dtype coverage
 

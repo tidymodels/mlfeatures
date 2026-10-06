@@ -7,8 +7,8 @@ resolved `lat`/`lon` column names. The *apply* half
 (`apply_geo_distance()`) computes the per-row distance. `StepGeoDistance`
 wraps them into the `Step` lifecycle so a `Recipe` can fit and apply it.
 
-See `shoez.step_interact` for the precedent of a fit function with nothing
-to estimate, and `shoez.step_class_distance` for the precedent of a
+See `mlfeatures.step_interact` for the precedent of a fit function with nothing
+to estimate, and `mlfeatures.step_class_distance` for the precedent of a
 distance-to-a-point step.
 """
 
@@ -22,9 +22,9 @@ import narwhals.stable.v2 as nw
 import numpy as np
 import numpy.typing as npt
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -313,7 +313,7 @@ class StepGeoDistance(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepGeoDistance
+    from mlfeatures import Recipe, StepGeoDistance
     ```
 
     ```{python}

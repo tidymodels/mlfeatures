@@ -11,9 +11,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from shoez import ANY_DTYPE, ColSchema, Mode, Recipe, Step
-from shoez._dependencies import MissingDependencyError
-from shoez.types import AcceptedDtypes
+from mlfeatures import ANY_DTYPE, ColSchema, Mode, Recipe, Step
+from mlfeatures._dependencies import MissingDependencyError
+from mlfeatures.types import AcceptedDtypes
 
 
 class _MissingPkgStep(Step):
@@ -25,7 +25,7 @@ class _MissingPkgStep(Step):
         super().__init__(None, "needs_zzz")
 
     def required_pkgs(self) -> list[str]:
-        return ["shoez_no_such_dependency_zzz"]
+        return ["mlfeatures_no_such_dependency_zzz"]
 
     def fit(self, training_data: object, info: object) -> "Step":
         self.trained = True
@@ -66,7 +66,7 @@ def test_inspecting_a_recipe_does_not_check_required_pkgs(df: pd.DataFrame) -> N
 
 def test_fit_checks_required_pkgs(df: pd.DataFrame) -> None:
     recipe = Recipe().add(_MissingPkgStep())
-    with pytest.raises(MissingDependencyError, match="shoez_no_such_dependency_zzz"):
+    with pytest.raises(MissingDependencyError, match="mlfeatures_no_such_dependency_zzz"):
         recipe.fit(df)
 
 
@@ -84,7 +84,7 @@ class _TogglePkgStep(_MissingPkgStep):
     declaring = False
 
     def required_pkgs(self) -> list[str]:
-        return ["shoez_no_such_dependency_zzz"] if _TogglePkgStep.declaring else []
+        return ["mlfeatures_no_such_dependency_zzz"] if _TogglePkgStep.declaring else []
 
 
 def test_transform_checks_required_pkgs(df: pd.DataFrame) -> None:
@@ -94,7 +94,7 @@ def test_transform_checks_required_pkgs(df: pd.DataFrame) -> None:
     _TogglePkgStep.declaring = True
     try:
         with pytest.raises(
-            MissingDependencyError, match="shoez_no_such_dependency_zzz"
+            MissingDependencyError, match="mlfeatures_no_such_dependency_zzz"
         ):
             fitted.transform(df)
     finally:

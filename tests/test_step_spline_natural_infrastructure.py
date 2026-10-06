@@ -1,6 +1,6 @@
 """Conformance tests for StepSplineNatural.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this
 file only supplies the step and the data to run it against. Behaviour
 specific to StepSplineNatural belongs in ``test_step_spline_natural.py`` and
 ``test_step_spline_natural_e2e.py``.
@@ -8,8 +8,8 @@ specific to StepSplineNatural belongs in ``test_step_spline_natural.py`` and
 
 from __future__ import annotations
 
-from shoez import StepSplineNatural
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepSplineNatural
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestSplineNaturalConformance(StepConformanceTest):

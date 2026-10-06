@@ -2,7 +2,7 @@
 
 Several of these are placeholders for types owned by other foundation issues
 (notably the schema subsystem — see ``design/schema.md``). They exist so that
-the `shoez.step` contract is importable and type-checkable today. The
+the `mlfeatures.step` contract is importable and type-checkable today. The
 concrete implementations will replace the placeholder bodies here without
 changing the names the rest of the team codes against.
 """
@@ -24,9 +24,9 @@ if TYPE_CHECKING:
     from polars import Expr as PlExpr
     from polars.selectors import Selector as PlSelector
 
-    from shoez.schema import Schema
-    from shoez.selectors import ShoezSelector
-    from shoez.step import Step
+    from mlfeatures.schema import Schema
+    from mlfeatures.selectors import FeaturesSelector
+    from mlfeatures.step import Step
 
     #: A native tabular structure at the package boundary — concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
@@ -54,18 +54,18 @@ else:
 
 #: The internal frame type that flows between steps. A backend-agnostic narwhals
 #: ``DataFrame`` wrapping the user's native frame; steps write their data ops
-#: against this via `shoez._frame`. See ``design/ecosystem.md``.
+#: against this via `mlfeatures._frame`. See ``design/ecosystem.md``.
 Frame: TypeAlias = nw.DataFrame[Any]
 
 #: The type of every step's ``columns`` parameter: a single column name, an
-#: explicit list of names, a shoez selector such as
+#: explicit list of names, a mlfeatures selector such as
 #: ``Selectors.numeric_features()`` (see `Selectors` for the full set), or a
 #: narwhals or polars selector (``narwhals.selectors.numeric()``,
 #: ``polars.selectors.numeric()``). A polars column selection such as
 #: ``polars.col("a")`` is accepted too. Any selector is resolved against the
 #: frame's schema at fit time, so the same selector works on any backend.
 Selector: TypeAlias = Union[
-    str, Sequence[str], NwSelector, "PlSelector", "PlExpr", "ShoezSelector"
+    str, Sequence[str], NwSelector, "PlSelector", "PlExpr", "FeaturesSelector"
 ]
 
 # Listed so the selector aliases (``NwSelector`` is a renamed import; ``PlSelector``
@@ -95,14 +95,14 @@ class ColSchema:
     describe what it consumed (``schema_in``) and produced (``schema_out``).
     This is the lightweight step-facing report; the recipe-side column-lineage
     DAG that tracks roles, source, sparsity, and provenance is
-    `shoez.schema.Schema` (``design/schema.md``).
+    `mlfeatures.schema.Schema` (``design/schema.md``).
 
     Examples
     --------
     ```{python}
     #| echo: false
     #| output: false
-    from shoez import ColSchema
+    from mlfeatures import ColSchema
     ```
 
     ```{python}
@@ -128,7 +128,7 @@ class SchemaInfo:
 
     Carries the current column names, their dtype names, and the live `Roles`.
     In practice a step reads only ``roles`` (for selector resolution). The
-    recipe-side column-lineage DAG (`shoez.schema.Schema`, ``design/schema.md``)
+    recipe-side column-lineage DAG (`mlfeatures.schema.Schema`, ``design/schema.md``)
     is maintained separately by the recipe and is not handed to steps for their
     own logic; ``schema`` and ``producing_steps`` are populated by the recipe
     purely so provenance selectors (``has_source`` / ``has_ancestor``) can
@@ -143,7 +143,7 @@ class SchemaInfo:
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import SchemaInfo, _frame
+    from mlfeatures import SchemaInfo, _frame
     ```
 
     ```{python}
@@ -173,7 +173,7 @@ class SchemaInfo:
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":
         """Build a `SchemaInfo` snapshot from an internal `Frame`."""
-        from shoez import _frame
+        from mlfeatures import _frame
 
         dtypes = {name: str(dtype) for name, dtype in _frame.dtypes(frame).items()}
         return cls(columns=_frame.columns(frame), dtypes=dtypes)
@@ -197,7 +197,7 @@ class Roles:
     ```{python}
     #| echo: false
     #| output: false
-    from shoez import Roles
+    from mlfeatures import Roles
     ```
 
     ```{python}
@@ -351,7 +351,7 @@ class Mode(Enum):
     ```{python}
     #| echo: false
     #| output: false
-    from shoez import Mode, StepDummy
+    from mlfeatures import Mode, StepDummy
     ```
 
     ```{python}
@@ -383,7 +383,7 @@ class KeepOriginals(Enum):
     ```{python}
     #| echo: false
     #| output: false
-    from shoez import KeepOriginals, Mode, StepDummy
+    from mlfeatures import KeepOriginals, Mode, StepDummy
     ```
 
     ```{python}

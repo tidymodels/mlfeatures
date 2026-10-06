@@ -10,7 +10,7 @@ module supplies only its `ColumnDropStep._drop_candidates` rule, its own
 ``__init__`` (for its own hyperparameters), ``accepts_dtypes()``, and its
 class docstring.
 
-Not part of the public API: only the ``shoez.step_drop*`` modules import
+Not part of the public API: only the ``mlfeatures.step_drop*`` modules import
 from here.
 """
 
@@ -19,9 +19,9 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import ColSchema, Frame, Mode, Roles, SchemaInfo, Selector
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import ColSchema, Frame, Mode, Roles, SchemaInfo, Selector
 
 if TYPE_CHECKING:
     from typing_extensions import Self

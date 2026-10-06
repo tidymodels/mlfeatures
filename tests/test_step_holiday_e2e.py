@@ -17,7 +17,7 @@ import pytest
 from dateutil.rrule import SA, SU, WEEKLY, rrule
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, StepHoliday, StepNormalize
+from mlfeatures import Recipe, StepHoliday, StepNormalize
 
 
 def _dates() -> list[date]:

@@ -1,12 +1,12 @@
 """Smoke tests verifying the package is importable and reports a version."""
 
-import shoez
+import mlfeatures
 
 
 def test_import() -> None:
-    assert shoez is not None
+    assert mlfeatures is not None
 
 
 def test_version_is_string() -> None:
-    assert isinstance(shoez.__version__, str)
-    assert shoez.__version__
+    assert isinstance(mlfeatures.__version__, str)
+    assert mlfeatures.__version__

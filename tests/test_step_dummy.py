@@ -12,9 +12,9 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, StepNormalize
-from shoez.step_dummy import StepDummy, apply_dummy, fit_dummy
-from shoez.types import Roles, SchemaInfo
+from mlfeatures import Recipe, StepNormalize
+from mlfeatures.step_dummy import StepDummy, apply_dummy, fit_dummy
+from mlfeatures.types import Roles, SchemaInfo
 
 # ---------------------------------------------------------------------------
 # Helpers

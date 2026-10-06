@@ -10,7 +10,7 @@ long tail of levels a model cannot learn from becomes a single informative
 bucket. Ports R ``recipes``' ``step_other``.
 
 Deviation from R: where ``recipes`` gives ``step_other`` a single ``threshold``
-argument whose units flip from a proportion to a count at 1.0, shoez splits it
+argument whose units flip from a proportion to a count at 1.0, mlfeatures splits it
 into ``threshold`` (a proportion) and ``min_count`` (a count) and refuses both at
 once. The no-argument default still matches ``recipes``' ``threshold = 0.05``.
 
@@ -25,10 +25,10 @@ from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez._level_recode import warn_level_collision
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures._level_recode import warn_level_collision
+from mlfeatures.step import Step
+from mlfeatures.types import (
     _CATEGORICAL_DTYPES,  # pyright: ignore[reportPrivateUsage]
     AcceptedDtypes,
     ColSchema,
@@ -184,7 +184,7 @@ class StepOther(Step):
     ----------
     columns
         Columns to collapse. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_features()`` (see
+        mlfeatures selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -217,8 +217,8 @@ class StepOther(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepOther
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepOther
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

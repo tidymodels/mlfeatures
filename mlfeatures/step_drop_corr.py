@@ -13,8 +13,8 @@ from typing import Any, Literal, cast
 import narwhals as nw
 import numpy as np
 
-from shoez._drop import ColumnDropStep
-from shoez.types import NUMERIC_DTYPES, AcceptedDtypes, Frame, Selector
+from mlfeatures._drop import ColumnDropStep
+from mlfeatures.types import NUMERIC_DTYPES, AcceptedDtypes, Frame, Selector
 
 __all__ = ["fit_drop_corr", "StepDropCorr"]
 
@@ -155,7 +155,7 @@ class StepDropCorr(ColumnDropStep):
     ----------
     columns
         Columns to consider for removal. Accepts a single column name, a list
-        of names, a shoez selector such as ``Selectors.numeric_features()``
+        of names, a mlfeatures selector such as ``Selectors.numeric_features()``
         (see `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -180,8 +180,8 @@ class StepDropCorr(ColumnDropStep):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepDropCorr
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepDropCorr
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

@@ -13,7 +13,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from shoez.types import (
+from mlfeatures.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
@@ -362,7 +362,7 @@ class Step(ABC):
         no columns makes the step the identity transform; a step that resolves
         its own selection therefore never has to handle the empty case itself.
         """
-        from shoez import _frame
+        from mlfeatures import _frame
 
         return _frame.select(
             data, self.columns, info.roles, info.schema, info.producing_steps
@@ -396,7 +396,7 @@ class Step(ABC):
         ``pip install`` that fixes it. Version constraints in a requirement are
         reported but not enforced.
         """
-        from shoez._dependencies import require_packages
+        from mlfeatures._dependencies import require_packages
 
         requirements = self.required_pkgs()
         if requirements:
@@ -411,10 +411,10 @@ class Step(ABC):
         Every hyperparameter and learned statistic already lives as a plain
         instance attribute, so the default encodes ``self.__dict__`` through the
         shared value codec -- no per-step boilerplate. The step class itself is
-        recorded separately (by qualified name) by `shoez.serialization`. See
+        recorded separately (by qualified name) by `mlfeatures.serialization`. See
         ``design/serialization.md``.
         """
-        from shoez.serialization import _encode  # pyright: ignore[reportPrivateUsage]
+        from mlfeatures.serialization import _encode  # pyright: ignore[reportPrivateUsage]
 
         return {k: _encode(v) for k, v in self.__dict__.items()}
 
@@ -427,7 +427,7 @@ class Step(ABC):
         keeps whatever a bare instance would carry, so within a major version an
         older payload loads cleanly without per-field shims.
         """
-        from shoez.serialization import _decode  # pyright: ignore[reportPrivateUsage]
+        from mlfeatures.serialization import _decode  # pyright: ignore[reportPrivateUsage]
 
         step = cls.__new__(cls)
         for key, value in state.items():

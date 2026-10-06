@@ -9,8 +9,8 @@ This module holds that shared logic, parameterized by the reducer
 each step module keeps its own public `fit_impute_mean()` / `fit_impute_median()`
 etc. with their own docstrings, delegating to the functions here.
 
-Not part of the public API: only `shoez.step_impute_mean` and
-`shoez.step_impute_median` import from here.
+Not part of the public API: only `mlfeatures.step_impute_mean` and
+`mlfeatures.step_impute_median` import from here.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from typing import Any, Callable
 
 import narwhals.stable.v2 as nw
 
-from shoez.types import ColSchema, Frame
+from mlfeatures.types import ColSchema, Frame
 
 
 def fit_reduce_impute(

@@ -1,4 +1,4 @@
-"""Tests for the scikit-learn adapter (``shoez.compat.RecipeTransformer``)."""
+"""Tests for the scikit-learn adapter (``mlfeatures.compat.RecipeTransformer``)."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, StepNormalize
-from shoez.compat import RecipeTransformer
+from mlfeatures import Recipe, StepNormalize
+from mlfeatures.compat import RecipeTransformer
 
 
 def _supervised_recipe() -> Recipe:
@@ -182,7 +182,7 @@ class TestRepr:
         assert "step_normalize" in html
 
     def test_visual_block_class_resolves(self) -> None:
-        from shoez.compat import _visual_block_class
+        from mlfeatures.compat import _visual_block_class
 
         assert _visual_block_class() is not None
 

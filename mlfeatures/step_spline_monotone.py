@@ -6,7 +6,7 @@ training data to place interior knots (by quantile, or the caller's own
 explicit `knots`) and stores them alongside the training boundary; the
 *apply* half (`apply_spline_monotone()`) reuses those stored knots to expand
 each selected column — the basis is never recomputed from new data, matching
-`shoez.step_polynomial` and `shoez.step_spline_natural`. `StepSplineMonotone`
+`mlfeatures.step_polynomial` and `mlfeatures.step_spline_natural`. `StepSplineMonotone`
 wraps both into the `Step` lifecycle so a `Recipe` can fit and apply them.
 
 Unlike scikit-learn's ``SplineTransformer`` (B-spline only, no shape
@@ -16,7 +16,7 @@ the resulting fit is guaranteed monotonic in the column. This is a genuine
 gap in the Python ecosystem, not a wrapper around an existing transformer.
 
 The basis math falls out of an exact identity rather than needing its own
-closed form the way `shoez.step_spline_natural` does: an I-spline basis
+closed form the way `mlfeatures.step_spline_natural` does: an I-spline basis
 function is by definition the integral of an M-spline basis function, and an
 M-spline is just a rescaled B-spline (``M_i(x) = order / (t[i+order] - t[i])
 * B_i(x)``, the standard de Boor normalization). SciPy's
@@ -40,11 +40,11 @@ from typing import TYPE_CHECKING, Any
 import narwhals.stable.v2 as nw
 import numpy as np
 
-from shoez import _frame, _spline
-from shoez._basis_expansion import expand_columns_schema, update_roles_for_expansion
-from shoez._dependencies import import_optional
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame, _spline
+from mlfeatures._basis_expansion import expand_columns_schema, update_roles_for_expansion
+from mlfeatures._dependencies import import_optional
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -74,7 +74,7 @@ class SplineMonotoneFit:
     basis on new data: the interior knots, the training-set boundary, the
     underlying M-spline degree, and the effective number of output columns.
     Marked ``frozen=True`` so the fitted state can't be mutated and drift
-    train-to-serve. As with `shoez.step_spline_natural`'s ``SplineNaturalFit``,
+    train-to-serve. As with `mlfeatures.step_spline_natural`'s ``SplineNaturalFit``,
     no separate transform matrix is stored — the knots are the pinned state.
 
     Attributes
@@ -119,7 +119,7 @@ def fit_spline_monotone(
     alongside the training boundary in a `SplineMonotoneFit`. A column with
     fewer than 2 distinct non-null values cannot support a boundary at all
     and is **omitted from expansion** (``deg_free=0``, a warning names it),
-    the same convention `shoez.step_polynomial.fit_polynomial` uses for a
+    the same convention `mlfeatures.step_polynomial.fit_polynomial` uses for a
     constant column.
 
     Parameters
@@ -152,7 +152,7 @@ def fit_spline_monotone(
         If `degree` is not a non-negative integer, if `deg_free` is too small
         to admit 0 interior knots (only checked when `knots` is not given),
         or if `knots` is invalid for some column (see
-        `shoez._spline.check_explicit_knots`).
+        `mlfeatures._spline.check_explicit_knots`).
     """
     _spline.check_degree(degree)
     _spline.check_complete_set(complete_set)
@@ -363,7 +363,7 @@ class StepSplineMonotone(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -404,8 +404,8 @@ class StepSplineMonotone(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepSplineMonotone
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepSplineMonotone
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

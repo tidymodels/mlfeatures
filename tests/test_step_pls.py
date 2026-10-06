@@ -19,7 +19,7 @@ import polars as pl
 import pytest
 from sklearn.cross_decomposition import PLSRegression
 
-from shoez.step_pls import StepPls, apply_pls, fit_pls
+from mlfeatures.step_pls import StepPls, apply_pls, fit_pls
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

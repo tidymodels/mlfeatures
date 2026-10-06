@@ -13,7 +13,7 @@ construction from a frame. The ``update()`` step-application logic, ``summary()`
 and the provenance queries land in later commits of issue #19.
 
 The DAG is **recipe-side state**: it is not handed to steps (steps receive a
-`shoez.types.SchemaInfo`, which only needs roles). It is consumed by
+`mlfeatures.types.SchemaInfo`, which only needs roles). It is consumed by
 ``recipe.summary()``, provenance queries, and the ``has_source`` selector.
 """
 
@@ -24,11 +24,11 @@ from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez.types import DataFrame, Frame, Roles
+from mlfeatures import _frame
+from mlfeatures.types import DataFrame, Frame, Roles
 
 if TYPE_CHECKING:
-    from shoez.step import Step
+    from mlfeatures.step import Step
 
 __all__ = ["ColumnNode", "Schema"]
 
@@ -72,8 +72,8 @@ class ColumnNode:
 
     ```{python}
     import pandas as pd
-    from shoez import Recipe, StepDummy
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepDummy
+    from mlfeatures import Selectors as s
 
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
     node = Recipe().add(StepDummy(s.nominal_features())).fit(df).schema["color_red"]
@@ -112,8 +112,8 @@ class Schema:
 
     ```{python}
     import pandas as pd
-    from shoez import Recipe, StepImputeMean, StepNormalize, StepDummy
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepImputeMean, StepNormalize, StepDummy
+    from mlfeatures import Selectors as s
 
     df = pd.DataFrame(
         {
@@ -170,8 +170,8 @@ class Schema:
         --------
         ```{python}
         import pandas as pd
-        from shoez import _frame
-        from shoez.schema import Schema
+        from mlfeatures import _frame
+        from mlfeatures.schema import Schema
 
         frame = _frame.from_native(
             pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
@@ -346,7 +346,7 @@ class Schema:
         Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse`` — one row
         per live column, in frame order. ``dtype`` is the taxonomy category
         (``"float"``, ``"categorical_unordered"``, …) from
-        `shoez._frame.dtype_category`; ``roles`` is the sorted role set joined
+        `mlfeatures._frame.dtype_category`; ``roles`` is the sorted role set joined
         with ``", "``. Built on the polars backend and returned native.
 
         Examples
@@ -355,8 +355,8 @@ class Schema:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
 
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
@@ -400,8 +400,8 @@ class Schema:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
 
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
@@ -439,8 +439,8 @@ class Schema:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepDummy
+        from mlfeatures import Selectors as s
 
         df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
         schema = Recipe().add(StepDummy(s.nominal_features())).fit(df).schema
@@ -476,8 +476,8 @@ class Schema:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepClassDistance, StepPolynomial
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepClassDistance, StepPolynomial
+        from mlfeatures import Selectors as s
 
         df = pd.DataFrame(
             {

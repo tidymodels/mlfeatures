@@ -43,7 +43,7 @@ jobs:
       # check that the public API is sufficient to write a plugin under strict
       # mode (issue #197); pyright picks it up via `include` in pyproject.toml.
       - name: mypy --strict
-        run: uv run mypy shoez extras
+        run: uv run mypy mlfeatures extras
       - name: pyright (strict)
         run: uv run pyright
 

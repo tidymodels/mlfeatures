@@ -1,4 +1,4 @@
-"""Tests for the optional-dependency machinery in :mod:`shoez._dependencies`.
+"""Tests for the optional-dependency machinery in :mod:`mlfeatures._dependencies`.
 
 These exercise the mechanism in isolation: a friendly import helper, a
 ``ModuleNotFoundError`` subclass that existing ``except`` clauses still catch,
@@ -15,8 +15,8 @@ import textwrap
 
 import pytest
 
-from shoez import _dependencies
-from shoez._dependencies import (
+from mlfeatures import _dependencies
+from mlfeatures._dependencies import (
     MissingDependencyError,
     _LazyModule,
     import_optional,
@@ -39,13 +39,13 @@ class TestImportOptional:
 
     def test_raises_for_absent_module(self) -> None:
         with pytest.raises(MissingDependencyError):
-            import_optional("shoez_no_such_dependency_zzz")
+            import_optional("mlfeatures_no_such_dependency_zzz")
 
     def test_error_names_the_module_and_install_hint(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
-            import_optional("shoez_no_such_dependency_zzz")
+            import_optional("mlfeatures_no_such_dependency_zzz")
         message = str(excinfo.value)
-        assert "shoez_no_such_dependency_zzz" in message
+        assert "mlfeatures_no_such_dependency_zzz" in message
         assert "pip install" in message
 
     def test_known_extra_is_mentioned_in_hint(
@@ -63,12 +63,12 @@ class TestImportOptional:
         monkeypatch.setattr(_dependencies.importlib, "import_module", fake_import)
         with pytest.raises(MissingDependencyError) as excinfo:
             import_optional("numpy")
-        assert "shoez[numpy]" in str(excinfo.value)
+        assert "mlfeatures[numpy]" in str(excinfo.value)
 
     def test_purpose_appears_in_message(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
             import_optional(
-                "shoez_no_such_dependency_zzz", purpose="to expand polynomials"
+                "mlfeatures_no_such_dependency_zzz", purpose="to expand polynomials"
             )
         assert "to expand polynomials" in str(excinfo.value)
 
@@ -78,7 +78,7 @@ class TestModuleAvailable:
         assert module_available("json") is True
 
     def test_false_for_absent(self) -> None:
-        assert module_available("shoez_no_such_dependency_zzz") is False
+        assert module_available("mlfeatures_no_such_dependency_zzz") is False
 
 
 class TestLazyModuleProxy:
@@ -91,14 +91,14 @@ class TestLazyModuleProxy:
         assert np.ndarray is importlib.import_module("numpy").ndarray
 
     def test_attribute_access_on_missing_module_raises(self) -> None:
-        proxy = _LazyModule("shoez_no_such_dependency_zzz")
+        proxy = _LazyModule("mlfeatures_no_such_dependency_zzz")
         with pytest.raises(MissingDependencyError):
             proxy.some_function
 
     def test_dunder_access_raises_attribute_error_not_dependency_error(self) -> None:
         # Tooling/inspection probes dunders; those must fail as AttributeError so
         # they don't surface as a misleading "install this" message.
-        proxy = _LazyModule("shoez_no_such_dependency_zzz")
+        proxy = _LazyModule("mlfeatures_no_such_dependency_zzz")
         with pytest.raises(AttributeError):
             proxy.__wrapped__
 
@@ -120,33 +120,33 @@ class TestRequirePackages:
     def test_raises_naming_package_purpose_and_hint(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
             require_packages(
-                ["shoez_no_such_dependency_zzz"], purpose="by step 'x' (step_x)"
+                ["mlfeatures_no_such_dependency_zzz"], purpose="by step 'x' (step_x)"
             )
         message = str(excinfo.value)
-        assert "shoez_no_such_dependency_zzz" in message
+        assert "mlfeatures_no_such_dependency_zzz" in message
         assert "by step 'x' (step_x)" in message
-        assert "pip install shoez_no_such_dependency_zzz" in message
+        assert "pip install mlfeatures_no_such_dependency_zzz" in message
 
     def test_lists_every_missing_package(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
             require_packages(
-                ["shoez_no_such_a_zzz", "numpy", "shoez_no_such_b_zzz"],
+                ["mlfeatures_no_such_a_zzz", "numpy", "mlfeatures_no_such_b_zzz"],
                 purpose="by step 'x'",
             )
         message = str(excinfo.value)
-        assert "shoez_no_such_a_zzz" in message
-        assert "shoez_no_such_b_zzz" in message
+        assert "mlfeatures_no_such_a_zzz" in message
+        assert "mlfeatures_no_such_b_zzz" in message
         assert "numpy" not in message  # installed; not reported
         # The two install commands read as a list, not run together.
         assert (
-            "`pip install shoez_no_such_a_zzz` and `pip install shoez_no_such_b_zzz`"
+            "`pip install mlfeatures_no_such_a_zzz` and `pip install mlfeatures_no_such_b_zzz`"
             in message
         )
 
     def test_version_constraint_is_kept_in_the_hint(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
-            require_packages(["shoez_no_such_dependency_zzz>=1.3"], purpose="by step")
-        assert "pip install 'shoez_no_such_dependency_zzz>=1.3'" in str(excinfo.value)
+            require_packages(["mlfeatures_no_such_dependency_zzz>=1.3"], purpose="by step")
+        assert "pip install 'mlfeatures_no_such_dependency_zzz>=1.3'" in str(excinfo.value)
 
     def test_known_extra_is_used_for_a_bare_name(
         self, monkeypatch: pytest.MonkeyPatch
@@ -156,7 +156,7 @@ class TestRequirePackages:
         )
         with pytest.raises(MissingDependencyError) as excinfo:
             require_packages(["numpy"], purpose="by step 'x'")
-        assert "shoez[numpy]" in str(excinfo.value)
+        assert "mlfeatures[numpy]" in str(excinfo.value)
 
     def test_distribution_name_maps_to_its_module(
         self, monkeypatch: pytest.MonkeyPatch
@@ -181,7 +181,7 @@ class TestRequirePackages:
         with pytest.raises(MissingDependencyError) as excinfo:
             require_packages(["scikit-learn"], purpose="by step 'x'")
         message = str(excinfo.value)
-        assert "shoez[sklearn]" in message  # extra is keyed by module name
+        assert "mlfeatures[sklearn]" in message  # extra is keyed by module name
         assert "pip install scikit-learn" in message
         assert "pip install sklearn" not in message
 
@@ -194,7 +194,7 @@ class TestRequirePackages:
         with pytest.raises(MissingDependencyError) as excinfo:
             require_packages(["numpy>=1.24"], purpose="by step 'x'")
         message = str(excinfo.value)
-        assert "shoez[numpy]" in message
+        assert "mlfeatures[numpy]" in message
         assert "pip install 'numpy>=1.24'" in message
 
     def test_distribution_name_is_canonicalized(
@@ -245,7 +245,7 @@ _BLOCK_POLARS_SCRIPT = textwrap.dedent(
         del sys.modules[mod]
 
     try:
-        import shoez.polars  # noqa: F401
+        import mlfeatures.polars  # noqa: F401
     except ModuleNotFoundError as exc:
         assert "polars" in str(exc), str(exc)
         assert "pip install" in str(exc), str(exc)

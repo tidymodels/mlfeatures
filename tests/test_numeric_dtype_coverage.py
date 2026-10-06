@@ -39,7 +39,7 @@ import narwhals.stable.v2 as nw
 import polars as pl
 import pytest
 
-from shoez import (
+from mlfeatures import (
     Recipe,
     Step,
     StepClassDistance,

@@ -22,10 +22,10 @@
 # SOFTWARE.
 """Optional-dependency machinery.
 
-shoez keeps a small required core (narwhals) and treats heavier libraries —
+mlfeatures keeps a small required core (narwhals) and treats heavier libraries —
 numpy, pandas, polars, scikit-learn — as *optional*. This module is the single
 place that turns "the library might be absent" into a predictable, friendly
-failure instead of an ``ImportError`` at ``import shoez`` time.
+failure instead of an ``ImportError`` at ``import mlfeatures`` time.
 
 Two tools, for two situations:
 
@@ -37,8 +37,8 @@ Two tools, for two situations:
 - `numpy` (and friends, via `_lazy_import()`) — a *lazy* module proxy.
   Importing it never fails; the real import is deferred to first attribute
   access, and a missing library surfaces there as `MissingDependencyError`.
-  This lets a step write ``from shoez._dependencies import numpy as np`` and keep
-  every ``np.<...>`` call site unchanged, while ``import shoez`` stays cheap and
+  This lets a step write ``from mlfeatures._dependencies import numpy as np`` and keep
+  every ``np.<...>`` call site unchanged, while ``import mlfeatures`` stays cheap and
   works even when numpy is not installed.
 
 See ``design/dependencies.md`` for the step-author guide.
@@ -65,7 +65,7 @@ __all__ = [
     "require_packages",
 ]
 
-# Top-level module name -> the shoez extra that provides it, for install hints.
+# Top-level module name -> the mlfeatures extra that provides it, for install hints.
 # Listed even when not yet wired up as a lazy proxy so the hint is correct the
 # moment a step starts depending on the library.
 _EXTRAS: dict[str, str] = {
@@ -98,7 +98,7 @@ def _install_command(module_name: str, *, dist_name: str | None = None) -> str:
     install = dist_name if dist_name is not None else top
     extra = _EXTRAS.get(top)
     if extra is not None:
-        return f"`pip install 'shoez[{extra}]'` (or `pip install {install}`)"
+        return f"`pip install 'mlfeatures[{extra}]'` (or `pip install {install}`)"
     return f"`pip install {install}`"
 
 
@@ -218,7 +218,7 @@ def _requirement_module(requirement: str) -> str:
 def _requirement_available(requirement: str) -> bool:
     """Whether the package named by ``requirement`` can be imported.
 
-    Version specifiers are parsed off but not enforced: shoez does not vendor a
+    Version specifiers are parsed off but not enforced: mlfeatures does not vendor a
     version parser, and a wrong-version library fails loudly at the call site
     anyway. The specifier is still carried into the error message, so the
     install hint names the version the step actually wants.
@@ -230,7 +230,7 @@ def _requirement_hint(requirement: str) -> str:
     """A ``pip install`` suggestion for one declared requirement.
 
     Routed through `_install_command` either way, so a requirement carrying a
-    version constraint still gets the shoez extra that provides it; the
+    version constraint still gets the mlfeatures extra that provides it; the
     constraint survives by being quoted as written.
     """
     requirement = requirement.strip()

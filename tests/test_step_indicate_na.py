@@ -1,4 +1,4 @@
-"""Tests for :mod:`shoez.step_indicate_na`."""
+"""Tests for :mod:`mlfeatures.step_indicate_na`."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ import narwhals.stable.v2 as nw
 import polars as pl
 import pytest
 
-from shoez import Mode, SchemaInfo
-from shoez.step_indicate_na import (
+from mlfeatures import Mode, SchemaInfo
+from mlfeatures.step_indicate_na import (
     IndicateNaFit,
     StepIndicateNa,
     apply_indicate_na,
     fit_indicate_na,
 )
-from shoez.types import Roles
+from mlfeatures.types import Roles
 
 
 def _data() -> dict[str, list[Any]]:
@@ -126,7 +126,7 @@ class TestStepIndicateNaUnit:
             StepIndicateNa(["x"]).output_parents()
 
     def test_accepts_any_dtype(self) -> None:
-        from shoez.types import ANY_DTYPE
+        from mlfeatures.types import ANY_DTYPE
 
         assert StepIndicateNa(["x"]).accepts_dtypes() is ANY_DTYPE
 

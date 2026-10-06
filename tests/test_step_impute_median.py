@@ -12,7 +12,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_impute_median import (
+from mlfeatures.step_impute_median import (
     apply_impute_median,
     fit_impute_median,
 )

@@ -1,4 +1,4 @@
-"""Tests for `shoez._spline`, the machinery shared by the two spline steps.
+"""Tests for `mlfeatures._spline`, the machinery shared by the two spline steps.
 
 Knot-placement values below were verified against live R output
 (`stats::quantile(x, probs = (1:n)/(n+1))`, R's default quantile type 7) —
@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import _spline
+from mlfeatures import _spline
 
 # ---------------------------------------------------------------------------
 # quantile_interior_knots / capped_interior_knots

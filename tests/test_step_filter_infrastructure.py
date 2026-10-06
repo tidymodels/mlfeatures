@@ -1,14 +1,14 @@
 """Conformance tests for StepFilter.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepFilter belongs in ``test_step_filter.py`` and ``test_step_filter_e2e.py``.
 """
 
 from __future__ import annotations
 
-from shoez import StepFilter
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepFilter
+from mlfeatures.testing import StepConformanceTest
 
 
 def _keep_over_one(df: object) -> object:

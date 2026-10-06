@@ -10,7 +10,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_filter import StepFilter, apply_filter
+from mlfeatures.step_filter import StepFilter, apply_filter
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

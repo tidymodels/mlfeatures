@@ -1,19 +1,19 @@
-"""Example datasets bundled with shoez.
+"""Example datasets bundled with mlfeatures.
 
 Each name below is a dataset, loaded on access as a polars ``DataFrame``::
 
-    from shoez.data import credit
+    from mlfeatures.data import credit
 
     credit.head()
 
 The files ship inside the package, so a cell copied out of the documentation
-runs anywhere shoez is installed. They add about 2 MB to the installed
+runs anywhere mlfeatures is installed. They add about 2 MB to the installed
 package, most of it ``beans``. Every access reads the parquet file afresh;
 bind the result to a name rather than reaching for the attribute repeatedly.
 pandas users can call ``.to_pandas()`` on the result.
 
 The four R-exported datasets (``ames``, ``beans``, ``concrete``, ``credit``)
-were written from R with ``arrow::write_parquet`` in the shoez research repo.
+were written from R with ``arrow::write_parquet`` in the mlfeatures research repo.
 ``ames_mini`` and ``hotels`` are derived here by the private ``_regenerate_*``
 functions at the bottom of this module.
 """

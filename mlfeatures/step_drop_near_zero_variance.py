@@ -4,14 +4,14 @@ The *fit* half of the near-zero-variance rule lives in
 `fit_drop_near_zero_variance()` as a plain function so the logic can be
 exercised on its own; `StepDropNearZeroVariance` supplies it as the
 `_drop_candidates()` rule for the fit/transform/schema lifecycle shared with
-the other ``step_drop_*`` steps in `shoez._drop.ColumnDropStep`.
+the other ``step_drop_*`` steps in `mlfeatures._drop.ColumnDropStep`.
 """
 
 from __future__ import annotations
 
-from shoez._drop import ColumnDropStep
-from shoez.step_drop_zero_variance import fit_drop_zero_variance
-from shoez.types import ANY_DTYPE, AcceptedDtypes, Frame, Selector
+from mlfeatures._drop import ColumnDropStep
+from mlfeatures.step_drop_zero_variance import fit_drop_zero_variance
+from mlfeatures.types import ANY_DTYPE, AcceptedDtypes, Frame, Selector
 
 __all__ = ["fit_drop_near_zero_variance", "StepDropNearZeroVariance"]
 
@@ -33,7 +33,7 @@ def fit_drop_near_zero_variance(
     selected
         Internal `Frame` (narwhals) holding the candidate
         feature columns. Native frames are wrapped via
-        `shoez._frame.from_native()` at the recipe boundary.
+        `mlfeatures._frame.from_native()` at the recipe boundary.
     freq_cut
         Threshold for the frequency ratio; a column is only flagged as
         near-zero-variance if its ratio exceeds this value.
@@ -46,7 +46,7 @@ def fit_drop_near_zero_variance(
     -------
     list[str]
         Column names to drop, in their input order. Pair with
-        `shoez._frame.apply_drop()` to remove the offending columns
+        `mlfeatures._frame.apply_drop()` to remove the offending columns
         from any frame with the same schema.
     """
     zero_variance = set(fit_drop_zero_variance(selected))
@@ -88,7 +88,7 @@ class StepDropNearZeroVariance(ColumnDropStep):
     ----------
     columns
         Columns to consider for removal. Accepts a single column name, a list
-        of names, a shoez selector such as ``Selectors.features()`` (see
+        of names, a mlfeatures selector such as ``Selectors.features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -114,8 +114,8 @@ class StepDropNearZeroVariance(ColumnDropStep):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepDropNearZeroVariance
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepDropNearZeroVariance
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from shoez import _frame
-from shoez.step import RowOp
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import RowOp
+from mlfeatures.types import (
     ANY_DTYPE,
     AcceptedDtypes,
     ColSchema,
@@ -48,7 +48,7 @@ def apply_filter(selected: Frame, predicate: Predicate) -> Frame:
     ----------
     selected
         Internal `Frame` (narwhals). Native frames are wrapped via
-        `shoez._frame.from_native()` at the recipe boundary.
+        `mlfeatures._frame.from_native()` at the recipe boundary.
     predicate
         Callable taking ``selected`` and returning a boolean narwhals
         expression or series, ``True`` for the rows to retain (``dplyr::filter``
@@ -97,7 +97,7 @@ class StepFilter(RowOp):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepFilter
+    from mlfeatures import Recipe, StepFilter
     ```
 
     ```{python}
@@ -152,7 +152,7 @@ class StepFilter(RowOp):
         behaves exactly as one that was never serialized: it filters no rows at
         ``transform`` time.
         """
-        from shoez.serialization import _encode  # pyright: ignore[reportPrivateUsage]
+        from mlfeatures.serialization import _encode  # pyright: ignore[reportPrivateUsage]
 
         return {k: _encode(v) for k, v in self.__dict__.items() if k != "predicate"}
 

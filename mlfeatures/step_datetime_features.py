@@ -1,7 +1,7 @@
 """Calendar-part expansion for Datetime columns: fit + apply.
 
 `step_datetime_features` is the Datetime-only counterpart of
-`step_date_features` (`shoez/step_date_features.py`). They are two separate
+`step_date_features` (`mlfeatures/step_date_features.py`). They are two separate
 steps because a date has no time of day: ``hour``, ``minute``, and ``second``
 make no sense on a plain calendar date, so a single step trying to cover both
 would need to either fake a time-of-day or special-case Date columns
@@ -28,8 +28,8 @@ from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez._calendar_features import (
+from mlfeatures import _frame
+from mlfeatures._calendar_features import (
     apply_calendar_features,
     day_expr,
     dow_expr,
@@ -42,8 +42,8 @@ from shoez._calendar_features import (
     validate_features,
     year_expr,
 )
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures.step import Step
+from mlfeatures.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
@@ -139,7 +139,7 @@ def fit_datetime_features(
     ----------
     selected
         Internal `Frame` (narwhals) holding the Datetime columns to expand.
-        Native frames are wrapped via `shoez._frame.from_native()` at the
+        Native frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
     features
         Calendar parts to compute; every entry must be a key of the supported
@@ -229,7 +229,7 @@ class StepDatetimeFeatures(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.datetime_features()`` (see
+        mlfeatures selector such as ``Selectors.datetime_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.by_dtype(narwhals.Datetime)``). Selectors are
         resolved against the frame's schema when the recipe is fitted, so the
@@ -271,8 +271,8 @@ class StepDatetimeFeatures(Step):
     #| output: false
     import pandas as pd
     from datetime import datetime
-    from shoez import Recipe, StepDatetimeFeatures
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepDatetimeFeatures
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

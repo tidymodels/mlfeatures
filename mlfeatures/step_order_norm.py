@@ -24,11 +24,11 @@ from typing import TYPE_CHECKING, Any, cast
 import narwhals.stable.v2 as nw
 import numpy as np
 
-from shoez import _frame
-from shoez._dependencies import import_optional
-from shoez._numeric_one_to_one import schema_out_for_touched
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures._dependencies import import_optional
+from mlfeatures._numeric_one_to_one import schema_out_for_touched
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -237,7 +237,7 @@ class StepOrderNorm(Step):
     ----------
     columns
         Columns to normalize. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -256,8 +256,8 @@ class StepOrderNorm(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepOrderNorm
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepOrderNorm
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

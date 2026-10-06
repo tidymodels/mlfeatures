@@ -1,16 +1,16 @@
 """Partial least squares feature extraction: fit + apply.
 
-Like `shoez.step_pca`, a *set* of numeric input columns is replaced by a new
+Like `mlfeatures.step_pca`, a *set* of numeric input columns is replaced by a new
 *set* of component columns, so every output descends from the whole input set
 rather than a single source column. Unlike PCA, the components are chosen to
-be predictive of a target column, the way `shoez.step_class_distance` reads a
+be predictive of a target column, the way `mlfeatures.step_class_distance` reads a
 target at fit time without treating it as a selected input feature.
 
 The *fit* half (`fit_pls()`) delegates the actual NIPALS computation to
 ``sklearn.cross_decomposition.PLSRegression`` and copies only the plain NumPy
 arrays it needs out of the fitted estimator into a frozen `PlsFit`; the
 *apply* half (`apply_pls()`) reuses those arrays to project any frame onto the
-learned components, exactly as `shoez.step_pca` does for its loadings — the
+learned components, exactly as `mlfeatures.step_pca` does for its loadings — the
 basis is never recomputed from new data, giving train/serve parity.
 `StepPls` wraps both into the `Step` lifecycle so a `Recipe` can fit and apply
 them.
@@ -24,10 +24,10 @@ from typing import TYPE_CHECKING, Any, cast
 import narwhals.stable.v2 as nw
 import numpy as np
 
-from shoez import _frame
-from shoez._dependencies import import_optional
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures._dependencies import import_optional
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -98,7 +98,7 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the numeric columns to project.
-        Native frames are wrapped via `shoez._frame.from_native()` at the
+        Native frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
     target
         Narwhals ``Series`` of a numeric or categorical target, aligned
@@ -159,7 +159,7 @@ def _dummy_code_target(
     """Restrict ``x`` to complete rows and dummy-code a categorical ``target``.
 
     One indicator column per class (sorted by `sorted()`, matching
-    `shoez.step_class_distance.fit_class_distance`) turns PLS discriminant
+    `mlfeatures.step_class_distance.fit_class_distance`) turns PLS discriminant
     analysis into an ordinary multi-output PLS regression -- the same
     ``x_rotations_`` extraction in `fit_pls` works unchanged.
     """
@@ -260,7 +260,7 @@ class StepPls(Step):
     ----------
     columns
         Columns to project. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -295,8 +295,8 @@ class StepPls(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepPls
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepPls
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

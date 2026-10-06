@@ -9,8 +9,8 @@ from __future__ import annotations
 import pandas as pd
 import polars as pl
 
-from shoez import Recipe, StepDrop, StepNormalize
-from shoez import Selectors as s
+from mlfeatures import Recipe, StepDrop, StepNormalize
+from mlfeatures import Selectors as s
 
 
 def _data() -> dict[str, list[object]]:

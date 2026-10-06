@@ -10,7 +10,7 @@ in, or a column silently changing dtype between training and serving.
 The name→dtype half reuses narwhals' own :class:`narwhals.Schema` (an ordered
 name→dtype mapping that is backend-agnostic across pandas and polars). Roles and
 the per-role *requirements* (which columns must be present at ``transform()``
-time) are shoez concepts narwhals knows nothing about, so they live here.
+time) are mlfeatures concepts narwhals knows nothing about, so they live here.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from dataclasses import dataclass
 
 import narwhals.stable.v2 as nw
 
-from shoez._frame import dtypes as frame_dtypes
-from shoez.types import Frame, Roles
+from mlfeatures._frame import dtypes as frame_dtypes
+from mlfeatures.types import Frame, Roles
 
 #: Roles whose transform-time requirement is fixed and cannot be configured via
 #: ``update_role_requirements``: a ``feature`` is always required at transform,
@@ -83,8 +83,8 @@ class Ptype:
 
     ```{python}
     import pandas as pd
-    from shoez import Recipe, StepNormalize
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepNormalize
+    from mlfeatures import Selectors as s
 
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "y": [0, 1, 0]})
     rec = Recipe(target="y", features="x").add(

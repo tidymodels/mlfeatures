@@ -1,4 +1,4 @@
-"""Native shoez selector DSL (issue #20).
+"""Native mlfeatures selector DSL (issue #20).
 
 Covers the native by-name / by-type / by-role surface, set-op composition and
 column ordering, cross-family coercion + ``Selectors.wrap``, the provenance
@@ -20,8 +20,8 @@ import pytest
 from narwhals.exceptions import ColumnNotFoundError
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Recipe, Selectors, StepDummy, StepNormalize, _frame
-from shoez.types import Frame, Roles
+from mlfeatures import Recipe, Selectors, StepDummy, StepNormalize, _frame
+from mlfeatures.types import Frame, Roles
 
 
 def _frame_with_roles() -> tuple[Frame, Roles]:
@@ -331,17 +331,17 @@ class TestSetOps:
 
 
 class TestCrossFamily:
-    def test_shoez_leads_coerces_polars(self) -> None:
+    def test_mlfeatures_leads_coerces_polars(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(Selectors.features() & cs.starts_with("x"), frame, roles)
         assert result == ["x1", "x2"]
 
-    def test_shoez_leads_coerces_list(self) -> None:
+    def test_mlfeatures_leads_coerces_list(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(Selectors.numeric() & ["x1", "label"], frame, roles)
         assert result == ["x1"]
 
-    def test_shoez_leads_coerces_narwhals(self) -> None:
+    def test_mlfeatures_leads_coerces_narwhals(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(Selectors.features() & ncs.numeric(), frame, roles)
         assert result == ["x1", "x2", "count"]
@@ -382,7 +382,7 @@ class TestCrossFamily:
         assert _resolve(Selectors.wrap("x1"), frame, roles) == ["x1"]
 
     def test_polars_leading_is_unsupported(self) -> None:
-        # Documented limit: a polars selector on the left cannot see the shoez
+        # Documented limit: a polars selector on the left cannot see the mlfeatures
         # operand and polars raises rather than composing.
         with pytest.raises(TypeError):
             _ = cs.numeric() & Selectors.features()  # type: ignore[operator]
@@ -582,7 +582,7 @@ class TestPolarsEscapeHatch:
             _resolve(selector, frame, roles)
         assert str(excinfo.value) == snapshot
 
-    def test_shoez_leads_coerces_column_expression(self) -> None:
+    def test_mlfeatures_leads_coerces_column_expression(self) -> None:
         frame, roles = _frame_with_roles()
         result = _resolve(Selectors.features() & pl.col("x1", "y"), frame, roles)
         assert result == ["x1"]

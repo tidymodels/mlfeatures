@@ -10,7 +10,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from shoez import Recipe, StepError, StepNormalize
+from mlfeatures import Recipe, StepError, StepNormalize
 
 
 def _data() -> pd.DataFrame:

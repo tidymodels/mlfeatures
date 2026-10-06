@@ -7,7 +7,7 @@ own explicit `knots`) and stores them alongside the training boundary
 (``min``/``max``); the *apply* half (`apply_spline_natural()`) reuses those
 stored knots to expand each selected column — the basis is never recomputed
 from new data, so train/serve parity holds the way it does for
-`shoez.step_polynomial`. `StepSplineNatural` wraps both into the `Step`
+`mlfeatures.step_polynomial`. `StepSplineNatural` wraps both into the `Step`
 lifecycle so a `Recipe` can fit and apply them.
 
 The basis math itself (`natural_null_space()`) is a direct port of
@@ -34,10 +34,10 @@ from typing import TYPE_CHECKING, Any
 import narwhals.stable.v2 as nw
 import numpy as np
 
-from shoez import _frame, _spline
-from shoez._basis_expansion import expand_columns_schema, update_roles_for_expansion
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame, _spline
+from mlfeatures._basis_expansion import expand_columns_schema, update_roles_for_expansion
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -67,7 +67,7 @@ class SplineNaturalFit:
     basis on new data: the interior knots (placed once, from training data,
     or supplied explicitly), the training-set boundary, and the effective
     number of output columns. Marked ``frozen=True`` so the fitted state
-    can't be mutated and drift train-to-serve. Unlike `shoez.step_polynomial`'s
+    can't be mutated and drift train-to-serve. Unlike `mlfeatures.step_polynomial`'s
     ``PolynomialFit``, no separate transform matrix is stored: the knots
     *are* the pinned state, and the null-space matrix is a cheap, pure
     function of them, recomputed (not re-estimated) at apply time.
@@ -86,7 +86,7 @@ class SplineNaturalFit:
         Effective number of output columns. ``0`` for a degenerate column
         (fewer than 2 distinct training values) — those are passed through
         untouched at apply time (with a warning), the same convention as a
-        degree-0 `shoez.step_polynomial.PolynomialFit`.
+        degree-0 `mlfeatures.step_polynomial.PolynomialFit`.
     """
 
     internal_knots: "np.ndarray[Any, Any]"
@@ -161,7 +161,7 @@ def fit_spline_natural(
     them alongside the training boundary in a `SplineNaturalFit`. A column
     with fewer than 2 distinct non-null values cannot support a boundary at
     all and is **omitted from expansion** (``deg_free=0``, a warning names it),
-    the same convention `shoez.step_polynomial.fit_polynomial` uses for a
+    the same convention `mlfeatures.step_polynomial.fit_polynomial` uses for a
     constant column.
 
     Parameters
@@ -193,7 +193,7 @@ def fit_spline_natural(
     ValueError
         If `deg_free` is not an integer >= 2 (only checked when `knots` is
         not given), or if `knots` is invalid for some column (see
-        `shoez._spline.check_explicit_knots`).
+        `mlfeatures._spline.check_explicit_knots`).
     """
     _spline.check_complete_set(complete_set)
     if knots is None:
@@ -406,7 +406,7 @@ class StepSplineNatural(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -444,8 +444,8 @@ class StepSplineNatural(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepSplineNatural
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepSplineNatural
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

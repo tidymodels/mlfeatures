@@ -20,20 +20,20 @@ from __future__ import annotations
 import copy
 import warnings
 
-from shoez import _frame
-from shoez.ptype import (
+from mlfeatures import _frame
+from mlfeatures.ptype import (
     _NON_CONFIGURABLE_ROLES,  # pyright: ignore[reportPrivateUsage]
     Ptype,
 )
-from shoez.schema import Schema
-from shoez.selectors import ShoezSelector
-from shoez.step import (
+from mlfeatures.schema import Schema
+from mlfeatures.selectors import FeaturesSelector
+from mlfeatures.step import (
     RowOp,
     Step,
     StepError,
     _step_type_label,  # pyright: ignore[reportPrivateUsage]
 )
-from shoez.types import (
+from mlfeatures.types import (
     DataFrame,
     Frame,
     Roles,
@@ -50,7 +50,7 @@ def _check_accepted_dtypes(step: Step, data: Frame, selected: list[str]) -> None
     The framework-side half of ``Step.accepts_dtypes()``: it runs at the recipe
     boundary, after the selector has resolved and before ``step.fit()``, so a
     step never sees a column it declared itself invalid for and a mismatch is
-    reported by shoez rather than by whatever narwhals, polars, or pandas
+    reported by mlfeatures rather than by whatever narwhals, polars, or pandas
     happens to raise from inside the step. A step returning ``ANY_DTYPE`` opts
     out (the sentinel contains every dtype).
     """
@@ -152,7 +152,7 @@ class Recipe:
     guarantee in ``design/lifecycle.md``):
 
     ```python
-    from shoez import Selectors as s
+    from mlfeatures import Selectors as s
 
     recipe = (
         Recipe()
@@ -195,7 +195,7 @@ class Recipe:
         #: Pending transform-time requirement overrides, applied at ``fit()``.
         #: Each entry is a (target, transform_required) pair where target is a
         #: role name or a selector resolved against the training frame.
-        self._role_req_overrides: list[tuple[str | ShoezSelector, bool]] = []
+        self._role_req_overrides: list[tuple[str | FeaturesSelector, bool]] = []
         _apply_role_assignments(
             self.roles,
             {"target": target, "feature": features, "case_weights": case_weights},
@@ -246,8 +246,8 @@ class Recipe:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
         ```
 
         ```{python}
@@ -302,7 +302,7 @@ class Recipe:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe
+        from mlfeatures import Recipe
         ```
 
         Start from a frame whose columns need roles:
@@ -355,7 +355,7 @@ class Recipe:
 
     def update_role_requirements(
         self,
-        role: str | ShoezSelector,
+        role: str | FeaturesSelector,
         *,
         transform_required: bool,
     ) -> "Recipe":
@@ -424,8 +424,8 @@ class Recipe:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
         ```
 
         ```{python}
@@ -556,8 +556,8 @@ class Recipe:
 
         ```{python}
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
 
         df = pd.DataFrame(
             {
@@ -614,47 +614,47 @@ class FittedRecipe:
         )
 
     def to_dict(self) -> dict[str, object]:
-        """Serialize to a diffable, JSON-safe ``dict``. See `shoez.serialization`."""
-        from shoez import serialization
+        """Serialize to a diffable, JSON-safe ``dict``. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.to_dict(self)
 
     def to_json(self, *, indent: int = 2) -> str:
-        """Serialize to a diffable JSON string. See `shoez.serialization`."""
-        from shoez import serialization
+        """Serialize to a diffable JSON string. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.to_json(self, indent=indent)
 
     def to_yaml(self) -> str:
-        """Serialize to a diffable YAML string. See `shoez.serialization`."""
-        from shoez import serialization
+        """Serialize to a diffable YAML string. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.to_yaml(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_dict` output. See `shoez.serialization`."""
-        from shoez import serialization
+        """Reconstruct a fitted recipe from `to_dict` output. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.from_dict(data)
 
     @classmethod
     def from_json(cls, text: str) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_json` output. See `shoez.serialization`."""
-        from shoez import serialization
+        """Reconstruct a fitted recipe from `to_json` output. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.from_json(text)
 
     @classmethod
     def from_yaml(cls, text: str) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_yaml` output. See `shoez.serialization`."""
-        from shoez import serialization
+        """Reconstruct a fitted recipe from `to_yaml` output. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.from_yaml(text)
 
     def minimize(self) -> "FittedRecipe":
-        """Return a copy with fit-only artifacts stripped. See `shoez.serialization`."""
-        from shoez import serialization
+        """Return a copy with fit-only artifacts stripped. See `mlfeatures.serialization`."""
+        from mlfeatures import serialization
 
         return serialization.minimize(self)
 
@@ -694,8 +694,8 @@ class FittedRecipe:
         #| echo: false
         #| output: false
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
         ```
 
         ```{python}
@@ -741,8 +741,8 @@ class FittedRecipe:
 
         ```{python}
         import pandas as pd
-        from shoez import Recipe, StepNormalize, StepDummy
-        from shoez import Selectors as s
+        from mlfeatures import Recipe, StepNormalize, StepDummy
+        from mlfeatures import Selectors as s
 
         df = pd.DataFrame(
             {

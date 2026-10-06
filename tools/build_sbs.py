@@ -9,7 +9,7 @@ editing the SPECS below and commit both:
 Content lives in the SPECS list below: one spec per example, as sections of
 (title, shared_desc_lines, py_diff_lines, r_code, py_code). The code panes are
 hand-curated condensations of the research scripts (the R panes carry verbatim
-R code and run results that shoez CI cannot reproduce — R runs happened in the
+R code and run results that mlfeatures CI cannot reproduce — R runs happened in the
 shoez-research repo). The script does the mechanics: shared lines appear
 verbatim in both panes; py diff lines get a bare "#" placeholder in R; code
 blocks are end-padded to equal length, so both panes stay line-matched (an
@@ -58,7 +58,7 @@ def render(lines):
         if "----" in line and line.startswith("# "):
             out.append(f'<span class="bn">{e}</span>')
             mode = None
-        elif line.startswith("# DIFF (GAP") or line.startswith("# DIFF (shoez-only"):
+        elif line.startswith("# DIFF (GAP") or line.startswith("# DIFF (mlfeatures-only"):
             out.append(f'<span class="gp">{e}</span>')
             mode = "gp"
         elif line.startswith("# DIFF"):
@@ -126,7 +126,7 @@ SPECS = [
                 "Setup",
                 ["Load the modeling stack."],
                 [
-                    "DIFF: tidymodels bundles everything; Python assembles polars + sklearn + shoez."
+                    "DIFF: tidymodels bundles everything; Python assembles polars + sklearn + mlfeatures."
                 ],
                 """library(tidymodels)
 tidymodels_prefer()""",
@@ -135,8 +135,8 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from shoez import Recipe, RecipeTransformer, StepDummy
-from shoez import Selectors as s""",
+from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import Selectors as s""",
             ),
             (
                 "Data + target transform",
@@ -144,7 +144,7 @@ from shoez import Selectors as s""",
                 [
                     "DIFF: ames exported once from R (no PyPI package) -> data/ames.csv;",
                     "polars needs null_values='NA' — R's NA strings aren't auto-parsed.",
-                    "DIFF (GAP): step_log has no shoez analog — the log moves PRE-recipe.",
+                    "DIFF (GAP): step_log has no mlfeatures analog — the log moves PRE-recipe.",
                     "Static, so safe, but it leaves the replay boundary: new frames must",
                     "arrive already-logged. That trade IS the escape-hatch lesson.",
                 ],
@@ -262,8 +262,8 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
-from shoez import Recipe, RecipeTransformer, StepDummy
-from shoez import Selectors as s""",
+from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import Selectors as s""",
             ),
             (
                 "Data + target transform",
@@ -302,7 +302,7 @@ ames_train, ames_test = train_test_split(
                     "DIFF (GAP): step_other unbuilt — rare Neighborhoods keep their own dummies,",
                     "so the design matrix is wider and sparser than R's.",
                     "DIFF (GAP): step_interact unbuilt — interactions over generated columns is",
-                    "exactly shoez's has_source pitch; target form shown in place.",
+                    "exactly mlfeatures's has_source pitch; target form shown in place.",
                     "DIFF (GAP): step_ns unbuilt — no spline steps at all.",
                 ],
                 """ames_rec <-
@@ -380,7 +380,7 @@ rsq  = float(pl.DataFrame({"y": y_test, "pred": pred})
                 ["Load the modeling stack."],
                 [
                     "DIFF: tidymodels is one meta-package; Python assembles polars + sklearn",
-                    "+ xgboost + shoez (xgboost's polars path needs pyarrow).",
+                    "+ xgboost + mlfeatures (xgboost's polars path needs pyarrow).",
                 ],
                 """library(tidymodels)
 tidymodels_prefer()""",
@@ -389,8 +389,8 @@ import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
-from shoez import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
-from shoez import Selectors as s""",
+from mlfeatures import Recipe, RecipeTransformer, StepDropZeroVariance, StepOneHot
+from mlfeatures import Selectors as s""",
             ),
             (
                 "Data + target transform",
@@ -436,7 +436,7 @@ ames_train, ames_test = train_test_split(
                     "one-hot encode, drop zero-variance columns.",
                 ],
                 [
-                    "DIFF (GAP): step_novel() has no shoez analog yet — StepNovel is unbuilt and",
+                    "DIFF (GAP): step_novel() has no mlfeatures analog yet — StepNovel is unbuilt and",
                     "StepUnknown fills only nulls. Omitted here; StepOneHot warns and emits",
                     "nulls for unseen levels at transform instead.",
                     "DIFF: Recipe(target=...) roles replace the R formula; selectors pick",
@@ -536,7 +536,7 @@ print(rmse)                 # ran: 0.0771 (R test: 0.0730)""",
                 "Proof the recipe stands alone",
                 ["Transform new data with no model attached."],
                 [
-                    "DIFF (shoez-only): the lineage query — which columns did the one-hot step",
+                    "DIFF (mlfeatures-only): the lineage query — which columns did the one-hot step",
                     "produce? — has no recipes equivalent (name-prefix matching is the R workaround).",
                 ],
                 """final_res %>%
@@ -568,8 +568,8 @@ import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
-from shoez import Recipe, RecipeTransformer, StepNormalize
-from shoez import Selectors as s""",
+from mlfeatures import Recipe, RecipeTransformer, StepNormalize
+from mlfeatures import Selectors as s""",
             ),
             (
                 "Data + the leakage beat",
@@ -617,7 +617,7 @@ concrete_train, concrete_test = train_test_split(
                 ],
                 [
                     "DIFF: none — StepNormalize ports step_normalize exactly. This candidate",
-                    "runs in shoez today.",
+                    "runs in mlfeatures today.",
                     "DIFF (GAP, variant only): the poly/interact response surface needs the",
                     "all-pairs StepInteract (unbuilt); StepPolynomial itself exists.",
                 ],
@@ -715,8 +715,8 @@ library(bestNormalize)""",
                 """import polars as pl
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from shoez import Recipe, StepDropZeroVariance, StepNormalize
-from shoez import Selectors as s""",
+from mlfeatures import Recipe, StepDropZeroVariance, StepNormalize
+from mlfeatures import Selectors as s""",
             ),
             (
                 "3-way split",
@@ -745,7 +745,7 @@ bean_validation, bean_test = train_test_split(
                     "the step ordering. fit() ~ prep(); transform() ~ bake().",
                 ],
                 [
-                    "DIFF (GAP): step_orderNorm (bestNormalize's ORQ transform) has no shoez",
+                    "DIFF (GAP): step_orderNorm (bestNormalize's ORQ transform) has no mlfeatures",
                     "analog — not even designed. Omitted: skewed shape features stay skewed,",
                     "so components will differ somewhat from the book's.",
                 ],
@@ -776,7 +776,7 @@ fitted.transform(bean_validation).head()""",
                     "recipe's output OUTSIDE the replay boundary. When it lands, this block",
                     "collapses into .add(StepPCA(s.numeric_features(), num_comp=4)).",
                     "DIFF: R pipes a NEW step onto the already-prep()ed recipe and re-preps",
-                    "(incremental fit); shoez recipes are declared whole and fit once.",
+                    "(incremental fit); mlfeatures recipes are declared whole and fit once.",
                 ],
                 """bean_pca_rec <-
   bean_rec_trained %>%
@@ -831,10 +831,10 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
                                      train_test_split)
 from sklearn.pipeline import Pipeline
-from shoez import (Recipe, RecipeTransformer, StepDropZeroVariance,
+from mlfeatures import (Recipe, RecipeTransformer, StepDropZeroVariance,
                    StepDummy, StepImputeMedian, StepImputeMode,
                    StepNormalize)
-from shoez import Selectors as s""",
+from mlfeatures import Selectors as s""",
             ),
             (
                 "Data + split",
@@ -981,12 +981,12 @@ for sp in SPECS:
 <p class="nav"><a href="sbs-index.html">index</a> · {nav}</p>
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
-explain what changes; <span style="color:var(--gap)">red = shoez gap</span>.
+explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
 Lightly condensed from <code>candidates/</code> — {sp["status"]}</p>
 <div class="cols">
 <div class="pane r"><h2>example.R — tidymodels (run)</h2>
 <pre>{render(r_lines)}</pre></div>
-<div class="pane py"><h2>example.py — shoez + sklearn (run)</h2>
+<div class="pane py"><h2>example.py — mlfeatures + sklearn (run)</h2>
 <pre>{render(py_lines)}</pre></div>
 </div>
 </div>
@@ -1006,7 +1006,7 @@ index = f"""<!doctype html>
 <body>
 <div class="wrap">
 <h1>R vs Python, line-matched — the proposed six</h1>
-<p class="lede">One page per proposed example: the R script (run) and its shoez/sklearn
+<p class="lede">One page per proposed example: the R script (run) and its mlfeatures/sklearn
 port (draft) side by side, sections aligned, differences as in-script comments.
 Generated by <code>build-sbs.py</code>.</p>
 <ul class="idx">

@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING
 
 import narwhals as nw
 
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures.step import Step
+from mlfeatures.types import (
     ANY_DTYPE,
     AcceptedDtypes,
     ColSchema,
@@ -43,7 +43,7 @@ def add_intercept(
     ----------
     selected
         Internal `Frame` (narwhals). Native frames are
-        wrapped via `shoez._frame.from_native()` at the recipe boundary.
+        wrapped via `mlfeatures._frame.from_native()` at the recipe boundary.
     value
         The constant to fill the new column with. Default ``1.0`` — a column of
         ones, the classic regression intercept. The column's dtype follows the
@@ -97,7 +97,7 @@ class StepIntercept(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepIntercept
+    from mlfeatures import Recipe, StepIntercept
     ```
 
     ```{python}

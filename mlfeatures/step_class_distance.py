@@ -7,7 +7,7 @@ replaces the selected columns with the distance from each row to each centroid.
 `Step` lifecycle so a `Recipe` can
 fit and apply it.
 
-See `shoez.step_normalize` and `shoez.step_polynomial` for the
+See `mlfeatures.step_normalize` and `mlfeatures.step_polynomial` for the
 canonical examples of the same fit/apply pattern.
 """
 
@@ -20,9 +20,9 @@ import narwhals.stable.v2 as nw
 import numpy as np
 import numpy.typing as npt
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -376,7 +376,7 @@ class StepClassDistance(Step):
     ----------
     columns
         Columns to measure distances over. Accepts a single column name, a list
-        of names, a shoez selector such as ``Selectors.numeric_features()``
+        of names, a mlfeatures selector such as ``Selectors.numeric_features()``
         (see `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -417,8 +417,8 @@ class StepClassDistance(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepClassDistance
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepClassDistance
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

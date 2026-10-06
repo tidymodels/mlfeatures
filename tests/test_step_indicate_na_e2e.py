@@ -13,7 +13,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import Recipe, StepIndicateNa, StepNormalize
+from mlfeatures import Recipe, StepIndicateNa, StepNormalize
 
 
 def _pandas_data() -> pd.DataFrame:

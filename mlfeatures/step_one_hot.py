@@ -1,7 +1,7 @@
 """One-hot encoding: expand discrete columns into k indicator columns.
 
 ``fit_one_hot`` identifies all unique levels per column (no reference level
-dropped). Transform logic is shared with `shoez.step_dummy` via
+dropped). Transform logic is shared with `mlfeatures.step_dummy` via
 `apply_dummy()`.
 """
 
@@ -12,16 +12,16 @@ from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.step_dummy import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.step_dummy import (
     DISCRETE_DTYPES,
     apply_dummy,
     dummy_output_parents,
     dummy_update_roles,
     resolve_col_name,
 )
-from shoez.types import (
+from mlfeatures.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
@@ -94,7 +94,7 @@ class StepOneHot(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_features()`` (see
+        mlfeatures selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -120,8 +120,8 @@ class StepOneHot(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepOneHot
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepOneHot
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

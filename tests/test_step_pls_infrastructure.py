@@ -1,14 +1,14 @@
 """Conformance tests for StepPls.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepPls belongs in ``test_step_pls.py`` and ``test_step_pls_e2e.py``.
 """
 
 from __future__ import annotations
 
-from shoez import StepPls
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepPls
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestPlsConformance(StepConformanceTest):

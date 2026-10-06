@@ -13,8 +13,8 @@ module defines for itself); each step module keeps its own public
 `fit_date_features()` / `apply_date_features()` etc. with their own
 docstrings, delegating to the functions here.
 
-Not part of the public API: only `shoez.step_date_features` and
-`shoez.step_datetime_features` import from here.
+Not part of the public API: only `mlfeatures.step_date_features` and
+`mlfeatures.step_datetime_features` import from here.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
-from shoez.types import Frame
+from mlfeatures.types import Frame
 
 if TYPE_CHECKING:
     from collections.abc import Callable

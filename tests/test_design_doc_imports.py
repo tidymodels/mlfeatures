@@ -1,19 +1,19 @@
-"""Guard that ``shoez`` imports written in ``design/`` actually resolve.
+"""Guard that ``mlfeatures`` imports written in ``design/`` actually resolve.
 
 ``design/`` uses plain ```` ```python ```` display fences, not the executable
 ```` ```{python} ```` cells that ``test_doc_examples.py`` runs, so nothing has
 ever checked them. That is how ``design/extensibility.md`` came to open its
-base-classes section with ``from shoez import Step, Check, RowOp`` when no
+base-classes section with ``from mlfeatures import Step, Check, RowOp`` when no
 ``Check`` has ever existed (see issue #197) — a plugin author following the doc
 literally wrote an import that fails.
 
 We deliberately do **not** execute these blocks. Most are fragments or elide
 setup, so running them would fail for reasons that say nothing about the docs'
 accuracy. Import resolution is the checkable subset: it is exactly the claim
-"this name is part of shoez", which is the claim that went stale.
+"this name is part of mlfeatures", which is the claim that went stale.
 
 Private modules are allowed here. ``design/`` documents internals, so
-``from shoez._dependencies import numpy`` is legitimate; the check is that the
+``from mlfeatures._dependencies import numpy`` is legitimate; the check is that the
 name *exists*, not that it is public.
 """
 
@@ -32,29 +32,29 @@ DESIGN_DIR = Path(__file__).resolve().parent.parent / "design"
 _BLOCK_RE = re.compile(r"^```python[^\n]*\n(.*?)\n```", re.DOTALL | re.MULTILINE)
 
 # `interfaces.md` weighs *candidate* construction interfaces against each other;
-# its blocks spell out proposed APIs (`from shoez.steps import ImputeMedian`)
+# its blocks spell out proposed APIs (`from mlfeatures.steps import ImputeMedian`)
 # that were considered and not adopted. Those imports are supposed not to
 # resolve — rewriting them to the shipped names would destroy the comparison the
 # document exists to make.
 _DELIBERATIVE = {"interfaces.md"}
 
 
-def _shoez_imports(source: str) -> list[tuple[str, str | None]]:
-    """Extract ``(module, attribute)`` pairs for every shoez import in a block.
+def _mlfeatures_imports(source: str) -> list[tuple[str, str | None]]:
+    """Extract ``(module, attribute)`` pairs for every mlfeatures import in a block.
 
-    ``import shoez.foo`` yields ``("shoez.foo", None)``; ``from shoez import X``
-    yields ``("shoez", "X")``. Blocks that do not parse are skipped by the
+    ``import mlfeatures.foo`` yields ``("mlfeatures.foo", None)``; ``from mlfeatures import X``
+    yields ``("mlfeatures", "X")``. Blocks that do not parse are skipped by the
     caller, so this only ever sees syntactically valid Python.
     """
     found: list[tuple[str, str | None]] = []
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if alias.name == "shoez" or alias.name.startswith("shoez."):
+                if alias.name == "mlfeatures" or alias.name.startswith("mlfeatures."):
                     found.append((alias.name, None))
         elif isinstance(node, ast.ImportFrom):
             module = node.module
-            if module is None or not (module == "shoez" or module.startswith("shoez.")):
+            if module is None or not (module == "mlfeatures" or module.startswith("mlfeatures.")):
                 continue
             for alias in node.names:
                 found.append((module, alias.name))
@@ -62,14 +62,14 @@ def _shoez_imports(source: str) -> list[tuple[str, str | None]]:
 
 
 def _collect() -> list[tuple[str, str, str | None]]:
-    """Yield ``(case_id, module, attribute)`` for every shoez import in design/."""
+    """Yield ``(case_id, module, attribute)`` for every mlfeatures import in design/."""
     cases: list[tuple[str, str, str | None]] = []
     for path in sorted(DESIGN_DIR.glob("*.md")):
         if path.name in _DELIBERATIVE:
             continue
         for index, block in enumerate(_BLOCK_RE.findall(path.read_text())):
             try:
-                imports = _shoez_imports(block)
+                imports = _mlfeatures_imports(block)
             except SyntaxError:
                 # A fragment or pseudo-code block; nothing to check.
                 continue
@@ -84,7 +84,7 @@ _CASES = _collect()
 
 def test_design_doc_imports_were_found() -> None:
     """Guard the collector: if discovery breaks, every check below passes vacuously."""
-    assert _CASES, "no shoez imports were discovered in design/*.md"
+    assert _CASES, "no mlfeatures imports were discovered in design/*.md"
 
 
 @pytest.mark.parametrize(
@@ -93,7 +93,7 @@ def test_design_doc_imports_were_found() -> None:
     ids=[c[0] for c in _CASES],
 )
 def test_design_doc_import_resolves(module: str, attribute: str | None) -> None:
-    """Each name a design doc imports from shoez exists."""
+    """Each name a design doc imports from mlfeatures exists."""
     try:
         imported = importlib.import_module(module)
     except ImportError as exc:  # pragma: no cover - only on a stale doc

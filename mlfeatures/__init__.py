@@ -1,13 +1,13 @@
-"""shoez: a framework for declaring, estimating, and applying feature-engineering pipelines."""
+"""mlfeatures: a framework for declaring, estimating, and applying feature-engineering pipelines."""
 
 from importlib.metadata import PackageNotFoundError, version
 
-from shoez.compat import RecipeTransformer
-from shoez.ptype import Ptype
-from shoez.recipe import FittedRecipe, Recipe
-from shoez.schema import ColumnNode, Schema
-from shoez.selectors import Selectors
-from shoez.serialization import (
+from mlfeatures.compat import RecipeTransformer
+from mlfeatures.ptype import Ptype
+from mlfeatures.recipe import FittedRecipe, Recipe
+from mlfeatures.schema import ColumnNode, Schema
+from mlfeatures.selectors import Selectors
+from mlfeatures.serialization import (
     from_dict,
     from_json,
     from_yaml,
@@ -16,38 +16,38 @@ from shoez.serialization import (
     to_json,
     to_yaml,
 )
-from shoez.step import RowOp, Step, StepError
-from shoez.step_class_distance import StepClassDistance
-from shoez.step_date_features import StepDateFeatures
-from shoez.step_datetime_features import StepDatetimeFeatures
-from shoez.step_drop import StepDrop
-from shoez.step_drop_corr import StepDropCorr
-from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
-from shoez.step_drop_zero_variance import StepDropZeroVariance
-from shoez.step_dummy import StepDummy
-from shoez.step_filter import StepFilter
-from shoez.step_geo_distance import StepGeoDistance
-from shoez.step_holiday import StepHoliday
-from shoez.step_impute_mean import StepImputeMean
-from shoez.step_impute_median import StepImputeMedian
-from shoez.step_impute_mode import StepImputeMode
-from shoez.step_indicate_na import StepIndicateNa
-from shoez.step_interact import StepInteract
-from shoez.step_intercept import StepIntercept
-from shoez.step_log import StepLog
-from shoez.step_mutate import StepMutate
-from shoez.step_normalize import StepNormalize
-from shoez.step_one_hot import StepOneHot
-from shoez.step_order_norm import StepOrderNorm
-from shoez.step_other import StepOther
-from shoez.step_pca import StepPca
-from shoez.step_pls import StepPls
-from shoez.step_polynomial import StepPolynomial
-from shoez.step_range import StepRange
-from shoez.step_spline_monotone import StepSplineMonotone
-from shoez.step_spline_natural import StepSplineNatural
-from shoez.step_unknown import StepUnknown
-from shoez.types import (
+from mlfeatures.step import RowOp, Step, StepError
+from mlfeatures.step_class_distance import StepClassDistance
+from mlfeatures.step_date_features import StepDateFeatures
+from mlfeatures.step_datetime_features import StepDatetimeFeatures
+from mlfeatures.step_drop import StepDrop
+from mlfeatures.step_drop_corr import StepDropCorr
+from mlfeatures.step_drop_near_zero_variance import StepDropNearZeroVariance
+from mlfeatures.step_drop_zero_variance import StepDropZeroVariance
+from mlfeatures.step_dummy import StepDummy
+from mlfeatures.step_filter import StepFilter
+from mlfeatures.step_geo_distance import StepGeoDistance
+from mlfeatures.step_holiday import StepHoliday
+from mlfeatures.step_impute_mean import StepImputeMean
+from mlfeatures.step_impute_median import StepImputeMedian
+from mlfeatures.step_impute_mode import StepImputeMode
+from mlfeatures.step_indicate_na import StepIndicateNa
+from mlfeatures.step_interact import StepInteract
+from mlfeatures.step_intercept import StepIntercept
+from mlfeatures.step_log import StepLog
+from mlfeatures.step_mutate import StepMutate
+from mlfeatures.step_normalize import StepNormalize
+from mlfeatures.step_one_hot import StepOneHot
+from mlfeatures.step_order_norm import StepOrderNorm
+from mlfeatures.step_other import StepOther
+from mlfeatures.step_pca import StepPca
+from mlfeatures.step_pls import StepPls
+from mlfeatures.step_polynomial import StepPolynomial
+from mlfeatures.step_range import StepRange
+from mlfeatures.step_spline_monotone import StepSplineMonotone
+from mlfeatures.step_spline_natural import StepSplineNatural
+from mlfeatures.step_unknown import StepUnknown
+from mlfeatures.types import (
     ANY_DTYPE,
     NUMERIC_DTYPES,
     AcceptedDtypes,
@@ -62,7 +62,7 @@ from shoez.types import (
 )
 
 try:
-    __version__ = version("shoez")
+    __version__ = version("mlfeatures")
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0"
 

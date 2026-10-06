@@ -6,9 +6,9 @@ parameterizing them over two hooks a subclass supplies: `make_step` and
 `training_data`.
 
 Ships as part of the installed package (unlike ``tests/``) so a plugin author
-can run the same contract shoez's own steps are held to::
+can run the same contract mlfeatures's own steps are held to::
 
-    from shoez.testing import StepConformanceTest
+    from mlfeatures.testing import StepConformanceTest
 
     class TestMyStepConformance(StepConformanceTest):
         def make_step(self):
@@ -38,14 +38,14 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez import _frame
-from shoez.recipe import FittedRecipe, Recipe
-from shoez.types import DataFrame, KeepOriginals, SchemaInfo
+from mlfeatures import _frame
+from mlfeatures.recipe import FittedRecipe, Recipe
+from mlfeatures.types import DataFrame, KeepOriginals, SchemaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from shoez.step import Step
+    from mlfeatures.step import Step
 
 __all__ = [
     "StepConformanceTest",
@@ -446,7 +446,7 @@ class StepConformanceTest:
         anything other than dtype *classes* (a dtype instance, a string name)
         would silently reject every column instead.
         """
-        from shoez.types import ANY_DTYPE
+        from mlfeatures.types import ANY_DTYPE
 
         accepted = self.make_step().accepts_dtypes()
         if accepted is ANY_DTYPE:

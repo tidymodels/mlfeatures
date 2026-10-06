@@ -1,8 +1,8 @@
 """An out-of-tree step, written the way a plugin author would write one.
 
-This package is not shipped and is not part of shoez. It exists to hold the
+This package is not shipped and is not part of mlfeatures. It exists to hold the
 public API to its promise: a third party must be able to write a complete,
-strictly-typed step using only the names in ``shoez.__all__``.
+strictly-typed step using only the names in ``mlfeatures.__all__``.
 
 Two things enforce that, and neither works if this step lives under ``tests/``:
 
@@ -10,10 +10,10 @@ Two things enforce that, and neither works if this step lives under ``tests/``:
   nothing about strict-mode typability. This directory is added to both
   checkers' scope instead.
 * ``tests/test_out_of_tree_step.py`` scans this module's imports and fails if
-  any of them reach into a private module (``shoez.types``, ``shoez._frame``).
+  any of them reach into a private module (``mlfeatures.types``, ``mlfeatures._frame``).
 
 So the awkward-looking constraint below is the point of the file: everything
-comes from the top-level ``shoez`` namespace, and nothing else does.
+comes from the top-level ``mlfeatures`` namespace, and nothing else does.
 
 See ``design/extensibility.md`` and issue #197.
 """
@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
-from shoez import (
+from mlfeatures import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -51,7 +51,7 @@ class StepDemoMaxAbs(Step):
     ----------
     columns
         Columns to scale. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()``, or a narwhals
+        mlfeatures selector such as ``Selectors.numeric_features()``, or a narwhals
         or polars selector. Only numeric columns are meaningful here.
     id
         Stable step identifier. Defaults to ``"demo_max_abs"``.
@@ -70,7 +70,7 @@ class StepDemoMaxAbs(Step):
 
         This is the sanctioned selector-resolution route: ``resolve_selection``
         gives the column names and narwhals' own ``schema`` gives the dtypes,
-        so no private shoez module is needed.
+        so no private mlfeatures module is needed.
         """
         names = self.resolve_selection(training_data, info)
         selected = training_data.select(names)

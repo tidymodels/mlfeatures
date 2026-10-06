@@ -5,7 +5,7 @@ Per ``design/ecosystem.md`` §"Sklearn adapter", a trained recipe should drop in
 is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
 without re-implementing it.
 
-The adapter resolves one impedance mismatch between the two worlds. shoez fits on a *single*
+The adapter resolves one impedance mismatch between the two worlds. mlfeatures fits on a *single*
 frame in which the target is identified by its ``"target"`` role; sklearn calls
 ``fit(X, y=None)`` with features and target kept apart and expects ``transform`` to return the
 feature matrix only (``y`` flows around the transformer inside a pipeline). So this adapter
@@ -22,9 +22,9 @@ import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 
-from shoez import _frame
-from shoez.recipe import FittedRecipe, Recipe
-from shoez.types import DataFrame
+from mlfeatures import _frame
+from mlfeatures.recipe import FittedRecipe, Recipe
+from mlfeatures.types import DataFrame
 
 __all__ = ["RecipeTransformer"]
 
@@ -54,7 +54,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     Usable as a single step in a `sklearn.pipeline.Pipeline`:
 
     ```python
-    from shoez.compat import RecipeTransformer
+    from mlfeatures.compat import RecipeTransformer
 
     pipe = Pipeline([
         ("recipe", RecipeTransformer(rec)),
@@ -79,9 +79,9 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepNormalize, StepDummy
-    from shoez import Selectors as s
-    from shoez.compat import RecipeTransformer
+    from mlfeatures import Recipe, StepNormalize, StepDummy
+    from mlfeatures import Selectors as s
+    from mlfeatures.compat import RecipeTransformer
     ```
 
     ```{python}

@@ -9,15 +9,15 @@ every other selected column keeps its input dtype. This module holds that
 one shared computation; each step still owns its own `_estimates` (whatever
 per-column state it needs) and only has to say *which* columns it touched.
 
-Not part of the public API: only ``shoez.step_normalize``, ``shoez.step_range``,
-``shoez.step_log``, and ``shoez.step_order_norm`` import from here.
+Not part of the public API: only ``mlfeatures.step_normalize``, ``mlfeatures.step_range``,
+``mlfeatures.step_log``, and ``mlfeatures.step_order_norm`` import from here.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from shoez.types import ColSchema
+from mlfeatures.types import ColSchema
 
 if TYPE_CHECKING:
     from collections.abc import Collection

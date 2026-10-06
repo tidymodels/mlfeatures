@@ -10,8 +10,8 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import StepOther
-from shoez.step_other import apply_other, fit_other
+from mlfeatures import StepOther
+from mlfeatures.step_other import apply_other, fit_other
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

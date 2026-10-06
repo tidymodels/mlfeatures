@@ -10,7 +10,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from shoez.step_pca import StepPca, apply_pca, fit_pca
+from mlfeatures.step_pca import StepPca, apply_pca, fit_pca
 
 
 def _df(*cols: tuple[str, list[Any]]) -> nw.DataFrame[Any]:

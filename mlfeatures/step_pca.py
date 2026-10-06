@@ -21,9 +21,9 @@ from typing import TYPE_CHECKING, Any, cast
 import narwhals.stable.v2 as nw
 import numpy as np
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -86,7 +86,7 @@ def fit_pca(selected: Frame, num_comp: int) -> PcaFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the numeric columns to project.
-        Native frames are wrapped via `shoez._frame.from_native()` at the
+        Native frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
     num_comp
         Number of principal components to keep. Must be an ``int`` strictly
@@ -198,7 +198,7 @@ class StepPca(Step):
     ----------
     columns
         Columns to project. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -228,8 +228,8 @@ class StepPca(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepPca
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepPca
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

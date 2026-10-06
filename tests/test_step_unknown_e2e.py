@@ -12,7 +12,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import Mode, Recipe, SchemaInfo, StepUnknown
+from mlfeatures import Mode, Recipe, SchemaInfo, StepUnknown
 
 
 def _data() -> dict[str, list[str | None]]:
@@ -117,7 +117,7 @@ class TestStepUnknownUnit:
     def test_schema_out_recodes_every_selected_column_to_string(self) -> None:
         # The resolved selection (_schema_in.columns) is the recoded set: every
         # selected column becomes String regardless of its input dtype.
-        from shoez.types import ColSchema
+        from mlfeatures.types import ColSchema
 
         step = StepUnknown(["color", "n"])
         step._schema_in = ColSchema(

@@ -16,9 +16,9 @@ from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     ANY_DTYPE,
     AcceptedDtypes,
     ColSchema,
@@ -86,7 +86,7 @@ def fit_indicate_na(selected: Frame) -> IndicateNaFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the columns to build indicators
-        for. Native frames are wrapped via `shoez._frame.from_native()` at the
+        for. Native frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
 
     Returns
@@ -177,7 +177,7 @@ class StepIndicateNa(Step):
     ----------
     columns
         Columns to project. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.features()`` (see `Selectors` for
+        mlfeatures selector such as ``Selectors.features()`` (see `Selectors` for
         the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -202,8 +202,8 @@ class StepIndicateNa(Step):
     #| echo: false
     #| output: false
     import polars as pl
-    from shoez import Recipe, StepIndicateNa
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepIndicateNa
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

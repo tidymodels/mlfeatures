@@ -15,7 +15,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import (
+from mlfeatures import (
     ANY_DTYPE,
     ColSchema,
     Mode,
@@ -28,8 +28,8 @@ from shoez import (
     StepNormalize,
     _frame,
 )
-from shoez.schema import ColumnNode, Schema
-from shoez.types import AcceptedDtypes, Frame, Roles, SchemaInfo
+from mlfeatures.schema import ColumnNode, Schema
+from mlfeatures.types import AcceptedDtypes, Frame, Roles, SchemaInfo
 
 Constructor = Callable[[dict[str, Any]], Any]
 

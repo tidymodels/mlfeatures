@@ -1,6 +1,6 @@
 """Conformance tests for StepDateFeatures.
 
-The step contract itself lives in `shoez.testing.StepConformanceTest`; this file
+The step contract itself lives in `mlfeatures.testing.StepConformanceTest`; this file
 only supplies the step and the data to run it against. Behaviour specific to
 StepDateFeatures belongs in ``test_step_date_features.py`` and
 ``test_step_date_features_e2e.py``.
@@ -20,8 +20,8 @@ from datetime import date
 
 import narwhals.stable.v2 as nw
 
-from shoez import StepDateFeatures
-from shoez.testing import StepConformanceTest
+from mlfeatures import StepDateFeatures
+from mlfeatures.testing import StepConformanceTest
 
 
 class TestDateFeaturesConformance(StepConformanceTest):

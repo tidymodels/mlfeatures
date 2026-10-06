@@ -6,7 +6,7 @@ recoding would otherwise merge genuine samples into the sentinel bucket. The
 warning differs only in the noun describing what gets merged in (recoded
 nulls vs. pooled levels); this module holds the shared message.
 
-Not part of the public API: only `shoez.step_unknown` and `shoez.step_other`
+Not part of the public API: only `mlfeatures.step_unknown` and `mlfeatures.step_other`
 import from here.
 """
 

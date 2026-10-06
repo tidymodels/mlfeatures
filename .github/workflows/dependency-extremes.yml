@@ -3,8 +3,8 @@ name: Newest and oldest dependencies
 # CI installs exactly what uv.lock says (UV_LOCKED=1), so the locked jobs test
 # one point in the version ranges pyproject.toml declares. For a
 # dataframe-agnostic library both ends of those ranges are real signal: a new
-# narwhals or polars release that breaks shoez, and a declared floor that
-# shoez no longer actually supports. This workflow checks both ends on every
+# narwhals or polars release that breaks mlfeatures, and a declared floor that
+# mlfeatures no longer actually supports. This workflow checks both ends on every
 # pull request and fails it like any other job (narwhals does the same with
 # its nightlies and minimum-versions jobs), so a break is seen and fixed by
 # whoever is already looking at the PR. The linter and type-checkers are
@@ -42,7 +42,7 @@ jobs:
       - name: Resolve dependencies fresh
         run: uv lock --upgrade
       - name: mypy --strict
-        run: uv run mypy shoez extras
+        run: uv run mypy mlfeatures extras
       - name: pyright (strict)
         run: uv run pyright
       - name: Run tests

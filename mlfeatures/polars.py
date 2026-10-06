@@ -1,14 +1,14 @@
-"""Opt-in polars accessor: ``df.shz.<step>(...)`` sugar over the shoez lifecycle.
+"""Opt-in polars accessor: ``df.mlf.<step>(...)`` sugar over the mlfeatures lifecycle.
 
-Importing this module registers a ``shz`` namespace on polars DataFrames, so a
+Importing this module registers a ``mlf`` namespace on polars DataFrames, so a
 single step can be fitted and applied to a frame in one expression:
 
 ```python
-import shoez.polars  # registers the `shz` namespace (side effect)
+import mlfeatures.polars  # registers the `mlf` namespace (side effect)
 
-df.shz.step_dummy(["color"])                  # one step
-df.shz.apply(StepNormalize(["x"]))            # any step(s), generic
-df.shz.step_dummy(["color"]).shz.step_normalize(["x"])  # chains
+df.mlf.step_dummy(["color"])                  # one step
+df.mlf.apply(StepNormalize(["x"]))            # any step(s), generic
+df.mlf.step_dummy(["color"]).mlf.step_normalize(["x"])  # chains
 ```
 
 Each method fits the step on ``df`` and immediately transforms ``df``, returning a
@@ -16,11 +16,11 @@ fresh polars ``DataFrame`` (the fitted step is discarded). It is a thin convenie
 layer over `Recipe` — it adds no new data-operation surface and
 delegates conversion to the recipe lifecycle.
 
-Boundary note: this is the **one** module in ``shoez`` that imports ``polars`` at
+Boundary note: this is the **one** module in ``mlfeatures`` that imports ``polars`` at
 runtime, a deliberate exception to the package's no-runtime-backend-import rule
 (``design/ecosystem.md``, boundary rule #5). The accessor is an explicitly
 polars-only convenience and is kept out of the backend-agnostic core: it is never
-imported by `shoez.__init__`, so users opt in with ``import shoez.polars``.
+imported by `mlfeatures.__init__`, so users opt in with ``import mlfeatures.polars``.
 polars is already a hard dependency, so this adds no new requirement.
 """
 
@@ -31,39 +31,39 @@ from typing import TYPE_CHECKING, cast
 
 from dateutil.rrule import rrule, rruleset
 
-from shoez._dependencies import import_optional
-from shoez.recipe import Recipe
-from shoez.step import Step
-from shoez.step_class_distance import StepClassDistance
-from shoez.step_date_features import StepDateFeatures
-from shoez.step_datetime_features import StepDatetimeFeatures
-from shoez.step_drop import StepDrop
-from shoez.step_drop_corr import StepDropCorr
-from shoez.step_drop_near_zero_variance import StepDropNearZeroVariance
-from shoez.step_drop_zero_variance import StepDropZeroVariance
-from shoez.step_dummy import StepDummy
-from shoez.step_filter import StepFilter
-from shoez.step_geo_distance import StepGeoDistance
-from shoez.step_holiday import StepHoliday
-from shoez.step_impute_mean import StepImputeMean
-from shoez.step_impute_median import StepImputeMedian
-from shoez.step_impute_mode import StepImputeMode
-from shoez.step_indicate_na import StepIndicateNa
-from shoez.step_interact import StepInteract
-from shoez.step_intercept import StepIntercept
-from shoez.step_log import StepLog
-from shoez.step_mutate import StepMutate
-from shoez.step_normalize import StepNormalize
-from shoez.step_one_hot import StepOneHot
-from shoez.step_order_norm import StepOrderNorm
-from shoez.step_other import DEFAULT_OTHER_LEVEL, StepOther
-from shoez.step_pca import StepPca
-from shoez.step_pls import StepPls
-from shoez.step_polynomial import StepPolynomial
-from shoez.step_range import StepRange
-from shoez.step_spline_monotone import StepSplineMonotone
-from shoez.step_spline_natural import StepSplineNatural
-from shoez.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
+from mlfeatures._dependencies import import_optional
+from mlfeatures.recipe import Recipe
+from mlfeatures.step import Step
+from mlfeatures.step_class_distance import StepClassDistance
+from mlfeatures.step_date_features import StepDateFeatures
+from mlfeatures.step_datetime_features import StepDatetimeFeatures
+from mlfeatures.step_drop import StepDrop
+from mlfeatures.step_drop_corr import StepDropCorr
+from mlfeatures.step_drop_near_zero_variance import StepDropNearZeroVariance
+from mlfeatures.step_drop_zero_variance import StepDropZeroVariance
+from mlfeatures.step_dummy import StepDummy
+from mlfeatures.step_filter import StepFilter
+from mlfeatures.step_geo_distance import StepGeoDistance
+from mlfeatures.step_holiday import StepHoliday
+from mlfeatures.step_impute_mean import StepImputeMean
+from mlfeatures.step_impute_median import StepImputeMedian
+from mlfeatures.step_impute_mode import StepImputeMode
+from mlfeatures.step_indicate_na import StepIndicateNa
+from mlfeatures.step_interact import StepInteract
+from mlfeatures.step_intercept import StepIntercept
+from mlfeatures.step_log import StepLog
+from mlfeatures.step_mutate import StepMutate
+from mlfeatures.step_normalize import StepNormalize
+from mlfeatures.step_one_hot import StepOneHot
+from mlfeatures.step_order_norm import StepOrderNorm
+from mlfeatures.step_other import DEFAULT_OTHER_LEVEL, StepOther
+from mlfeatures.step_pca import StepPca
+from mlfeatures.step_pls import StepPls
+from mlfeatures.step_polynomial import StepPolynomial
+from mlfeatures.step_range import StepRange
+from mlfeatures.step_spline_monotone import StepSplineMonotone
+from mlfeatures.step_spline_natural import StepSplineNatural
+from mlfeatures.step_unknown import DEFAULT_UNKNOWN_LEVEL, StepUnknown
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -71,24 +71,24 @@ if TYPE_CHECKING:
 
     import polars as pl
 
-    from shoez.step_class_distance import Metric
-    from shoez.step_geo_distance import GeoMetric
-    from shoez.types import Frame, Selector
+    from mlfeatures.step_class_distance import Metric
+    from mlfeatures.step_geo_distance import GeoMetric
+    from mlfeatures.types import Frame, Selector
 else:
     # Runtime: this opt-in module is the one sanctioned place that imports polars
     # at runtime (``design/ecosystem.md`` boundary rule #5). Route it through
     # import_optional so a missing polars surfaces as a friendly, greppable
-    # MissingDependencyError at ``import shoez.polars`` rather than a bare error.
-    pl = import_optional("polars", purpose="for the `df.shz` accessor")
+    # MissingDependencyError at ``import mlfeatures.polars`` rather than a bare error.
+    pl = import_optional("polars", purpose="for the `df.mlf` accessor")
 
-__all__ = ["ShzNamespace"]
+__all__ = ["MlfNamespace"]
 
 
-@pl.api.register_dataframe_namespace("shz")
-class ShzNamespace:
-    """The ``shz`` polars DataFrame namespace.
+@pl.api.register_dataframe_namespace("mlf")
+class MlfNamespace:
+    """The ``mlf`` polars DataFrame namespace.
 
-    Registered on import; reach it as ``df.shz``. Each method builds the
+    Registered on import; reach it as ``df.mlf``. Each method builds the
     corresponding step, fits it on the frame, and returns the transformed frame.
     """
 

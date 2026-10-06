@@ -11,8 +11,8 @@ import polars.selectors as cs
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import SchemaInfo
-from shoez.step_drop_corr import StepDropCorr, fit_drop_corr
+from mlfeatures import SchemaInfo
+from mlfeatures.step_drop_corr import StepDropCorr, fit_drop_corr
 
 
 def _df(*cols: tuple[str, list[float | None]]) -> nw.DataFrame:

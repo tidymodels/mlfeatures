@@ -12,7 +12,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez import (
+from mlfeatures import (
     ANY_DTYPE,
     AcceptedDtypes,
     Recipe,
@@ -21,7 +21,7 @@ from shoez import (
     StepDummy,
     StepNormalize,
 )
-from shoez.types import Frame
+from mlfeatures.types import Frame
 
 
 class _RaisingNormalize(StepNormalize):

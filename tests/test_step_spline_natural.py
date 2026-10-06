@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from shoez.step_spline_natural import (
+from mlfeatures.step_spline_natural import (
     SplineNaturalFit,
     apply_spline_natural,
     fit_spline_natural,

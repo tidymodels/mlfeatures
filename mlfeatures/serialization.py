@@ -34,7 +34,7 @@ Known limitations
   `_decode_dtype_instance`) -- `StepDatetimeFeatures`'s conformance suite
   depends on it: a pandas frame's nanosecond-precision ``Datetime`` must still
   match the ptype snapshot after a JSON round-trip.
-- Raw polars / narwhals selectors are not serializable. Only shoez `Selectors`
+- Raw polars / narwhals selectors are not serializable. Only mlfeatures `Selectors`
   and plain name lists are; a native selector raises a clear ``TypeError``.
 - ``dateutil.rrule.rrule`` / ``rruleset`` instances are not serializable
   (`StepHoliday`'s ``rules``); a step storing one raises a clear ``TypeError``
@@ -65,7 +65,7 @@ import numpy as np
 from dateutil.rrule import rrule, rruleset
 
 if TYPE_CHECKING:
-    from shoez.recipe import FittedRecipe
+    from mlfeatures.recipe import FittedRecipe
 
 __all__ = [
     "to_dict",
@@ -85,7 +85,7 @@ FORMAT_VERSION = 1
 # narwhals dtype codec
 # --------------------------------------------------------------------------- #
 
-# The narwhals dtype classes shoez supports. Encoding uses the class name (the
+# The narwhals dtype classes mlfeatures supports. Encoding uses the class name (the
 # same base representation ``ColSchema`` stores via ``str(dt)``); decoding maps
 # the name back to the class. Parametrized dtypes round-trip by base name only.
 _DTYPE_CLASSES: tuple[type[nw.dtypes.DType], ...] = (
@@ -249,9 +249,9 @@ def _encode(value: Any) -> Any:
             return {k: _encode(v) for k, v in value.items()}
         # Non-string keys (rare) round-trip as an ordered list of pairs.
         return {"__dict__": [[_encode(k), _encode(v)] for k, v in value.items()]}
-    # ColSchema, ShoezSelector, and frozen fit dataclasses.
-    from shoez.selectors import ShoezSelector
-    from shoez.types import ColSchema
+    # ColSchema, FeaturesSelector, and frozen fit dataclasses.
+    from mlfeatures.selectors import FeaturesSelector
+    from mlfeatures.types import ColSchema
 
     if isinstance(value, ColSchema):
         return {
@@ -260,7 +260,7 @@ def _encode(value: Any) -> Any:
                 "dtypes": dict(value.dtypes),
             }
         }
-    if isinstance(value, ShoezSelector):
+    if isinstance(value, FeaturesSelector):
         return {"__selector__": _encode_selector(value)}
     if isinstance(value, (rrule, rruleset)):
         raise TypeError(
@@ -311,7 +311,7 @@ def _decode(obj: Any) -> Any:
             if tag == "__dict__":
                 return {_decode(k): _decode(v) for k, v in payload}
             if tag == "__colschema__":
-                from shoez.types import ColSchema
+                from mlfeatures.types import ColSchema
 
                 return ColSchema(
                     columns=list(payload["columns"]), dtypes=dict(payload["dtypes"])
@@ -342,7 +342,7 @@ def _sorted_safe(values: Any) -> list[Any]:
 
 
 def _encode_selector(sel: Any) -> dict[str, Any]:
-    from shoez.selectors import (
+    from mlfeatures.selectors import (
         _Complement,
         _CompositeSelector,
         _ForeignSelector,
@@ -389,14 +389,14 @@ def _encode_selector(sel: Any) -> dict[str, Any]:
         ):
             return {"cls": "foreign", "value": _encode(value)}
         raise TypeError(
-            "cannot serialize a native polars/narwhals selector; use shoez "
+            "cannot serialize a native polars/narwhals selector; use mlfeatures "
             "'Selectors' (or a plain list of column names) instead"
         )
     raise TypeError(f"cannot serialize selector of type {type(sel).__name__!r}")
 
 
 def _decode_selector(state: dict[str, Any]) -> Any:
-    from shoez.selectors import (
+    from mlfeatures.selectors import (
         _Complement,
         _CompositeSelector,
         _ForeignSelector,
@@ -455,7 +455,7 @@ def _decode_dtype_spec(spec: None | str | list[str]) -> type | tuple[type, ...] 
 def _load_qualname(qualname: str) -> Any:
     """Import ``module.Qualname`` and return the attribute.
 
-    Falls back to the ``shoez.steps`` entry-point group so third-party plugin
+    Falls back to the ``mlfeatures.steps`` entry-point group so third-party plugin
     steps deserialize by the name they registered under.
     """
     module_name, _, attr = qualname.rpartition(".")
@@ -476,9 +476,9 @@ def _step_entry_points() -> Any:
     from importlib.metadata import entry_points
 
     try:
-        return entry_points(group="shoez.steps")
+        return entry_points(group="mlfeatures.steps")
     except TypeError:  # pragma: no cover - Python <3.10 signature
-        return entry_points().get("shoez.steps", [])
+        return entry_points().get("mlfeatures.steps", [])
 
 
 # --------------------------------------------------------------------------- #
@@ -491,7 +491,7 @@ def _encode_roles(roles: Any) -> dict[str, list[str]]:
 
 
 def _decode_roles(payload: dict[str, list[str]]) -> Any:
-    from shoez.types import Roles
+    from mlfeatures.types import Roles
 
     return Roles({col: set(names) for col, names in payload.items()})
 
@@ -508,7 +508,7 @@ def _encode_ptype(ptype: Any) -> dict[str, Any]:
 
 
 def _decode_ptype(payload: dict[str, Any]) -> Any:
-    from shoez.ptype import Ptype
+    from mlfeatures.ptype import Ptype
 
     schema = nw.Schema(
         {name: _decode_dtype_instance(dt) for name, dt in payload["schema"].items()}
@@ -534,7 +534,7 @@ def _encode_node(node: Any) -> dict[str, Any]:
 
 
 def _decode_node(payload: dict[str, Any]) -> Any:
-    from shoez.schema import ColumnNode
+    from mlfeatures.schema import ColumnNode
 
     return ColumnNode(
         name=payload["name"],
@@ -556,7 +556,7 @@ def _encode_schema(schema: Any) -> dict[str, Any]:
 
 
 def _decode_schema(payload: dict[str, Any]) -> Any:
-    from shoez.schema import Schema
+    from mlfeatures.schema import Schema
 
     schema = Schema()
     for node_payload in payload["live"]:
@@ -592,10 +592,10 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
     only plain data, so it round-trips through `from_dict` and is stable enough
     to diff in code review.
     """
-    from shoez import __version__
+    from mlfeatures import __version__
 
     payload: dict[str, Any] = {
-        "shoez_version": __version__,
+        "mlfeatures_version": __version__,
         "format_version": FORMAT_VERSION,
         "roles": _encode_roles(recipe.roles),
         "ptype": None if recipe.ptype is None else _encode_ptype(recipe.ptype),
@@ -607,13 +607,13 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
 
 def from_dict(data: dict[str, Any]) -> FittedRecipe:
     """Reconstruct a `FittedRecipe` from the ``dict`` produced by `to_dict`."""
-    from shoez.recipe import FittedRecipe
+    from mlfeatures.recipe import FittedRecipe
 
     found = data.get("format_version", FORMAT_VERSION)
     if found != FORMAT_VERSION:
         raise ValueError(
             f"cannot load a recipe serialized with format_version {found!r}; "
-            f"this shoez writes and reads format_version {FORMAT_VERSION}, and "
+            f"this mlfeatures writes and reads format_version {FORMAT_VERSION}, and "
             "the layout changed incompatibly; re-fit the recipe to re-serialize"
         )
     steps = [_decode_step(p) for p in data["steps"]]
@@ -645,7 +645,7 @@ def _require_yaml() -> Any:
     except ImportError as exc:
         raise ImportError(
             "YAML serialization needs the optional 'pyyaml' package; "
-            "install it with 'pip install pyyaml' (or 'pip install shoez[yaml]')"
+            "install it with 'pip install pyyaml' (or 'pip install mlfeatures[yaml]')"
         ) from exc
     return yaml
 
@@ -679,7 +679,7 @@ def minimize(recipe: FittedRecipe) -> FittedRecipe:
     them. The roles, ptype, and lineage schema are preserved so the minimized
     recipe still validates new data at the boundary and reports its schema.
     """
-    from shoez.recipe import FittedRecipe
+    from mlfeatures.recipe import FittedRecipe
 
     return FittedRecipe(
         steps=[step.minimize() for step in recipe.steps],

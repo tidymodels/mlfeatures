@@ -20,10 +20,10 @@ import narwhals.stable.v2 as nw
 import numpy as np
 from numpy.polynomial.polynomial import polyvander
 
-from shoez import _frame
-from shoez._basis_expansion import expand_columns_schema, update_roles_for_expansion
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures._basis_expansion import expand_columns_schema, update_roles_for_expansion
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -98,7 +98,7 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
     ----------
     selected
         Internal `Frame` (narwhals) holding the columns to
-        be expanded. Native frames are wrapped via `shoez._frame.from_native()`
+        be expanded. Native frames are wrapped via `mlfeatures._frame.from_native()`
         at the recipe boundary.
     degree
         Maximum polynomial degree. Must be an ``int`` strictly greater than
@@ -208,7 +208,7 @@ def apply_polynomial(
 
     Columns named in ``fit_result`` that are absent from ``data`` are silently
     skipped — same schema-drift tolerance as
-    `shoez._frame.apply_drop()` (see ``design/lifecycle.md``).
+    `mlfeatures._frame.apply_drop()` (see ``design/lifecycle.md``).
 
     Parameters
     ----------
@@ -355,7 +355,7 @@ class StepPolynomial(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -385,8 +385,8 @@ class StepPolynomial(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepPolynomial
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepPolynomial
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

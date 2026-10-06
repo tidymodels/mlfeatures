@@ -1,8 +1,8 @@
-"""Tests for the opt-in ``shz`` polars accessor (``shoez.polars``).
+"""Tests for the opt-in ``mlf`` polars accessor (``mlfeatures.polars``).
 
-The accessor is thin sugar over :class:`~shoez.recipe.Recipe`: every method must
+The accessor is thin sugar over :class:`~mlfeatures.recipe.Recipe`: every method must
 produce exactly what the equivalent one-step recipe produces, and always return a
-polars ``DataFrame``. Importing :mod:`shoez.polars` registers the namespace as a
+polars ``DataFrame``. Importing :mod:`mlfeatures.polars` registers the namespace as a
 side effect.
 """
 
@@ -14,25 +14,25 @@ from typing import ClassVar
 import polars as pl
 import pytest
 
-import shoez
-import shoez.polars  # noqa: F401  (registers the `shz` namespace)
-from shoez.polars import ShzNamespace
-from shoez.recipe import Recipe
-from shoez.step import RowOp, Step, _step_type_label
-from shoez.step_class_distance import StepClassDistance
-from shoez.step_drop_corr import StepDropCorr
-from shoez.step_drop_zero_variance import StepDropZeroVariance
-from shoez.step_dummy import StepDummy
-from shoez.step_impute_mean import StepImputeMean
-from shoez.step_impute_median import StepImputeMedian
-from shoez.step_impute_mode import StepImputeMode
-from shoez.step_intercept import StepIntercept
-from shoez.step_log import StepLog
-from shoez.step_normalize import StepNormalize
-from shoez.step_one_hot import StepOneHot
-from shoez.step_polynomial import StepPolynomial
-from shoez.step_range import StepRange
-from shoez.step_unknown import StepUnknown
+import mlfeatures
+import mlfeatures.polars  # noqa: F401  (registers the `mlf` namespace)
+from mlfeatures.polars import MlfNamespace
+from mlfeatures.recipe import Recipe
+from mlfeatures.step import RowOp, Step, _step_type_label
+from mlfeatures.step_class_distance import StepClassDistance
+from mlfeatures.step_drop_corr import StepDropCorr
+from mlfeatures.step_drop_zero_variance import StepDropZeroVariance
+from mlfeatures.step_dummy import StepDummy
+from mlfeatures.step_impute_mean import StepImputeMean
+from mlfeatures.step_impute_median import StepImputeMedian
+from mlfeatures.step_impute_mode import StepImputeMode
+from mlfeatures.step_intercept import StepIntercept
+from mlfeatures.step_log import StepLog
+from mlfeatures.step_normalize import StepNormalize
+from mlfeatures.step_one_hot import StepOneHot
+from mlfeatures.step_polynomial import StepPolynomial
+from mlfeatures.step_range import StepRange
+from mlfeatures.step_unknown import StepUnknown
 
 
 @pytest.fixture
@@ -62,14 +62,14 @@ def _recipe_out(df: pl.DataFrame, *steps: Step) -> pl.DataFrame:
 
 class TestRegistration:
     def test_namespace_registered(self, df: pl.DataFrame) -> None:
-        assert hasattr(df, "shz")
+        assert hasattr(df, "mlf")
 
     def test_returns_polars_dataframe(self, df: pl.DataFrame) -> None:
-        assert isinstance(df.shz.step_dummy(["color"]), pl.DataFrame)
+        assert isinstance(df.mlf.step_dummy(["color"]), pl.DataFrame)
 
     def test_does_not_mutate_source(self, df: pl.DataFrame) -> None:
         before = df.clone()
-        df.shz.step_dummy(["color"])
+        df.mlf.step_dummy(["color"])
         assert df.equals(before)
 
 
@@ -107,7 +107,7 @@ def test_wrapper_maps_to_step(
     step_cls: type[Step],
     args: tuple[object, ...],
 ) -> None:
-    got = getattr(df.shz, method)(*args)
+    got = getattr(df.mlf, method)(*args)
     assert got.equals(_recipe_out(df, step_cls(*args)))
 
 
@@ -118,17 +118,17 @@ def test_wrapper_maps_to_step(
 
 class TestApplyAndChaining:
     def test_apply_single_step(self, df: pl.DataFrame) -> None:
-        assert df.shz.apply(StepDummy(["color"])).equals(df.shz.step_dummy(["color"]))
+        assert df.mlf.apply(StepDummy(["color"])).equals(df.mlf.step_dummy(["color"]))
 
     def test_apply_multiple_steps_matches_recipe(self, df: pl.DataFrame) -> None:
         steps = [StepDummy(["color"]), StepNormalize(["x"])]
-        assert df.shz.apply(*steps).equals(_recipe_out(df, *steps))
+        assert df.mlf.apply(*steps).equals(_recipe_out(df, *steps))
 
     def test_apply_no_steps_is_identity(self, df: pl.DataFrame) -> None:
-        assert df.shz.apply().equals(df)
+        assert df.mlf.apply().equals(df)
 
     def test_chaining_matches_multi_step_recipe(self, df: pl.DataFrame) -> None:
-        chained = df.shz.step_dummy(["color"]).shz.step_normalize(["x"])
+        chained = df.mlf.step_dummy(["color"]).mlf.step_normalize(["x"])
         assert chained.equals(
             _recipe_out(df, StepDummy(["color"]), StepNormalize(["x"]))
         )
@@ -140,15 +140,15 @@ class TestApplyAndChaining:
 
 
 def _public_step_classes() -> list[type[Step]]:
-    """Every public, concrete `Step` exported from ``shoez.__all__``.
+    """Every public, concrete `Step` exported from ``mlfeatures.__all__``.
 
     The abstract bases (`Step`, `RowOp`) are excluded; everything else that is a
     `Step` subclass is a step that end users can build, so it must be reachable
-    through the ``df.shz`` accessor with a dedicated ``step_*`` wrapper.
+    through the ``df.mlf`` accessor with a dedicated ``step_*`` wrapper.
     """
     out: list[type[Step]] = []
-    for name in shoez.__all__:
-        obj = getattr(shoez, name)
+    for name in mlfeatures.__all__:
+        obj = getattr(mlfeatures, name)
         if inspect.isclass(obj) and issubclass(obj, Step) and obj not in (Step, RowOp):
             out.append(obj)
     return out
@@ -157,7 +157,7 @@ def _public_step_classes() -> list[type[Step]]:
 class TestWrapperStepParity:
     """Guards the invariant behind issue #73: the accessor stays in sync.
 
-    Rather than hand-checking that ``shoez/polars.py`` was updated whenever a step
+    Rather than hand-checking that ``mlfeatures/polars.py`` was updated whenever a step
     is added, these tests fail in CI the moment a public step has no matching
     wrapper (or a wrapper points at a step that no longer exists).
     """
@@ -166,27 +166,27 @@ class TestWrapperStepParity:
         missing = [
             step_cls.__name__
             for step_cls in _public_step_classes()
-            if not hasattr(ShzNamespace, _step_type_label(step_cls))
+            if not hasattr(MlfNamespace, _step_type_label(step_cls))
         ]
         assert not missing, (
-            f"public step(s) with no `df.shz` wrapper: {missing}; "
-            "add a matching `step_*` method to `ShzNamespace` in shoez/polars.py"
+            f"public step(s) with no `df.mlf` wrapper: {missing}; "
+            "add a matching `step_*` method to `MlfNamespace` in mlfeatures/polars.py"
         )
 
     def test_no_wrapper_without_a_step(self) -> None:
         wrapper_names = {
             name
-            for name in vars(ShzNamespace)
-            if name.startswith("step_") and callable(getattr(ShzNamespace, name))
+            for name in vars(MlfNamespace)
+            if name.startswith("step_") and callable(getattr(MlfNamespace, name))
         }
         step_names = {_step_type_label(cls) for cls in _public_step_classes()}
         orphaned = wrapper_names - step_names
         assert not orphaned, (
-            f"`ShzNamespace` wrapper(s) with no matching public step: {orphaned}"
+            f"`MlfNamespace` wrapper(s) with no matching public step: {orphaned}"
         )
 
     #: Per-step type aliases that are private to their module (not in
-    #: `shoez.__all__`), so a wrapper cannot reference them by name and instead
+    #: `mlfeatures.__all__`), so a wrapper cannot reference them by name and instead
     #: spells out the expansion. Keyed by the alias name a step's annotation may
     #: use, mapped to the literal expansion a wrapper is expected to write instead.
     _PRIVATE_ALIAS_EXPANSIONS: ClassVar[dict[str, str]] = {
@@ -200,7 +200,7 @@ class TestWrapperStepParity:
         The wrapper is allowed to drop the step's `id` parameter (the accessor
         discards the fitted step, so a caller-chosen handle is moot), and is
         allowed to spell out a step-private type alias (`_PRIVATE_ALIAS_EXPANSIONS`)
-        since it cannot import a name that isn't in `shoez.__all__`. Nothing else
+        since it cannot import a name that isn't in `mlfeatures.__all__`. Nothing else
         may differ: every other parameter must appear in the wrapper with the same
         default and the same annotation. This catches both a wrapper silently
         missing an entire argument and a wrapper typing `columns` narrower than
@@ -209,7 +209,7 @@ class TestWrapperStepParity:
         mismatches: list[str] = []
         for step_cls in _public_step_classes():
             label = _step_type_label(step_cls)
-            wrapper = getattr(ShzNamespace, label, None)
+            wrapper = getattr(MlfNamespace, label, None)
             if wrapper is None:
                 continue  # reported by test_every_public_step_has_a_wrapper
             step_params = inspect.signature(step_cls.__init__).parameters

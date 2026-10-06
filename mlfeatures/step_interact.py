@@ -6,7 +6,7 @@ unordered pair among the selected columns it adds one column holding their
 elementwise product, preserving readable names (`{a}{sep}{b}`) rather than
 the anonymous, name-dropping expansion `sklearn.preprocessing.PolynomialFeatures
 (interaction_only=True)` produces. A caller who needs an n-way term should
-write it explicitly with `shoez.step_mutate.apply_mutate` / `StepMutate`.
+write it explicitly with `mlfeatures.step_mutate.apply_mutate` / `StepMutate`.
 
 The *fit* half (`fit_interact()`) only needs the selected columns' names to
 enumerate the pairs; there is nothing to estimate from the data. The *apply*
@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -80,7 +80,7 @@ def fit_interact(selected: Frame, *, sep: str = "_x_") -> InteractFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the columns to interact. Native
-        frames are wrapped via `shoez._frame.from_native()` at the recipe
+        frames are wrapped via `mlfeatures._frame.from_native()` at the recipe
         boundary.
     sep
         Separator joining each pair's two column names into the output
@@ -171,7 +171,7 @@ class StepInteract(Step):
     ----------
     columns
         Columns to interact. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -199,8 +199,8 @@ class StepInteract(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepInteract
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepInteract
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

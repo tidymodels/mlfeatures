@@ -2,7 +2,7 @@
 
 ``fit_dummy`` decides which levels to retain (all except the first, after
 sorting). ``apply_dummy`` performs the indicator expansion and is shared with
-`shoez.step_one_hot`. ``StepDummy`` wraps both in the
+`mlfeatures.step_one_hot`. ``StepDummy`` wraps both in the
 `Step` lifecycle.
 """
 
@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
 
-from shoez import _frame
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures.step import Step
+from mlfeatures.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
@@ -291,7 +291,7 @@ class StepDummy(Step):
     ----------
     columns
         Columns to expand. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.nominal_features()`` (see
+        mlfeatures selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -317,8 +317,8 @@ class StepDummy(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepDummy
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepDummy
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

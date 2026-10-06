@@ -10,8 +10,8 @@ math (the natural-spline null-space transform, the M-spline-to-I-spline
 antiderivative identity) lives in each step's own module, since it is not
 shared.
 
-Not part of the public API: only `shoez.step_spline_natural` and
-`shoez.step_spline_monotone` import from here.
+Not part of the public API: only `mlfeatures.step_spline_natural` and
+`mlfeatures.step_spline_monotone` import from here.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from typing import Any, cast
 
 import numpy as np
 
-from shoez._dependencies import import_optional
+from mlfeatures._dependencies import import_optional
 
 __all__: list[str] = []
 
@@ -62,7 +62,7 @@ def bspline_design_matrix(
     needing a *different* extrapolation rule (natural splines extrapolate
     linearly, not as the raw local cubic) evaluate this at the boundary knot
     itself and build the extrapolated row by hand -- see
-    `shoez.step_spline_natural`.
+    `mlfeatures.step_spline_natural`.
     """
     bspline_cls = import_optional(
         "scipy.interpolate", purpose="for spline basis construction"
@@ -105,7 +105,7 @@ def capped_interior_knots(
     (two knots landing on the same repeated value). Rather than let the
     downstream B-spline construction choke on a degenerate knot sequence --
     R `splines2`'s behavior, via ``spline2_create()``'s try/catch, is to drop
-    the whole column -- shoez shrinks the interior knot count to whatever came
+    the whole column -- mlfeatures shrinks the interior knot count to whatever came
     out unique. This is what makes the natural/monotone fits "cap silently"
     rather than "drop the column", matching `StepPolynomial`'s established
     house style (see ``fit_polynomial``'s degree-capping).

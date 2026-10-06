@@ -19,15 +19,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from shoez import _frame
-from shoez._frame import as_float
-from shoez._impute_reduce import (
+from mlfeatures import _frame
+from mlfeatures._frame import as_float
+from mlfeatures._impute_reduce import (
     apply_reduce_impute,
     fit_reduce_impute,
     reduce_impute_schema_out,
 )
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures.step import Step
+from mlfeatures.types import (
     NUMERIC_DTYPES,
     AcceptedDtypes,
     ColSchema,
@@ -113,7 +113,7 @@ class StepImputeMedian(Step):
     ----------
     columns
         Columns to impute. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.numeric_features()`` (see
+        mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -132,8 +132,8 @@ class StepImputeMedian(Step):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepImputeMedian
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepImputeMedian
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

@@ -13,7 +13,7 @@ the training year range is still classified correctly. `StepHoliday` wraps
 both into the `Step` lifecycle so a `Recipe` can fit and apply them.
 
 Named-holiday data comes from the `holidays` PyPI package's per-country
-calendars (see ``shoez._dependencies.import_optional``). Unlike R recipes'
+calendars (see ``mlfeatures._dependencies.import_optional``). Unlike R recipes'
 ``timeDate`` backend, which exposes one function per holiday across all
 countries at once, `holidays` groups holidays under a single country (and
 optional subdivision), so ``holidays`` names here are only meaningful
@@ -34,10 +34,10 @@ from typing import TYPE_CHECKING, Any
 import narwhals.stable.v2 as nw
 from dateutil.rrule import rrule, rruleset
 
-from shoez import _frame
-from shoez._dependencies import import_optional
-from shoez.step import Step
-from shoez.types import (
+from mlfeatures import _frame
+from mlfeatures._dependencies import import_optional
+from mlfeatures.step import Step
+from mlfeatures.types import (
     AcceptedDtypes,
     ColSchema,
     Frame,
@@ -162,7 +162,7 @@ def fit_holiday(
     ----------
     selected
         Internal `Frame` (narwhals) holding the Date/Datetime columns to flag
-        holidays on. Native frames are wrapped via `shoez._frame.from_native()`
+        holidays on. Native frames are wrapped via `mlfeatures._frame.from_native()`
         at the recipe boundary.
     holidays
         Holiday names to flag; each must be a name the `holidays` package
@@ -360,7 +360,7 @@ class StepHoliday(Step):
     ----------
     columns
         Columns to flag. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.date_features()`` (see
+        mlfeatures selector such as ``Selectors.date_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.by_dtype(narwhals.Date)``). Selectors are
         resolved against the frame's schema when the recipe is fitted, so the
@@ -404,8 +404,8 @@ class StepHoliday(Step):
     #| output: false
     import polars as pl
     from datetime import date
-    from shoez import Recipe, StepHoliday
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepHoliday
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}

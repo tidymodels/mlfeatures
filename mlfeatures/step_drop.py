@@ -4,13 +4,13 @@ Unlike the other ``step_drop_*`` modules, there is nothing to estimate here, so
 this one has no ``fit_*`` half: the resolved selection *is* the state.
 ``StepDrop``'s only job is `_drop_candidates()`, returning every resolved
 column; the fit/transform/schema lifecycle shared with the other
-``step_drop_*`` steps lives in `shoez._drop.ColumnDropStep`.
+``step_drop_*`` steps lives in `mlfeatures._drop.ColumnDropStep`.
 """
 
 from __future__ import annotations
 
-from shoez._drop import ColumnDropStep
-from shoez.types import ANY_DTYPE, AcceptedDtypes, Frame, Selector
+from mlfeatures._drop import ColumnDropStep
+from mlfeatures.types import ANY_DTYPE, AcceptedDtypes, Frame, Selector
 
 __all__ = ["StepDrop"]
 
@@ -32,7 +32,7 @@ class StepDrop(ColumnDropStep):
     ----------
     columns
         Columns to remove. Accepts a single column name, a list of names, a
-        shoez selector such as ``Selectors.features()`` (see `Selectors` for the
+        mlfeatures selector such as ``Selectors.features()`` (see `Selectors` for the
         full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
@@ -51,8 +51,8 @@ class StepDrop(ColumnDropStep):
     #| echo: false
     #| output: false
     import pandas as pd
-    from shoez import Recipe, StepDrop
-    from shoez import Selectors as s
+    from mlfeatures import Recipe, StepDrop
+    from mlfeatures import Selectors as s
     ```
 
     ```{python}
