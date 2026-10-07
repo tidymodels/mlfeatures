@@ -417,8 +417,11 @@ class TestStepDummyInfrastructure:
     def test_custom_id(self) -> None:
         assert StepDummy(columns=["x"], id="my_step").id == "my_step"
 
-    def test_output_role_is_feature(self) -> None:
-        assert StepDummy(columns=["x"]).output_role == "feature"
+    def test_output_role_defaults_to_inheriting(self) -> None:
+        assert StepDummy(columns=["x"]).output_role is None
+
+    def test_role_sets_output_role(self) -> None:
+        assert StepDummy(columns=["x"], role="group").output_role == "group"
 
 
 # ---------------------------------------------------------------------------
@@ -554,3 +557,11 @@ class TestStepDummyRoles:
         roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
         assert roles.of("x") == set()
+
+    def test_role_overrides_inherited_roles(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepDummy(columns=["x"], role="group").fit(df, _schema())
+        roles = Roles({"x": {"feature"}})
+        step.update_roles(roles)
+        assert roles.of("x_b") == {"group"}
+        assert roles.of("x_c") == {"group"}

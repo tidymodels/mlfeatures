@@ -106,6 +106,9 @@ class StepOneHot(Step):
     keep_original_cols
         If ``True``, the source columns are kept alongside the indicators
         instead of being dropped. Default ``False``.
+    role
+        Role assigned to the indicator columns (see `Roles`). Default
+        ``None``, which gives each indicator the roles of its source column.
     id
         Stable step identifier. Defaults to ``"one_hot"``; a second step of
         this type in the same recipe becomes ``"one_hot_2"``, and passing an
@@ -166,12 +169,13 @@ class StepOneHot(Step):
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
+        role: str | None = None,
         id: str | None = None,
     ) -> None:
         self.columns = columns
         self.name_fn = name_fn
         super().__init__(
-            id, "one_hot", keep_original_cols=keep_original_cols, output_role="feature"
+            id, "one_hot", keep_original_cols=keep_original_cols, output_role=role
         )
         self._estimates: dict[str, list[Any]] | None = None
         self._schema_in: ColSchema | None = None
@@ -234,6 +238,7 @@ class StepOneHot(Step):
             self._estimates,
             self._col_name,
             keep_original_cols=self.keep_original_cols,
+            output_role=self.output_role,
         )
 
     @property
