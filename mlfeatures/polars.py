@@ -111,10 +111,16 @@ class MlfNamespace:
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
+        role: str | None = None,
     ) -> pl.DataFrame:
         """Treatment (drop-one) dummy encoding. See `StepDummy`."""
         return self.apply(
-            StepDummy(columns, name_fn=name_fn, keep_original_cols=keep_original_cols)
+            StepDummy(
+                columns,
+                name_fn=name_fn,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
         )
 
     def step_one_hot(
@@ -123,10 +129,16 @@ class MlfNamespace:
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
+        role: str | None = None,
     ) -> pl.DataFrame:
         """One-hot encoding. See `StepOneHot`."""
         return self.apply(
-            StepOneHot(columns, name_fn=name_fn, keep_original_cols=keep_original_cols)
+            StepOneHot(
+                columns,
+                name_fn=name_fn,
+                keep_original_cols=keep_original_cols,
+                role=role,
+            )
         )
 
     def step_date_features(
