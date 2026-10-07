@@ -312,8 +312,11 @@ class TestStepOneHotInfrastructure:
     def test_custom_id(self) -> None:
         assert StepOneHot(columns=["x"], id="my_ohe").id == "my_ohe"
 
-    def test_output_role_is_feature(self) -> None:
-        assert StepOneHot(columns=["x"]).output_role == "feature"
+    def test_output_role_defaults_to_inheriting(self) -> None:
+        assert StepOneHot(columns=["x"]).output_role is None
+
+    def test_role_sets_output_role(self) -> None:
+        assert StepOneHot(columns=["x"], role="group").output_role == "group"
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +397,14 @@ class TestStepOneHotCategoricalEnum:
 
 
 class TestStepOneHotRoles:
+    def test_role_overrides_inherited_roles(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"], role="group").fit(df, _schema())
+        roles = Roles({"x": {"feature"}})
+        step.update_roles(roles)
+        for col in ("x_a", "x_b", "x_c"):
+            assert roles.of(col) == {"group"}
+
     def test_generated_columns_inherit_source_role(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepOneHot(columns=["x"]).fit(df, _schema())

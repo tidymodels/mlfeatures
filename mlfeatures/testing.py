@@ -40,7 +40,7 @@ import pytest
 
 from mlfeatures import _frame
 from mlfeatures.recipe import FittedRecipe, Recipe
-from mlfeatures.types import DataFrame, KeepOriginals, SchemaInfo
+from mlfeatures.types import DataFrame, KeepOriginals, Mode, SchemaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -280,6 +280,23 @@ class StepConformanceTest:
         assert step.trained is False
         assert isinstance(step.keep_original_cols, bool)
         assert step.output_role is None or isinstance(step.output_role, str)
+
+    def test_column_producing_step_exposes_role(self) -> None:
+        """A step that creates new columns lets the caller choose their role.
+
+        ``ONE_TO_MANY``, ``MANY_TO_MANY``, and ``ADDING`` steps produce columns
+        that did not exist before, so each exposes a ``role`` constructor
+        argument that it hands to ``Step.__init__`` as ``output_role``. Steps in
+        the other modes only transform or remove existing columns and need none.
+        """
+        step = self.make_step()
+        if type(step).mode not in {Mode.ONE_TO_MANY, Mode.MANY_TO_MANY, Mode.ADDING}:
+            return
+        params = inspect.signature(type(step).__init__).parameters
+        assert "role" in params, (
+            f"a step with mode {type(step).mode.value!r} produces new columns "
+            "and must expose 'role' as a constructor argument"
+        )
 
     def test_keep_original_cols_follows_the_mode(self) -> None:
         """The step's `Mode` decides whether ``keep_original_cols`` can vary.
