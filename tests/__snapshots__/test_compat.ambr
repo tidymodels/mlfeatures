@@ -2,3 +2,12 @@
 # name: TestAssemble.test_y_without_target_role_raises
   "y was provided but the recipe declares no 'target' role; assign one with set_roles(target=...) or pass y=None"
 # ---
+# name: TestNestedParams.test_malformed_key
+  "invalid parameter 'threshold' for Recipe; use '<step id>__<parameter>'"
+# ---
+# name: TestNestedParams.test_unknown_parameter
+  "invalid parameter(s) ['nope'] for StepDropCorr; valid parameter(s) are ['method', 'threshold']"
+# ---
+# name: TestNestedParams.test_unknown_step_id
+  "no step with id(s) ['nope'] in this recipe; valid ids are ['corr', 'corr_2', 'normalize']"
+# ---

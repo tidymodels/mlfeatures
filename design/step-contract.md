@@ -109,6 +109,10 @@ Routing `id` through the base class is what records whether it was defaulted or 
 
 Any future framework-owned attribute belongs in `super().__init__()` too, with a default, so existing steps and out-of-tree steps keep working unchanged.
 
+### Tunable parameters
+
+`Step.get_params()` and `Step.set_params(**params)` are what make a step's hyperparameters tunable through `RecipeTransformer` (see [Ecosystem Fit](ecosystem.md#tuning)). They work by reading the `__init__` signature, so a step must store each constructor argument unchanged under an attribute of the same name (`self.threshold = threshold`). The one framework exception is `role`, which is stored as `output_role`. `set_params` rebuilds the step through `__init__` (so argument validation runs again) and returns a new, untrained step with the same `id`; it never mutates. `id` and `columns` are not tunable. `StepConformanceTest` checks the round trip, so a step that transforms an argument on the way in fails the contract.
+
 ---
 
 ## `accepts_dtypes()`

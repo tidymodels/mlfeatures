@@ -9,9 +9,10 @@ and the conformance test suite are implemented in later issues (#17, #18, #21).
 
 from __future__ import annotations
 
+import inspect
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from mlfeatures.types import (
     AcceptedDtypes,
@@ -28,6 +29,13 @@ if TYPE_CHECKING:
     from typing import ClassVar
 
     from typing_extensions import Self
+
+#: Constructor arguments that identify a step rather than tune it: ``id`` is
+#: the key tuning APIs address a step by, and ``columns`` is a selector.
+_UNTUNABLE_PARAMS = frozenset({"id", "columns"})
+
+#: Constructor arguments the framework stores under a different attribute name.
+_PARAM_ATTRS = {"role": "output_role"}
 
 
 def _step_type_label(step: "Step | type[Step]") -> str:
@@ -246,6 +254,58 @@ class Step(ABC):
         so rebuild the step instead of mutating it.
         """
         return self._keep_original_cols
+
+    @classmethod
+    def _init_param_names(cls) -> list[str]:
+        """Names of the concrete step's ``__init__`` parameters, in signature order."""
+        return [
+            name
+            for name, param in inspect.signature(cls.__init__).parameters.items()
+            if name != "self"
+            and param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
+        ]
+
+    def _param_value(self, name: str) -> object:
+        """The instance attribute holding the ``__init__`` argument ``name``."""
+        return getattr(self, _PARAM_ATTRS.get(name, name))
+
+    def get_params(self) -> dict[str, object]:
+        """The step's tunable hyperparameters, keyed by constructor argument name.
+
+        Read from the instance attribute of the same name as each ``__init__``
+        parameter (``role`` is stored as ``output_role``). ``id`` and
+        ``columns`` are not tunable and are left out.
+        """
+        return {
+            name: self._param_value(name)
+            for name in self._init_param_names()
+            if name not in _UNTUNABLE_PARAMS
+        }
+
+    def set_params(self, **params: object) -> "Self":
+        """Return a new untrained step with ``params`` replaced.
+
+        The step is rebuilt through ``__init__``, so the usual argument
+        validation runs again; ``self`` is left untouched. The new step keeps
+        this step's ``id`` and ``columns``.
+        """
+        tunable = self.get_params()
+        unknown = sorted(set(params) - set(tunable))
+        if unknown:
+            raise ValueError(
+                f"invalid parameter(s) {unknown!r} for {type(self).__name__}; "
+                f"valid parameter(s) are {sorted(tunable)!r}"
+            )
+        kwargs: dict[str, Any] = {
+            name: self._param_value(name)
+            for name in self._init_param_names()
+            if name in _UNTUNABLE_PARAMS
+        }
+        kwargs.update(tunable)
+        kwargs.update(params)
+        new = type(self)(**kwargs)
+        new._id_explicit = self._id_explicit
+        return new
 
     @abstractmethod
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
