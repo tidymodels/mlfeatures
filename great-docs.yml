@@ -310,6 +310,8 @@ reference:
       - Step.keep_original_cols
       - Step.required_pkgs
       - Step.check_required_pkgs
+      - Step.get_params
+      - Step.set_params
       - Step.to_state
       - Step.from_state
       - Step.minimize

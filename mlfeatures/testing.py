@@ -392,6 +392,33 @@ class StepConformanceTest:
         second, _ = self._fitted()
         assert first.steps[0].id == second.steps[0].id
 
+    def test_set_params_round_trips_constructor_arguments(self) -> None:
+        """Rebuilding through ``set_params()`` keeps every argument, ``id`` and ``columns``.
+
+        Guards the convention ``get_params`` relies on: each ``__init__``
+        argument is stored under an attribute of the same name, unchanged.
+        """
+        step = self.make_step()
+        rebuilt = step.set_params()
+        assert rebuilt is not step
+        assert type(rebuilt) is type(step)
+        assert not rebuilt.trained
+        assert rebuilt.id == step.id
+        assert rebuilt._id_explicit == step._id_explicit  # pyright: ignore[reportPrivateUsage]
+        original = step.get_params()
+        assert rebuilt.get_params().keys() == original.keys()
+        for name, value in original.items():
+            assert rebuilt.get_params()[name] == value, name
+        if hasattr(step, "columns"):
+            assert rebuilt.columns == step.columns  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
+
+    def test_set_params_rejects_unknown_and_untunable_names(self) -> None:
+        """Unknown names, ``id`` and ``columns`` are not tunable."""
+        step = self.make_step()
+        for name in ("not_a_param", "id", "columns"):
+            with pytest.raises(ValueError, match="invalid parameter"):
+                step.set_params(**{name: None})
+
     def test_estimates_populated_after_fit(self) -> None:
         """Fit-time estimates are None on a fresh step and populated by fit()."""
         attr = self.estimates_attr
