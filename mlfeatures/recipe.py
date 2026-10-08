@@ -228,6 +228,63 @@ class Recipe:
         new._role_req_overrides = list(self._role_req_overrides)
         return new
 
+    def get_params(self, deep: bool = True) -> dict[str, object]:
+        """Step hyperparameters keyed ``<step id>__<parameter>``.
+
+        Follows scikit-learn's nested-parameter convention, so a
+        `RecipeTransformer` exposes them as ``recipe__<step id>__<parameter>``
+        to `GridSearchCV` and friends. Steps are addressed by ``id``, never by
+        position. A step's ``id`` and ``columns`` are not tunable and are left
+        out. ``deep`` is accepted for sklearn compatibility: every parameter
+        lives inside a step, so ``deep=False`` returns an empty ``dict``.
+        """
+        if not deep:
+            return {}
+        return {
+            f"{step.id}__{name}": value
+            for step in self.steps
+            for name, value in step.get_params().items()
+        }
+
+    def set_params(self, **params: object) -> "Recipe":
+        """Return a new recipe with step hyperparameters replaced.
+
+        Keys are ``<step id>__<parameter>``, as returned by `get_params`. The
+        affected steps are rebuilt (so their argument validation runs again) and
+        the recipe's roles and prototype data carry over; ``self`` is left
+        untouched.
+        """
+        by_step: dict[str, dict[str, object]] = {}
+        for key, value in params.items():
+            step_id, sep, name = key.partition("__")
+            if not sep or not name:
+                raise ValueError(
+                    f"invalid parameter {key!r} for Recipe; "
+                    "use '<step id>__<parameter>'"
+                )
+            by_step.setdefault(step_id, {})[name] = value
+        ids = [step.id for step in self.steps]
+        unknown = [step_id for step_id in by_step if step_id not in ids]
+        if unknown:
+            raise ValueError(
+                f"no step with id(s) {unknown!r} in this recipe; valid ids are {ids!r}"
+            )
+        new = self._clone()
+        new.steps = [
+            step.set_params(**by_step[step.id]) if step.id in by_step else step
+            for step in self.steps
+        ]
+        return new
+
+    def __sklearn_clone__(self) -> "Recipe":
+        """Let `sklearn.base.clone` copy a recipe without rebuilding it from params.
+
+        sklearn would otherwise call ``Recipe(**get_params(deep=False))``, which
+        is not how a recipe is constructed. `Recipe` is immutable, so a
+        shallow copy is a faithful clone.
+        """
+        return self._clone()
+
     def add(self, *steps: Step) -> "Recipe":
         """Return a new recipe with ``steps`` appended (steps are pure).
 
