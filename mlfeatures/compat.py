@@ -24,9 +24,9 @@ from sklearn.exceptions import NotFittedError
 
 from mlfeatures import _frame
 from mlfeatures.recipe import FittedRecipe, Recipe
-from mlfeatures.step import (  # pyright: ignore[reportPrivateUsage]
+from mlfeatures.step import (
     RowOp,
-    _step_type_label,
+    _step_type_label,  # pyright: ignore[reportPrivateUsage]
 )
 from mlfeatures.types import DataFrame
 
