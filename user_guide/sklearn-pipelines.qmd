@@ -83,6 +83,44 @@ search.fit(X, y)
 search.best_params_
 ```
 
+### Tuning step hyperparameters
+
+Step hyperparameters are reachable through scikit-learn's nested parameter
+names, so a grid can vary a step's argument directly. Steps are addressed by
+their `id`, never by position, giving keys of the form
+`<pipeline step>__recipe__<step id>__<parameter>`. A step's `id` and `columns`
+are not tunable.
+
+```{python}
+from mlfeatures import Selectors as s
+from mlfeatures import StepDropCorr
+
+recipe = (
+    Recipe(data=X.assign(target=y), target="target", features=features)
+    .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+    .add(StepNormalize(s.numeric_features()))
+)
+pipe = Pipeline(
+    [
+        ("prep", RecipeTransformer(recipe)),
+        ("model", LogisticRegression(max_iter=1000)),
+    ]
+)
+```
+
+The parameters each step exposes are listed by `get_params`:
+
+```{python}
+{k: v for k, v in pipe.get_params().items() if k.startswith("prep__recipe__")}
+```
+
+```{python}
+grid = {"prep__recipe__corr__threshold": [0.8, 0.95]}
+search = GridSearchCV(pipe, grid, cv=3)
+search.fit(X, y)
+search.best_params_
+```
+
 ## Feature names and `set_output`
 
 `RecipeTransformer` implements `get_feature_names_out`, so it composes inside a

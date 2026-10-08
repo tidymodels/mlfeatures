@@ -68,3 +68,7 @@ pipe.fit(X_train, y_train)
 ```
 
 This is the bridge to the existing Python ML ecosystem. The adapter wraps the `fit` / `transform` lifecycle; it does not re-implement it.
+
+### Tuning
+
+Step hyperparameters are exposed through sklearn's nested-parameter convention, keyed on step `id` (never position): `get_params(deep=True)` returns `recipe__<step id>__<parameter>`, and `set_params` accepts the same keys, so `GridSearchCV` can tune `recipe__corr__threshold` directly. `Recipe` and `Step` each implement `get_params` / `set_params`; both are immutable, so `set_params` returns a new object, and `RecipeTransformer.set_params` rebinds `self.recipe` to it. A step's `id` and `columns` are not tunable. `Recipe.__sklearn_clone__` makes `sklearn.base.clone` copy the recipe rather than rebuild it from its parameters.
