@@ -67,6 +67,11 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     cross-validation / grid search) round-trips correctly; `Recipe` is immutable, so
     this is safe.
 
+    Step hyperparameters are tunable through sklearn's nested parameter names,
+    keyed on step ``id``: ``recipe__<step id>__<parameter>``, for example
+    ``GridSearchCV(pipe, {"prep__recipe__corr__threshold": [0.8, 0.9]})``. A
+    step's ``id`` and ``columns`` are not tunable.
+
     It implements `get_feature_names_out()` and therefore composes inside a
     `sklearn.compose.ColumnTransformer` and supports
     ``set_output(transform="pandas" | "polars")``.
@@ -109,6 +114,23 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         # Stored unchanged under the same name as the constructor arg: required by
         # sklearn's get_params / clone contract.
         self.recipe = recipe
+
+    def set_params(self, **params: Any) -> "RecipeTransformer":
+        """Set parameters, including step hyperparameters as ``recipe__<step id>__<param>``.
+
+        A whole ``recipe`` is applied first, then the nested keys on top of it.
+        `Recipe` is immutable, so nested keys rebuild ``self.recipe`` instead of
+        mutating it (sklearn's default ``set_params`` would discard the result).
+        """
+        nested = {
+            key.removeprefix("recipe__"): params.pop(key)
+            for key in list(params)
+            if key.startswith("recipe__")
+        }
+        cast(Any, super()).set_params(**params)
+        if nested:
+            self.recipe = self.recipe.set_params(**nested)
+        return self
 
     def _display_recipe(self) -> Recipe | FittedRecipe:
         """The recipe to show when printing: the fitted one once available.

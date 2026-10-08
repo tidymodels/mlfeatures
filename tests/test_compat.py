@@ -8,7 +8,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from mlfeatures import Recipe, StepNormalize
+from mlfeatures import Recipe, StepDropCorr, StepNormalize
 from mlfeatures.compat import RecipeTransformer
 
 
@@ -232,3 +232,111 @@ class TestEndToEnd:
         search.fit(X, y)  # exercises clone() of RecipeTransformer across folds
         assert search.best_score_ > 0.9
         assert search.best_params_["model__C"] in (0.1, 1.0)
+
+
+def _tunable_recipe() -> Recipe:
+    """Two same-type steps (ids ``corr`` and ``corr_2``) plus a normalize."""
+    return (
+        Recipe()
+        .add(StepDropCorr(["a", "b"], threshold=0.9))
+        .add(StepDropCorr(["c", "d"], threshold=0.5))
+        .add(StepNormalize(["a"]))
+    )
+
+
+class TestNestedParams:
+    def test_get_params_exposes_step_hyperparameters(self) -> None:
+        params = RecipeTransformer(_tunable_recipe()).get_params(deep=True)
+        assert params["recipe__corr__threshold"] == 0.9
+        assert params["recipe__corr__method"] == "pearson"
+        assert params["recipe__corr_2__threshold"] == 0.5
+        assert "recipe__corr__columns" not in params
+        assert "recipe__corr__id" not in params
+
+    def test_shallow_get_params_is_only_the_recipe(self) -> None:
+        rec = _tunable_recipe()
+        assert RecipeTransformer(rec).get_params(deep=False) == {"recipe": rec}
+
+    def test_set_params_rebuilds_the_recipe(self) -> None:
+        rec = _tunable_recipe()
+        t = RecipeTransformer(rec)
+        assert t.set_params(recipe__corr_2__threshold=0.7) is t
+        assert t.get_params()["recipe__corr_2__threshold"] == 0.7
+        assert t.get_params()["recipe__corr__threshold"] == 0.9
+        assert [s.id for s in t.recipe.steps] == ["corr", "corr_2", "normalize"]
+        # the original recipe is untouched
+        assert rec.steps[1].get_params()["threshold"] == 0.5  # type: ignore[attr-defined]
+
+    def test_set_params_keeps_roles(self) -> None:
+        t = RecipeTransformer(
+            Recipe(target="y").add(StepDropCorr(["a", "b"]))
+        ).set_params(recipe__corr__threshold=0.3)
+        assert t.recipe.roles.columns_with_role("target") == ["y"]
+
+    def test_set_params_whole_recipe_then_nested(self) -> None:
+        t = RecipeTransformer(Recipe())
+        t.set_params(recipe=_tunable_recipe(), recipe__corr__threshold=0.2)
+        assert t.get_params()["recipe__corr__threshold"] == 0.2
+
+    def test_set_params_still_validates(self) -> None:
+        t = RecipeTransformer(_tunable_recipe())
+        with pytest.raises(ValueError, match="'threshold'"):
+            t.set_params(recipe__corr__threshold=2)
+
+    def test_unknown_step_id(self, snapshot: SnapshotAssertion) -> None:
+        t = RecipeTransformer(_tunable_recipe())
+        with pytest.raises(ValueError) as excinfo:
+            t.set_params(recipe__nope__threshold=0.1)
+        assert str(excinfo.value) == snapshot
+
+    def test_unknown_parameter(self, snapshot: SnapshotAssertion) -> None:
+        t = RecipeTransformer(_tunable_recipe())
+        with pytest.raises(ValueError) as excinfo:
+            t.set_params(recipe__corr__nope=0.1)
+        assert str(excinfo.value) == snapshot
+
+    def test_columns_are_not_tunable(self) -> None:
+        t = RecipeTransformer(_tunable_recipe())
+        with pytest.raises(ValueError, match="invalid parameter"):
+            t.set_params(recipe__corr__columns=["c"])
+
+    def test_malformed_key(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            _tunable_recipe().set_params(threshold=0.1)
+        assert str(excinfo.value) == snapshot
+
+    def test_clone_keeps_nested_params(self) -> None:
+        from sklearn.base import clone
+
+        t = RecipeTransformer(_tunable_recipe()).set_params(recipe__corr__threshold=0.4)
+        cloned = clone(t)
+        assert cloned.get_params()["recipe__corr__threshold"] == 0.4
+        assert cloned.recipe is not t.recipe
+
+    def test_clone_of_fitted_transformer_is_unfitted(self) -> None:
+        from sklearn.base import clone
+
+        X = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [2.0, 4.0, 6.5]})
+        fitted = RecipeTransformer(Recipe().add(StepDropCorr(["a", "b"]))).fit(X)
+        assert not hasattr(clone(fitted), "fitted_")
+
+    def test_grid_search_over_a_step_hyperparameter(self) -> None:
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.model_selection import GridSearchCV
+        from sklearn.pipeline import Pipeline
+
+        rec, X, y = _cancer_recipe()
+        feature_cols = list(X.columns)
+        rec = rec.add(StepDropCorr(feature_cols, threshold=0.9))
+        pipe = Pipeline(
+            [
+                ("prep", RecipeTransformer(rec)),
+                ("model", LogisticRegression(max_iter=2000)),
+            ]
+        )
+        grid = {"prep__recipe__corr__threshold": [0.8, 0.95]}
+        search = GridSearchCV(pipe, grid, cv=3)
+        search.fit(X, y)
+        reported = search.cv_results_["param_prep__recipe__corr__threshold"]
+        assert sorted(reported.tolist()) == [0.8, 0.95]
+        assert search.best_params_["prep__recipe__corr__threshold"] in (0.8, 0.95)
