@@ -11,3 +11,6 @@
 # name: TestNestedParams.test_unknown_step_id
   "no step with id(s) ['nope'] in this recipe; valid ids are ['corr', 'corr_2', 'normalize']"
 # ---
+# name: TestTargetSteps.test_step_on_target_raises
+  "step 'log' (step_log) operates on target column(s) ['price']; RecipeTransformer cannot apply it because sklearn's transform() never receives y; transform the target outside the pipeline (e.g. with sklearn's TransformedTargetRegressor)"
+# ---

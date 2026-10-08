@@ -24,6 +24,10 @@ from sklearn.exceptions import NotFittedError
 
 from mlfeatures import _frame
 from mlfeatures.recipe import FittedRecipe, Recipe
+from mlfeatures.step import (
+    RowOp,
+    _step_type_label,  # pyright: ignore[reportPrivateUsage]
+)
 from mlfeatures.types import DataFrame
 
 __all__ = ["RecipeTransformer"]
@@ -184,6 +188,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         """Fit the wrapped recipe on ``X`` (with ``y`` re-joined as the target)."""
         data = self._assemble(X, y)
         self.fitted_: FittedRecipe = self.recipe.fit(data)
+        self._check_no_target_steps()
         self.feature_names_in_ = list(_frame.columns(_frame.from_native(X)))
         # Output column names are fixed at fit time (the transform is deterministic),
         # so cache them for get_feature_names_out / set_output. Compute via the fitted
@@ -245,6 +250,29 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
             )
         frame = _frame.from_native(X)
         return _frame.to_native(_frame.with_column(frame, targets[0], y))
+
+    def _check_no_target_steps(self) -> None:
+        """Reject fitted steps that consume a target column.
+
+        sklearn's ``transform(X)`` never receives ``y``, so a step reading the target
+        would fail on the missing column the first time the transformer is applied.
+        ``RowOp`` steps and identity (empty-selection) steps never run at transform
+        time, so they are allowed.
+        """
+        targets = set(self._target_columns())
+        if not targets:
+            return
+        for step in self.fitted_.steps:
+            if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
+                continue
+            used = [c for c in step.schema_in().columns if c in targets]
+            if used:
+                raise ValueError(
+                    f"step {step.id!r} ({_step_type_label(step)}) operates on target "
+                    f"column(s) {used!r}; RecipeTransformer cannot apply it because "
+                    "sklearn's transform() never receives y; transform the target "
+                    "outside the pipeline (e.g. with sklearn's TransformedTargetRegressor)"
+                )
 
     def _drop_targets(self, data: DataFrame) -> DataFrame:
         """Strip target-role columns from transformed output (features only)."""

@@ -8,7 +8,8 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from mlfeatures import Recipe, StepDropCorr, StepNormalize
+from mlfeatures import Recipe, StepDropCorr, StepFilter, StepLog, StepNormalize
+from mlfeatures import Selectors as s
 from mlfeatures.compat import RecipeTransformer
 
 
@@ -67,6 +68,22 @@ class TestAssemble:
         with pytest.raises(ValueError) as excinfo:
             RecipeTransformer(rec).fit(pd.DataFrame({"x1": [1.0, 2.0, 3.0]}), y)
         assert str(excinfo.value) == snapshot
+
+
+class TestTargetSteps:
+    def test_step_on_target_raises(self, snapshot: SnapshotAssertion) -> None:
+        X = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0], "b": [10.0, 20.0, 30.0, 40.0]})
+        y = pd.Series([1.0, 10.0, 100.0, 1000.0])
+        rec = Recipe(target="price").add(StepLog(s.targets()))
+        with pytest.raises(ValueError) as excinfo:
+            RecipeTransformer(rec).fit(X, y)
+        assert str(excinfo.value) == snapshot
+
+    def test_row_op_on_target_allowed(self) -> None:
+        X = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0]})
+        y = pd.Series([1.0, 10.0, 100.0, 1000.0])
+        rec = Recipe(target="price").add(StepFilter(lambda df: df["price"] > 0))
+        RecipeTransformer(rec).fit(X, y)
 
 
 class TestBackendParity:
