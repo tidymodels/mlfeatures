@@ -388,7 +388,7 @@ class StepDummy(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the sorted level list for each selected column."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         # Build the full known-level set (retained + reference) so that
         # apply_dummy does not flag the reference level as "unseen" at transform.

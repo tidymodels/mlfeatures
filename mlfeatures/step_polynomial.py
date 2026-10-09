@@ -461,7 +461,7 @@ class StepPolynomial(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the polynomial basis for each selected column on training data."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_polynomial(selected, self.degree)
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

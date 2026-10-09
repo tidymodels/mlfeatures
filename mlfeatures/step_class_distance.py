@@ -520,7 +520,7 @@ class StepClassDistance(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-class centroids from the feature + target columns."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         # ``training_data[col]`` returns a narwhals Series — the same shape
         # ``_ortho_poly`` consumes in step_polynomial.

@@ -2,7 +2,7 @@
 
 A minimal, vertical-slice implementation of the ``specify → fit → transform``
 lifecycle described in ``design/lifecycle.md``. It exercises the step contract
-end to end and maintains the column-lineage DAG (``design/schema.md``) across
+end to end and maintains the column-lineage DAG (``design/lineage.md``) across
 ``fit()``. At ``fit()`` it snapshots the training schema into a ``Ptype`` and
 validates the incoming frame against it; the snapshot rides along on the
 ``FittedRecipe`` so ``transform()`` can re-check new data at the boundary before
@@ -21,11 +21,11 @@ import copy
 import warnings
 
 from mlfeatures import _frame
+from mlfeatures.lineage import Lineage
 from mlfeatures.ptype import (
     _NON_CONFIGURABLE_ROLES,  # pyright: ignore[reportPrivateUsage]
     Ptype,
 )
-from mlfeatures.schema import Schema
 from mlfeatures.selectors import FeaturesSelector
 from mlfeatures.step import (
     RowOp,
@@ -462,7 +462,7 @@ class Recipe:
         """Fit each step in order on the training data.
 
         The transformed output of step *i* is the input to step *i+1*'s
-        ``fit()``, so later steps see the schema as modified by earlier ones.
+        ``fit()``, so later steps see the lineage as modified by earlier ones.
         ``RowOp`` steps *are* applied here — a row operation reshapes the
         training frame every later step then fits on — but never run during
         ``transform()`` on new data, which the framework enforces structurally.
@@ -529,9 +529,9 @@ class Recipe:
         ptype = Ptype.from_frame(current, live_roles, overrides)
         ptype.check(current, context="fit")
         # The column-lineage DAG, seeded from the training frame and updated
-        # after each column-changing step (see design/schema.md). RowOp and
+        # after each column-changing step (see design/lineage.md). RowOp and
         # empty-selection steps make no schema change and are skipped below.
-        schema = Schema.from_frame(current, live_roles)
+        lineage = Lineage.from_frame(current, live_roles)
         fitted_steps: list[Step] = []
         for step in steps:
             info = SchemaInfo.from_frame(current)
@@ -539,7 +539,7 @@ class Recipe:
             # Hand the live lineage DAG and the id→step map to selector
             # resolution so provenance selectors (has_source/has_ancestor) can
             # resolve; these are recipe-side state, not for steps' own logic.
-            info.schema = schema
+            info.lineage = lineage
             info.producing_steps = {s.id: s for s in fitted_steps}
             # Empty selection ⇒ identity. Resolved here, once, at the recipe
             # boundary so the no-op is structural: a step is never fitted on a
@@ -579,8 +579,8 @@ class Recipe:
             if not isinstance(step, RowOp):
                 # Centralized name-collision guard: reject produced columns that
                 # clash with the live schema or with each other, before the step
-                # runs (see Schema.check_additions). Steps no longer self-check.
-                schema.check_additions(fitted.id, fitted.produced_columns())
+                # runs (see Lineage.check_additions). Steps no longer self-check.
+                lineage.check_additions(fitted.id, fitted.produced_columns())
             # ``transform`` runs at fit time even for ``RowOp`` steps: a row
             # operation only ever takes effect on the *training* frame, so
             # applying it here filters/reshapes the rows every later step fits
@@ -592,14 +592,14 @@ class Recipe:
                 raise StepError.wrap(fitted, selected, "fit") from exc
             fitted.update_roles(live_roles)
             if not isinstance(step, RowOp):
-                schema.update(fitted, current, live_roles)
+                lineage.update(fitted, current, live_roles)
             fitted_steps.append(fitted)
         return FittedRecipe(
-            steps=fitted_steps, roles=live_roles, schema=schema, ptype=ptype
+            steps=fitted_steps, roles=live_roles, lineage=lineage, ptype=ptype
         )
 
     def summary(self) -> DataFrame:
-        """The initial (pre-fit) schema as a tidy frame. See ``design/schema.md``.
+        """The initial (pre-fit) lineage as a tidy frame. See ``design/lineage.md``.
 
         Shows the prototype columns before any step runs. Requires a prototype:
         construct the recipe with ``Recipe(data=...)``, or call ``fit()`` and use
@@ -636,7 +636,7 @@ class Recipe:
                 "summary() needs prototype data; construct the recipe with "
                 "Recipe(data=...), or fit it and call FittedRecipe.summary()"
             )
-        return Schema.from_frame(self._prototype_frame, self.roles).summary()
+        return Lineage.from_frame(self._prototype_frame, self.roles).summary()
 
 
 class FittedRecipe:
@@ -646,14 +646,14 @@ class FittedRecipe:
         self,
         steps: list[Step],
         roles: Roles | None = None,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         ptype: Ptype | None = None,
     ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
-        #: The post-all-steps column-lineage DAG (``design/schema.md``), or
+        #: The post-all-steps column-lineage DAG (``design/lineage.md``), or
         #: ``None`` if the recipe was constructed without one.
-        self.schema = schema
+        self.lineage = lineage
         #: The training-data ptype snapshot (``design/lifecycle.md``) used to
         #: validate new data in ``transform()``, or ``None`` if absent.
         self.ptype = ptype
@@ -788,7 +788,7 @@ class FittedRecipe:
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
-        """The fitted (post-all-steps) schema as a tidy frame. See ``design/schema.md``.
+        """The fitted (post-all-steps) lineage as a tidy frame. See ``design/lineage.md``.
 
         Examples
         --------
@@ -817,6 +817,6 @@ class FittedRecipe:
         fitted.summary()
         ```
         """
-        if self.schema is None:
-            raise RuntimeError("this FittedRecipe was constructed without a schema")
-        return self.schema.summary()
+        if self.lineage is None:
+            raise RuntimeError("this FittedRecipe was constructed without a lineage")
+        return self.lineage.summary()

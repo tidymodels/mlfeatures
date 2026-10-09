@@ -27,7 +27,7 @@ from mlfeatures.selectors import FeaturesSelector
 from mlfeatures.types import DataFrame, Frame, NwSelector, PlExpr, Roles, Selector
 
 if TYPE_CHECKING:
-    from mlfeatures.schema import Schema
+    from mlfeatures.lineage import Lineage
     from mlfeatures.step import Step
 
 # --- Entry / exit (the sklearn boundary) ----------------------------------
@@ -95,7 +95,7 @@ def select(
     frame: Frame,
     names: Selector,
     roles: Roles | None = None,
-    schema: "Schema | None" = None,
+    lineage: "Lineage | None" = None,
     steps: "dict[str, Step] | None" = None,
 ) -> Frame:
     """Return a frame with only the selected columns.
@@ -107,11 +107,11 @@ def select(
     expression is resolved against the frame's schema, so it works
     regardless of the frame's backend. A ``FeaturesSelector`` additionally uses
     ``roles`` to filter by role, and — for provenance selectors — the live
-    lineage DAG ``schema`` and id→step map ``steps`` when the recipe supplies
+    lineage DAG ``lineage`` and id→step map ``steps`` when the recipe supplies
     them at fit time.
     """
     if isinstance(names, FeaturesSelector):
-        return frame.select(names.resolve(frame, roles or Roles(), schema, steps))
+        return frame.select(names.resolve(frame, roles or Roles(), lineage, steps))
     if isinstance(names, str):
         return frame.select([names])
     if isinstance(names, NwSelector):
@@ -298,7 +298,7 @@ def is_list(frame: Frame, column: str) -> bool:
 
 
 def dtype_category(dtype: nw.dtypes.DType) -> str:
-    """Classify a narwhals dtype into a `design/schema.md` taxonomy category.
+    """Classify a narwhals dtype into a `design/lineage.md` taxonomy category.
 
     Returns one of the taxonomy leaf names: ``"float"``, ``"int"``,
     ``"decimal"``, ``"bool"``, ``"str"``, ``"categorical_ordered"``,
@@ -307,7 +307,7 @@ def dtype_category(dtype: nw.dtypes.DType) -> str:
     maps to ``"other"``.
 
     This is the single place that names the taxonomy categories; the lineage
-    DAG and ``recipe.summary()`` (see ``design/schema.md``) will consume it.
+    DAG and ``recipe.summary()`` (see ``design/lineage.md``) will consume it.
     ``"decimal"`` is split out from the numeric group because narwhals'
     ``Decimal`` is neither ``is_float`` nor ``is_integer``, so it has no home
     under the float/int leaves of the taxonomy tree.

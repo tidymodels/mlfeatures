@@ -1,7 +1,7 @@
 """Shared type aliases and sentinels for the step contract.
 
 Several of these are placeholders for types owned by other foundation issues
-(notably the schema subsystem — see ``design/schema.md``). They exist so that
+(notably the lineage subsystem — see ``design/lineage.md``). They exist so that
 the `mlfeatures.step` contract is importable and type-checkable today. The
 concrete implementations will replace the placeholder bodies here without
 changing the names the rest of the team codes against.
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from polars import Expr as PlExpr
     from polars.selectors import Selector as PlSelector
 
-    from mlfeatures.schema import Schema
+    from mlfeatures.lineage import Lineage
     from mlfeatures.selectors import FeaturesSelector
     from mlfeatures.step import Step
 
@@ -95,7 +95,7 @@ class ColSchema:
     describe what it consumed (``schema_in``) and produced (``schema_out``).
     This is the lightweight step-facing report; the recipe-side column-lineage
     DAG that tracks roles, source, sparsity, and provenance is
-    `mlfeatures.schema.Schema` (``design/schema.md``).
+    `mlfeatures.lineage.Lineage` (``design/lineage.md``).
 
     Examples
     --------
@@ -128,9 +128,9 @@ class SchemaInfo:
 
     Carries the current column names, their dtype names, and the live `Roles`.
     In practice a step reads only ``roles`` (for selector resolution). The
-    recipe-side column-lineage DAG (`mlfeatures.schema.Schema`, ``design/schema.md``)
+    recipe-side column-lineage DAG (`mlfeatures.lineage.Lineage`, ``design/lineage.md``)
     is maintained separately by the recipe and is not handed to steps for their
-    own logic; ``schema`` and ``producing_steps`` are populated by the recipe
+    own logic; ``lineage`` and ``producing_steps`` are populated by the recipe
     purely so provenance selectors (``has_source`` / ``has_ancestor``) can
     resolve against the DAG at fit time. Both are ``None`` outside a recipe fit.
 
@@ -158,14 +158,14 @@ class SchemaInfo:
         columns: list[str] | None = None,
         dtypes: dict[str, str] | None = None,
         roles: Roles | None = None,
-        schema: "Schema | None" = None,
+        lineage: "Lineage | None" = None,
         producing_steps: "dict[str, Step] | None" = None,
     ):
         self.columns = list(columns) if columns is not None else []
         self.dtypes = dict(dtypes) if dtypes is not None else {}
         self.roles: Roles = roles if roles is not None else Roles()
         #: The live column-lineage DAG, set by the recipe during fit (else None).
-        self.schema: "Schema | None" = schema
+        self.lineage: "Lineage | None" = lineage
         #: Map of step id → fitted step, set by the recipe during fit (else None).
         #: Lets ``has_source(step_type=...)`` map ids back to step instances.
         self.producing_steps: "dict[str, Step] | None" = producing_steps
@@ -310,7 +310,7 @@ ANY_DTYPE = _AnyDtype()
 #: Return type of ``Step.accepts_dtypes()``: an explicit set of narwhals dtype
 #: classes, or the `ANY_DTYPE` sentinel. Using narwhals' own dtype types
 #: rather than a custom string taxonomy keeps the framework aligned with the one
-#: backend-agnostic type system it already depends on (see ``design/schema.md``).
+#: backend-agnostic type system it already depends on (see ``design/lineage.md``).
 AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
 
 #: The narwhals numeric dtypes — a convenience set for steps that only accept

@@ -287,7 +287,7 @@ class StepRange(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-column lower and upper bounds over the selected columns."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_range(selected)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

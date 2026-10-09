@@ -185,7 +185,7 @@ class StepOneHot(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the full sorted level list for each selected column."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_one_hot(selected)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

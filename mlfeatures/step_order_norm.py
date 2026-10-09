@@ -304,7 +304,7 @@ class StepOrderNorm(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn each column's rank-to-normal-quantile lookup table."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_order_norm(selected)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

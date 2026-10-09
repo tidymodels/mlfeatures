@@ -305,7 +305,7 @@ class StepPca(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the component basis from the selected columns on training data."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_pca(selected, self.num_comp)
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

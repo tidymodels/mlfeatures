@@ -307,7 +307,7 @@ class StepOther(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the levels frequent enough to keep in each selected column."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_other(
             selected,

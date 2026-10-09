@@ -272,7 +272,7 @@ class StepInteract(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the pairwise interactions among the selected columns."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_interact(selected, sep=self.sep)
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

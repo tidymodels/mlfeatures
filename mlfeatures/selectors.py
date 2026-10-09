@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 import narwhals.stable.v2 as nw
 
 if TYPE_CHECKING:
-    from mlfeatures.schema import Schema
+    from mlfeatures.lineage import Lineage
     from mlfeatures.step import Step
     from mlfeatures.types import Frame, Roles
 
@@ -49,12 +49,12 @@ class FeaturesSelector:
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         """Resolve to concrete column names against ``frame`` (and ``roles``).
 
-        ``schema`` and ``steps`` are the live lineage DAG and id→step map, only
+        ``lineage`` and ``steps`` are the live lineage DAG and id→step map, only
         needed by provenance selectors; they are ``None`` outside a recipe fit.
         """
         raise NotImplementedError
@@ -102,7 +102,7 @@ class _ForeignSelector(FeaturesSelector):
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         from mlfeatures import _frame
@@ -128,13 +128,13 @@ class _CompositeSelector(FeaturesSelector):
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         from mlfeatures import _frame
 
         resolved: list[set[str]] = [
-            set(child.resolve(frame, roles, schema, steps)) for child in self._children
+            set(child.resolve(frame, roles, lineage, steps)) for child in self._children
         ]
         keep: set[str] = set()
         if resolved:
@@ -158,12 +158,12 @@ class _Complement(FeaturesSelector):
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         from mlfeatures import _frame
 
-        excluded = set(self._inner.resolve(frame, roles, schema, steps))
+        excluded = set(self._inner.resolve(frame, roles, lineage, steps))
         return [c for c in _frame.columns(frame) if c not in excluded]
 
 
@@ -196,7 +196,7 @@ class _RoleTypeSelector(FeaturesSelector):
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         from mlfeatures import _frame
@@ -261,7 +261,7 @@ class _NameSelector(FeaturesSelector):
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         from mlfeatures import _frame
@@ -305,7 +305,9 @@ class _SourceSelector(FeaturesSelector):
             arg = f"step_type={self._step_type.__name__}"
         return f"{name}({arg})"
 
-    def _matching_ids(self, schema: Schema, steps: dict[str, Step] | None) -> set[str]:
+    def _matching_ids(
+        self, lineage: Lineage, steps: dict[str, Step] | None
+    ) -> set[str]:
         if steps is None:
             # No id→step map (e.g. resolved outside a recipe fit): no matches,
             # and nothing to validate the id or type against.
@@ -336,15 +338,15 @@ class _SourceSelector(FeaturesSelector):
         self,
         frame: Frame,
         roles: Roles,
-        schema: Schema | None = None,
+        lineage: Lineage | None = None,
         steps: dict[str, Step] | None = None,
     ) -> list[str]:
         from mlfeatures import _frame
 
-        if schema is None:
+        if lineage is None:
             # No DAG available (e.g. resolved outside a recipe fit): no matches.
             return []
-        ids = self._matching_ids(schema, steps)
+        ids = self._matching_ids(lineage, steps)
         if not ids:
             return []
 
@@ -354,14 +356,14 @@ class _SourceSelector(FeaturesSelector):
             selected = {
                 name
                 for sid in ids
-                for name in schema.columns_from_source(sid)
+                for name in lineage.columns_from_source(sid)
                 if name in live
             }
         else:
             selected = set()
             for name in live:
-                node_sources = {schema[name].source} | {
-                    schema[a].source for a in schema.ancestors(name) if a in schema
+                node_sources = {lineage[name].source} | {
+                    lineage[a].source for a in lineage.ancestors(name) if a in lineage
                 }
                 if node_sources & ids:
                     selected.add(name)

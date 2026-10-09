@@ -489,7 +489,7 @@ class StepSplineMonotone(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the monotone-spline knot placement for each selected column."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_spline_monotone(
             selected, self.deg_free, self.degree, self.complete_set, self.knots

@@ -336,7 +336,7 @@ class Step(ABC):
         Known after ``fit()``. The keys are exactly the columns this step adds to
         the frame; each value lists the input columns that column descends from.
         The recipe consults this to populate the column-lineage DAG (see
-        ``design/schema.md``) and validates the keys against the post-step frame.
+        ``design/lineage.md``) and validates the keys against the post-step frame.
 
         The default returns ``{}`` — correct for steps that create no new columns
         (in-place ``ONE_TO_ONE`` such as ``step_normalize``; ``REMOVING``;
@@ -425,7 +425,7 @@ class Step(ABC):
         from mlfeatures import _frame
 
         return _frame.select(
-            data, self.columns, info.roles, info.schema, info.producing_steps
+            data, self.columns, info.roles, info.lineage, info.producing_steps
         ).columns
 
     def update_roles(self, roles: Roles) -> None:

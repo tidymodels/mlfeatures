@@ -58,7 +58,7 @@ class ColumnDropStep(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the selection, decide what to drop, and store the decision."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = self._drop_candidates(selected)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}
