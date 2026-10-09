@@ -1,6 +1,6 @@
 # Errors, Printing, and Inspection
 
-→ See also: [step-contract.md](step-contract.md), [schema.md](schema.md), [lifecycle.md](lifecycle.md)
+→ See also: [step-contract.md](step-contract.md), [lineage.md](lineage.md), [lifecycle.md](lifecycle.md)
 
 ---
 
@@ -66,4 +66,4 @@ The exception is the provenance selectors: `has_source` / `has_ancestor` raise o
 
 ## `recipe.summary()`
 
-Returns the current schema — see [schema.md](schema.md).
+Returns the current lineage — see [lineage.md](lineage.md).

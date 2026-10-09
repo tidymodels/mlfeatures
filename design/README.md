@@ -49,7 +49,7 @@ Key invariants the framework guarantees:
 | [selectors.md](selectors.md)           | Selector DSL — by name, role, type, and set ops      |
 | [steps-catalog.md](steps-catalog.md)   | Full step catalog, tiered by priority                |
 | [step-contract.md](step-contract.md)   | What every step must implement                       |
-| [schema.md](schema.md)                 | Column-lineage DAG and schema tracking               |
+| [lineage.md](lineage.md)               | Column-lineage DAG and type taxonomy                 |
 | [ecosystem.md](ecosystem.md)           | Dataframe types, sparse support, sklearn adapter     |
 | [serialization.md](serialization.md)   | Pickle + stable format, `minimize()`, no closures    |
 | [extensibility.md](extensibility.md)   | Plugin steps via entry points, base classes          |

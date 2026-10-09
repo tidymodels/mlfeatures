@@ -1,6 +1,6 @@
 # Ecosystem Fit
 
-→ See also: [serialization.md](serialization.md), [schema.md](schema.md), [frame-notes.md](frame-notes.md)
+→ See also: [serialization.md](serialization.md), [lineage.md](lineage.md), [frame-notes.md](frame-notes.md)
 
 ---
 
@@ -40,7 +40,7 @@ No implicit `strings_as_factors` conversion. Categorical encoding is opt-in per 
 
 > **Note:** This section is provisional. Sparse support in Python's ML ecosystem (scipy.sparse, pyarrow, polars, narwhals) is fragmented and the right approach here will require more research before anything is finalised.
 
-Sparse-ness is a **column attribute** that flows through the column-lineage DAG (see [schema.md](schema.md)). It is not a mode that is converted internally — that approach was benchmarked and self-closed in R [#515].
+Sparse-ness is a **column attribute** that flows through the column-lineage DAG (see [lineage.md](lineage.md)). It is not a mode that is converted internally — that approach was benchmarked and self-closed in R [#515].
 
 Each step declares one of:
 - `produces_sparse = True` — output is sparse (e.g. `step_dummy` on high-cardinality columns).

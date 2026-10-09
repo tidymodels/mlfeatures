@@ -1,6 +1,6 @@
 # Motivation: Why Not Just a Pipeline?
 
-→ See also: [selectors.md](selectors.md), [roles.md](roles.md), [schema.md](schema.md), [ecosystem.md](ecosystem.md)
+→ See also: [selectors.md](selectors.md), [roles.md](roles.md), [lineage.md](lineage.md), [ecosystem.md](ecosystem.md)
 
 ---
 

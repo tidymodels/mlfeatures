@@ -1,6 +1,6 @@
 # Step Contract
 
-→ See also: [steps-catalog.md](steps-catalog.md), [schema.md](schema.md), [selectors.md](selectors.md), [extensibility.md](extensibility.md)
+→ See also: [steps-catalog.md](steps-catalog.md), [lineage.md](lineage.md), [selectors.md](selectors.md), [extensibility.md](extensibility.md)
 
 ---
 
@@ -139,7 +139,7 @@ def accepts_dtypes(self) -> AcceptedDtypes:
 
 `ANY_DTYPE` is a sentinel constant that skips dtype validation entirely for that step. It is the correct choice for steps like `step_zv` or `step_rm` where the operation is meaningful regardless of column type.
 
-This replaces the R pattern of silently coercing or producing nonsense output when a step receives the wrong type. The check happens at the schema boundary — see [schema.md](schema.md) for the full type taxonomy — so the error message names the offending column and its actual dtype, not a cryptic failure from inside numpy or polars.
+This replaces the R pattern of silently coercing or producing nonsense output when a step receives the wrong type. The check happens at the schema boundary — see [lineage.md](lineage.md) for the full type taxonomy — so the error message names the offending column and its actual dtype, not a cryptic failure from inside numpy or polars.
 
 ---
 
@@ -183,7 +183,7 @@ def produced_columns(self) -> list[str]:
     """Ordered names this step adds, with duplicates preserved."""
 ```
 
-The recipe passes this list to the single centralized name-collision check (`Schema.check_additions`) **before** the step runs, rejecting both a name that already exists in the schema and a name the step would emit more than once. Validating up front keeps the error clean and identical across backends: at transform time polars raises a backend-specific error while pandas silently keeps only one of the colliding columns, so a post-transform check cannot see a within-step duplicate. The base-class default derives the list from `output_parents()` keys; steps with a free-form naming scheme that could self-collide (`step_dummy` / `step_one_hot`) override it to preserve duplicates. Steps no longer perform their own collision checks.
+The recipe passes this list to the single centralized name-collision check (`Lineage.check_additions`) **before** the step runs, rejecting both a name that already exists in the lineage and a name the step would emit more than once. Validating up front keeps the error clean and identical across backends: at transform time polars raises a backend-specific error while pandas silently keeps only one of the colliding columns, so a post-transform check cannot see a within-step duplicate. The base-class default derives the list from `output_parents()` keys; steps with a free-form naming scheme that could self-collide (`step_dummy` / `step_one_hot`) override it to preserve duplicates. Steps no longer perform their own collision checks.
 
 ### What recording this information enables
 
@@ -191,7 +191,7 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 
 - **Feature provenance.** The lineage DAG records which input columns produced which output columns. Tracing PCA components or dummy columns back to their source is possible programmatically. This is the core problem identified in [tidymodels/recipes#1158](https://github.com/tidymodels/recipes/issues/1158).
 - **`has_source()` selector.** Users can select all columns produced by a given step or step type — e.g. `has_source(step_type=step_dummy)`. See [selectors.md](selectors.md).
-- **Naming contract enforcement.** The framework validates that generated column names are unique — both against the existing schema and within the step — before each step runs, via `produced_columns()` and `Schema.check_additions`. Steps do not self-check.
+- **Naming contract enforcement.** The framework validates that generated column names are unique — both against the existing lineage and within the step — before each step runs, via `produced_columns()` and `Lineage.check_additions`. Steps do not self-check.
 - **`keep_original_cols` applicability.** Every `ONE_TO_MANY` and `MANY_TO_MANY` step exposes `keep_original_cols` as a constructor argument defaulting to `False`, since keeping the source columns beside the derived ones is a legitimate thing to want. Steps in the other modes have no such argument, and the value is fixed: `False` for `ONE_TO_ONE` and `REMOVING`, `True` for `ADDING`, `ROW_OP`, and `UNCONSTRAINED`.
 
   The rule is enforced rather than merely documented. `KeepOriginals.for_mode(mode)` is the single table encoding it; `Step.__init__` consults it, so a step in a fixed mode never states the value itself. The base parameter defaults to `None` rather than `False` precisely so "not stated" is distinguishable from "stated as `False`": a fixed-mode step that passes *either* value against its mode raises, in both directions. The attribute is a **read-only property** over `_keep_original_cols`, so reassigning it after construction (which would silently break a step whose correctness depends on the fixed value) is an `AttributeError` at runtime and an error under both type-checkers. `StepConformanceTest` checks both halves: that the value matches the mode's policy and that only a configurable step exposes the constructor argument.
@@ -203,7 +203,7 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 - Resolves selectors against the current schema.
 - Estimates and stores statistics. By convention a step holds its fitted statistics on a single `_estimates` attribute, initialized to `None` in `__init__` and populated in `fit()`; steps with more than one piece of fitted state bundle it into one frozen dataclass (e.g. `DummyEstimates`, `PolynomialFit`). This is a convention, not a base-class slot — the stored type varies per step, so `Step` declares no `_estimates`.
 - Returns the fitted step. Setting `trained=True` is done by `recipe.fit()` after calling `step.fit()` — not by the step itself.
-- Declares `schema_in()` and `schema_out()` so the recipe can update its column-lineage DAG. See [schema.md](schema.md).
+- Declares `schema_in()` and `schema_out()` so the recipe can update its column-lineage DAG. See [lineage.md](lineage.md).
 - Must be idempotent given the same training data.
 
 ---
