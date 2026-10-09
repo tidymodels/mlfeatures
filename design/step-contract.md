@@ -95,11 +95,15 @@ A step's `__init__` stores its own arguments and then calls `super().__init__()`
 class StepNormalize(Step):
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
+    _estimates: dict[str, tuple[float, float]] | None
+
     def __init__(self, columns: Selector, *, id: str | None = None):
         self.columns = columns
         super().__init__(id, "normalize")
-        self._estimates: dict[str, tuple[float, float]] | None = None
 ```
+
+The fit-time state every step may carry (`_estimates`, `_schema_in`, `_schema_out`, `_output_parents`) is declared on `Step` and set to `None` by `super().__init__()`, so a step never assigns those placeholders itself. A step that estimates something narrows the type of `_estimates` with a class-level annotation, as above, and leaves the others alone; one that produces no columns simply never fills `_schema_out` or `_output_parents`.
 
 `super().__init__()` takes the caller's `id` (or `None`) plus the step type's short name to default it to, and keyword-only `keep_original_cols` and `output_role`. A step whose mode makes `keep_original_cols` configurable forwards its constructor argument (`super().__init__(id, "pca", keep_original_cols=keep_original_cols, output_role=role)`); every other step passes nothing, because the base class derives the fixed value from `mode` and raises if a step tries to contradict it.
 

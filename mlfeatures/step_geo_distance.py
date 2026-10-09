@@ -383,6 +383,10 @@ class StepGeoDistance(Step):
 
     mode = Mode.MANY_TO_MANY
 
+    #: Populated by ``fit()``: the latitude and longitude columns, the reference
+    #: point, and the distance settings.
+    _estimates: GeoDistanceFit | None
+
     def __init__(
         self,
         lat: str,
@@ -423,11 +427,6 @@ class StepGeoDistance(Step):
             keep_original_cols=keep_original_cols,
             output_role=role,
         )
-        # Populated by ``fit()``.
-        self._estimates: GeoDistanceFit | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Package the reference point and validate the lat/lon columns exist."""

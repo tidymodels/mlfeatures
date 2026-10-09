@@ -307,6 +307,9 @@ class StepLog(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: the resolved column names, in frame order.
+    _estimates: list[str] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -328,9 +331,6 @@ class StepLog(Step):
         self.offset = offset
         self.signed = signed
         super().__init__(id, "log")
-        # Populated by ``fit()``: the resolved column names, in frame order.
-        self._estimates: list[str] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the selection and screen it for out-of-domain values."""

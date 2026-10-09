@@ -203,10 +203,6 @@ class StepUnknown(Step):
         self.columns = columns
         self.new_level = new_level
         super().__init__(id, "unknown")
-        # Populated by ``fit()``. ``_schema_in.columns`` is the resolved
-        # selection — every selected column is recoded, so no separate list is
-        # needed.
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the columns to recode and check for level collisions."""

@@ -341,6 +341,9 @@ class StepDatetimeFeatures(Step):
 
     mode = Mode.ONE_TO_MANY
 
+    #: Populated by ``fit()``: the resolved columns and the calendar features to extract.
+    _estimates: DatetimeFeaturesFit | None
+
     def __init__(
         self,
         columns: Selector,
@@ -365,11 +368,6 @@ class StepDatetimeFeatures(Step):
             keep_original_cols=keep_original_cols,
             output_role=role,
         )
-        # Populated by ``fit()``.
-        self._estimates: DatetimeFeaturesFit | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record which columns and calendar parts to compute."""

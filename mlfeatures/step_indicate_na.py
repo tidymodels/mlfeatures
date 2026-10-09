@@ -243,6 +243,9 @@ class StepIndicateNa(Step):
 
     mode = Mode.ONE_TO_MANY
 
+    #: Populated by ``fit()``: the resolved columns and their fit-time dtypes.
+    _estimates: IndicateNaFit | None
+
     def __init__(
         self,
         columns: Selector,
@@ -258,11 +261,6 @@ class StepIndicateNa(Step):
             keep_original_cols=keep_original_cols,
             output_role=role,
         )
-        # Populated by ``fit()``.
-        self._estimates: IndicateNaFit | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record which columns to build missing-data indicators for."""

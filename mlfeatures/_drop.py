@@ -38,6 +38,9 @@ class ColumnDropStep(Step):
 
     mode = Mode.REMOVING
 
+    #: Populated by ``fit()``: the resolved names to drop.
+    _estimates: list[str] | None
+
     def __init__(
         self, columns: Selector, *, id: str | None = None, default_id: str
     ) -> None:
@@ -46,9 +49,6 @@ class ColumnDropStep(Step):
         # ``fit()`` hands it to ``_frame.select``, which resolves it at fit time.
         self.columns = columns
         super().__init__(id, default_id)
-        # Populated by ``fit()``: the resolved names to drop.
-        self._estimates: list[str] | None = None
-        self._schema_in: ColSchema | None = None
 
     @abstractmethod
     def _drop_candidates(self, selected: Frame) -> list[str]:

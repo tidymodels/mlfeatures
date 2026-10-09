@@ -195,6 +195,9 @@ class StepImputeMode(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: mode} over the imputable columns.
+    _estimates: dict[str, Any] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -203,9 +206,6 @@ class StepImputeMode(Step):
     ):
         self.columns = columns
         super().__init__(id, "impute_mode")
-        # Populated by ``fit()``: {column: mode} over the imputable columns.
-        self._estimates: dict[str, Any] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mode over the selected columns."""

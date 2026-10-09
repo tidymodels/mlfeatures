@@ -262,6 +262,9 @@ class StepRange(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: (lo, hi)} over rescalable columns.
+    _estimates: dict[str, tuple[float, float]] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -280,9 +283,6 @@ class StepRange(Step):
         self.max = max
         self.clipping = clipping
         super().__init__(id, "range")
-        # Populated by ``fit()``: {column: (lo, hi)} over rescalable columns.
-        self._estimates: dict[str, tuple[float, float]] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-column lower and upper bounds over the selected columns."""

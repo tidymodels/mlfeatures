@@ -159,6 +159,9 @@ class StepImputeMean(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: mean} over the imputable columns.
+    _estimates: dict[str, float] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -167,9 +170,6 @@ class StepImputeMean(Step):
     ):
         self.columns = columns
         super().__init__(id, "impute_mean")
-        # Populated by ``fit()``: {column: mean} over the imputable columns.
-        self._estimates: dict[str, float] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column mean over the selected columns."""

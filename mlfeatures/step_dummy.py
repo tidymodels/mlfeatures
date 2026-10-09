@@ -366,6 +366,10 @@ class StepDummy(Step):
 
     mode = Mode.ONE_TO_MANY
 
+    #: Populated by ``fit()``: the levels to encode per column, and every level
+    #: seen in training.
+    _estimates: DummyEstimates | None
+
     def __init__(
         self,
         columns: Selector,
@@ -380,10 +384,6 @@ class StepDummy(Step):
         super().__init__(
             id, "dummy", keep_original_cols=keep_original_cols, output_role=role
         )
-        self._estimates: DummyEstimates | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the sorted level list for each selected column."""

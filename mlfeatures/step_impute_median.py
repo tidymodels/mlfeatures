@@ -164,6 +164,9 @@ class StepImputeMedian(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: median} over the imputable columns.
+    _estimates: dict[str, float] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -172,9 +175,6 @@ class StepImputeMedian(Step):
     ):
         self.columns = columns
         super().__init__(id, "impute_median")
-        # Populated by ``fit()``: {column: median} over the imputable columns.
-        self._estimates: dict[str, float] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate the per-column median over the selected columns."""

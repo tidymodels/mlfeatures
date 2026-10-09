@@ -162,10 +162,6 @@ class StepMutate(Step):
                 )
         self.mutations = dict(mutations)
         super().__init__(id, "mutate", output_role=role)
-        # Populated by ``fit()``.
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def to_state(self) -> dict[str, object]:
         """Not supported: ``step_mutate`` carries user callables it needs at transform.
