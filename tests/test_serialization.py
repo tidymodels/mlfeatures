@@ -294,6 +294,41 @@ class TestMinimizeStrips:
         pt.assert_frame_equal(rec.minimize().transform(df), rec.transform(df))
 
 
+class TestFitStatePlaceholders:
+    """The base class's fit-state placeholders ride along in every step's state."""
+
+    PLACEHOLDERS = ("_estimates", "_schema_in", "_schema_out", "_output_parents")
+
+    def test_untrained_step_state_carries_every_placeholder_as_none(self) -> None:
+        state = StepNormalize(["a"]).to_state()
+        for attr in self.PLACEHOLDERS:
+            assert state[attr] is None
+
+    def test_unused_placeholders_stay_none_through_a_round_trip(self) -> None:
+        """``StepNormalize`` fills ``_schema_in`` but never ``_schema_out``."""
+        df = pd.DataFrame({"a": [1.0, 2.0, 3.0]})
+        fitted = Recipe().add(StepNormalize(["a"])).fit(df)
+        restored = FittedRecipe.from_dict(fitted.to_dict()).steps[0]
+        assert restored._schema_out is None  # pyright: ignore[reportPrivateUsage]
+        assert restored._output_parents is None  # pyright: ignore[reportPrivateUsage]
+        assert restored._schema_in is not None  # pyright: ignore[reportPrivateUsage]
+
+    def test_a_payload_written_before_the_hoisting_still_loads(self) -> None:
+        """Older payloads lack ``_schema_out`` and ``_output_parents`` on such a step.
+
+        ``from_state`` bypasses ``__init__``, so a missing key is simply absent
+        rather than ``None``. That is harmless for a step that never reads it:
+        the restored step still transforms identically.
+        """
+        df = pd.DataFrame({"a": [1.0, 2.0, 3.0]})
+        fitted = Recipe().add(StepNormalize(["a"])).fit(df)
+        payload = fitted.to_dict()
+        for key in ("_schema_out", "_output_parents"):
+            del payload["steps"][0]["state"][key]
+        restored = FittedRecipe.from_dict(payload)
+        pt.assert_frame_equal(restored.transform(df), fitted.transform(df))
+
+
 class TestBackCompatDefaults:
     """A payload missing a newer field loads without error (class default kept)."""
 
