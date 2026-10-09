@@ -83,7 +83,7 @@ class TestNameCollisions:
     """Generated indicator names are validated centrally by the recipe.
 
     ``StepDummy`` no longer checks names itself; the recipe rejects collisions
-    via ``Schema.check_additions`` before the step runs, on every backend.
+    via ``Lineage.check_additions`` before the step runs, on every backend.
     """
 
     @pytest.mark.parametrize("ctor", [pd.DataFrame, pl.DataFrame], ids=["pd", "pl"])

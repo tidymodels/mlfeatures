@@ -507,7 +507,7 @@ class StepHoliday(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the selection and validate ``holidays`` and ``rules``."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_holiday(
             selected, self.holidays, self.country, self.subdiv, self.rules

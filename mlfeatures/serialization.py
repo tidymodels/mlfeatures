@@ -23,12 +23,12 @@ both round-trip identically. YAML support needs the optional ``pyyaml`` package;
 
 Known limitations
 -----------------
-- ``Enum`` categories do not round-trip: an ``Enum`` column's ptype/schema
+- ``Enum`` categories do not round-trip: an ``Enum`` column's ptype/lineage
   dtype comes back as an empty-category ``Enum`` after a JSON round-trip. This
-  is enough for the schema/ptype checks, which only compare dtype *identity*
+  is enough for the lineage/ptype checks, which only compare dtype *identity*
   by base type, but it does mean ``ColSchema``, which already stores dtypes as
   ``str(dt)``, is a more faithful record of an ``Enum``'s categories than a
-  deserialized ``Ptype``/``Schema`` is.
+  deserialized ``Ptype``/``Lineage`` is.
 - ``Datetime`` (time-unit, time zone) and ``Duration`` (time-unit) *do*
   round-trip their parameters (see `_encode_dtype_instance` /
   `_decode_dtype_instance`) -- `StepDatetimeFeatures`'s conformance suite
@@ -42,7 +42,7 @@ Known limitations
 """
 
 # This module is the one place that deliberately reaches into the internal
-# representation of steps, selectors, and the lineage schema and juggles the
+# representation of steps, selectors, and the lineage and juggles the
 # resulting plain runtime data (``Any`` scalars, lists, dicts, ndarrays) -- that
 # is what a serializer does. Pyright strict flags every private-field access
 # (reportPrivateUsage) and every ``Any``-typed value the codec touches
@@ -149,7 +149,7 @@ def _dtype_instance(name: str) -> nw.dtypes.DType:
     """Instantiate a dtype from its base name, using default parameters.
 
     ``Enum`` needs a category list it no longer has after a by-name round-trip;
-    it falls back to an empty-category enum, which is enough for the schema/ptype
+    it falls back to an empty-category enum, which is enough for the lineage/ptype
     checks that only compare dtype *identity* by base type.
     """
     cls = _dtype_class(name)
@@ -159,7 +159,7 @@ def _dtype_instance(name: str) -> nw.dtypes.DType:
 
 
 def _encode_dtype_instance(dtype: nw.dtypes.DType) -> str | dict[str, Any]:
-    """Encode a concrete dtype instance for the ptype/schema-node codecs.
+    """Encode a concrete dtype instance for the ptype/lineage-node codecs.
 
     Unlike `_dtype_name` (used where only the base type matters, e.g. a
     selector's stored dtype), this preserves ``Datetime``'s time-unit and time
@@ -482,7 +482,7 @@ def _step_entry_points() -> Any:
 
 
 # --------------------------------------------------------------------------- #
-# Recipe-level codecs (roles / ptype / schema)
+# Recipe-level codecs (roles / ptype / lineage)
 # --------------------------------------------------------------------------- #
 
 
@@ -534,7 +534,7 @@ def _encode_node(node: Any) -> dict[str, Any]:
 
 
 def _decode_node(payload: dict[str, Any]) -> Any:
-    from mlfeatures.schema import ColumnNode
+    from mlfeatures.lineage import ColumnNode
 
     return ColumnNode(
         name=payload["name"],
@@ -548,22 +548,22 @@ def _decode_node(payload: dict[str, Any]) -> Any:
     )
 
 
-def _encode_schema(schema: Any) -> dict[str, Any]:
+def _encode_lineage(lineage: Any) -> dict[str, Any]:
     return {
-        "live": [_encode_node(node) for node in schema._live.values()],
-        "history": [_encode_node(node) for node in schema._history],
+        "live": [_encode_node(node) for node in lineage._live.values()],
+        "history": [_encode_node(node) for node in lineage._history],
     }
 
 
-def _decode_schema(payload: dict[str, Any]) -> Any:
-    from mlfeatures.schema import Schema
+def _decode_lineage(payload: dict[str, Any]) -> Any:
+    from mlfeatures.lineage import Lineage
 
-    schema = Schema()
+    lineage = Lineage()
     for node_payload in payload["live"]:
         node = _decode_node(node_payload)
-        schema._live[node.name] = node
-    schema._history = [_decode_node(n) for n in payload["history"]]
-    return schema
+        lineage._live[node.name] = node
+    lineage._history = [_decode_node(n) for n in payload["history"]]
+    return lineage
 
 
 # --------------------------------------------------------------------------- #
@@ -588,7 +588,7 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
     """Serialize a `FittedRecipe` to a diffable, JSON-safe ``dict``.
 
     Captures every step's hyperparameters and learned statistics plus the
-    recipe-level roles, training ptype, and lineage schema. The result contains
+    recipe-level roles, training ptype, and lineage. The result contains
     only plain data, so it round-trips through `from_dict` and is stable enough
     to diff in code review.
     """
@@ -599,7 +599,7 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
         "format_version": FORMAT_VERSION,
         "roles": _encode_roles(recipe.roles),
         "ptype": None if recipe.ptype is None else _encode_ptype(recipe.ptype),
-        "schema": None if recipe.schema is None else _encode_schema(recipe.schema),
+        "lineage": None if recipe.lineage is None else _encode_lineage(recipe.lineage),
         "steps": [_encode_step(step) for step in recipe.steps],
     }
     return payload
@@ -619,8 +619,8 @@ def from_dict(data: dict[str, Any]) -> FittedRecipe:
     steps = [_decode_step(p) for p in data["steps"]]
     roles = _decode_roles(data["roles"])
     ptype = None if data.get("ptype") is None else _decode_ptype(data["ptype"])
-    schema = None if data.get("schema") is None else _decode_schema(data["schema"])
-    return FittedRecipe(steps=steps, roles=roles, schema=schema, ptype=ptype)
+    lineage = None if data.get("lineage") is None else _decode_lineage(data["lineage"])
+    return FittedRecipe(steps=steps, roles=roles, lineage=lineage, ptype=ptype)
 
 
 def to_json(recipe: FittedRecipe, *, indent: int = 2) -> str:
@@ -676,14 +676,14 @@ def minimize(recipe: FittedRecipe) -> FittedRecipe:
     Delegates to each step's `Step.minimize`, which by default returns the step
     unchanged. Steps that retain training artifacts only needed at fit time
     (e.g. a future KNN imputer's neighbor matrix) override ``minimize`` to drop
-    them. The roles, ptype, and lineage schema are preserved so the minimized
-    recipe still validates new data at the boundary and reports its schema.
+    them. The roles, ptype, and lineage are preserved so the minimized
+    recipe still validates new data at the boundary and reports its lineage.
     """
     from mlfeatures.recipe import FittedRecipe
 
     return FittedRecipe(
         steps=[step.minimize() for step in recipe.steps],
         roles=recipe.roles,
-        schema=recipe.schema,
+        lineage=recipe.lineage,
         ptype=recipe.ptype,
     )

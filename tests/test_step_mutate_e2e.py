@@ -47,7 +47,7 @@ class TestEndToEnd:
     def test_added_column_attributed_to_step(self) -> None:
         df = pd.DataFrame(_data())
         fitted = Recipe(steps=[StepMutate({"z": lambda d: d["x"] * 2})]).fit(df)
-        node = fitted.schema.summary()
+        node = fitted.lineage.summary()
         # The new column carries the step id as its source in the lineage DAG.
         z_source = node.filter(pl.col("name") == "z")["source"].to_list()
         assert z_source == ["mutate"]

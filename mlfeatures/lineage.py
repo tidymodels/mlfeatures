@@ -1,14 +1,14 @@
 """The column-lineage DAG.
 
 The recipe maintains an internal **column-lineage DAG** — not a flat table —
-that is updated after each step's ``fit()`` (see ``design/schema.md``). R
+that is updated after each step's ``fit()`` (see ``design/lineage.md``). R
 ``recipes`` used a flat ``var_info`` / ``term_info`` table, which made
 provenance impossible and caused years of issues. A DAG instead records, per
 column, where it came from and how its dtype evolved, so that provenance
 queries (``has_source``, ancestry) resolve and ``recipe.summary()`` can report
-the live schema.
+the live lineage.
 
-This module defines the structure (`ColumnNode`, `Schema`) and its initial
+This module defines the structure (`ColumnNode`, `Lineage`) and its initial
 construction from a frame. The ``update()`` step-application logic, ``summary()``
 and the provenance queries land in later commits of issue #19.
 
@@ -30,12 +30,12 @@ from mlfeatures.types import DataFrame, Frame, Roles
 if TYPE_CHECKING:
     from mlfeatures.step import Step
 
-__all__ = ["ColumnNode", "Schema"]
+__all__ = ["ColumnNode", "Lineage"]
 
 
 @dataclass
 class ColumnNode:
-    """One column's lineage record. See ``design/schema.md``.
+    """One column's lineage record. See ``design/lineage.md``.
 
     A node is mutable: an in-place step (e.g. ``step_normalize``) updates
     ``dtype`` and appends to ``dtype_history`` without creating a new node, and
@@ -68,7 +68,7 @@ class ColumnNode:
 
     Examples
     --------
-    Nodes are read off a fitted recipe's `Schema` by column name:
+    Nodes are read off a fitted recipe's `Lineage` by column name:
 
     ```{python}
     import pandas as pd
@@ -76,7 +76,7 @@ class ColumnNode:
     from mlfeatures import Selectors as s
 
     df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-    node = Recipe().add(StepDummy(s.nominal_features())).fit(df).schema["color_red"]
+    node = Recipe().add(StepDummy(s.nominal_features())).fit(df).lineage["color_red"]
     node.name, node.source, node.parent_cols
     ```
     """
@@ -91,7 +91,7 @@ class ColumnNode:
     removed_by: str | None = None
 
 
-class Schema:
+class Lineage:
     """The column-lineage DAG: live columns plus archived removed columns.
 
     ``_live`` maps each current column name to its `ColumnNode`, in frame
@@ -106,7 +106,7 @@ class Schema:
 
     Examples
     --------
-    The DAG is built by the recipe; read it back from ``FittedRecipe.schema``.
+    The DAG is built by the recipe; read it back from ``FittedRecipe.lineage``.
     Here a small pipeline imputes a missing value, rescales the numerics, and
     dummy-encodes a categorical — composed step by step with ``.add()``:
 
@@ -122,15 +122,15 @@ class Schema:
             "city": ["NYC", "LA", "NYC", "SF"],
         }
     )
-    schema = (
+    lineage = (
         Recipe()
         .add(StepImputeMean(s.numeric_features()))
         .add(StepNormalize(s.numeric_features()))
         .add(StepDummy(s.nominal_features()))
         .fit(df)
-        .schema
+        .lineage
     )
-    schema.summary()
+    lineage.summary()
     ```
 
     ``age`` stayed in place through both numeric steps, so its ``source`` is
@@ -138,7 +138,7 @@ class Schema:
     that ``StepNormalize`` applied:
 
     ```{python}
-    schema["age"].source, schema["age"].dtype_history
+    lineage["age"].source, lineage["age"].dtype_history
     ```
 
     ``city`` was expanded into indicators and dropped. ``columns_from_source``
@@ -146,11 +146,11 @@ class Schema:
     through the now-removed ``city`` column:
 
     ```{python}
-    schema.columns_from_source("dummy")
+    lineage.columns_from_source("dummy")
     ```
 
     ```{python}
-    schema.ancestors("city_NYC")
+    lineage.ancestors("city_NYC")
     ```
     """
 
@@ -159,7 +159,7 @@ class Schema:
         self._history: list[ColumnNode] = []
 
     @classmethod
-    def from_frame(cls, frame: Frame, roles: Roles | None = None) -> "Schema":
+    def from_frame(cls, frame: Frame, roles: Roles | None = None) -> "Lineage":
         """Build the initial DAG: one live node per column, all ``"original"``.
 
         Each node takes its dtype from the frame, its roles from ``roles`` (an
@@ -171,25 +171,25 @@ class Schema:
         ```{python}
         import pandas as pd
         from mlfeatures import _frame
-        from mlfeatures.schema import Schema
+        from mlfeatures.lineage import Lineage
 
         frame = _frame.from_native(
             pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
         )
-        schema = Schema.from_frame(frame)
-        schema.columns
+        lineage = Lineage.from_frame(frame)
+        lineage.columns
         ```
 
         Every node starts as an ``"original"`` with no parents:
 
         ```{python}
-        schema["a"].source, schema["a"].parent_cols
+        lineage["a"].source, lineage["a"].parent_cols
         ```
         """
         roles = roles if roles is not None else Roles()
-        schema = cls()
+        lineage = cls()
         for name, dtype in _frame.dtypes(frame).items():
-            schema._live[name] = ColumnNode(
+            lineage._live[name] = ColumnNode(
                 name=name,
                 dtype=dtype,
                 roles=set(roles.of(name)),
@@ -198,7 +198,7 @@ class Schema:
                 dtype_history=[dtype],
                 sparse=False,
             )
-        return schema
+        return lineage
 
     def check_additions(self, step_id: str, produced: list[str]) -> None:
         """Validate the columns a step will *add*, before it runs.
@@ -206,7 +206,7 @@ class Schema:
         ``produced`` is the step's ``produced_columns()`` — an ordered list of
         the names it adds, preserving duplicates. This is the single centralized
         name-collision check: it rejects a produced name that already exists in
-        the live schema *and* a name the step would emit more than once. Running
+        the live lineage *and* a name the step would emit more than once. Running
         before ``step.transform()`` keeps the error clean and identical on every
         backend; left to transform time, polars raises a backend-specific error
         and pandas silently keeps only one of the colliding columns.
@@ -228,7 +228,7 @@ class Schema:
         if existing:
             raise ValueError(
                 f"step {step_id!r} produces column(s) {sorted(existing)} that "
-                "already exist in the schema; output column names must be unique"
+                "already exist in the lineage; output column names must be unique"
             )
         if duplicated:
             raise ValueError(
@@ -266,7 +266,7 @@ class Schema:
           that was present before the step. A mismatch is a step bug.
 
         ``RowOp`` and empty-selection steps never reach here (the recipe skips
-        them), so ``frame_after`` always reflects a real schema change or none.
+        them), so ``frame_after`` always reflects a real lineage change or none.
         """
         after = _frame.columns(frame_after)
         after_set = set(after)
@@ -281,7 +281,7 @@ class Schema:
         if collisions:
             raise ValueError(
                 f"step {step.id!r} produces column(s) {sorted(collisions)} that "
-                "already exist in the schema; output column names must be unique"
+                "already exist in the lineage; output column names must be unique"
             )
         if set(parents) != set(added):
             raise ValueError(
@@ -297,7 +297,7 @@ class Schema:
         if unknown_parents:
             raise ValueError(
                 f"step {step.id!r} declares parent column(s) "
-                f"{sorted(unknown_parents)} that are not in the schema"
+                f"{sorted(unknown_parents)} that are not in the lineage"
             )
 
         # 1. archive removed columns (retain for provenance)
@@ -341,7 +341,7 @@ class Schema:
         return {name: node.dtype for name, node in self._live.items()}
 
     def summary(self) -> DataFrame:
-        """The live schema as a tidy frame (see ``design/schema.md``).
+        """The live lineage as a tidy frame (see ``design/lineage.md``).
 
         Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse`` — one row
         per live column, in frame order. ``dtype`` is the taxonomy category
@@ -361,12 +361,12 @@ class Schema:
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
-        schema = (
+        lineage = (
             Recipe()
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
             .fit(df)
-            .schema
+            .lineage
         )
         ```
 
@@ -375,7 +375,7 @@ class Schema:
         ``"dummy"``):
 
         ```{python}
-        schema.summary()
+        lineage.summary()
         ```
         """
         nodes = list(self._live.values())
@@ -392,7 +392,7 @@ class Schema:
         """Live columns produced by the step with ``id == step_id``.
 
         The primitive behind the ``has_source(step_id)`` selector (#20). Pass
-        ``"original"`` for the input columns that survive to the live schema.
+        ``"original"`` for the input columns that survive to the live lineage.
 
         Examples
         --------
@@ -406,26 +406,26 @@ class Schema:
         df = pd.DataFrame(
             {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
         )
-        schema = (
+        lineage = (
             Recipe()
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
             .fit(df)
-            .schema
+            .lineage
         )
         ```
 
         Select every column a step produced — the dummy indicators:
 
         ```{python}
-        schema.columns_from_source("dummy")
+        lineage.columns_from_source("dummy")
         ```
 
         ``"original"`` picks the inputs that survive to the output (``age`` is
         still here; ``city`` was consumed by the dummy step):
 
         ```{python}
-        schema.columns_from_source("original")
+        lineage.columns_from_source("original")
         ```
         """
         return [name for name, node in self._live.items() if node.source == step_id]
@@ -443,13 +443,13 @@ class Schema:
         from mlfeatures import Selectors as s
 
         df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        schema = Recipe().add(StepDummy(s.nominal_features())).fit(df).schema
+        lineage = Recipe().add(StepDummy(s.nominal_features())).fit(df).lineage
         ```
 
         Each indicator's immediate parent is the column it was encoded from:
 
         ```{python}
-        schema.parents("color_green")
+        lineage.parents("color_green")
         ```
         """
         node = self._node(name)
@@ -486,7 +486,7 @@ class Schema:
                 "cls": [0, 0, 1, 1],
             }
         )
-        schema = (
+        lineage = (
             Recipe()
             .add(
                 StepClassDistance(
@@ -495,7 +495,7 @@ class Schema:
             )
             .add(StepPolynomial(s.col("distance_0"), degree=2))
             .fit(df)
-            .schema
+            .lineage
         )
         ```
 
@@ -503,7 +503,7 @@ class Schema:
         the original features it was built from:
 
         ```{python}
-        sorted(schema.ancestors("distance_0_1"))
+        sorted(lineage.ancestors("distance_0_1"))
         ```
         """
         result: set[str] = set()
@@ -541,4 +541,4 @@ class Schema:
         return len(self._live)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return f"Schema(columns={self.columns!r}, removed={len(self._history)})"
+        return f"Lineage(columns={self.columns!r}, removed={len(self._history)})"

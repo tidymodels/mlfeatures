@@ -90,23 +90,23 @@ fitted = recipe.fit(df)
 fitted.transform(df)
 ```
 
-### What dropping does to the schema
+### What dropping does to the lineage
 
-A fitted recipe maintains a column-lineage DAG (see `Schema`), and dropping a source column does not erase it from that DAG. The node is *archived* rather than deleted, with a record of which step removed it, so a derived column's provenance still resolves through columns that no longer exist:
+A fitted recipe maintains a column-lineage DAG (see `Lineage`), and dropping a source column does not erase it from that DAG. The node is *archived* rather than deleted, with a record of which step removed it, so a derived column's provenance still resolves through columns that no longer exist:
 
 ```{python}
 recipe = base.add(StepPca(s.numeric_features(), num_comp=2))
 fitted = recipe.fit(df)
-fitted.schema.summary()
+fitted.lineage.summary()
 ```
 
 `summary()` lists only the live columns, and `sqft` and `beds` are gone from it. Ancestry still finds them:
 
 ```{python}
-fitted.schema.ancestors("PC1")
+fitted.lineage.ancestors("PC1")
 ```
 
-What the live schema does lose is the dropped columns' **roles**. A dropped source column is no longer a feature, because it is no longer a column, so a later `s.numeric_features()` in the same recipe will not pick it up. When `keep_original_cols=True`, the sources survive with their roles intact and later selectors do see them.
+What the live lineage does lose is the dropped columns' **roles**. A dropped source column is no longer a feature, because it is no longer a column, so a later `s.numeric_features()` in the same recipe will not pick it up. When `keep_original_cols=True`, the sources survive with their roles intact and later selectors do see them.
 
 ### Name collisions
 
@@ -121,7 +121,7 @@ Steps that produce new columns take `role`, which assigns a role to those column
 ```{python}
 recipe = base.add(StepPca(s.numeric_features(), num_comp=2))
 fitted = recipe.fit(df)
-fitted.schema.summary()
+fitted.lineage.summary()
 ```
 
 Pass something else when the new columns are not model input. This replaces the default rather than adding to it, so the components below are *not* features and a later `s.numeric_features()` will skip them:
@@ -129,7 +129,7 @@ Pass something else when the new columns are not model input. This replaces the 
 ```{python}
 recipe = base.add(StepPca(s.numeric_features(), num_comp=2, role="group"))
 fitted = recipe.fit(df)
-fitted.schema.summary()
+fitted.lineage.summary()
 ```
 
 Two related recipe-level APIs are worth knowing about. `Recipe.set_roles` assigns roles to columns that already exist in the input data, which is the other half of the same picture: `role` is for columns a step creates, `set_roles` for columns that arrived with the data. `Recipe.update_role_requirements` controls whether a role's columns must be present when `FittedRecipe.transform` is called on new data, which is where a custom role usually needs a decision: an identifier column you carry through the pipeline is required at transform time, an auxiliary column used only during fitting is not.
@@ -140,7 +140,7 @@ Every step takes `id`, a short string naming that step within the recipe. It def
 
 The id exists because a step needs a name that does not change when you edit the recipe around it. Positions shift the moment you insert a step; the id does not, so everything that refers to a step refers to it by id:
 
-- **Column provenance.** Each column the DAG knows about records the id of the step that produced it, which is the `source` column in `Schema.summary()` above (`pca`, not "step 1"). `Schema.columns_from_source` looks columns up by that id.
+- **Column provenance.** Each column the DAG knows about records the id of the step that produced it, which is the `source` column in `Lineage.summary()` above (`pca`, not "step 1"). `Lineage.columns_from_source` looks columns up by that id.
 - **Selectors.** `Selectors.has_source` and `Selectors.has_ancestor` select columns by which step produced them, letting a later step operate on exactly one earlier step's output.
 - **Errors.** When a step fails, the raised `StepError` names the id, so a failure deep in a long pipeline says which step broke.
 

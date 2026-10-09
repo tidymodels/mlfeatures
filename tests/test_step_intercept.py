@@ -111,7 +111,7 @@ class TestNameClash:
     """``add_intercept`` itself does not guard against a clash.
 
     Name-collision rejection is centralized in the recipe
-    (``Schema.check_additions``); see the recipe-level test in
+    (``Lineage.check_additions``); see the recipe-level test in
     ``test_step_intercept_e2e.py``. The bare helper just overwrites.
     """
 

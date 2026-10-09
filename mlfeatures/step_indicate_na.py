@@ -267,7 +267,7 @@ class StepIndicateNa(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record which columns to build missing-data indicators for."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_indicate_na(selected)
         dtypes_in = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

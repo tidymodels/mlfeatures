@@ -1,6 +1,6 @@
 """Round-trip coverage for the dtype taxonomy (issue #16).
 
-The taxonomy in ``design/schema.md`` (numeric/float/int, bool, str, categorical
+The taxonomy in ``design/lineage.md`` (numeric/float/int, bool, str, categorical
 ordered/unordered, date, datetime, duration, list) is realized as **narwhals
 dtype classes** rather than a custom enum — see ``mlfeatures/types.py`` and the
 predicates in ``mlfeatures/_frame.py``. This module proves narwhals round-trips every

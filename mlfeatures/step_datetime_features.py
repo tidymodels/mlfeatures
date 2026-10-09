@@ -374,7 +374,7 @@ class StepDatetimeFeatures(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record which columns and calendar parts to compute."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_datetime_features(
             selected, self.features, self.categorical

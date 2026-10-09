@@ -208,17 +208,17 @@ reference:
       - FittedRecipe.transform
       - FittedRecipe.summary
 
-  - title: Schema
+  - title: Lineage
     desc: >-
       The column-lineage DAG a fitted recipe maintains: per-column provenance
       and dtype history, plus the queries that back has_source.
     contents:
-      - name: Schema
+      - name: Lineage
         members: false
-      - Schema.summary
-      - Schema.columns_from_source
-      - Schema.parents
-      - Schema.ancestors
+      - Lineage.summary
+      - Lineage.columns_from_source
+      - Lineage.parents
+      - Lineage.ancestors
       - name: ColumnNode
         members: false
 

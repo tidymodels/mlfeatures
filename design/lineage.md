@@ -1,4 +1,4 @@
-# Schema Tracking
+# Column Lineage
 
 → See also: [roles.md](roles.md), [selectors.md](selectors.md), [step-contract.md](step-contract.md)
 
@@ -63,11 +63,11 @@ Each step declares which dtypes it `accepts_dtypes()` — rejection happens at t
 
 ## `recipe.summary()`
 
-Returns the current schema as a tidy `DataFrame` with columns: `name`, `dtype`, `roles`, `source`, `sparse`. Before fit, shows the initial schema. After fit, shows the post-all-steps schema.
+Returns the current lineage as a tidy `DataFrame` with columns: `name`, `dtype`, `roles`, `source`, `sparse`. Before fit, shows the initial lineage. After fit, shows the post-all-steps lineage.
 
 ---
 
-## Schema at pre- and post-fit
+## Lineage at pre- and post-fit
 
 - **Pre-fit:** selectors are shown as unresolved expressions.
 - **Post-fit:** selectors show resolved column names; the DAG is fully populated.

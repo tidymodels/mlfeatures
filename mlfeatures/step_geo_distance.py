@@ -432,7 +432,7 @@ class StepGeoDistance(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Package the reference point and validate the lat/lon columns exist."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_geo_distance(
             selected,

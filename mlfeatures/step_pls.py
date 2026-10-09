@@ -395,7 +395,7 @@ class StepPls(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the component basis from the selected columns and target."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         target_series = training_data[self.target]
         self._estimates = fit_pls(selected, target_series, self.num_comp)

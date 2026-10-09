@@ -335,7 +335,7 @@ class StepLog(Step):
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Resolve the selection and screen it for out-of-domain values."""
         selected = _frame.select(
-            training_data, self.columns, info.roles, info.schema, info.producing_steps
+            training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
         self._estimates = fit_log(selected, offset=self.offset, signed=self.signed)
         dtypes = {name: str(dt) for name, dt in _frame.dtypes(selected).items()}

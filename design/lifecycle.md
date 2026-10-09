@@ -1,6 +1,6 @@
 # Lifecycle API
 
-→ See also: [roles.md](roles.md), [selectors.md](selectors.md), [schema.md](schema.md), [serialization.md](serialization.md)
+→ See also: [roles.md](roles.md), [selectors.md](selectors.md), [lineage.md](lineage.md), [serialization.md](serialization.md)
 
 ---
 
@@ -76,7 +76,7 @@ recipe.update_role_requirements(starts_with("id_"), transform_required=False)
 
 Selector expressions are accepted wherever a column name is — see [selectors.md](selectors.md).
 
-Unlike R's `update_role_requirements()`, this applies to **any** column in the schema — including columns produced by earlier steps — since requirements are tracked in the column-lineage DAG. See [schema.md](schema.md).
+Unlike R's `update_role_requirements()`, this applies to **any** column in the lineage — including columns produced by earlier steps — since requirements are tracked in the column-lineage DAG. See [lineage.md](lineage.md).
 
 ### What is checked
 
@@ -142,16 +142,16 @@ def fit(self, data):
 
     for step in self.steps:
         # resolve selectors against the current schema
-        resolved_cols = step.selector.resolve(self._schema)
+        resolved_cols = step.selector.resolve(self._lineage)
 
         # check that selected columns match the step's accepted dtypes
         check_accepted_dtypes(step, current_data, resolved_cols)
 
         # fit the step on the current data
-        fitted_step = step.fit(current_data, info=self._schema)
+        fitted_step = step.fit(current_data, info=self._lineage)
 
         # update the lineage DAG with this step's schema_out()
-        self._schema.update(fitted_step.schema_out())
+        self._lineage.update(fitted_step.schema_out())
 
         # for non-RowOp steps: transform current data to feed the next step
         if not isinstance(step, RowOp):
@@ -159,7 +159,7 @@ def fit(self, data):
 
         fitted_steps.append(fitted_step)
 
-    return FittedRecipe(steps=fitted_steps, schema=self._schema, ptype=ptype)
+    return FittedRecipe(steps=fitted_steps, lineage=self._lineage, ptype=ptype)
 ```
 
 Key points:
@@ -186,7 +186,7 @@ def transform(self, data, selector=None):
 
     # 3. optionally subset output columns by selector
     if selector is not None:
-        output_cols = selector.resolve(self._schema)
+        output_cols = selector.resolve(self._lineage)
         current_data = current_data.select(output_cols)
 
     return current_data

@@ -131,8 +131,8 @@ class TestProvenanceIsUnambiguous:
         )
         fitted = recipe.fit(df)
 
-        first = fitted.schema.columns_from_source("dummy")
-        second = fitted.schema.columns_from_source("dummy_2")
+        first = fitted.lineage.columns_from_source("dummy")
+        second = fitted.lineage.columns_from_source("dummy_2")
         assert first and second
         assert not set(first) & set(second)
         assert all(name.startswith("g_") for name in first)

@@ -1,6 +1,6 @@
 # serializer version: 1
 # name: test_check_additions_rejects_collision_with_existing
-  "step 'step' produces column(s) ['b'] that already exist in the schema; output column names must be unique"
+  "step 'step' produces column(s) ['b'] that already exist in the lineage; output column names must be unique"
 # ---
 # name: test_check_additions_rejects_within_step_duplicate
   "step 'step' produces duplicate column name(s) ['x']; output column names must be unique"
@@ -9,11 +9,11 @@
   'summary() needs prototype data; construct the recipe with Recipe(data=...), or fit it and call FittedRecipe.summary()'
 # ---
 # name: test_update_rejects_name_collision
-  "step 'reduce' produces column(s) ['h'] that already exist in the schema; output column names must be unique"
+  "step 'reduce' produces column(s) ['h'] that already exist in the lineage; output column names must be unique"
 # ---
 # name: test_update_rejects_undeclared_produced_column
   "step 'reduce': declared produced columns ['pc1'] do not match the columns it added to the frame ['pc1', 'pc2']"
 # ---
 # name: test_update_rejects_unknown_parent
-  "step 'reduce' declares parent column(s) ['ghost'] that are not in the schema"
+  "step 'reduce' declares parent column(s) ['ghost'] that are not in the lineage"
 # ---

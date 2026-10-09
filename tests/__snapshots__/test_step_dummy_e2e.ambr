@@ -1,9 +1,9 @@
 # serializer version: 1
 # name: TestNameCollisions.test_generated_name_collides_with_existing_column_raises[pd]
-  "step 'dummy' produces column(s) ['color_red'] that already exist in the schema; output column names must be unique"
+  "step 'dummy' produces column(s) ['color_red'] that already exist in the lineage; output column names must be unique"
 # ---
 # name: TestNameCollisions.test_generated_name_collides_with_existing_column_raises[pl]
-  "step 'dummy' produces column(s) ['color_red'] that already exist in the schema; output column names must be unique"
+  "step 'dummy' produces column(s) ['color_red'] that already exist in the lineage; output column names must be unique"
 # ---
 # name: TestNameCollisions.test_two_generated_columns_with_same_name_raises[pd]
   "step 'dummy' produces duplicate column name(s) ['a_b_c']; output column names must be unique"

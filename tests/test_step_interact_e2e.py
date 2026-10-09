@@ -145,7 +145,7 @@ class TestNameCollisions:
         # With sep="_x_", the pairs ("a_x", "b") and ("a", "x_b") both name
         # their product "a_x_x_b". `produced_columns()` must preserve this
         # duplicate (rather than silently losing it the way a dict keyed by
-        # name would) so `Schema.check_additions` rejects it up front.
+        # name would) so `Lineage.check_additions` rejects it up front.
         data = {"a_x": [1.0, 2.0], "b": [3.0, 4.0], "a": [5.0, 6.0], "x_b": [7.0, 8.0]}
         df = ctor(data)
         recipe = Recipe(steps=[StepInteract(["a_x", "b", "a", "x_b"])])

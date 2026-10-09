@@ -1,6 +1,6 @@
 # Roles
 
-→ See also: [selectors.md](selectors.md), [schema.md](schema.md)
+→ See also: [selectors.md](selectors.md), [lineage.md](lineage.md)
 
 ---
 
@@ -78,7 +78,7 @@ rec = (
 
 In R `recipes`, role management is technically applied to the original data before any steps run, regardless of where it appears in the code. This caused persistent confusion — users expected role changes to take effect at the point they wrote them, and were surprised when they didn't [#437, #778]. In `mlfeatures`, the order is respected: a role change takes effect from that point in the pipeline forward, affecting which columns subsequent selectors resolve to.
 
-Role management also operates on **any** column in the schema — including columns produced by earlier steps — since the lineage DAG is updated after each operation. See [schema.md](schema.md).
+Role management also operates on **any** column in the schema — including columns produced by earlier steps — since the lineage DAG is updated after each operation. See [lineage.md](lineage.md).
 
 ---
 

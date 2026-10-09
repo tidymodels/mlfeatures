@@ -1,6 +1,6 @@
 # Selectors
 
-→ See also: [roles.md](roles.md), [schema.md](schema.md), [step-contract.md](step-contract.md)
+→ See also: [roles.md](roles.md), [lineage.md](lineage.md), [step-contract.md](step-contract.md)
 
 ---
 
@@ -70,14 +70,14 @@ rec = (
 )
 ```
 
-This was impossible in R `recipes` because provenance was not tracked [tidymodels/recipes#571]. It falls out naturally from the mode-declaration design in [step-contract.md](step-contract.md). The provenance selectors resolve against the lineage DAG at fit time — see [schema.md](schema.md).
+This was impossible in R `recipes` because provenance was not tracked [tidymodels/recipes#571]. It falls out naturally from the mode-declaration design in [step-contract.md](step-contract.md). The provenance selectors resolve against the lineage DAG at fit time — see [lineage.md](lineage.md).
 
 ### Direct vs. ancestral provenance — `has_source` vs `has_ancestor`
 
 The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. a dummy column that was subsequently passed through `StepNormalize`. Both are useful, and mlfeatures exposes them as **two separate selectors** (the decision for issue #20's "Q3"):
 
-- **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Schema.columns_from_source`.
-- **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Schema.ancestors`.
+- **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Lineage.columns_from_source`.
+- **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Lineage.ancestors`.
 
 Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
 
@@ -99,7 +99,7 @@ s.date()
 s.datetime()
 ```
 
-Names follow Python and polars conventions, not R. The dtype check is an internal primitive (see `mlfeatures._frame`) and is not part of the public surface. See [schema.md](schema.md) for the full type taxonomy.
+Names follow Python and polars conventions, not R. The dtype check is an internal primitive (see `mlfeatures._frame`) and is not part of the public surface. See [lineage.md](lineage.md) for the full type taxonomy.
 
 ---
 
@@ -138,7 +138,7 @@ Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set opera
 
 ## Evaluation timing
 
-Selectors are resolved against the **post-step-N-1** schema at fit time, so a step that adds or removes columns affects what later selectors see. The recipe maintains a column-lineage DAG (see [schema.md](schema.md)) that selectors resolve against.
+Selectors are resolved against the **post-step-N-1** schema at fit time, so a step that adds or removes columns affects what later selectors see. The recipe maintains a column-lineage DAG (see [lineage.md](lineage.md)) that selectors resolve against.
 
 At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolved). After fit, it shows the **resolved column names**. See [inspection.md](inspection.md).
 
