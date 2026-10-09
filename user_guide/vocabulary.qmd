@@ -55,7 +55,8 @@ A few words mean something different here than you might expect, so they are wor
 | trained | A recipe whose steps hold fitted state, ready to apply | prepped |
 | `fit()` | Estimate every step's state from training data | `prep()` |
 | `transform()` | Apply the fitted steps to data | `bake()` |
-| ptype | A zero-row snapshot of the training data's columns, dtypes, and roles | (no equivalent) |
+| `Schema` | A zero-row snapshot of the training data's columns, dtypes, and roles, used to validate data at `fit()` and `transform()` | (no equivalent) |
+| `Lineage` | The record of where each column came from and how its dtype and roles changed across steps | `var_info` / `term_info` |
 
 Note the two lifecycle names in particular. mlfeatures deliberately does not use R `recipes`' cooking analogy, so a recipe is never "prepped" or "baked": it is untrained or trained, and you `fit()` then `transform()` it.
 

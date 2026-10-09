@@ -40,9 +40,9 @@ X_new   = trained.transform(df_new, s.features())  # selector at transform time
 
 ---
 
-## Input validation via ptype snapshot
+## Input validation via schema snapshot
 
-At `fit()` time a snapshot of sufficient schema information is captured from the training data and stored on the resulting `FittedRecipe` (as `FittedRecipe.ptype`):
+At `fit()` time a snapshot of the training columns is captured from the training data and stored on the resulting `FittedRecipe` (as `FittedRecipe.schema`):
 
 - Column names
 - Column dtypes
@@ -81,8 +81,8 @@ Unlike R's `update_role_requirements()`, this applies to **any** column in the l
 ### What is checked
 
 - All required columns are present (hard error if missing).
-- Column dtypes match the ptype snapshot (hard error on mismatch).
-- Extra columns beyond those in the ptype are silently ignored.
+- Column dtypes match the schema snapshot (hard error on mismatch).
+- Extra columns beyond those in the schema are silently ignored.
 
 This catches the most common failure modes — passing the wrong dataframe, a column silently changing type between training and serving — at the boundary before any step runs.
 
@@ -107,7 +107,7 @@ A significant design goal is that step authors should only need to implement the
 
 | Concern | R `recipes` | `mlfeatures` |
 | --------------------------------- | ------------------------------------ | ------------------------------- |
-| Column presence at transform time | Each step checked, or silently broke | Ptype check before any step runs |
+| Column presence at transform time | Each step checked, or silently broke | Schema check before any step runs |
 | Dtype validation | Each step did its own or skipped it | `accepts_dtypes()` checked by framework before `fit()` |
 | Selector resolution | Each step called tidyselect internals | Framework resolves before calling `step.fit()` |
 | Skip on new data (row ops) | `skip=TRUE` convention, routinely missed | Structural — `RowOp` subclass, framework enforces |
@@ -129,12 +129,12 @@ A rough sketch of what `fit()` and `transform()` do internally. This is not fina
 
 ```python
 def fit(self, data):
-    # 1. snapshot the training schema into a ptype, then validate the training
+    # 1. snapshot the training data into a schema, then validate the training
     #    frame against it — all columns required at fit time. The snapshot is
     #    captured here (not at construction), so role-defaulting has run and the
     #    per-role transform requirements are known.
-    ptype = Ptype.from_frame(data, roles, overrides)
-    ptype.check(data, context="fit")
+    schema = Schema.from_frame(data, roles, overrides)
+    schema.check(data, context="fit")
 
     # 2. iterate over steps in order
     current_data = data
@@ -159,7 +159,7 @@ def fit(self, data):
 
         fitted_steps.append(fitted_step)
 
-    return FittedRecipe(steps=fitted_steps, lineage=self._lineage, ptype=ptype)
+    return FittedRecipe(steps=fitted_steps, lineage=self._lineage, schema=schema)
 ```
 
 Key points:
@@ -171,10 +171,10 @@ Key points:
 
 ```python
 def transform(self, data, selector=None):
-    # 1. validate input against the ptype captured at fit() — only columns
+    # 1. validate input against the schema captured at fit() — only columns
     #    flagged required at transform time (features always; targets never;
     #    others per role default / update_role_requirements) must be present.
-    self.ptype.check(data, context="transform")
+    self.schema.check(data, context="transform")
 
     # 2. apply each step in order, skipping RowOps
     current_data = data

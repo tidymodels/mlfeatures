@@ -269,9 +269,9 @@ reference:
         members: false
       - KeepOriginals.for_mode
       - KeepOriginals.fixed_value
-      - name: Ptype
+      - name: Schema
         members: false
-      - Ptype.check
+      - Schema.check
       - DataFrame
       - Frame
       - ANY_DTYPE
