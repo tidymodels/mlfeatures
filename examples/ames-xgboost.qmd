@@ -129,5 +129,5 @@ print(f"rmse: {rmse:.4f}   rsq: {rsq:.3f}")
 print("\n--- transformed training head (mlfeatures fit/transform, no pipeline) ---")
 print(fitted.transform(ames_train).head())
 print("\n--- lineage: columns the one-hot step produced ---")
-print(fitted.schema.columns_from_source("one_hot")[:8])
+print(fitted.lineage.columns_from_source("one_hot")[:8])
 ```

@@ -548,7 +548,7 @@ print(rmse)                 # ran: 0.0771 (R test: 0.0730)""",
                 """fitted = xgboost_recipe.fit(ames_train)
 fitted.transform(ames_train).head()
 
-fitted.schema.columns_from_source("one_hot")[:8]""",
+fitted.lineage.columns_from_source("one_hot")[:8]""",
             ),
         ],
     ),
