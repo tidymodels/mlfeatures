@@ -249,6 +249,9 @@ class StepInteract(Step):
 
     mode = Mode.MANY_TO_MANY
 
+    #: Populated by ``fit()``: the resolved columns and the column pairs to multiply.
+    _estimates: InteractFit | None
+
     def __init__(
         self,
         columns: Selector,
@@ -263,11 +266,6 @@ class StepInteract(Step):
         super().__init__(
             id, "interact", keep_original_cols=keep_original_cols, output_role=role
         )
-        # Populated by ``fit()``.
-        self._estimates: InteractFit | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the pairwise interactions among the selected columns."""

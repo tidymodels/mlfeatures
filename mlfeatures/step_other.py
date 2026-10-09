@@ -269,6 +269,9 @@ class StepOther(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: kept levels} over the selection.
+    _estimates: dict[str, list[str]] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -300,9 +303,6 @@ class StepOther(Step):
         self.min_count = min_count
         self.other_level = other_level
         super().__init__(id, "other")
-        # Populated by ``fit()``: {column: kept levels} over the selection.
-        self._estimates: dict[str, list[str]] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the levels frequent enough to keep in each selected column."""

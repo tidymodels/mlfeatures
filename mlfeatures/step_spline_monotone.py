@@ -457,6 +457,9 @@ class StepSplineMonotone(Step):
 
     mode = Mode.ONE_TO_MANY
 
+    #: Populated by ``fit()``: per-column fitted knots and basis settings.
+    _estimates: dict[str, SplineMonotoneFit] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -480,11 +483,6 @@ class StepSplineMonotone(Step):
             keep_original_cols=keep_original_cols,
             output_role=role,
         )
-        # Populated by ``fit()``: per-column fitted knots + schemas.
-        self._estimates: dict[str, SplineMonotoneFit] | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the monotone-spline knot placement for each selected column."""

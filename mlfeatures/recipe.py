@@ -172,6 +172,20 @@ class Recipe:
     and ``case_weights`` keyword arguments.
     """
 
+    #: The steps, in the order they run.
+    steps: list[Step]
+    #: The optional prototype frame backs column-existence checks during role
+    #: assignment and the pre-fit ``summary()``. It is never mutated, so
+    #: clones share the reference. The lineage DAG is derived from it on
+    #: demand rather than stored — see ``summary()``.
+    _prototype_frame: Frame | None
+    #: The roles declared on the recipe.
+    roles: Roles
+    #: Pending transform-time requirement overrides, applied at ``fit()``.
+    #: Each entry is a (target, transform_required) pair where target is a
+    #: role name or a selector resolved against the training frame.
+    _role_req_overrides: list[tuple[str | FeaturesSelector, bool]]
+
     def __init__(
         self,
         steps: list[Step] | None = None,
@@ -181,21 +195,10 @@ class Recipe:
         features: str | list[str] | None = None,
         case_weights: str | list[str] | None = None,
     ):
-        self.steps: list[Step] = (
-            _resolve_step_ids([], tuple(steps)) if steps is not None else []
-        )
-        # The optional prototype frame backs column-existence checks during role
-        # assignment and the pre-fit ``summary()``. It is never mutated, so
-        # clones share the reference. The lineage DAG is derived from it on
-        # demand rather than stored — see ``summary()``.
-        self._prototype_frame: Frame | None = (
-            _frame.from_native(data) if data is not None else None
-        )
+        self.steps = _resolve_step_ids([], tuple(steps)) if steps is not None else []
+        self._prototype_frame = _frame.from_native(data) if data is not None else None
         self.roles = Roles()
-        #: Pending transform-time requirement overrides, applied at ``fit()``.
-        #: Each entry is a (target, transform_required) pair where target is a
-        #: role name or a selector resolved against the training frame.
-        self._role_req_overrides: list[tuple[str | FeaturesSelector, bool]] = []
+        self._role_req_overrides = []
         _apply_role_assignments(
             self.roles,
             {"target": target, "feature": features, "case_weights": case_weights},

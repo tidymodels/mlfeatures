@@ -59,11 +59,12 @@ class StepDemoMaxAbs(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: maximum absolute value}.
+    _estimates: dict[str, float] | None
+
     def __init__(self, columns: Selector, *, id: str | None = None) -> None:
         self.columns = columns
         super().__init__(id, "demo_max_abs")
-        self._estimates: dict[str, float] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> Self:
         """Estimate each selected column's maximum absolute value.

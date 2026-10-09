@@ -280,6 +280,9 @@ class StepPca(Step):
 
     mode = Mode.MANY_TO_MANY
 
+    #: Populated by ``fit()``: the input column order, centering mean, and loadings.
+    _estimates: PcaFit | None
+
     def __init__(
         self,
         columns: Selector,
@@ -296,11 +299,6 @@ class StepPca(Step):
         super().__init__(
             id, "pca", keep_original_cols=keep_original_cols, output_role=role
         )
-        # Populated by ``fit()``.
-        self._estimates: PcaFit | None = None
-        self._schema_in: ColSchema | None = None
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn the component basis from the selected columns on training data."""

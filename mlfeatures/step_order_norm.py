@@ -289,6 +289,9 @@ class StepOrderNorm(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: OrderNormFit} over normalizable columns.
+    _estimates: dict[str, OrderNormFit] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -297,9 +300,6 @@ class StepOrderNorm(Step):
     ):
         self.columns = columns
         super().__init__(id, "order_norm")
-        # Populated by ``fit()``: {column: OrderNormFit} over normalizable columns.
-        self._estimates: dict[str, OrderNormFit] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Learn each column's rank-to-normal-quantile lookup table."""

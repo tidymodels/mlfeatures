@@ -147,9 +147,6 @@ class StepIntercept(Step):
         self.value = value
         self.name = name
         super().__init__(id, "intercept", output_role=role)
-        # Populated by ``fit()``.
-        self._schema_out: ColSchema | None = None
-        self._output_parents: dict[str, list[str]] | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the produced column's schema. Estimates nothing."""

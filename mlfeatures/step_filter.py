@@ -126,6 +126,10 @@ class StepFilter(RowOp):
     ```
     """
 
+    #: Populated by ``fit()``. A filter changes no columns, so ``schema_in``
+    #: and ``schema_out`` are the same frame schema.
+    _schema: ColSchema | None
+
     def __init__(
         self,
         predicate: Predicate,
@@ -138,9 +142,7 @@ class StepFilter(RowOp):
             )
         self.predicate = predicate
         super().__init__(id, "filter")
-        # Populated by ``fit()``. A filter changes no columns, so ``schema_in``
-        # and ``schema_out`` are the same frame schema.
-        self._schema: ColSchema | None = None
+        self._schema = None
 
     def to_state(self) -> dict[str, object]:
         """Serialize, omitting the row predicate.

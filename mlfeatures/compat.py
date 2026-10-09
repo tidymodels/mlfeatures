@@ -114,6 +114,16 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     ```
     """
 
+    #: The untrained recipe, stored under the constructor argument's name as
+    #: sklearn's ``get_params`` / ``clone`` contract requires.
+    recipe: Recipe
+    #: The trained recipe; set by ``fit()``.
+    fitted_: FittedRecipe
+    #: Column names seen by ``fit()``, following sklearn's ``feature_names_in_``.
+    feature_names_in_: list[str]
+    #: Column names the fitted recipe produces; cached by ``fit()``.
+    feature_names_out_: list[str]
+
     def __init__(self, recipe: Recipe):
         # Stored unchanged under the same name as the constructor arg: required by
         # sklearn's get_params / clone contract.
@@ -187,7 +197,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X: DataFrame, y: Any = None) -> "RecipeTransformer":
         """Fit the wrapped recipe on ``X`` (with ``y`` re-joined as the target)."""
         data = self._assemble(X, y)
-        self.fitted_: FittedRecipe = self.recipe.fit(data)
+        self.fitted_ = self.recipe.fit(data)
         self._check_no_target_steps()
         self.feature_names_in_ = list(_frame.columns(_frame.from_native(X)))
         # Output column names are fixed at fit time (the transform is deterministic),

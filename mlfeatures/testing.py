@@ -428,6 +428,20 @@ class StepConformanceTest:
         assert getattr(step, attr) is None
         assert getattr(fit_isolated(step, self._frame()), attr) is not None
 
+    def test_fit_state_is_unset_before_fit(self) -> None:
+        """A fresh step carries the base class's fit-state placeholders, all ``None``.
+
+        ``Step.__init__`` declares and initializes ``_estimates``, ``_schema_in``,
+        ``_schema_out``, and ``_output_parents``, so a step never assigns those
+        placeholders itself. A step that never calls ``super().__init__()``, or
+        one that overwrites a placeholder with a non-``None`` default, fails here
+        rather than surfacing as stale state mid-fit.
+        """
+        step = self.make_step()
+        for attr in ("_estimates", "_schema_in", "_schema_out", "_output_parents"):
+            assert hasattr(step, attr), f"a fresh step is missing {attr!r}"
+            assert getattr(step, attr) is None, f"{attr!r} must be None before fit()"
+
     def test_output_parents_matches_added_columns(self) -> None:
         """output_parents() declares exactly the added columns, each with valid parents."""
         fitted, train = self._fitted()

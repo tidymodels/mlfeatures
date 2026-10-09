@@ -189,6 +189,9 @@ class StepNormalize(Step):
 
     mode = Mode.ONE_TO_ONE
 
+    #: Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
+    _estimates: dict[str, tuple[float, float]] | None
+
     def __init__(
         self,
         columns: Selector,
@@ -197,9 +200,6 @@ class StepNormalize(Step):
     ):
         self.columns = columns
         super().__init__(id, "normalize")
-        # Populated by ``fit()``: {column: (mean, std)} over normalizable columns.
-        self._estimates: dict[str, tuple[float, float]] | None = None
-        self._schema_in: ColSchema | None = None
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Estimate per-column mean and std over the selected columns."""

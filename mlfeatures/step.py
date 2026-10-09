@@ -173,6 +173,19 @@ class Step(ABC):
     #: convention — mirroring how `RowOp` makes the transform-time skip
     #: structural. Defaults to ``False``.
     _empty_selection: bool = False
+    #: What ``fit()`` estimated from the training data, or ``None`` before
+    #: fitting (and for steps that estimate nothing). Each step narrows this to
+    #: its own payload type.
+    _estimates: Any
+    #: Schema of the columns the step consumed, captured by ``fit()``; ``None``
+    #: before fitting and for steps that consume no columns.
+    _schema_in: ColSchema | None
+    #: Schema of the columns the step produced, captured by ``fit()``; ``None``
+    #: before fitting and for steps that produce none.
+    _schema_out: ColSchema | None
+    #: Map from each column the step adds to its parent input columns, captured
+    #: by ``fit()``; ``None`` before fitting and for steps that add no columns.
+    _output_parents: dict[str, list[str]] | None
 
     def __init__(
         self,
@@ -217,6 +230,10 @@ class Step(ABC):
         self.trained = False
         self._keep_original_cols = self._resolve_keep_original_cols(keep_original_cols)
         self.output_role = output_role
+        self._estimates = None
+        self._schema_in = None
+        self._schema_out = None
+        self._output_parents = None
 
     def _resolve_keep_original_cols(self, requested: bool | None) -> bool:
         """The ``keep_original_cols`` this step's `Mode` allows it to have."""

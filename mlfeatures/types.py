@@ -111,6 +111,11 @@ class ColSchema:
     ```
     """
 
+    #: Column names, in order.
+    columns: list[str]
+    #: Dtype name of each column, keyed by column name.
+    dtypes: dict[str, str]
+
     def __init__(
         self,
         columns: list[str] | None = None,
@@ -153,6 +158,18 @@ class SchemaInfo:
     ```
     """
 
+    #: Current column names.
+    columns: list[str]
+    #: Dtype name of each column, keyed by column name.
+    dtypes: dict[str, str]
+    #: The live roles of the columns.
+    roles: Roles
+    #: The live column-lineage DAG, set by the recipe during fit (else None).
+    lineage: "Lineage | None"
+    #: Map of step id → fitted step, set by the recipe during fit (else None).
+    #: Lets ``has_source(step_type=...)`` map ids back to step instances.
+    producing_steps: "dict[str, Step] | None"
+
     def __init__(
         self,
         columns: list[str] | None = None,
@@ -163,12 +180,9 @@ class SchemaInfo:
     ):
         self.columns = list(columns) if columns is not None else []
         self.dtypes = dict(dtypes) if dtypes is not None else {}
-        self.roles: Roles = roles if roles is not None else Roles()
-        #: The live column-lineage DAG, set by the recipe during fit (else None).
-        self.lineage: "Lineage | None" = lineage
-        #: Map of step id → fitted step, set by the recipe during fit (else None).
-        #: Lets ``has_source(step_type=...)`` map ids back to step instances.
-        self.producing_steps: "dict[str, Step] | None" = producing_steps
+        self.roles = roles if roles is not None else Roles()
+        self.lineage = lineage
+        self.producing_steps = producing_steps
 
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":
@@ -211,8 +225,12 @@ class Roles:
     #: Role pairs that may not co-occur on a single column.
     _INCOMPATIBLE: tuple[frozenset[str], ...] = (frozenset({"target", "feature"}),)
 
+    #: The roles held by each column, keyed by column name. A column with no
+    #: roles has no entry.
+    _roles: dict[str, set[str]]
+
     def __init__(self, mapping: dict[str, set[str]] | None = None):
-        self._roles: dict[str, set[str]] = {}
+        self._roles = {}
         if mapping is not None:
             for column, roles in mapping.items():
                 for role in roles:
