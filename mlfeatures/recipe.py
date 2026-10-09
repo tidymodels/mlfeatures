@@ -3,7 +3,7 @@
 A minimal, vertical-slice implementation of the ``specify → fit → transform``
 lifecycle described in ``design/lifecycle.md``. It exercises the step contract
 end to end and maintains the column-lineage DAG (``design/lineage.md``) across
-``fit()``. At ``fit()`` it snapshots the training schema into a ``Ptype`` and
+``fit()``. At ``fit()`` it snapshots the training data into a ``Schema`` and
 validates the incoming frame against it; the snapshot rides along on the
 ``FittedRecipe`` so ``transform()`` can re-check new data at the boundary before
 any step runs (see ``design/lifecycle.md``).
@@ -22,9 +22,9 @@ import warnings
 
 from mlfeatures import _frame
 from mlfeatures.lineage import Lineage
-from mlfeatures.ptype import (
+from mlfeatures.schema import (
     _NON_CONFIGURABLE_ROLES,  # pyright: ignore[reportPrivateUsage]
-    Ptype,
+    Schema,
 )
 from mlfeatures.selectors import FeaturesSelector
 from mlfeatures.step import (
@@ -522,12 +522,12 @@ class Recipe:
             for col in _frame.columns(current):
                 if col not in reserved:
                     live_roles.add(col, "feature")
-        # Snapshot the training schema into a ptype and validate the incoming
+        # Snapshot the training data into a schema and validate the incoming
         # frame against it (all columns required at fit). The snapshot rides on
         # the FittedRecipe so transform() can re-check new data at the boundary.
         overrides = self._resolve_role_req_overrides(current, live_roles)
-        ptype = Ptype.from_frame(current, live_roles, overrides)
-        ptype.check(current, context="fit")
+        schema = Schema.from_frame(current, live_roles, overrides)
+        schema.check(current, context="fit")
         # The column-lineage DAG, seeded from the training frame and updated
         # after each column-changing step (see design/lineage.md). RowOp and
         # empty-selection steps make no schema change and are skipped below.
@@ -562,7 +562,7 @@ class Recipe:
                 continue
             # Dtype validation, also at the recipe boundary and also before the
             # step runs: a step declares what it accepts, the framework enforces
-            # it (see design/step-contract.md). Only at fit time — the ptype
+            # it (see design/step-contract.md). Only at fit time — the schema
             # already pins dtypes at transform time.
             if has_selector:
                 _check_accepted_dtypes(step, current, selected)
@@ -595,7 +595,7 @@ class Recipe:
                 lineage.update(fitted, current, live_roles)
             fitted_steps.append(fitted)
         return FittedRecipe(
-            steps=fitted_steps, roles=live_roles, lineage=lineage, ptype=ptype
+            steps=fitted_steps, roles=live_roles, lineage=lineage, schema=schema
         )
 
     def summary(self) -> DataFrame:
@@ -647,16 +647,16 @@ class FittedRecipe:
         steps: list[Step],
         roles: Roles | None = None,
         lineage: Lineage | None = None,
-        ptype: Ptype | None = None,
+        schema: Schema | None = None,
     ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
         #: The post-all-steps column-lineage DAG (``design/lineage.md``), or
         #: ``None`` if the recipe was constructed without one.
         self.lineage = lineage
-        #: The training-data ptype snapshot (``design/lifecycle.md``) used to
+        #: The training-data schema snapshot (``design/lifecycle.md``) used to
         #: validate new data in ``transform()``, or ``None`` if absent.
-        self.ptype = ptype
+        self.schema = schema
 
     def __repr__(self) -> str:
         """A human-readable, trained view of the fitted pipeline (``design/inspection.md``).
@@ -773,8 +773,8 @@ class FittedRecipe:
         for step in self.steps:
             step.check_required_pkgs()
         current = _frame.from_native(data)
-        if self.ptype is not None:
-            self.ptype.check(current, context="transform")
+        if self.schema is not None:
+            self.schema.check(current, context="transform")
         for step in self.steps:
             if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
                 continue

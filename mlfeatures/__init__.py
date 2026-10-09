@@ -4,8 +4,8 @@ from importlib.metadata import PackageNotFoundError, version
 
 from mlfeatures.compat import RecipeTransformer
 from mlfeatures.lineage import ColumnNode, Lineage
-from mlfeatures.ptype import Ptype
 from mlfeatures.recipe import FittedRecipe, Recipe
+from mlfeatures.schema import Schema
 from mlfeatures.selectors import Selectors
 from mlfeatures.serialization import (
     from_dict,
@@ -115,7 +115,7 @@ __all__ = [
     "Selector",
     "Lineage",
     "ColumnNode",
-    "Ptype",
+    "Schema",
     "DataFrame",
     "Frame",
     "Selectors",
