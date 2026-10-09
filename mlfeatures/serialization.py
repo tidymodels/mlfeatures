@@ -2,7 +2,7 @@
 
 A `FittedRecipe` is serialized to a plain, human-readable ``dict`` (and from
 there to JSON or YAML) that captures every step's **hyperparameters and learned
-statistics** plus the recipe-level role, ptype, and lineage state. The format is
+statistics** plus the recipe-level role, schema, and lineage state. The format is
 stable and diffable so a trained recipe can be reviewed in a pull request, saved
 alongside a model, and reloaded in another process for inference.
 
@@ -23,17 +23,17 @@ both round-trip identically. YAML support needs the optional ``pyyaml`` package;
 
 Known limitations
 -----------------
-- ``Enum`` categories do not round-trip: an ``Enum`` column's ptype/lineage
+- ``Enum`` categories do not round-trip: an ``Enum`` column's schema/lineage
   dtype comes back as an empty-category ``Enum`` after a JSON round-trip. This
-  is enough for the lineage/ptype checks, which only compare dtype *identity*
+  is enough for the lineage/schema checks, which only compare dtype *identity*
   by base type, but it does mean ``ColSchema``, which already stores dtypes as
   ``str(dt)``, is a more faithful record of an ``Enum``'s categories than a
-  deserialized ``Ptype``/``Lineage`` is.
+  deserialized ``Schema``/``Lineage`` is.
 - ``Datetime`` (time-unit, time zone) and ``Duration`` (time-unit) *do*
   round-trip their parameters (see `_encode_dtype_instance` /
   `_decode_dtype_instance`) -- `StepDatetimeFeatures`'s conformance suite
   depends on it: a pandas frame's nanosecond-precision ``Datetime`` must still
-  match the ptype snapshot after a JSON round-trip.
+  match the schema snapshot after a JSON round-trip.
 - Raw polars / narwhals selectors are not serializable. Only mlfeatures `Selectors`
   and plain name lists are; a native selector raises a clear ``TypeError``.
 - ``dateutil.rrule.rrule`` / ``rruleset`` instances are not serializable
@@ -149,7 +149,7 @@ def _dtype_instance(name: str) -> nw.dtypes.DType:
     """Instantiate a dtype from its base name, using default parameters.
 
     ``Enum`` needs a category list it no longer has after a by-name round-trip;
-    it falls back to an empty-category enum, which is enough for the lineage/ptype
+    it falls back to an empty-category enum, which is enough for the lineage/schema
     checks that only compare dtype *identity* by base type.
     """
     cls = _dtype_class(name)
@@ -159,12 +159,12 @@ def _dtype_instance(name: str) -> nw.dtypes.DType:
 
 
 def _encode_dtype_instance(dtype: nw.dtypes.DType) -> str | dict[str, Any]:
-    """Encode a concrete dtype instance for the ptype/lineage-node codecs.
+    """Encode a concrete dtype instance for the schema/lineage-node codecs.
 
     Unlike `_dtype_name` (used where only the base type matters, e.g. a
     selector's stored dtype), this preserves ``Datetime``'s time-unit and time
     zone, and ``Duration``'s time-unit, since two ``Datetime`` columns of
-    different precision are not the same ptype -- `Ptype.check` would
+    different precision are not the same schema -- `Schema.check` would
     otherwise accept a nanosecond-precision new-data column against a
     microsecond-precision training snapshot that a round-trip silently
     downgraded to. Every other dtype still round-trips by base name only (see
@@ -482,7 +482,7 @@ def _step_entry_points() -> Any:
 
 
 # --------------------------------------------------------------------------- #
-# Recipe-level codecs (roles / ptype / lineage)
+# Recipe-level codecs (roles / schema / lineage)
 # --------------------------------------------------------------------------- #
 
 
@@ -496,25 +496,25 @@ def _decode_roles(payload: dict[str, list[str]]) -> Any:
     return Roles({col: set(names) for col, names in payload.items()})
 
 
-def _encode_ptype(ptype: Any) -> dict[str, Any]:
+def _encode_schema(schema: Any) -> dict[str, Any]:
     return {
-        "schema": {
-            name: _encode_dtype_instance(ptype.schema[name])
-            for name in ptype.schema.names()
+        "dtypes": {
+            name: _encode_dtype_instance(schema.dtypes[name])
+            for name in schema.dtypes.names()
         },
-        "roles": _encode_roles(ptype.roles),
-        "transform_required": dict(ptype.transform_required),
+        "roles": _encode_roles(schema.roles),
+        "transform_required": dict(schema.transform_required),
     }
 
 
-def _decode_ptype(payload: dict[str, Any]) -> Any:
-    from mlfeatures.ptype import Ptype
+def _decode_schema(payload: dict[str, Any]) -> Any:
+    from mlfeatures.schema import Schema
 
-    schema = nw.Schema(
-        {name: _decode_dtype_instance(dt) for name, dt in payload["schema"].items()}
+    dtypes = nw.Schema(
+        {name: _decode_dtype_instance(dt) for name, dt in payload["dtypes"].items()}
     )
-    return Ptype(
-        schema=schema,
+    return Schema(
+        dtypes=dtypes,
         roles=_decode_roles(payload["roles"]),
         transform_required=dict(payload["transform_required"]),
     )
@@ -588,7 +588,7 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
     """Serialize a `FittedRecipe` to a diffable, JSON-safe ``dict``.
 
     Captures every step's hyperparameters and learned statistics plus the
-    recipe-level roles, training ptype, and lineage. The result contains
+    recipe-level roles, training schema, and lineage. The result contains
     only plain data, so it round-trips through `from_dict` and is stable enough
     to diff in code review.
     """
@@ -598,7 +598,7 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
         "mlfeatures_version": __version__,
         "format_version": FORMAT_VERSION,
         "roles": _encode_roles(recipe.roles),
-        "ptype": None if recipe.ptype is None else _encode_ptype(recipe.ptype),
+        "schema": None if recipe.schema is None else _encode_schema(recipe.schema),
         "lineage": None if recipe.lineage is None else _encode_lineage(recipe.lineage),
         "steps": [_encode_step(step) for step in recipe.steps],
     }
@@ -618,9 +618,9 @@ def from_dict(data: dict[str, Any]) -> FittedRecipe:
         )
     steps = [_decode_step(p) for p in data["steps"]]
     roles = _decode_roles(data["roles"])
-    ptype = None if data.get("ptype") is None else _decode_ptype(data["ptype"])
+    schema = None if data.get("schema") is None else _decode_schema(data["schema"])
     lineage = None if data.get("lineage") is None else _decode_lineage(data["lineage"])
-    return FittedRecipe(steps=steps, roles=roles, lineage=lineage, ptype=ptype)
+    return FittedRecipe(steps=steps, roles=roles, lineage=lineage, schema=schema)
 
 
 def to_json(recipe: FittedRecipe, *, indent: int = 2) -> str:
@@ -676,7 +676,7 @@ def minimize(recipe: FittedRecipe) -> FittedRecipe:
     Delegates to each step's `Step.minimize`, which by default returns the step
     unchanged. Steps that retain training artifacts only needed at fit time
     (e.g. a future KNN imputer's neighbor matrix) override ``minimize`` to drop
-    them. The roles, ptype, and lineage are preserved so the minimized
+    them. The roles, schema, and lineage are preserved so the minimized
     recipe still validates new data at the boundary and reports its lineage.
     """
     from mlfeatures.recipe import FittedRecipe
@@ -685,5 +685,5 @@ def minimize(recipe: FittedRecipe) -> FittedRecipe:
         steps=[step.minimize() for step in recipe.steps],
         roles=recipe.roles,
         lineage=recipe.lineage,
-        ptype=recipe.ptype,
+        schema=recipe.schema,
     )

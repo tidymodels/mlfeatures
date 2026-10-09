@@ -24,4 +24,4 @@ One representative per mode, chosen to also cover numeric and categorical input 
 | `step_filter` | `ROW_OP` | — | Remove rows matching a condition |
 | `step_mutate` | `UNCONSTRAINED` | any | Arbitrary column mutation (escape hatch) |
 
-This set is sufficient to build and validate the full framework — the lineage DAG, selector resolution, ptype checking, serialization, and the sklearn adapter — before expanding the catalog.
+This set is sufficient to build and validate the full framework — the lineage DAG, selector resolution, schema checking, serialization, and the sklearn adapter — before expanding the catalog.

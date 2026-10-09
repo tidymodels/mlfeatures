@@ -382,7 +382,7 @@ class Step(ABC):
         set before ``fit()`` runs and raises a ``TypeError`` naming the step, the
         offending column(s), and their dtypes, so a step never sees a column it
         declared itself invalid for. The check does not run again at
-        ``transform()`` time: the ptype snapshot already pins new data's dtypes
+        ``transform()`` time: the schema snapshot already pins new data's dtypes
         to what was seen at fit.
         """
         raise NotImplementedError

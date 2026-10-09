@@ -99,7 +99,7 @@ class TestDtypeAcceptance:
         pd.testing.assert_frame_equal(out, df)
 
     def test_transform_does_not_recheck(self) -> None:
-        # The ptype already pins new data's dtypes, so the guard is fit-only.
+        # The schema already pins new data's dtypes, so the guard is fit-only.
         df = _mixed()
         fitted = Recipe(steps=[StepNormalize(["a"])]).fit(df)
         assert fitted.transform(df) is not None

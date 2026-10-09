@@ -1,7 +1,7 @@
-"""Tests for the ptype snapshot + boundary validation. See ``design/lifecycle.md``.
+"""Tests for the schema snapshot + boundary validation. See ``design/lifecycle.md``.
 
 A fitted recipe snapshots the training schema (names, dtypes, roles) into a
-``Ptype`` and validates new data against it at ``transform()``: required columns
+``Schema`` and validates new data against it at ``transform()``: required columns
 must be present and present columns must match the training dtype. Per-role
 requirements decide *which* columns are required at transform time, and
 ``Recipe.update_role_requirements`` overrides them.
@@ -16,7 +16,7 @@ import polars as pl
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from mlfeatures import Ptype, Recipe, Selectors, StepNormalize
+from mlfeatures import Recipe, Schema, Selectors, StepNormalize
 
 
 def _train() -> dict[str, list[float]]:
@@ -66,8 +66,8 @@ class TestRoleRequirements:
         rec = Recipe(features="x")
         rec.roles.add("y", "id")
         fitted = rec.add(StepNormalize(["x"])).fit(df)
-        assert fitted.ptype is not None
-        assert fitted.ptype.transform_required["y"] is True
+        assert fitted.schema is not None
+        assert fitted.schema.transform_required["y"] is True
 
     def test_update_role_requirements_by_role_name(self) -> None:
         df = pd.DataFrame(_train())
@@ -78,8 +78,8 @@ class TestRoleRequirements:
             .add(StepNormalize(["x"]))
             .fit(df)
         )
-        assert fitted.ptype is not None
-        assert fitted.ptype.transform_required["y"] is False
+        assert fitted.schema is not None
+        assert fitted.schema.transform_required["y"] is False
         # And the now-optional column may be dropped at transform.
         out = fitted.transform(pd.DataFrame({"x": [1.0, 2.0]}))
         assert list(out.columns) == ["x"]
@@ -93,8 +93,8 @@ class TestRoleRequirements:
             .add(StepNormalize(["x"]))
             .fit(df)
         )
-        assert fitted.ptype is not None
-        assert fitted.ptype.transform_required["y"] is False
+        assert fitted.schema is not None
+        assert fitted.schema.transform_required["y"] is False
 
     def test_feature_requirement_not_configurable(
         self, snapshot: SnapshotAssertion
@@ -139,12 +139,14 @@ class TestPolarsBackend:
 
 
 class TestPickle:
-    def test_ptype_survives_pickle_roundtrip(self, snapshot: SnapshotAssertion) -> None:
+    def test_schema_survives_pickle_roundtrip(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
         df = pd.DataFrame(_train())
         fitted = Recipe(target="y", features="x").add(StepNormalize(["x"])).fit(df)
         restored = pickle.loads(pickle.dumps(fitted))
-        assert isinstance(restored.ptype, Ptype)
-        assert restored.ptype.transform_required == fitted.ptype.transform_required
+        assert isinstance(restored.schema, Schema)
+        assert restored.schema.transform_required == fitted.schema.transform_required
         # The restored recipe still enforces the boundary check.
         with pytest.raises(ValueError) as excinfo:
             restored.transform(pd.DataFrame({"y": [0.0]}))

@@ -1,6 +1,6 @@
-"""The ptype snapshot and boundary validation. See ``design/lifecycle.md``.
+"""The schema snapshot and boundary validation. See ``design/lifecycle.md``.
 
-A **ptype** (prototype) is a zero-row structural snapshot of the training data:
+A **schema** is a zero-row structural snapshot of the training data:
 column names, dtypes, and role assignments. It is captured at ``Recipe.fit()``
 and stored on the resulting ``FittedRecipe``; both ``fit()`` and
 ``transform()`` validate the incoming frame against it before any step runs.
@@ -58,18 +58,19 @@ def column_transform_required(
 
 
 @dataclass(frozen=True)
-class Ptype:
+class Schema:
     """A structural snapshot of the training data used for boundary checks.
 
-    Captured at ``Recipe.fit()`` and exposed as ``FittedRecipe.ptype``. Holds the
+    Captured at ``Recipe.fit()`` and exposed as ``FittedRecipe.schema``. Holds the
     training :class:`narwhals.Schema` (column names and dtypes), the role
     assignments, and a precomputed per-column flag for whether each column is
     required at ``transform()`` time.
 
     Attributes
     ----------
-    schema
-        The training frame's narwhals schema: an ordered name→dtype mapping.
+    dtypes
+        The training frame's column dtypes, as a narwhals schema: an ordered
+        name→dtype mapping.
     roles
         Role assignments captured at fit (see ``design/roles.md``).
     transform_required
@@ -79,7 +80,7 @@ class Ptype:
 
     Examples
     --------
-    The ptype is built by the recipe; read it back from a fitted recipe:
+    The schema is built by the recipe; read it back from a fitted recipe:
 
     ```{python}
     import pandas as pd
@@ -91,11 +92,11 @@ class Ptype:
         StepNormalize(s.numeric_features())
     )
     rec = rec.fit(df)
-    rec.ptype.schema.names()
+    rec.schema.dtypes.names()
     ```
     """
 
-    schema: nw.Schema
+    dtypes: nw.Schema
     roles: Roles
     transform_required: dict[str, bool]
 
@@ -105,26 +106,26 @@ class Ptype:
         frame: Frame,
         roles: Roles,
         overrides: dict[str, bool],
-    ) -> "Ptype":
-        """Snapshot ``frame`` into a ptype given role assignments and overrides.
+    ) -> "Schema":
+        """Snapshot ``frame`` into a schema given role assignments and overrides.
 
         The per-column transform-time requirement is precomputed here from the
         role defaults and any ``update_role_requirements`` ``overrides``.
         """
-        schema = nw.Schema(frame_dtypes(frame))
+        dtypes = nw.Schema(frame_dtypes(frame))
         return cls(
-            schema=schema,
+            dtypes=dtypes,
             roles=roles.copy(),
             transform_required={
                 col: column_transform_required(col, roles, overrides)
-                for col in schema.names()
+                for col in dtypes.names()
             },
         )
 
     def check(self, frame: Frame, *, context: str) -> None:
         """Validate ``frame`` against this snapshot.
 
-        ``context`` is ``"fit"`` or ``"transform"``. At ``"fit"`` every ptype
+        ``context`` is ``"fit"`` or ``"transform"``. At ``"fit"`` every schema
         column is required; at ``"transform"`` only columns flagged in
         ``transform_required`` are. In both contexts, columns that *are* present
         must match the snapshot dtype. Extra columns beyond the snapshot are
@@ -139,9 +140,9 @@ class Ptype:
         present = frame_dtypes(frame)
 
         if context == "fit":
-            required = list(self.schema.names())
+            required = list(self.dtypes.names())
         else:
-            required = [c for c in self.schema.names() if self.transform_required[c]]
+            required = [c for c in self.dtypes.names() if self.transform_required[c]]
 
         missing = [c for c in required if c not in present]
         if missing:
@@ -149,11 +150,11 @@ class Ptype:
             raise ValueError(f"missing required column(s) at {context} time: {cols}")
 
         mismatched = [
-            f"{name!r} (expected {self.schema[name]}, got {present[name]})"
-            for name in self.schema.names()
-            if name in present and present[name] != self.schema[name]
+            f"{name!r} (expected {self.dtypes[name]}, got {present[name]})"
+            for name in self.dtypes.names()
+            if name in present and present[name] != self.dtypes[name]
         ]
         if mismatched:
             raise ValueError(
-                "dtype mismatch against the training ptype: " + "; ".join(mismatched)
+                "dtype mismatch against the training schema: " + "; ".join(mismatched)
             )
