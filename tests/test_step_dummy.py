@@ -208,7 +208,7 @@ class TestApplyDummy:
         assert not any("not seen" in str(warning.message).lower() for warning in w)
 
     # Name-collision protection is no longer enforced in ``apply_dummy``; it is
-    # centralized in the recipe (``Schema.check_additions``). See the recipe-level
+    # centralized in the recipe (``Lineage.check_additions``). See the recipe-level
     # collision tests in ``test_step_dummy_e2e.py``.
 
     def test_zero_row_frame(self) -> None:

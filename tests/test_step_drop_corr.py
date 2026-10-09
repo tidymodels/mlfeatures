@@ -305,8 +305,8 @@ class TestPolarsSelectorColumns:
         assert len(out.columns) == 3
 
     def test_polars_selector_resolves_against_pandas_frame(self) -> None:
-        # Resolution is pure schema name-resolution (Schema.to_polars), so a
-        # polars selector works against a pandas-backed frame too.
+        # Resolution is pure schema name-resolution against the narwhals
+        # schema, so a polars selector works against a pandas-backed frame too.
         df = nw.from_native(
             pd.DataFrame(
                 {

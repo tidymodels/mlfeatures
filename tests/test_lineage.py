@@ -1,7 +1,7 @@
 """Tests for the column-lineage DAG (issue #19).
 
-This module covers the structure and its initial construction (`Schema`,
-`ColumnNode`, `Schema.from_frame`). The ``update()`` application logic,
+This module covers the structure and its initial construction (`Lineage`,
+`ColumnNode`, `Lineage.from_frame`). The ``update()`` application logic,
 ``summary()`` and provenance queries are covered as they land.
 """
 
@@ -28,7 +28,7 @@ from mlfeatures import (
     StepNormalize,
     _frame,
 )
-from mlfeatures.schema import ColumnNode, Schema
+from mlfeatures.lineage import ColumnNode, Lineage
 from mlfeatures.types import AcceptedDtypes, Frame, Roles, SchemaInfo
 
 Constructor = Callable[[dict[str, Any]], Any]
@@ -46,12 +46,12 @@ def test_from_frame_builds_one_original_node_per_column(backend: str) -> None:
     frame = _frame_of(
         backend, {"a": [1, 2, 3], "b": [1.0, 2.0, 3.0], "c": ["x", "y", "z"]}
     )
-    schema = Schema.from_frame(frame)
+    lineage = Lineage.from_frame(frame)
     expected_dtypes = _frame.dtypes(frame)
 
-    assert schema.columns == ["a", "b", "c"]
+    assert lineage.columns == ["a", "b", "c"]
     for name in ("a", "b", "c"):
-        node = schema[name]
+        node = lineage[name]
         assert node.name == name
         assert node.dtype == expected_dtypes[name]
         assert node.source == "original"
@@ -65,62 +65,62 @@ def test_from_frame_builds_one_original_node_per_column(backend: str) -> None:
 def test_from_frame_pulls_roles(backend: str) -> None:
     frame = _frame_of(backend, {"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
     roles = Roles({"y": {"target"}, "x": {"feature"}})
-    schema = Schema.from_frame(frame, roles)
+    lineage = Lineage.from_frame(frame, roles)
 
-    assert schema["y"].roles == {"target"}
-    assert schema["x"].roles == {"feature"}
+    assert lineage["y"].roles == {"target"}
+    assert lineage["x"].roles == {"feature"}
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_from_frame_without_roles_gives_empty_role_sets(backend: str) -> None:
-    schema = Schema.from_frame(_frame_of(backend, {"a": [1, 2, 3]}))
-    assert schema["a"].roles == set()
+    lineage = Lineage.from_frame(_frame_of(backend, {"a": [1, 2, 3]}))
+    assert lineage["a"].roles == set()
 
 
 def test_node_roles_are_independent_copies() -> None:
     """Mutating a node's roles must not bleed back into the source Roles."""
     frame = _frame_of("polars", {"a": [1, 2, 3]})
     roles = Roles({"a": {"feature"}})
-    schema = Schema.from_frame(frame, roles)
+    lineage = Lineage.from_frame(frame, roles)
 
-    schema["a"].roles.add("id")
+    lineage["a"].roles.add("id")
     assert roles.of("a") == {"feature"}
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_columns_and_dtypes_views(backend: str) -> None:
     frame = _frame_of(backend, {"a": [1, 2, 3], "b": ["x", "y", "z"]})
-    schema = Schema.from_frame(frame)
+    lineage = Lineage.from_frame(frame)
 
-    assert schema.columns == ["a", "b"]
-    assert schema.dtypes == _frame.dtypes(frame)
+    assert lineage.columns == ["a", "b"]
+    assert lineage.dtypes == _frame.dtypes(frame)
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_mapping_protocol(backend: str) -> None:
     frame = _frame_of(backend, {"a": [1, 2, 3], "b": [4, 5, 6]})
-    schema = Schema.from_frame(frame)
+    lineage = Lineage.from_frame(frame)
 
-    assert len(schema) == 2
-    assert "a" in schema
-    assert "missing" not in schema
-    assert isinstance(schema["a"], ColumnNode)
+    assert len(lineage) == 2
+    assert "a" in lineage
+    assert "missing" not in lineage
+    assert isinstance(lineage["a"], ColumnNode)
     with pytest.raises(KeyError):
-        schema["missing"]
+        lineage["missing"]
 
 
 def test_empty_frame_yields_empty_schema() -> None:
-    schema = Schema.from_frame(_frame_of("polars", {}))
-    assert schema.columns == []
-    assert len(schema) == 0
+    lineage = Lineage.from_frame(_frame_of("polars", {}))
+    assert lineage.columns == []
+    assert len(lineage) == 0
 
 
 def test_fresh_schema_has_no_history() -> None:
-    schema = Schema.from_frame(_frame_of("polars", {"a": [1, 2, 3]}))
-    assert schema._history == []
+    lineage = Lineage.from_frame(_frame_of("polars", {"a": [1, 2, 3]}))
+    assert lineage._history == []
 
 
-# --- Schema.update -----------------------------------------------------------
+# --- Lineage.update -----------------------------------------------------------
 
 
 class _FakeReduce(Step):
@@ -180,45 +180,45 @@ class _FakeReduce(Step):
 
 def _apply(
     steps: list[Step], backend: str, data: dict[str, Any], roles: Roles | None = None
-) -> tuple[Schema, Frame]:
+) -> tuple[Lineage, Frame]:
     """Run ``steps`` through the recipe's per-step sequence, returning the DAG.
 
     Mirrors the loop the recipe will run in commit 5 (fit, transform,
-    update_roles, schema.update) so ``update()`` can be tested in isolation.
+    update_roles, lineage.update) so ``update()`` can be tested in isolation.
     """
     roles = roles if roles is not None else Roles()
     frame = _frame_of(backend, data)
-    schema = Schema.from_frame(frame, roles)
+    lineage = Lineage.from_frame(frame, roles)
     for step in steps:
         fitted = step.fit(frame, SchemaInfo(roles=roles))
         frame = fitted.transform(frame)
         fitted.update_roles(roles)
-        schema.update(fitted, frame, roles)
-    return schema, frame
+        lineage.update(fitted, frame, roles)
+    return lineage, frame
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_one_to_many_dummy_attributes_each_output_to_its_source(
     backend: str,
 ) -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDummy(["g"])], backend, {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
     )
-    assert "g" not in schema  # source column replaced
-    node = schema["g_b"]
+    assert "g" not in lineage  # source column replaced
+    node = lineage["g_b"]
     assert node.source == "dummy"
     assert node.parent_cols == ["g"]
-    archived = [n for n in schema._history if n.name == "g"]
+    archived = [n for n in lineage._history if n.name == "g"]
     assert len(archived) == 1
     assert archived[0].removed_by == "dummy"
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_one_to_one_records_dtype_change_not_source(backend: str) -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepNormalize(["a"])], backend, {"a": [1, 2, 3], "g": ["x", "y", "x"]}
     )
-    node = schema["a"]
+    node = lineage["a"]
     # In-place transform: the column is not "produced", so source is unchanged.
     assert node.source == "original"
     assert node.dtype_history[0] == nw.Int64
@@ -228,53 +228,53 @@ def test_update_one_to_one_records_dtype_change_not_source(backend: str) -> None
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_removing_archives_dropped_column(backend: str) -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDropZeroVariance(["a", "const"])],
         backend,
         {"a": [1.0, 2.0, 3.0], "const": [7.0, 7.0, 7.0]},
     )
-    assert schema.columns == ["a"]
-    archived = [n for n in schema._history if n.name == "const"]
+    assert lineage.columns == ["a"]
+    archived = [n for n in lineage._history if n.name == "const"]
     assert len(archived) == 1
     assert archived[0].removed_by == "zv"
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_adding_constant_has_no_parents(backend: str) -> None:
-    schema, _ = _apply([StepIntercept()], backend, {"a": [1.0, 2.0, 3.0]})
-    node = schema["intercept"]
+    lineage, _ = _apply([StepIntercept()], backend, {"a": [1.0, 2.0, 3.0]})
+    node = lineage["intercept"]
     assert node.source == "intercept"
     assert node.parent_cols == []
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_adding_derived_has_feature_parents(backend: str) -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepClassDistance(["a", "b"], target="out")],
         backend,
         {"a": [1.0, 2.0, 3.0, 4.0], "b": [2.0, 4.0, 6.0, 8.0], "out": [0, 0, 1, 1]},
     )
-    produced = [n for n in schema.columns if n.startswith("distance_")]
+    produced = [n for n in lineage.columns if n.startswith("distance_")]
     assert len(produced) == 2
     for name in produced:
-        assert schema[name].source == "class_distance"
-        assert schema[name].parent_cols == ["a", "b"]
+        assert lineage[name].source == "class_distance"
+        assert lineage[name].parent_cols == ["a", "b"]
 
 
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_update_many_to_many_every_output_descends_from_all_inputs(
     backend: str,
 ) -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [_FakeReduce(["a", "b", "c"])],
         backend,
         {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]},
     )
-    assert schema.columns == ["pc1", "pc2"]
+    assert lineage.columns == ["pc1", "pc2"]
     for name in ("pc1", "pc2"):
-        assert schema[name].source == "reduce"
-        assert schema[name].parent_cols == ["a", "b", "c"]
-    assert {n.name for n in schema._history} == {"a", "b", "c"}
+        assert lineage[name].source == "reduce"
+        assert lineage[name].parent_cols == ["a", "b", "c"]
+    assert {n.name for n in lineage._history} == {"a", "b", "c"}
 
 
 def test_update_rejects_name_collision(snapshot: SnapshotAssertion) -> None:
@@ -288,17 +288,17 @@ def test_update_rejects_name_collision(snapshot: SnapshotAssertion) -> None:
 
 
 def test_check_additions_accepts_unique_new_columns() -> None:
-    schema = Schema.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
+    lineage = Lineage.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
     # No raise: names are new and unique.
-    schema.check_additions("step", ["c", "d"])
+    lineage.check_additions("step", ["c", "d"])
 
 
 def test_check_additions_rejects_collision_with_existing(
     snapshot: SnapshotAssertion,
 ) -> None:
-    schema = Schema.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
+    lineage = Lineage.from_frame(_frame_of("polars", {"a": [1], "b": [2]}))
     with pytest.raises(ValueError) as excinfo:
-        schema.check_additions("step", ["b", "c"])
+        lineage.check_additions("step", ["b", "c"])
     assert str(excinfo.value) == snapshot
 
 
@@ -306,9 +306,9 @@ def test_check_additions_rejects_within_step_duplicate(
     snapshot: SnapshotAssertion,
 ) -> None:
     # The gap a post-transform check cannot see: a step emitting one name twice.
-    schema = Schema.from_frame(_frame_of("polars", {"a": [1]}))
+    lineage = Lineage.from_frame(_frame_of("polars", {"a": [1]}))
     with pytest.raises(ValueError) as excinfo:
-        schema.check_additions("step", ["x", "x"])
+        lineage.check_additions("step", ["x", "x"])
     assert str(excinfo.value) == snapshot
 
 
@@ -337,27 +337,27 @@ def test_update_rejects_unknown_parent(snapshot: SnapshotAssertion) -> None:
 
 def test_update_propagates_roles_to_produced_columns() -> None:
     roles = Roles({"g": {"feature"}})
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"]}, roles=roles
     )
-    assert schema["g_b"].roles == {"feature"}
+    assert lineage["g_b"].roles == {"feature"}
 
 
 def test_update_composes_across_a_multi_step_sequence() -> None:
-    schema, frame = _apply(
+    lineage, frame = _apply(
         [StepNormalize(["a"]), StepDummy(["g"])],
         "pandas",
         {"a": [1, 2, 3], "g": ["x", "y", "x"]},
     )
     # normalize left `a` in place (rescaled to float); dummy replaced `g`.
-    assert schema["a"].source == "original"
-    assert schema["a"].dtype_history[-1] == nw.Float64
-    assert "g" not in schema
-    assert schema["g_y"].source == "dummy"
-    assert schema["g_y"].parent_cols == ["g"]
-    assert any(n.name == "g" and n.removed_by == "dummy" for n in schema._history)
+    assert lineage["a"].source == "original"
+    assert lineage["a"].dtype_history[-1] == nw.Float64
+    assert "g" not in lineage
+    assert lineage["g_y"].source == "dummy"
+    assert lineage["g_y"].parent_cols == ["g"]
+    assert any(n.name == "g" and n.removed_by == "dummy" for n in lineage._history)
     # the live DAG order matches the transformed frame.
-    assert schema.columns == _frame.columns(frame)
+    assert lineage.columns == _frame.columns(frame)
 
 
 # --- summary() and provenance queries ----------------------------------------
@@ -366,8 +366,8 @@ def test_update_composes_across_a_multi_step_sequence() -> None:
 @pytest.mark.parametrize("backend", list(BACKENDS))
 def test_summary_columns_and_values(backend: str) -> None:
     frame = _frame_of(backend, {"a": [1, 2, 3], "b": [1.5, 2.5, 3.5]})
-    schema = Schema.from_frame(frame, Roles({"a": {"feature"}}))
-    out = nw.from_native(schema.summary())
+    lineage = Lineage.from_frame(frame, Roles({"a": {"feature"}}))
+    out = nw.from_native(lineage.summary())
 
     assert out.columns == ["name", "dtype", "roles", "source", "sparse"]
     assert out["name"].to_list() == ["a", "b"]
@@ -378,10 +378,10 @@ def test_summary_columns_and_values(backend: str) -> None:
 
 
 def test_summary_reflects_steps() -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
     )
-    out = nw.from_native(schema.summary())
+    out = nw.from_native(lineage.summary())
     source_of = dict(zip(out["name"].to_list(), out["source"].to_list()))
 
     assert "g" not in source_of  # replaced
@@ -390,40 +390,40 @@ def test_summary_reflects_steps() -> None:
 
 
 def test_summary_of_empty_schema_has_headers_but_no_rows() -> None:
-    out = nw.from_native(Schema.from_frame(_frame_of("polars", {})).summary())
+    out = nw.from_native(Lineage.from_frame(_frame_of("polars", {})).summary())
     assert out.columns == ["name", "dtype", "roles", "source", "sparse"]
     assert out.shape[0] == 0
 
 
 def test_columns_from_source() -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
     )
-    assert schema.columns_from_source("dummy") == ["g_b"]
-    assert schema.columns_from_source("original") == ["h"]
-    assert schema.columns_from_source("nope") == []
+    assert lineage.columns_from_source("dummy") == ["g_b"]
+    assert lineage.columns_from_source("original") == ["h"]
+    assert lineage.columns_from_source("nope") == []
 
 
 def test_parents_of_produced_and_original_columns() -> None:
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
     )
-    assert schema.parents("g_b") == ["g"]
-    assert schema.parents("h") == []
+    assert lineage.parents("g_b") == ["g"]
+    assert lineage.parents("h") == []
     with pytest.raises(KeyError):
-        schema.parents("missing")
+        lineage.parents("missing")
 
 
 def test_ancestors_trace_through_archived_columns() -> None:
     # dummy(g) -> g_b, then reduce(g_b, x) -> pc1, pc2: pc1's lineage must reach
     # back through the archived g_b to the original g.
-    schema, _ = _apply(
+    lineage, _ = _apply(
         [StepDummy(["g"]), _FakeReduce(["g_b", "x"])],
         "polars",
         {"g": ["a", "b", "a"], "x": [1, 2, 3]},
     )
-    assert schema.ancestors("pc1") == {"g_b", "x", "g"}
-    assert schema.columns_from_source("reduce") == ["pc1", "pc2"]
+    assert lineage.ancestors("pc1") == {"g_b", "x", "g"}
+    assert lineage.columns_from_source("reduce") == ["pc1", "pc2"]
 
 
 # --- Recipe integration ------------------------------------------------------
@@ -432,16 +432,16 @@ def test_ancestors_trace_through_archived_columns() -> None:
 def test_recipe_fit_builds_lineage_across_steps() -> None:
     train = pd.DataFrame({"a": [1, 2, 3], "g": ["x", "y", "x"]})
     fitted = Recipe(steps=[StepNormalize(["a"]), StepDummy(["g"])]).fit(train)
-    schema = fitted.schema
-    assert schema is not None
+    lineage = fitted.lineage
+    assert lineage is not None
     # normalize: in-place rescale (source unchanged, dtype became float)
-    assert schema["a"].source == "original"
-    assert schema["a"].dtype_history[-1] == nw.Float64
+    assert lineage["a"].source == "original"
+    assert lineage["a"].dtype_history[-1] == nw.Float64
     # dummy: g replaced by g_y, traceable back to g
-    assert "g" not in schema
-    assert schema["g_y"].source == "dummy"
-    assert schema.ancestors("g_y") == {"g"}
-    assert schema.columns_from_source("dummy") == ["g_y"]
+    assert "g" not in lineage
+    assert lineage["g_y"].source == "dummy"
+    assert lineage.ancestors("g_y") == {"g"}
+    assert lineage.columns_from_source("dummy") == ["g_y"]
 
 
 def test_fitted_recipe_summary_reflects_the_final_schema() -> None:
@@ -473,6 +473,6 @@ def test_recipe_summary_without_prototype_raises(
 def test_recipe_empty_selection_leaves_schema_unchanged() -> None:
     train = pd.DataFrame({"g": ["a", "b", "a"], "h": ["x", "y", "x"]})
     fitted = Recipe(steps=[StepDummy([])]).fit(train)
-    assert fitted.schema is not None
-    assert fitted.schema.columns == ["g", "h"]
-    assert all(fitted.schema[c].source == "original" for c in ("g", "h"))
+    assert fitted.lineage is not None
+    assert fitted.lineage.columns == ["g", "h"]
+    assert all(fitted.lineage[c].source == "original" for c in ("g", "h"))
