@@ -154,9 +154,14 @@ class Lineage:
     ```
     """
 
+    #: The node for each column currently in the frame, keyed by column name.
+    _live: dict[str, ColumnNode]
+    #: Every node ever created, in creation order, including removed columns.
+    _history: list[ColumnNode]
+
     def __init__(self) -> None:
-        self._live: dict[str, ColumnNode] = {}
-        self._history: list[ColumnNode] = []
+        self._live = {}
+        self._history = []
 
     @classmethod
     def from_frame(cls, frame: Frame, roles: Roles | None = None) -> "Lineage":
