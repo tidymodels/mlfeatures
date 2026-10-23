@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import copy
 import warnings
+from typing import TYPE_CHECKING
 
 from mlfeatures import _frame
 from mlfeatures.lineage import Lineage
@@ -40,6 +41,9 @@ from mlfeatures.types import (
     SchemaInfo,
     _apply_role_assignments,  # pyright: ignore[reportPrivateUsage]
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 __all__ = ["Recipe", "FittedRecipe"]
 
@@ -692,25 +696,39 @@ class FittedRecipe:
         return serialization.to_yaml(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_dict` output. See `mlfeatures.serialization`."""
+    def from_dict(
+        cls, data: dict[str, object], *, trusted: Iterable[type] = ()
+    ) -> "FittedRecipe":
+        """Reconstruct a fitted recipe from `to_dict` output. See `mlfeatures.serialization`.
+
+        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
+        the registered step plugins, and the packages of the ``trusted`` classes.
+        """
         from mlfeatures import serialization
 
-        return serialization.from_dict(data)
+        return serialization.from_dict(data, trusted=trusted)
 
     @classmethod
-    def from_json(cls, text: str) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_json` output. See `mlfeatures.serialization`."""
+    def from_json(cls, text: str, *, trusted: Iterable[type] = ()) -> "FittedRecipe":
+        """Reconstruct a fitted recipe from `to_json` output. See `mlfeatures.serialization`.
+
+        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
+        the registered step plugins, and the packages of the ``trusted`` classes.
+        """
         from mlfeatures import serialization
 
-        return serialization.from_json(text)
+        return serialization.from_json(text, trusted=trusted)
 
     @classmethod
-    def from_yaml(cls, text: str) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_yaml` output. See `mlfeatures.serialization`."""
+    def from_yaml(cls, text: str, *, trusted: Iterable[type] = ()) -> "FittedRecipe":
+        """Reconstruct a fitted recipe from `to_yaml` output. See `mlfeatures.serialization`.
+
+        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
+        the registered step plugins, and the packages of the ``trusted`` classes.
+        """
         from mlfeatures import serialization
 
-        return serialization.from_yaml(text)
+        return serialization.from_yaml(text, trusted=trusted)
 
     def minimize(self) -> "FittedRecipe":
         """Return a copy with fit-only artifacts stripped. See `mlfeatures.serialization`."""

@@ -54,6 +54,23 @@ def _step_type_label(step: "Step | type[Step]") -> str:
     return f"step_{snake}"
 
 
+def _check_state_key(cls: type, key: object) -> None:
+    """Refuse a state key that would replace code on the step instead of restoring data.
+
+    `Step.to_state` emits only instance attributes, so a key naming a method,
+    property, or dunder attribute of the class is never one it wrote.
+    """
+    if not isinstance(key, str) or key.startswith("__"):
+        raise ValueError(f"invalid state key {key!r} for {cls.__name__}")
+    attr = inspect.getattr_static(cls, key, None)
+    if isinstance(attr, (property, classmethod, staticmethod)) or inspect.isfunction(
+        attr
+    ):
+        raise ValueError(
+            f"state key {key!r} would replace a method or property of {cls.__name__}"
+        )
+
+
 class StepError(Exception):
     """A failure raised while fitting or transforming a step.
 
@@ -505,6 +522,12 @@ class Step(ABC):
         attribute missing from ``state`` (e.g. a field added in a newer version)
         keeps whatever a bare instance would carry, so within a major version an
         older payload loads cleanly without per-field shims.
+
+        ``state`` is meant to be one this process produced. A payload from
+        outside goes through `FittedRecipe.from_dict`, which also restricts the
+        classes the state may name; called directly, this accepts any importable
+        class name in ``state``. Either way a key that would replace a method or
+        property raises ``ValueError``, but the values are not validated.
         """
         from mlfeatures.serialization import (
             _decode,  # pyright: ignore[reportPrivateUsage]
@@ -517,6 +540,7 @@ class Step(ABC):
             # key so a payload written before the change still loads.
             if key == "keep_original_cols":
                 key = "_keep_original_cols"
+            _check_state_key(cls, key)
             setattr(step, key, _decode(value))
         return step
 

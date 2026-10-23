@@ -24,6 +24,8 @@ step_embed = "mypackage.steps:EmbedStep"
 
 The core never relies on import order for correctness. Each plugin step declares its `required_pkgs()` and lazy-imports them.
 
+Registration is also what lets `from_json`, `from_yaml`, and `from_dict` load a recipe containing the step: they accept only classes from `mlfeatures`, from registered packages, and from classes the caller passes as `trusted`. An unregistered step is refused on load. See [serialization.md](serialization.md#loading-a-payload-never-runs-code-the-payload-picks).
+
 ---
 
 ## Base classes
