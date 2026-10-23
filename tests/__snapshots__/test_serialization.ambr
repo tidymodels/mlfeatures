@@ -1,0 +1,71 @@
+# serializer version: 1
+# name: TestMalformedPayloads.test_malformed_step_and_dataclass_payloads
+  dict({
+    'dataclass field is unknown': "cannot construct 'mlfeatures.step_pca.PcaFit' from the payload's fields; PcaFit.__init__() got an unexpected keyword argument 'nope'",
+    'dataclass fields is missing': "expected the 'fields' of 'mlfeatures.step_pca.PcaFit' to be a mapping; got 'NoneType'",
+    'dataclass fields is not a mapping': "expected the 'fields' of 'mlfeatures.step_pca.PcaFit' to be a mapping; got 'int'",
+    'dataclass name is not a string': "expected a class name as a string; got 'int'",
+    'step is not a mapping': "expected each step payload to be a mapping with a 'type' and a 'state' mapping",
+    'step state is not a mapping': "expected each step payload to be a mapping with a 'type' and a 'state' mapping",
+    'step type is missing': "expected a class name as a string; got 'NoneType'",
+    'step type is not a string': "expected a class name as a string; got 'int'",
+  })
+# ---
+# name: TestPayloadCannotRunCode.test_a_trusted_module_cannot_launder_a_third_party_class
+  "cannot locate 'mlfeatures.recipe.Laundered' for deserialization; it resolves to a class defined in 'tests.test_serialization', which is not a trusted package"
+# ---
+# name: TestPayloadCannotRunCode.test_dataclass_tag_cannot_call_an_arbitrary_callable
+  list([
+    "cannot locate 'builtins.print' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded",
+    "cannot locate 'subprocess.call' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded",
+  ])
+# ---
+# name: TestPayloadCannotRunCode.test_dataclass_tag_must_name_a_dataclass
+  "'mlfeatures.recipe.Recipe' is not a dataclass; cannot deserialize it"
+# ---
+# name: TestPayloadCannotRunCode.test_selector_step_type_is_restricted
+  list([
+    "cannot locate 'builtins.print' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded",
+    "'mlfeatures.recipe.Recipe' is not a step class; cannot deserialize it",
+  ])
+# ---
+# name: TestPayloadCannotRunCode.test_state_key_cannot_replace_a_method
+  list([
+    "state key 'transform' would replace a method or property of StepNormalize",
+    "invalid state key '__class__' for StepNormalize",
+  ])
+# ---
+# name: TestPayloadCannotRunCode.test_step_type_cannot_name_an_arbitrary_callable
+  "cannot locate 'builtins.print' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestPayloadCannotRunCode.test_step_type_must_be_a_step_subclass
+  "'mlfeatures.recipe.Recipe' is not a step class; cannot deserialize it"
+# ---
+# name: TestPayloadCannotRunCode.test_the_same_attack_through_json
+  "cannot locate 'subprocess.call' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestPayloadCannotRunCode.test_the_same_attack_through_yaml
+  "cannot locate 'subprocess.call' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestPayloadCannotRunCode.test_untrusted_module_is_never_imported
+  "cannot locate 'evil_mod_s1.Thing' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestRegisteredPlugins.test_a_malformed_entry_point_does_not_break_loading
+  "cannot locate 'tests.test_serialization._HeavyStep' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestRegisteredPlugins.test_dataclass_from_another_package_is_refused_unless_trusted
+  "cannot locate 'other_pkg_s1.Foreign' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestRegisteredPlugins.test_unregistered_plugin_step_is_refused
+  "cannot locate 'tests.test_serialization._HeavyStep' for deserialization; only classes from 'mlfeatures', from a package that registers a step under the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+# ---
+# name: TestSavingWarns.test_unregistered_fit_dataclass_warns
+  list([
+    "recipe names class(es) ['other_pkg_s1.Foreign'] that 'from_dict' refuses by default; register a step from their package(s) under the 'mlfeatures.steps' entry-point group, or pass a class from them as 'trusted' when loading",
+  ])
+# ---
+# name: TestSavingWarns.test_unregistered_step_warns
+  list([
+    "recipe names class(es) ['tests.test_serialization._HeavyStep'] that 'from_dict' refuses by default; register a step from their package(s) under the 'mlfeatures.steps' entry-point group, or pass a class from them as 'trusted' when loading",
+  ])
+# ---

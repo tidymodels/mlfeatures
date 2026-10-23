@@ -9,15 +9,24 @@ full multi-step recipe round-trip.
 
 from __future__ import annotations
 
+import dataclasses
 import json
+import sys
+import types
+import warnings
+from importlib.metadata import EntryPoint
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pandas.testing as pt
 import polars.selectors as pcs
 import pytest
+from syrupy.assertion import SnapshotAssertion
 from typing_extensions import Self
 
+import mlfeatures.recipe as recipe_module
 from mlfeatures import (
     FittedRecipe,
     Recipe,
@@ -278,6 +287,7 @@ class _HeavyStep(Step):
         return stripped  # type: ignore[return-value]
 
 
+@pytest.mark.filterwarnings("ignore:recipe names class")
 class TestMinimizeStrips:
     """minimize() drops fit-only artifacts while preserving transform output."""
 
@@ -346,6 +356,447 @@ class TestBackCompatDefaults:
         assert restored.steps[0]._empty_selection is False  # type: ignore[attr-defined]
         # Reconstruction still succeeds and transforms identically.
         pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+
+
+def _plugin_entry_point(value: str) -> EntryPoint:
+    return EntryPoint(name="heavy", value=value, group="mlfeatures.steps")
+
+
+def _register(monkeypatch: pytest.MonkeyPatch, *entry_points: object) -> None:
+    """Make ``entry_points`` the installed ``mlfeatures.steps`` registrations."""
+    monkeypatch.setattr(serialization, "_step_entry_points", lambda: list(entry_points))
+
+
+@dataclasses.dataclass(frozen=True)
+class _Note:
+    """Fit state a plugin step keeps as a dataclass."""
+
+    value: int
+
+
+def _foreign_dataclass(monkeypatch: pytest.MonkeyPatch) -> type:
+    """A dataclass defined in a package other than this one (``other_pkg_s1``)."""
+    foreign = dataclasses.make_dataclass("Foreign", [("value", int)])
+    foreign.__module__ = "other_pkg_s1"
+    module = types.ModuleType("other_pkg_s1")
+    module.Foreign = foreign  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "other_pkg_s1", module)
+    return foreign
+
+
+def _heavy_fitted(note: object = None) -> FittedRecipe:
+    fitted = Recipe().add(_HeavyStep()).fit(pd.DataFrame({"a": [1.0, 2.0, 3.0]}))
+    if note is not None:
+        fitted.steps[0]._note = note  # type: ignore[attr-defined]
+    return fitted
+
+
+def _heavy_recipe_payload(note: object = None) -> dict[str, Any]:
+    # Saving warns that the step is unregistered; that is what these tests load.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return _heavy_fitted(note).to_dict()
+
+
+def _load_error(payload: dict[str, Any], **kwargs: Any) -> str:
+    """The message of the ``ValueError`` loading ``payload`` raises."""
+    with pytest.raises(ValueError) as excinfo:
+        FittedRecipe.from_dict(payload, **kwargs)
+    return str(excinfo.value)
+
+
+def _pca_dataclass_name() -> str:
+    """The qualified name of the fit dataclass ``StepPca`` stores."""
+    rec, _ = _multi_step()
+    return rec.to_dict()["steps"][2]["state"]["_estimates"]["__dataclass__"]
+
+
+class TestPayloadCannotRunCode:
+    """A payload can only name mlfeatures classes and registered plugin steps.
+
+    The class names in a payload (a step's ``type``, a fit ``__dataclass__``, a
+    selector's ``step_type``) used to be imported and called as given, so a
+    crafted JSON or YAML file ran an arbitrary callable on load.
+    """
+
+    @staticmethod
+    def _tampered(key: str, value: object) -> dict[str, Any]:
+        rec, _ = _multi_step()
+        payload = rec.to_dict()
+        payload["steps"][0]["state"][key] = value
+        return payload
+
+    def test_dataclass_tag_cannot_call_an_arbitrary_callable(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        snapshot: SnapshotAssertion,
+    ) -> None:
+        marker = tmp_path / "pwned"
+        attacks = [
+            ("builtins.print", {"end": "pwned"}),
+            ("subprocess.call", {"args": ["touch", str(marker)]}),
+        ]
+        messages = [
+            _load_error(
+                self._tampered(
+                    "injected", {"__dataclass__": qualname, "fields": fields}
+                )
+            )
+            for qualname, fields in attacks
+        ]
+        assert messages == snapshot
+        assert not marker.exists()
+        assert capsys.readouterr().out == ""
+
+    def test_the_same_attack_through_json(
+        self, tmp_path: Path, snapshot: SnapshotAssertion
+    ) -> None:
+        marker = tmp_path / "pwned"
+        payload = self._tampered(
+            "injected",
+            {
+                "__dataclass__": "subprocess.call",
+                "fields": {"args": ["touch", str(marker)]},
+            },
+        )
+        with pytest.raises(ValueError) as excinfo:
+            FittedRecipe.from_json(json.dumps(payload))
+        assert str(excinfo.value) == snapshot
+        assert not marker.exists()
+
+    def test_the_same_attack_through_yaml(
+        self, tmp_path: Path, snapshot: SnapshotAssertion
+    ) -> None:
+        yaml = pytest.importorskip("yaml")
+        marker = tmp_path / "pwned"
+        payload = self._tampered(
+            "injected",
+            {
+                "__dataclass__": "subprocess.call",
+                "fields": {"args": ["touch", str(marker)]},
+            },
+        )
+        with pytest.raises(ValueError) as excinfo:
+            FittedRecipe.from_yaml(yaml.safe_dump(payload))
+        assert str(excinfo.value) == snapshot
+        assert not marker.exists()
+
+    def test_step_type_cannot_name_an_arbitrary_callable(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        rec, _ = _multi_step()
+        payload = rec.to_dict()
+        payload["steps"][0]["type"] = "builtins.print"
+        assert _load_error(payload) == snapshot
+
+    def test_untrusted_module_is_never_imported(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        snapshot: SnapshotAssertion,
+    ) -> None:
+        marker = tmp_path / "imported"
+        (tmp_path / "evil_mod_s1.py").write_text(
+            f"from pathlib import Path\nPath({str(marker)!r}).touch()\n"
+            "class Thing:\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        payload = self._tampered(
+            "injected", {"__dataclass__": "evil_mod_s1.Thing", "fields": {}}
+        )
+        assert _load_error(payload) == snapshot
+        assert not marker.exists()
+        assert "evil_mod_s1" not in sys.modules
+
+    def test_step_type_must_be_a_step_subclass(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        rec, _ = _multi_step()
+        payload = rec.to_dict()
+        payload["steps"][0]["type"] = "mlfeatures.recipe.Recipe"
+        assert _load_error(payload) == snapshot
+
+    def test_dataclass_tag_must_name_a_dataclass(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        payload = self._tampered(
+            "injected", {"__dataclass__": "mlfeatures.recipe.Recipe", "fields": {}}
+        )
+        assert _load_error(payload) == snapshot
+
+    def test_a_trusted_module_cannot_launder_a_third_party_class(
+        self, monkeypatch: pytest.MonkeyPatch, snapshot: SnapshotAssertion
+    ) -> None:
+        # ``_Note`` is defined in this test module, which is not trusted, but a
+        # name under ``mlfeatures`` resolves to it.
+        monkeypatch.setattr(recipe_module, "Laundered", _Note, raising=False)
+        payload = self._tampered(
+            "injected",
+            {"__dataclass__": "mlfeatures.recipe.Laundered", "fields": {"value": 1}},
+        )
+        assert _load_error(payload) == snapshot
+
+    def test_selector_step_type_is_restricted(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "city": ["a", "b", "a"]})
+        rec = (
+            Recipe()
+            .add(StepDummy(["city"]))
+            .add(StepNormalize(Selectors.has_source(step_type=StepDummy)))
+            .fit(df)
+        )
+        text = rec.to_json()
+        restored = FittedRecipe.from_json(text)
+        pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+
+        marker = '"step_type": "mlfeatures.step_dummy.StepDummy"'
+        assert marker in text
+        messages = [
+            _load_error(json.loads(text.replace(marker, f'"step_type": "{name}"')))
+            for name in ("builtins.print", "mlfeatures.recipe.Recipe")
+        ]
+        assert messages == snapshot
+
+    def test_state_key_cannot_replace_a_method(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        messages = [
+            _load_error(self._tampered(key, 5)) for key in ("transform", "__class__")
+        ]
+        assert messages == snapshot
+
+    def test_a_trusted_class_does_not_open_the_load_to_other_callables(self) -> None:
+        payload = self._tampered(
+            "injected", {"__dataclass__": "builtins.print", "fields": {}}
+        )
+        with pytest.raises(ValueError):
+            FittedRecipe.from_dict(payload, trusted=[_HeavyStep])
+
+
+class TestMalformedPayloads:
+    """A payload that is malformed raises ``ValueError``, as one that names a bad class does."""
+
+    def test_malformed_step_and_dataclass_payloads(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        rec, _ = _multi_step()
+        name = _pca_dataclass_name()
+
+        def with_step(**changes: object) -> dict[str, Any]:
+            payload = rec.to_dict()
+            payload["steps"][0].update(changes)
+            return payload
+
+        def with_state(value: object) -> dict[str, Any]:
+            payload = rec.to_dict()
+            payload["steps"][0]["state"]["injected"] = value
+            return payload
+
+        payloads = {
+            "step type is not a string": with_step(type=123),
+            "step type is missing": {
+                **rec.to_dict(),
+                "steps": [{"state": rec.to_dict()["steps"][0]["state"]}],
+            },
+            "step state is not a mapping": with_step(state=[1, 2]),
+            "step is not a mapping": {**rec.to_dict(), "steps": ["x"]},
+            "dataclass name is not a string": with_state(
+                {"__dataclass__": 5, "fields": {}}
+            ),
+            "dataclass fields is not a mapping": with_state(
+                {"__dataclass__": name, "fields": 5}
+            ),
+            "dataclass fields is missing": with_state({"__dataclass__": name}),
+            "dataclass field is unknown": with_state(
+                {"__dataclass__": name, "fields": {"nope": 1}}
+            ),
+        }
+        assert {label: _load_error(p) for label, p in payloads.items()} == snapshot
+
+
+class TestRegisteredPlugins:
+    """Steps and fit state from a package that registers under ``mlfeatures.steps``."""
+
+    def test_unregistered_plugin_step_is_refused(
+        self, snapshot: SnapshotAssertion
+    ) -> None:
+        assert _load_error(_heavy_recipe_payload()) == snapshot
+
+    def test_registered_plugin_step_loads(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _register(monkeypatch, _plugin_entry_point(f"{__name__}:_HeavyStep"))
+        restored = FittedRecipe.from_dict(_heavy_recipe_payload())
+        assert isinstance(restored.steps[0], _HeavyStep)
+
+    def test_registered_plugin_fit_dataclass_loads(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _register(monkeypatch, _plugin_entry_point(f"{__name__}:_HeavyStep"))
+        restored = FittedRecipe.from_dict(_heavy_recipe_payload(_Note(3)))
+        assert restored.steps[0]._note == _Note(3)  # type: ignore[attr-defined]
+
+    def test_dataclass_from_another_package_is_refused_unless_trusted(
+        self, monkeypatch: pytest.MonkeyPatch, snapshot: SnapshotAssertion
+    ) -> None:
+        foreign = _foreign_dataclass(monkeypatch)
+        _register(monkeypatch, _plugin_entry_point(f"{__name__}:_HeavyStep"))
+        payload = _heavy_recipe_payload(foreign(1))
+        assert _load_error(payload) == snapshot
+        restored = FittedRecipe.from_dict(payload, trusted=[foreign])
+        assert restored.steps[0]._note == foreign(1)  # type: ignore[attr-defined]
+
+    def test_step_re_exported_from_another_package_loads(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The entry point names ``plugin_api_s1:_HeavyStep``, but the class is
+        # defined (and so serialized) under this test module's name.
+        api = types.ModuleType("plugin_api_s1")
+        api._HeavyStep = _HeavyStep  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "plugin_api_s1", api)
+        _register(monkeypatch, _plugin_entry_point("plugin_api_s1:_HeavyStep"))
+        restored = FittedRecipe.from_dict(_heavy_recipe_payload())
+        assert isinstance(restored.steps[0], _HeavyStep)
+
+    def test_a_malformed_entry_point_does_not_break_loading(
+        self, monkeypatch: pytest.MonkeyPatch, snapshot: SnapshotAssertion
+    ) -> None:
+        _register(
+            monkeypatch,
+            EntryPoint(name="x", value="not a valid value!!", group="mlfeatures.steps"),
+        )
+        rec, df = _multi_step()
+        restored = FittedRecipe.from_dict(rec.to_dict())
+        pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+        assert _load_error(_heavy_recipe_payload()) == snapshot
+
+    def test_built_in_steps_never_read_the_entry_points(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def unexpected() -> list[object]:
+            raise AssertionError("the entry points were read")
+
+        monkeypatch.setattr(serialization, "_step_entry_points", unexpected)
+        rec, df = _multi_step()
+        restored = FittedRecipe.from_json(rec.to_json())
+        pt.assert_frame_equal(restored.transform(df), rec.transform(df))
+
+    def test_a_refused_name_loads_no_plugin(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class Spy:
+            module = "spy_plugin"
+            attr = "SpyStep"
+            loaded = False
+
+            def load(self) -> object:
+                Spy.loaded = True
+                raise ImportError("broken plugin")
+
+        _register(monkeypatch, Spy())
+        rec, _ = _multi_step()
+        payload = rec.to_dict()
+        payload["steps"][0]["type"] = "builtins.print"
+        with pytest.raises(ValueError):
+            FittedRecipe.from_dict(payload)
+        assert not Spy.loaded
+
+        # A name a plugin does register is tried, and a plugin that fails to
+        # import leaves the usual ``ValueError``, not its own ``ImportError``.
+        payload["steps"][0]["type"] = "elsewhere.SpyStep"
+        with pytest.raises(ValueError):
+            FittedRecipe.from_dict(payload)
+        assert Spy.loaded
+
+    def test_default_loading_covers_mlfeatures_and_registered_packages(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert serialization._is_loaded_by_default(StepNormalize)  # pyright: ignore[reportPrivateUsage]
+        assert not serialization._is_loaded_by_default(_HeavyStep)  # pyright: ignore[reportPrivateUsage]
+        _register(monkeypatch, _plugin_entry_point(f"{__name__}:_HeavyStep"))
+        assert serialization._is_loaded_by_default(_HeavyStep)  # pyright: ignore[reportPrivateUsage]
+
+
+class TestTrustedArgument:
+    """``trusted`` loads a custom step that is not registered, for that call only."""
+
+    def test_trusted_loads_an_unregistered_step(self) -> None:
+        payload = _heavy_recipe_payload(_Note(3))
+        restored = FittedRecipe.from_dict(payload, trusted=[_HeavyStep])
+        assert isinstance(restored.steps[0], _HeavyStep)
+        assert restored.steps[0]._note == _Note(3)  # type: ignore[attr-defined]
+
+    def test_trusted_applies_to_json(self) -> None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            text = _heavy_fitted().to_json()
+        restored = FittedRecipe.from_json(text, trusted=[_HeavyStep])
+        assert isinstance(restored.steps[0], _HeavyStep)
+        assert isinstance(
+            serialization.from_json(text, trusted=[_HeavyStep]).steps[0], _HeavyStep
+        )
+
+    def test_trusted_applies_to_yaml(self) -> None:
+        pytest.importorskip("yaml")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            text = _heavy_fitted().to_yaml()
+        restored = FittedRecipe.from_yaml(text, trusted=[_HeavyStep])
+        assert isinstance(restored.steps[0], _HeavyStep)
+
+    def test_trusted_does_not_outlive_the_call(self) -> None:
+        payload = _heavy_recipe_payload()
+        FittedRecipe.from_dict(payload, trusted=[_HeavyStep])
+        with pytest.raises(ValueError):
+            FittedRecipe.from_dict(payload)
+
+
+class TestInProcessStateIsNotRestricted:
+    """``from_state`` on a step's own ``to_state`` names nothing a payload chose."""
+
+    def test_step_with_an_unregistered_fit_dataclass_round_trips(self) -> None:
+        step = _heavy_fitted(_Note(3)).steps[0]
+        restored = _HeavyStep.from_state(step.to_state())
+        assert restored._note == _Note(3)  # type: ignore[attr-defined]
+
+    def test_minimize_keeps_an_unregistered_fit_dataclass(self) -> None:
+        minimized = _heavy_fitted(_Note(3)).minimize()
+        assert minimized.steps[0]._note == _Note(3)  # type: ignore[attr-defined]
+
+    def test_selector_naming_an_unregistered_step_round_trips(self) -> None:
+        step = StepNormalize(Selectors.has_source(step_type=_HeavyStep))
+        restored = StepNormalize.from_state(step.to_state())
+        assert restored.columns._step_type is _HeavyStep  # type: ignore[attr-defined]
+
+
+class TestSavingWarns:
+    """A recipe that ``from_dict`` would refuse by default says so when it is saved."""
+
+    def test_unregistered_step_warns(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.warns(UserWarning) as record:
+            _heavy_fitted().to_json()
+        assert [str(w.message) for w in record] == snapshot
+
+    def test_unregistered_fit_dataclass_warns(
+        self, monkeypatch: pytest.MonkeyPatch, snapshot: SnapshotAssertion
+    ) -> None:
+        foreign = _foreign_dataclass(monkeypatch)
+        _register(monkeypatch, _plugin_entry_point(f"{__name__}:_HeavyStep"))
+        with pytest.warns(UserWarning) as record:
+            _heavy_fitted(foreign(1)).to_dict()
+        assert [str(w.message) for w in record] == snapshot
+
+    def test_built_in_and_registered_steps_do_not_warn(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _register(monkeypatch, _plugin_entry_point(f"{__name__}:_HeavyStep"))
+        rec, _ = _multi_step()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            rec.to_json()
+            _heavy_fitted(_Note(3)).to_json()
 
 
 class TestModuleAndMethodParity:
