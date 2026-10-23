@@ -99,5 +99,13 @@ restored = from_json(to_json(fitted))
 restored.transform(credit_validation).head()
 ```
 
+A saved recipe is data, and loading it never runs code the file picks: the
+loaders accept only classes from mlfeatures and from packages that register
+steps under the `mlfeatures.steps` entry-point group, and raise `ValueError`
+for any other name. A step of your own that is not registered, such as one
+defined in a notebook, loads when you name it with
+`from_json(text, trusted=[MyStep])`. Saving warns when a recipe contains a
+class the loaders would refuse by default.
+
 See [Serializing recipes](../extra/serializing-recipes.qmd) for the file
 format and for `minimize()`, which strips fit-only artifacts before saving.
