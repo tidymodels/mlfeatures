@@ -31,6 +31,7 @@ from __future__ import annotations
 import inspect
 import math
 import pickle
+import warnings
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
 
 import narwhals.stable.v2 as nw
@@ -40,6 +41,9 @@ import pytest
 
 from mlfeatures import _frame
 from mlfeatures.recipe import FittedRecipe, Recipe
+from mlfeatures.serialization import (
+    _is_loaded_by_default,  # pyright: ignore[reportPrivateUsage]
+)
 from mlfeatures.types import DataFrame, KeepOriginals, Mode, SchemaInfo
 
 if TYPE_CHECKING:
@@ -377,8 +381,44 @@ class StepConformanceTest:
                 fitted.to_json()
             return
         before = fitted.transform(train)
-        restored = fitted.from_json(fitted.to_json())
+        # A step under development is not registered under the entry-point group
+        # yet, so saving warns that loading refuses it and the load names it as
+        # trusted. ``test_json_loads_without_trusting_the_step`` covers the
+        # registered path.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            text = fitted.to_json()
+        restored = fitted.from_json(text, trusted=[type(s) for s in fitted.steps])
         pd.testing.assert_frame_equal(restored.transform(train), before)
+
+    def test_json_loads_without_trusting_the_step(self) -> None:
+        """A registered step loads from JSON with no ``trusted`` argument.
+
+        This is the load a user of the step runs: ``from_json`` refuses a class
+        outside ``mlfeatures`` unless its package registers a step under the
+        ``mlfeatures.steps`` entry-point group. Steps in ``mlfeatures`` pass as they
+        are; a plugin step passes once it is declared under
+        ``[project.entry-points."mlfeatures.steps"]`` and installed. Until then the
+        check skips with the reason, so a step under development is not failed for
+        something it has not done yet.
+        """
+        if not self.supports_json:
+            pytest.skip("the step refuses JSON serialization (supports_json = False)")
+        fitted, train = self._fitted()
+        unregistered = [
+            type(step).__name__
+            for step in fitted.steps
+            if not _is_loaded_by_default(type(step))
+        ]
+        if unregistered:
+            pytest.skip(
+                f"{unregistered} not registered under the 'mlfeatures.steps' "
+                "entry-point group, so from_json loads it only when told to trust it"
+            )
+        restored = fitted.from_json(fitted.to_json())
+        pd.testing.assert_frame_equal(
+            restored.transform(train), fitted.transform(train)
+        )
 
     def test_fit_is_deterministic(self) -> None:
         """Two independent fits on the same data yield identical transform output."""

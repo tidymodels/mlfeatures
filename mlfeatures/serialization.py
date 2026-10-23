@@ -12,6 +12,27 @@ class is looked up by qualified name at load time. That property is what the
 no-closure conformance test relies on -- a closure cannot be JSON-encoded, so a
 passing round-trip *is* the guarantee.
 
+Loading is restricted to what the payload may *name*. While `from_dict` (and so
+`from_json` and `from_yaml`) decodes a payload, the class names in it (a step's
+``type``, a fit dataclass, a selector's ``step_type``) are resolved only against
+``mlfeatures``, the packages that register a step under the ``mlfeatures.steps``
+entry-point group, and the packages of any classes the caller passes as
+``trusted``. They must resolve to a `Step` subclass or a dataclass respectively.
+A payload naming anything else (``builtins.print``, ``subprocess.call``) raises
+``ValueError`` before that module is imported, so loading a payload never runs
+code the payload picks. The check also looks at where the resolved class is
+defined, so a trusted module that re-exports a third-party class does not make
+it loadable. The trust unit is a top-level package. It does not validate the
+values inside a payload, and a step from a registered plugin runs its own
+author's code when the recipe transforms. Pickle, by contrast, executes
+arbitrary code by design and should only be used on files you trust.
+
+The allow-list applies to payloads, not to state produced in this process:
+`Step.from_state` on a step's own `Step.to_state` (the ``minimize`` idiom) is
+unrestricted, because nothing outside the process chose the names. Saving warns
+when a recipe names a class that `from_dict` would refuse by default, so the
+mismatch shows up when the file is written, not when it is first loaded.
+
 The public surface is a small module API -- `to_dict`, `from_dict`, `to_json`,
 `from_json`, `to_yaml`, `from_yaml`, and `minimize` -- mirrored by thin
 delegating methods on `FittedRecipe` (``fitted.to_json()``,
@@ -54,10 +75,13 @@ Known limitations
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import dataclasses
 import importlib
 import json
 import math
+import warnings
 from typing import TYPE_CHECKING, Any
 
 import narwhals.stable.v2 as nw
@@ -65,7 +89,10 @@ import numpy as np
 from dateutil.rrule import rrule, rruleset
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable, Iterator
+
     from mlfeatures.recipe import FittedRecipe
+    from mlfeatures.step import Step
 
 __all__ = [
     "to_dict",
@@ -271,7 +298,7 @@ def _encode(value: Any) -> Any:
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         cls = type(value)
         return {
-            "__dataclass__": f"{cls.__module__}.{cls.__qualname__}",
+            "__dataclass__": _qualified_name(cls),
             "fields": {
                 f.name: _encode(getattr(value, f.name))
                 for f in dataclasses.fields(value)
@@ -290,7 +317,7 @@ def _decode(obj: Any) -> Any:
         return [_decode(v) for v in obj]
     if isinstance(obj, dict):
         if "__dataclass__" in obj:
-            return _decode_dataclass(obj["__dataclass__"], obj["fields"])
+            return _decode_dataclass(obj)
         if len(obj) == 1:
             (tag,) = obj
             payload = obj[tag]
@@ -322,9 +349,23 @@ def _decode(obj: Any) -> Any:
     return obj
 
 
-def _decode_dataclass(qualname: str, fields: dict[str, Any]) -> Any:
+def _decode_dataclass(obj: dict[str, Any]) -> Any:
+    qualname = obj["__dataclass__"]
     cls = _load_qualname(qualname)
-    return cls(**{name: _decode(v) for name, v in fields.items()})
+    if not (isinstance(cls, type) and dataclasses.is_dataclass(cls)):
+        raise ValueError(f"{qualname!r} is not a dataclass; cannot deserialize it")
+    fields = obj.get("fields")
+    if not isinstance(fields, dict):
+        raise ValueError(
+            f"expected the 'fields' of {qualname!r} to be a mapping; "
+            f"got {type(fields).__name__!r}"
+        )
+    try:
+        return cls(**{name: _decode(v) for name, v in fields.items()})
+    except TypeError as exc:
+        raise ValueError(
+            f"cannot construct {qualname!r} from the payload's fields; {exc}"
+        ) from exc
 
 
 def _sorted_safe(values: Any) -> list[Any]:
@@ -375,7 +416,7 @@ def _encode_selector(sel: Any) -> dict[str, Any]:
     if isinstance(sel, _SourceSelector):
         step_type = None
         if sel._step_type is not None:
-            step_type = f"{sel._step_type.__module__}.{sel._step_type.__qualname__}"
+            step_type = _qualified_name(sel._step_type)
         return {
             "cls": "source",
             "step": sel._step,
@@ -416,7 +457,7 @@ def _decode_selector(state: dict[str, Any]) -> Any:
         return _RoleTypeSelector(state["role"], _decode_dtype_spec(state["dtype"]))
     if kind == "source":
         step_type = (
-            _load_qualname(state["step_type"])
+            _load_step_class(state["step_type"])
             if state["step_type"] is not None
             else None
         )
@@ -452,24 +493,183 @@ def _decode_dtype_spec(spec: None | str | list[str]) -> type | tuple[type, ...] 
 # --------------------------------------------------------------------------- #
 
 
-def _load_qualname(qualname: str) -> Any:
-    """Import ``module.Qualname`` and return the attribute.
+def _root(module_name: str) -> str:
+    return module_name.partition(".")[0]
 
-    Falls back to the ``mlfeatures.steps`` entry-point group so third-party plugin
-    steps deserialize by the name they registered under.
+
+def _qualified_name(cls: type) -> str:
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def _entry_point_parts(ep: Any) -> tuple[str, str] | None:
+    """The ``(module, attr)`` an entry point names, or ``None`` if it is malformed."""
+    try:
+        return ep.module, ep.attr or ""
+    except AttributeError:
+        return None
+
+
+_UNTRUSTED = (
+    "only classes from 'mlfeatures', from a package that registers a step under "
+    "the 'mlfeatures.steps' entry-point group, or passed as 'trusted' are loaded"
+)
+
+
+class _Trust:
+    """Which classes a payload may name, resolved lazily and at most once per load.
+
+    A payload is data from outside the process, so the class names in it are a
+    request, not an instruction: importing and calling whatever it names would let
+    a crafted file run ``subprocess.call``. Only ``mlfeatures`` itself, the
+    packages that register a step under the ``mlfeatures.steps`` entry-point group
+    (an install-time declaration, not payload data), and the packages of the
+    classes passed as ``trusted`` are honored. The trust unit is a top-level
+    package, and the check runs twice: on the name before anything is imported
+    (importing runs code), and on the module that defines the resolved class, so
+    a trusted module re-exporting a third-party class does not make it loadable.
+
+    ``enforce=False`` trusts every package. That is the mode for state produced in
+    this process (`Step.from_state` on a step's own `Step.to_state`), where nothing
+    outside the process chose the names.
     """
-    module_name, _, attr = qualname.rpartition(".")
-    if module_name:
-        try:
-            module = importlib.import_module(module_name)
-            return getattr(module, attr)
-        except (ImportError, AttributeError):
-            pass
-    for ep in _step_entry_points():
-        cls = ep.load()
-        if f"{cls.__module__}.{cls.__qualname__}" == qualname:
+
+    def __init__(self, trusted: Iterable[type] = (), *, enforce: bool = True) -> None:
+        self._enforce = enforce
+        self._extra_roots = frozenset(_root(cls.__module__) for cls in trusted)
+        self._entry_points: list[tuple[Any, str, str]] | None = None
+        self._registered_roots: frozenset[str] | None = None
+
+    def _registered(self) -> list[tuple[Any, str, str]]:
+        """The ``(entry point, module, attr)`` of each usable registered step.
+
+        Read on first use rather than up front: a payload of built-in steps never
+        needs it, and one malformed entry point in any installed package must not
+        break loading them. Malformed entry points are skipped.
+        """
+        if self._entry_points is None:
+            found: list[tuple[Any, str, str]] = []
+            for ep in _step_entry_points():
+                parts = _entry_point_parts(ep)
+                if parts is not None:
+                    found.append((ep, *parts))
+            self._entry_points = found
+        return self._entry_points
+
+    def allows(self, module_name: str) -> bool:
+        """Whether a class defined in ``module_name`` may be loaded."""
+        root = _root(module_name)
+        if not self._enforce or root == "mlfeatures" or root in self._extra_roots:
+            return True
+        if self._registered_roots is None:
+            self._registered_roots = frozenset(
+                _root(module) for _, module, _ in self._registered()
+            )
+        return root in self._registered_roots
+
+    def load(self, qualname: object) -> Any:
+        """Return the class ``module.Qualname``, or raise ``ValueError``.
+
+        The module is imported only when its package is trusted; importing is
+        itself code execution, so the check comes first. A step re-exported from
+        a package other than the one that defines it is found through the
+        ``mlfeatures.steps`` entry-point group, by the name it was serialized
+        under.
+        """
+        if not isinstance(qualname, str):
+            raise ValueError(
+                f"expected a class name as a string; got {type(qualname).__name__!r}"
+            )
+        module_name, _, attr = qualname.rpartition(".")
+        reason = _UNTRUSTED
+        cause: Exception | None = None
+        if module_name and self.allows(module_name):
+            try:
+                obj = getattr(importlib.import_module(module_name), attr)
+            except (ImportError, AttributeError) as exc:
+                reason, cause = str(exc), exc
+            else:
+                defined_in = getattr(obj, "__module__", None)
+                if isinstance(defined_in, str) and self.allows(defined_in):
+                    return obj
+                reason = (
+                    f"it resolves to a class defined in {defined_in!r}, "
+                    "which is not a trusted package"
+                )
+        cls = self._registered_class(qualname, attr)
+        if cls is not None:
             return cls
-    raise ValueError(f"cannot locate {qualname!r} for deserialization")
+        raise ValueError(
+            f"cannot locate {qualname!r} for deserialization; {reason}"
+        ) from cause
+
+    def _registered_class(self, qualname: str, attr: str) -> Any:
+        """The registered step class serialized as ``qualname``, or ``None``.
+
+        Entry points are matched on their attribute name before any is loaded, so
+        a name no plugin registers imports nothing, and a plugin that fails to
+        import cannot supply the class.
+        """
+        for ep, _, ep_attr in self._registered():
+            if ep_attr.rpartition(".")[2] != attr:
+                continue
+            try:
+                cls = ep.load()
+            except Exception:
+                continue
+            if isinstance(cls, type) and _qualified_name(cls) == qualname:
+                return cls
+        return None
+
+    def can_load(self, qualname: str) -> bool:
+        try:
+            self.load(qualname)
+        except ValueError:
+            return False
+        return True
+
+
+#: The `_Trust` for the payload being decoded; ``None`` outside `from_dict`, where
+#: nothing outside the process chose the names (see `_Trust`).
+_active_trust: contextvars.ContextVar[_Trust | None] = contextvars.ContextVar(
+    "_active_trust", default=None
+)
+
+
+@contextlib.contextmanager
+def _decoding(trusted: Iterable[type]) -> Generator[None]:
+    """Restrict the class names a payload may use for the duration of a block."""
+    token = _active_trust.set(_Trust(trusted))
+    try:
+        yield
+    finally:
+        _active_trust.reset(token)
+
+
+def _load_qualname(qualname: object) -> Any:
+    """`_Trust.load` under the trust of the payload being decoded."""
+    trust = _active_trust.get()
+    return (_Trust(enforce=False) if trust is None else trust).load(qualname)
+
+
+def _is_loaded_by_default(  # pyright: ignore[reportUnusedFunction]
+    cls: type,
+) -> bool:
+    """Whether `from_dict` loads ``cls`` without the caller listing it as trusted.
+
+    Its only caller is ``mlfeatures.testing``, which pyright does not check, so it
+    sees no use of this function in the package.
+    """
+    return _Trust().allows(cls.__module__)
+
+
+def _load_step_class(qualname: object) -> type[Step]:
+    """`_load_qualname`, requiring the result to be a `Step` subclass."""
+    from mlfeatures.step import Step
+
+    cls = _load_qualname(qualname)
+    if not (isinstance(cls, type) and issubclass(cls, Step)):
+        raise ValueError(f"{qualname!r} is not a step class; cannot deserialize it")
+    return cls
 
 
 def _step_entry_points() -> Any:
@@ -572,16 +772,55 @@ def _decode_lineage(payload: dict[str, Any]) -> Any:
 
 
 def _encode_step(step: Any) -> dict[str, Any]:
-    cls = type(step)
     return {
-        "type": f"{cls.__module__}.{cls.__qualname__}",
+        "type": _qualified_name(type(step)),
         "state": step.to_state(),
     }
 
 
-def _decode_step(payload: dict[str, Any]) -> Any:
-    cls = _load_qualname(payload["type"])
-    return cls.from_state(payload["state"])
+def _decode_step(payload: Any) -> Any:
+    state = payload.get("state") if isinstance(payload, dict) else None
+    if not isinstance(state, dict):
+        raise ValueError(
+            "expected each step payload to be a mapping with a 'type' and a "
+            "'state' mapping"
+        )
+    cls = _load_step_class(payload.get("type"))
+    return cls.from_state(state)
+
+
+def _class_names(obj: Any) -> Iterator[str]:
+    """The class names inside an encoded step: fit dataclasses and selector step types."""
+    if isinstance(obj, list):
+        for item in obj:
+            yield from _class_names(item)
+    elif isinstance(obj, dict):
+        if isinstance(obj.get("__dataclass__"), str):
+            yield obj["__dataclass__"]
+        if obj.get("cls") == "source" and isinstance(obj.get("step_type"), str):
+            yield obj["step_type"]
+        for value in obj.values():
+            yield from _class_names(value)
+
+
+def _warn_if_unloadable(steps: list[dict[str, Any]]) -> None:
+    """Warn when the encoded ``steps`` name classes `from_dict` refuses by default.
+
+    Without this the file is written without complaint and only fails when it is
+    first loaded, possibly in another process long after the recipe was fit.
+    """
+    trust = _Trust()
+    names = {step["type"] for step in steps} | set(_class_names(steps))
+    refused = sorted(name for name in names if not trust.can_load(name))
+    if refused:
+        warnings.warn(
+            f"recipe names class(es) {refused!r} that 'from_dict' refuses by "
+            "default; register a step from their package(s) under the "
+            "'mlfeatures.steps' entry-point group, or pass a class from them as "
+            "'trusted' when loading",
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
@@ -591,22 +830,54 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
     recipe-level roles, training schema, and lineage. The result contains
     only plain data, so it round-trips through `from_dict` and is stable enough
     to diff in code review.
+
+    Warns when a step, or a dataclass in its fit state, comes from a package that
+    `from_dict` refuses by default (see `from_dict`): the payload is still
+    produced, but loading it needs the step registered or passed as ``trusted``.
     """
     from mlfeatures import __version__
 
+    steps = [_encode_step(step) for step in recipe.steps]
+    _warn_if_unloadable(steps)
     payload: dict[str, Any] = {
         "mlfeatures_version": __version__,
         "format_version": FORMAT_VERSION,
         "roles": _encode_roles(recipe.roles),
         "schema": None if recipe.schema is None else _encode_schema(recipe.schema),
         "lineage": None if recipe.lineage is None else _encode_lineage(recipe.lineage),
-        "steps": [_encode_step(step) for step in recipe.steps],
+        "steps": steps,
     }
     return payload
 
 
-def from_dict(data: dict[str, Any]) -> FittedRecipe:
-    """Reconstruct a `FittedRecipe` from the ``dict`` produced by `to_dict`."""
+def from_dict(data: dict[str, Any], *, trusted: Iterable[type] = ()) -> FittedRecipe:
+    """Reconstruct a `FittedRecipe` from the ``dict`` produced by `to_dict`.
+
+    The payload is treated as untrusted data: it can name only classes from
+    ``mlfeatures``, from packages that register a step under the
+    ``mlfeatures.steps`` entry-point group, and from the packages of the classes
+    passed as ``trusted``. Each class must also be of the right kind (a `Step`
+    subclass for a step, a dataclass for fit state). Loading never calls
+    anything else the payload names, and a name is checked before its module is
+    imported. The values inside the payload are not validated.
+
+    Parameters
+    ----------
+    data
+        The ``dict`` produced by `to_dict`.
+    trusted
+        Classes whose top-level packages the payload may also name classes from,
+        for a custom step that is not registered (one defined in a script or
+        notebook, or still under development). Pass only classes you wrote or
+        trust: a package listed here is imported as the payload asks. Defaults
+        to none.
+
+    Raises
+    ------
+    ValueError
+        If the payload names a class outside the trusted packages, names something
+        that is not a step or dataclass, or is malformed.
+    """
     from mlfeatures.recipe import FittedRecipe
 
     found = data.get("format_version", FORMAT_VERSION)
@@ -616,10 +887,13 @@ def from_dict(data: dict[str, Any]) -> FittedRecipe:
             f"this mlfeatures writes and reads format_version {FORMAT_VERSION}, and "
             "the layout changed incompatibly; re-fit the recipe to re-serialize"
         )
-    steps = [_decode_step(p) for p in data["steps"]]
-    roles = _decode_roles(data["roles"])
-    schema = None if data.get("schema") is None else _decode_schema(data["schema"])
-    lineage = None if data.get("lineage") is None else _decode_lineage(data["lineage"])
+    with _decoding(trusted):
+        steps = [_decode_step(p) for p in data["steps"]]
+        roles = _decode_roles(data["roles"])
+        schema = None if data.get("schema") is None else _decode_schema(data["schema"])
+        lineage = (
+            None if data.get("lineage") is None else _decode_lineage(data["lineage"])
+        )
     return FittedRecipe(steps=steps, roles=roles, lineage=lineage, schema=schema)
 
 
@@ -628,14 +902,19 @@ def to_json(recipe: FittedRecipe, *, indent: int = 2) -> str:
 
     ``allow_nan=False`` keeps the output strictly valid JSON: non-finite floats
     are already encoded explicitly by the value codec, so a stray ``NaN`` here
-    signals a bug rather than emitting an invalid ``NaN`` token.
+    signals a bug rather than emitting an invalid ``NaN`` token. Warns like
+    `to_dict` when the recipe names a class that `from_json` refuses by default.
     """
     return json.dumps(to_dict(recipe), indent=indent, allow_nan=False)
 
 
-def from_json(text: str) -> FittedRecipe:
-    """Reconstruct a `FittedRecipe` from the JSON produced by `to_json`."""
-    return from_dict(json.loads(text))
+def from_json(text: str, *, trusted: Iterable[type] = ()) -> FittedRecipe:
+    """Reconstruct a `FittedRecipe` from the JSON produced by `to_json`.
+
+    Takes the same ``trusted`` argument as `from_dict` and raises the same
+    ``ValueError`` for a class outside the trusted packages.
+    """
+    return from_dict(json.loads(text), trusted=trusted)
 
 
 def _require_yaml() -> Any:
@@ -656,7 +935,8 @@ def to_yaml(recipe: FittedRecipe) -> str:
     A thin encoding over the same JSON-safe ``dict`` as `to_json`, so the two
     formats round-trip identically. ``sort_keys=False`` preserves the payload's
     stable key order and ``default_flow_style=False`` keeps the block layout that
-    diffs cleanly in review. Needs the optional ``pyyaml`` package.
+    diffs cleanly in review. Needs the optional ``pyyaml`` package. Warns like
+    `to_dict` when the recipe names a class that `from_yaml` refuses by default.
     """
     yaml = _require_yaml()
     return str(
@@ -664,10 +944,16 @@ def to_yaml(recipe: FittedRecipe) -> str:
     )
 
 
-def from_yaml(text: str) -> FittedRecipe:
-    """Reconstruct a `FittedRecipe` from the YAML produced by `to_yaml`."""
+def from_yaml(text: str, *, trusted: Iterable[type] = ()) -> FittedRecipe:
+    """Reconstruct a `FittedRecipe` from the YAML produced by `to_yaml`.
+
+    Takes the same ``trusted`` argument as `from_dict` and raises the same
+    ``ValueError`` for a class outside the trusted packages. ``safe_load`` only
+    keeps the YAML parser from building arbitrary objects; the class names inside
+    the payload are restricted by `from_dict`, as they are for JSON.
+    """
     yaml = _require_yaml()
-    return from_dict(yaml.safe_load(text))
+    return from_dict(yaml.safe_load(text), trusted=trusted)
 
 
 def minimize(recipe: FittedRecipe) -> FittedRecipe:
