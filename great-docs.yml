@@ -363,7 +363,7 @@ sections:
 # Canonical address of the deployed documentation site.
 # Required for subdirectory deployments, skills page install commands,
 # .well-known/ discovery, and sitemaps.
-site_url: "https://tidymodels.github.io/shoez/"
+site_url: "https://tidymodels.github.io/mlfeatures/"
 
 # Site Settings
 # -------------

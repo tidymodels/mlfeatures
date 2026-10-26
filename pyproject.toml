@@ -16,7 +16,7 @@ authors = [
 ]
 keywords = ["machine-learning", "feature-engineering", "preprocessing", "pipelines"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -72,9 +72,9 @@ examples = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tidymodels/shoez"
-Repository = "https://github.com/tidymodels/shoez"
-"Bug Tracker" = "https://github.com/tidymodels/shoez/issues"
+Homepage = "https://github.com/tidymodels/mlfeatures"
+Repository = "https://github.com/tidymodels/mlfeatures"
+"Bug Tracker" = "https://github.com/tidymodels/mlfeatures/issues"
 
 [project.entry-points."mlfeatures.steps"]
 # Third-party step plugins register here
