@@ -69,21 +69,6 @@ authors:
 #   homepage: https://posit.co
 #   ror: https://ror.org/03wc8by49
 
-# User Guide Structure
-# --------------------
-# Pages in user_guide/ are auto-discovered, but the implicit order is by
-# filename, which would put a new page ahead of getting-started.qmd. The
-# explicit form below fixes the order: the tour first, then the pages that
-# only matter once you are using a particular backend or ecosystem.
-user_guide:
-  - section: "User Guide"
-    contents:
-      - getting-started.qmd
-      - common-step-arguments.qmd
-      - polars-extension.qmd
-      - sklearn-pipelines.qmd
-      - vocabulary.qmd
-
 # API Reference Structure
 # -----------------------
 # Customize the sections below to organize your API documentation.
@@ -328,6 +313,7 @@ user_guide:
   - section: Getting started
     contents:
       - getting-started.qmd
+      - common-step-arguments.qmd
       - polars-extension.qmd
       - sklearn-pipelines.qmd
   - section: Basics
@@ -360,6 +346,7 @@ user_guide:
   - section: Extra
     contents:
       - extra/crosswalk.qmd
+      - vocabulary.qmd
       - extra/serializing-recipes.qmd
       - extra/creating-a-new-step.qmd
 
