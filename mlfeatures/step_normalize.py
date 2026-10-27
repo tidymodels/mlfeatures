@@ -58,7 +58,7 @@ def fit_normalize(
     ``dict`` mapping each normalizable column name to its ``(mean, std)`` pair.
     Empty when ``selected`` has no columns.
 
-    Columns with a standard deviation of ``0`` (constant columns — every value
+    Columns with a standard deviation of ``0`` (constant columns: every value
     the same) cannot be scaled to unit variance, so they are **omitted** from
     the result and a `UserWarning` is emitted naming them.
 
@@ -68,7 +68,7 @@ def fit_normalize(
     package.  Uses the sample standard deviation (``ddof=1``, pinned explicitly),
     matching R's ``sd()``; scaling by it makes the normalized column's sample
     standard deviation exactly ``1``.  A ``NaN`` standard deviation (e.g. from a
-    single-row fit) is not treated as constant — it is kept and propagates as
+    single-row fit) is not treated as constant: it is kept and propagates as
     ``NaN`` at transform time, signalling a degenerate fit.
     """
     stats: dict[str, tuple[float, float]] = {}
@@ -110,7 +110,7 @@ def apply_normalize(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``stats`` replaced
+    narwhals.DataFrame: the input frame with each column in ``stats`` replaced
     in place by its standardized value. Column names, order, and structure are
     unchanged.
     """

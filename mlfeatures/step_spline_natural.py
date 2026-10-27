@@ -5,7 +5,7 @@ Port of R ``recipes``'s ``step_spline_natural()``, which wraps
 inspects training data to place interior knots (by quantile, or the caller's
 own explicit `knots`) and stores them alongside the training boundary
 (``min``/``max``); the *apply* half (`apply_spline_natural()`) reuses those
-stored knots to expand each selected column — the basis is never recomputed
+stored knots to expand each selected column: the basis is never recomputed
 from new data, so train/serve parity holds the way it does for
 `mlfeatures.step_polynomial`. `StepSplineNatural` wraps both into the `Step`
 lifecycle so a `Recipe` can fit and apply them.
@@ -87,7 +87,7 @@ class SplineNaturalFit:
         Whether the constant basis column is included in the output.
     deg_free
         Effective number of output columns. ``0`` for a degenerate column
-        (fewer than 2 distinct training values) — those are passed through
+        (fewer than 2 distinct training values): those are passed through
         untouched at apply time (with a warning), the same convention as a
         degree-0 `mlfeatures.step_polynomial.PolynomialFit`.
     """
@@ -110,7 +110,7 @@ def natural_null_space(
     ``spline_df + 2``-column complete cubic B-spline basis (``spline_df``
     interior-knot-implied dimension, +2 for the intercept and linear term) down
     onto the ``spline_df``-dimensional space of coefficient vectors whose
-    second derivative is zero at both boundary knots — the defining property
+    second derivative is zero at both boundary knots: the defining property
     of a natural spline. ``spline_df`` here is always ``len(internal_knots) +
     2`` (the *complete*-basis dimension, i.e. before dropping a column for
     ``complete_set=False``), independent of the step's ``complete_set``
@@ -181,7 +181,7 @@ def fit_spline_natural(
         Explicit interior knot locations, shared across every selected
         column, or ``None`` (default) to place them at quantiles of each
         column's own training values. Each column's knots must lie strictly
-        inside that column's own training boundary — a `ValueError` names the
+        inside that column's own training boundary: a `ValueError` names the
         offending column if not.
 
     Returns
@@ -257,7 +257,7 @@ def apply_spline_natural(
     - If it is in ``fit_result`` with ``deg_free > 0``, replace it in place
       (same positional slot) with ``deg_free`` basis columns named
       ``{column}_1``, ``{column}_2``, ..., ``{column}_{deg_free}``, using the
-      fit-time knots — the basis is **not recomputed** from ``data``. With
+      fit-time knots: the basis is **not recomputed** from ``data``. With
       ``keep_original_cols`` the source column stays in its slot and the
       expansion follows it.
     - If its ``deg_free`` is ``0``, keep the original column and emit a
@@ -265,7 +265,7 @@ def apply_spline_natural(
 
     New data falling outside the fit-time boundary knots is extrapolated
     **linearly** (using the raw B-spline basis value and first derivative at
-    the boundary, then projected through the same null-space matrix) — this
+    the boundary, then projected through the same null-space matrix): this
     is a defining property of a natural spline, not a simplification, and was
     verified against R `splines2`'s own out-of-boundary output.
 
@@ -399,7 +399,7 @@ class StepSplineNatural(Step):
     column). A column with fewer than 2 distinct training values cannot
     support a boundary at all; `transform()` leaves such a column untouched
     and emits a `UserWarning`. New data outside the fit-time boundary is
-    extrapolated linearly, not as a wild polynomial continuation — this is
+    extrapolated linearly, not as a wild polynomial continuation: this is
     what "natural" means for this basis.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)

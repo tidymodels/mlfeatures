@@ -10,7 +10,7 @@ The *fit* half (`fit_pls()`) delegates the actual NIPALS computation to
 ``sklearn.cross_decomposition.PLSRegression`` and copies only the plain NumPy
 arrays it needs out of the fitted estimator into a frozen `PlsFit`; the
 *apply* half (`apply_pls()`) reuses those arrays to project any frame onto the
-learned components, exactly as `mlfeatures.step_pca` does for its loadings — the
+learned components, exactly as `mlfeatures.step_pca` does for its loadings: the
 basis is never recomputed from new data, giving train/serve parity.
 `StepPls` wraps both into the `Step` lifecycle so a `Recipe` can fit and apply
 them.

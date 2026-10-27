@@ -39,7 +39,7 @@ def fit_drop_corr(
 
     Returns
     -------
-    list[str] — column names to drop.  Empty list if nothing exceeds the
+    list[str]: column names to drop.  Empty list if nothing exceeds the
     threshold and every column has a usable correlation.  Columns whose
     correlations are all missing (constant or all-null columns) are always
     included, even when no pair exceeds the threshold.
@@ -110,7 +110,7 @@ def fit_drop_corr(
         corr[np.isnan(corr)] = 0.0
         np.fill_diagonal(corr, 1.0)
 
-    # Average absolute correlation per column — used to rank columns so the
+    # Average absolute correlation per column: used to rank columns so the
     # one with the broadest correlation to others is removed first.
     avg_corr = np.mean(np.abs(corr), axis=0)
 

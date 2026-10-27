@@ -78,7 +78,7 @@ class ColumnDropStep(Step):
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
-        """Schema of the columns this step produced — none; it only removes."""
+        """Schema of the columns this step produced: none; it only removes."""
         if self._estimates is None:
             raise RuntimeError(
                 f"{type(self).__name__}.schema_out() called before fit()"

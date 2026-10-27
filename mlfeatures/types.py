@@ -1,7 +1,7 @@
 """Shared type aliases and sentinels for the step contract.
 
 Several of these are placeholders for types owned by other foundation issues
-(notably the lineage subsystem — see ``design/lineage.md``). They exist so that
+(notably the lineage subsystem; see ``design/lineage.md``). They exist so that
 the `mlfeatures.step` contract is importable and type-checkable today. The
 concrete implementations will replace the placeholder bodies here without
 changing the names the rest of the team codes against.
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from mlfeatures.selectors import FeaturesSelector
     from mlfeatures.step import Step
 
-    #: A native tabular structure at the package boundary — concretely a pandas or
+    #: A native tabular structure at the package boundary: concretely a pandas or
     #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
     #: `Frame` on entry to the recipe and back at the sklearn boundary.
     DataFrame = Union["pd.DataFrame", "pl.DataFrame"]
@@ -91,7 +91,7 @@ __all__ = [
 class ColSchema:
     """Column schema: the names and dtypes a step reports for a column set.
 
-    Carries the column names and their dtype names — enough for a step to
+    Carries the column names and their dtype names: enough for a step to
     describe what it consumed (``schema_in``) and produced (``schema_out``).
     This is the lightweight step-facing report; the recipe-side column-lineage
     DAG that tracks roles, source, sparsity, and provenance is
@@ -331,7 +331,7 @@ ANY_DTYPE = _AnyDtype()
 #: backend-agnostic type system it already depends on (see ``design/lineage.md``).
 AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
 
-#: The narwhals numeric dtypes — a convenience set for steps that only accept
+#: The narwhals numeric dtypes: a convenience set for steps that only accept
 #: numeric columns (e.g. `StepDropCorr`, ``step_normalize``).
 NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.Int8,

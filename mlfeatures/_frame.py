@@ -1,4 +1,4 @@
-"""Internal dataframe boundary — the single data-ops API steps write against.
+"""Internal dataframe boundary: the single data-ops API steps write against.
 
 Per ``design/ecosystem.md``, narwhals is the *full internal representation* for
 v0.1: a step is written once against this surface and narwhals dispatches to the
@@ -106,7 +106,7 @@ def select(
     (``polars.col("a")``), or a `FeaturesSelector`. A polars selector or
     expression is resolved against the frame's schema, so it works
     regardless of the frame's backend. A ``FeaturesSelector`` additionally uses
-    ``roles`` to filter by role, and — for provenance selectors — the live
+    ``roles`` to filter by role, and (for provenance selectors) the live
     lineage DAG ``lineage`` and id→step map ``steps`` when the recipe supplies
     them at fit time.
     """
@@ -145,7 +145,7 @@ def _expand_polars_expr(frame: Frame, expr: PlExpr) -> list[str]:
     private attribute that a deep copy drops.
     """
     # Reached only when ``names`` is a polars expression, which it can be
-    # only if polars is loaded — so polars is guaranteed importable here and
+    # only if polars is loaded, so polars is guaranteed importable here and
     # this never raises. Routed through import_optional anyway so the package's
     # sanctioned runtime-backend imports are uniform/greppable.
     cs = import_optional("polars.selectors", purpose="to resolve a polars selector")

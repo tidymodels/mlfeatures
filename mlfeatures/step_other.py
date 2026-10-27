@@ -66,8 +66,8 @@ def fit_other(
         by the step's ``fit()`` method after selector resolution.
     threshold:
         Minimum proportion of the column's non-null rows a level must reach to
-        be kept. Mutually exclusive with ``min_count`` — `StepOther` rejects
-        both at once in its constructor — and when both are ``None`` this falls
+        be kept. Mutually exclusive with ``min_count`` (`StepOther` rejects
+        both at once in its constructor), and when both are ``None`` this falls
         back to ``DEFAULT_THRESHOLD``, so calling the helper with no criterion
         behaves like the step's no-argument default.
     min_count:
@@ -78,7 +78,7 @@ def fit_other(
 
     Returns
     -------
-    dict[str, list[str]] — a mapping from every column of ``selected`` to its
+    dict[str, list[str]]: a mapping from every column of ``selected`` to its
     kept levels, sorted so the estimate is deterministic and JSON-serializable.
     Every column is present (not only those with something to collapse), because
     the kept set is also what decides the fate of levels *unseen* at fit time:
@@ -145,7 +145,7 @@ def apply_other(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each mapped column cast to
+    narwhals.DataFrame: the input frame with each mapped column cast to
     ``String`` and every value outside its kept set replaced by ``other_level``.
     Nulls stay null. Column names, order, and structure are unchanged.
     """

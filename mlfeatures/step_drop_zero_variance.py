@@ -44,8 +44,8 @@ def fit_drop_zero_variance(selected: Frame) -> list[str]:
 class StepDropZeroVariance(ColumnDropStep):
     """Remove columns that have a single unique value (zero variance).
 
-    The selected columns whose observed values are all the same — or all
-    missing — are dropped, and no new columns are produced.
+    The selected columns whose observed values are all the same (or all
+    missing) are dropped, and no new columns are produced.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.

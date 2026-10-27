@@ -13,7 +13,7 @@ df.mlf.step_dummy(["color"]).mlf.step_normalize(["x"])  # chains
 
 Each method fits the step on ``df`` and immediately transforms ``df``, returning a
 fresh polars ``DataFrame`` (the fitted step is discarded). It is a thin convenience
-layer over `Recipe` — it adds no new data-operation surface and
+layer over `Recipe`: it adds no new data-operation surface and
 delegates conversion to the recipe lifecycle.
 
 Boundary note: this is the **one** module in ``mlfeatures`` that imports ``polars`` at

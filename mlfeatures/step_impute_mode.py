@@ -10,7 +10,7 @@ Each selected categorical column has its null values filled with that column's
 most frequent level. Ports R ``recipes``' ``step_impute_mode``, which likewise
 targets nominal variables.
 
-Mode imputation is for **categorical** columns only — the most frequent observed
+Mode imputation is for **categorical** columns only: the most frequent observed
 level. (The mean/median steps cover numeric columns; the mode of a continuous
 numeric column is not meaningful.) It **preserves** the column's dtype, since the
 fill value is an observed level of the column.
@@ -108,7 +108,7 @@ def apply_impute_mode(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with nulls in each mapped column filled
+    narwhals.DataFrame: the input frame with nulls in each mapped column filled
     by its mode (columns with a ``None`` mode are left as-is). Column names,
     order, dtypes, and structure are unchanged.
     """
@@ -129,7 +129,7 @@ class StepImputeMode(Step):
 
     Mode imputation is for categorical columns (it accepts
     ``Categorical``/``Enum``/``String``, not numeric dtypes) and is
-    dtype-preserving — the fill value is an observed level of the column.
+    dtype-preserving: the fill value is an observed level of the column.
 
     A column that is entirely null at fit time has no mode; it is left unchanged
     (not dropped) with a warning, and passes through ``transform`` untouched.
@@ -230,7 +230,7 @@ class StepImputeMode(Step):
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
-        """Schema of the produced columns — unchanged: mode imputation preserves dtype."""
+        """Schema of the produced columns, unchanged because mode imputation preserves dtype."""
         if self._schema_in is None:
             raise RuntimeError("StepImputeMode.schema_out() called before fit()")
         return ColSchema(

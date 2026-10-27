@@ -1,8 +1,8 @@
 """Geographic distance feature: distance from each row to a fixed reference point.
 
-The *fit* half (`fit_geo_distance()`) does no estimation from data — the
+The *fit* half (`fit_geo_distance()`) does no estimation from data (the
 reference point and distance settings are all constructor arguments, not
-learned statistics — so it just validates and packages them alongside the
+learned statistics), so it just validates and packages them alongside the
 resolved `lat`/`lon` column names. The *apply* half
 (`apply_geo_distance()`) computes the per-row distance. `StepGeoDistance`
 wraps them into the `Step` lifecycle so a `Recipe` can fit and apply it.
@@ -48,7 +48,7 @@ __all__ = [
 
 # ``Literal`` makes the allowed metric values part of the type so a typo at the
 # call site is caught by mypy/pyright. Add a new metric here when ready to
-# support it — the runtime dispatch in ``_compute_distance`` and the relevant
+# support it: the runtime dispatch in ``_compute_distance`` and the relevant
 # tests are what need to change in lockstep.
 GeoMetric = Literal["haversine", "euclidean"]
 
@@ -493,5 +493,5 @@ class StepGeoDistance(Step):
 
     @property
     def produces_sparse(self) -> bool:
-        """Distances are dense by construction — no zeros structurally."""
+        """Distances are dense by construction: no zeros structurally."""
         return False

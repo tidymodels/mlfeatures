@@ -47,7 +47,7 @@ __all__ = [
 
 # ``Literal`` makes the allowed metric values part of the type so a typo at the
 # call site is caught by mypy/pyright. Add a new metric here when ready to
-# support it — the runtime dispatch in ``_compute_distances`` and the relevant
+# support it: the runtime dispatch in ``_compute_distances`` and the relevant
 # tests are what need to change in lockstep.
 Metric = Literal["euclidean", "manhattan"]
 
@@ -61,7 +61,7 @@ class ClassDistanceFit:
     labels, plus the distance configuration so the apply call can be a one-arg
     invocation (no risk of mismatching fit-time and apply-time settings).
 
-    Marked ``frozen=True`` so the fitted object is immutable — accidental
+    Marked ``frozen=True`` so the fitted object is immutable: accidental
     mutation of a stored statistic is a common source of train/serve drift.
 
     Attributes
@@ -74,7 +74,7 @@ class ClassDistanceFit:
         `sorted()` so the order is deterministic across fits.
         Length equals the number of classes ``c``.
     centroids
-        Float-64 matrix of shape ``(p, c)`` — row ``i`` is the centroid
+        Float-64 matrix of shape ``(p, c)``: row ``i`` is the centroid
         coordinate for feature ``columns[i]``, column ``j`` is the centroid
         for class ``classes[j]``. This matches the orientation
         ``p features × c classes`` requested by the original spec.
@@ -121,7 +121,7 @@ def fit_class_distance(
     target
         Narwhals ``Series`` of class labels, aligned row-for-row with
         ``selected``. Rows where the target is null are dropped before the
-        per-class means are taken — a missing label is not a class.
+        per-class means are taken: a missing label is not a class.
     metric
         Distance function to use at apply time. Recorded on the fit object;
         does not change the centroid computation itself (Euclidean and
@@ -171,7 +171,7 @@ def fit_class_distance(
     labels = target_np[not_null]
 
     # Sort the unique class labels so the column order of ``centroids`` is
-    # deterministic — same input always gives the same column layout. This
+    # deterministic: same input always gives the same column layout. This
     # matches the ``sorted(levels)`` discipline used by ``fit_dummy``.
     classes: list[Any] = sorted(set(labels.tolist()))
 
@@ -183,7 +183,7 @@ def fit_class_distance(
     for j, cls in enumerate(classes):
         # Boolean mask over rows: True where the label equals this class.
         class_mask = labels == cls
-        # Per-column mean across the matching rows — that's the centroid.
+        # Per-column mean across the matching rows: that's the centroid.
         # ``axis=0`` collapses the row axis, yielding a length-``p`` vector.
         # ``np.mean`` of an empty array would produce a warning and a NaN; we
         # are guaranteed at least one row per class because each ``cls`` came
@@ -245,7 +245,7 @@ def apply_class_distance(
     `apply_polynomial()`'s per-row null tolerance).
 
     The column name is the same whether or not the distances were
-    log-transformed — the transformation is recorded in ``fit_result.log_distance``
+    log-transformed: the transformation is recorded in ``fit_result.log_distance``
     rather than in the column name.
     """
     # Empty fit (no columns were selected): nothing to add; pass through.
@@ -301,7 +301,7 @@ def _compute_distances(
     x
         Feature matrix of shape ``(n, p)``.
     centroids
-        Centroid matrix of shape ``(p, c)`` — same layout as
+        Centroid matrix of shape ``(p, c)``: same layout as
         `ClassDistanceFit.centroids`.
     metric
         Which distance function to compute.
@@ -319,7 +319,7 @@ def _compute_distances(
 
     * ``x[:, :, None]`` reshapes ``x`` to ``(n, p, 1)``.
     * ``centroids[None, :, :]`` reshapes the centroid matrix to ``(1, p, c)``.
-    * Subtracting them broadcasts to ``(n, p, c)`` — for every (row, feature,
+    * Subtracting them broadcasts to ``(n, p, c)``: for every (row, feature,
       class) triple, the difference between that row's feature value and the
       corresponding centroid coordinate.
 
@@ -520,7 +520,7 @@ class StepClassDistance(Step):
         selected = _frame.select(
             training_data, self.columns, info.roles, info.lineage, info.producing_steps
         )
-        # ``training_data[col]`` returns a narwhals Series — the same shape
+        # ``training_data[col]`` returns a narwhals Series: the same shape
         # ``_ortho_poly`` consumes in step_polynomial.
         target_series = training_data[self.target]
         self._estimates = fit_class_distance(
@@ -592,5 +592,5 @@ class StepClassDistance(Step):
 
     @property
     def produces_sparse(self) -> bool:
-        """Distances are dense by construction — no zeros structurally."""
+        """Distances are dense by construction: no zeros structurally."""
         return False
