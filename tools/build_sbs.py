@@ -137,7 +137,7 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import Recipe, RecipeTransformer, StepDummy, StepLog
 from mlfeatures import Selectors as s""",
             ),
             (
@@ -146,9 +146,8 @@ from mlfeatures import Selectors as s""",
                 [
                     "DIFF: ames exported once from R (no PyPI package) -> data/ames.csv;",
                     "polars needs null_values='NA' — R's NA strings aren't auto-parsed.",
-                    "DIFF (GAP): step_log has no mlfeatures analog — the log moves PRE-recipe.",
-                    "Static, so safe, but it leaves the replay boundary: new frames must",
-                    "arrive already-logged. That trade IS the escape-hatch lesson.",
+                    "DIFF: only the target is logged here; Gr_Liv_Area is logged inside the",
+                    "recipe by StepLog, so the fitted recipe replays it on new frames.",
                 ],
                 """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))
@@ -157,8 +156,7 @@ ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))
                 """ames = pl.read_csv("data/ames.csv", null_values="NA")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built",
                     "Bldg_Type", "Sale_Price"])
-ames = ames.with_columns(pl.col("Sale_Price").log(base=10),
-                         pl.col("Gr_Liv_Area").log(base=10))  # was step_log""",
+ames = ames.with_columns(pl.col("Sale_Price").log(base=10))""",
             ),
             (
                 "Split",
@@ -182,7 +180,7 @@ ames_train, ames_test = train_test_split(
                     "The book's first recipe: the formula's implicit preprocessing made explicit."
                 ],
                 [
-                    "DIFF: with the log moved out, only the encoding remains in the recipe.",
+                    "DIFF: StepLog = step_log; the fitted recipe replays it on new frames.",
                     "DIFF: StepDummy = step_dummy (k-1 indicators, reference level dropped).",
                 ],
                 """simple_ames <-
@@ -192,6 +190,7 @@ ames_train, ames_test = train_test_split(
   step_dummy(all_nominal_predictors())""",
                 """simple_ames = (
     Recipe(data=ames_train, target="Sale_Price")
+    .add(StepLog(s.col("Gr_Liv_Area"), base=10))
     .add(StepDummy(s.nominal_features()))
 )""",
             ),
@@ -251,7 +250,7 @@ rsq  = float(pl.DataFrame({"y": y_test, "pred": pred})
         slug="tmwr03",
         id="TMWR-03",
         title="ames realistic + lm",
-        status="R: CV rmse 0.0791 · Python ran: test 0.0825, CV = nan — unseen fold-levels nulled predictions; the gaps broke CV itself (see py-run-results.md).",
+        status="R: CV rmse 0.0791 · Python ran: CV 0.0780, test rmse 0.0792 / rsq 0.789 — the full recipe runs; StepOther pools unseen fold-levels, so every CV fold scores.",
         sections=[
             (
                 "Setup",
@@ -264,7 +263,8 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
-from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import (Recipe, RecipeTransformer, StepDummy, StepInteract,
+                        StepLog, StepOther, StepSplineNatural)
 from mlfeatures import Selectors as s""",
             ),
             (
@@ -272,14 +272,13 @@ from mlfeatures import Selectors as s""",
                 [
                     "Six features now (adds Latitude/Longitude); log10 the target pre-split."
                 ],
-                ["DIFF (GAP): step_log again worked around pre-recipe (see TMWR-01)."],
+                [],
                 """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))""",
                 """ames = pl.read_csv("data/ames.csv", null_values="NA")
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Latitude", "Longitude", "Sale_Price"])
-ames = ames.with_columns(pl.col("Sale_Price").log(base=10),
-                         pl.col("Gr_Liv_Area").log(base=10))  # was step_log""",
+ames = ames.with_columns(pl.col("Sale_Price").log(base=10))""",
             ),
             (
                 "Split",
@@ -301,11 +300,9 @@ ames_train, ames_test = train_test_split(
                     "levels BEFORE dummy; interact targets the GENERATED Bldg_Type_* columns.",
                 ],
                 [
-                    "DIFF (GAP): step_other unbuilt — rare Neighborhoods keep their own dummies,",
-                    "so the design matrix is wider and sparser than R's.",
-                    "DIFF (GAP): step_interact unbuilt — interactions over generated columns is",
-                    "exactly mlfeatures's has_source pitch; target form shown in place.",
-                    "DIFF (GAP): step_ns unbuilt — no spline steps at all.",
+                    "DIFF: StepInteract multiplies every pair in its selection, so it also adds",
+                    "the dummy-by-dummy products R's formula omits; they are all zero.",
+                    "DIFF: keep_original_cols=True keeps the source columns, as R does.",
                 ],
                 """ames_rec <-
   recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built +
@@ -317,13 +314,13 @@ ames_train, ames_test = train_test_split(
   step_ns(Latitude, Longitude, deg_free = 20)""",
                 """ames_rec = (
     Recipe(data=ames_train, target="Sale_Price")
-
-    # .add(StepOther(s.col("Neighborhood"), threshold=0.01))   # GAP
+    .add(StepLog(s.col("Gr_Liv_Area"), base=10))
+    .add(StepOther(s.col("Neighborhood"), threshold=0.01))
     .add(StepDummy(s.nominal_features()))
-    # .add(StepInteract(s.col("Gr_Liv_Area")
-    #                   * s.starts_with("Bldg_Type_")))         # GAP
-    # .add(StepSplineNatural(s.col("Latitude", "Longitude"),
-    #                        deg_free=20))                      # GAP
+    .add(StepInteract(s.col("Gr_Liv_Area") | s.starts_with("Bldg_Type_"),
+                      keep_original_cols=True))
+    .add(StepSplineNatural(s.col("Latitude", "Longitude"),
+                           deg_free=20))
 )""",
             ),
             (
@@ -344,8 +341,8 @@ collect_metrics(lm_res)
 cv_rmse = -cross_val_score(lm_wflow, X_train, y_train, cv=cv,
                            scoring="neg_root_mean_squared_error")
 print(cv_rmse.mean())
-# ran: nan! unseen fold-level ('Landmark') nulled predictions — the
-# missing step_other doesn't just cost accuracy, it breaks CV""",
+# ran: 0.0780 (R: 0.0791) — StepOther pools unseen fold-levels, so every
+# fold scores""",
             ),
             (
                 "Final fit + proof + metrics",
@@ -620,8 +617,8 @@ concrete_train, concrete_test = train_test_split(
                 [
                     "DIFF: none — StepNormalize ports step_normalize exactly. This candidate",
                     "runs in mlfeatures today.",
-                    "DIFF (GAP, variant only): the poly/interact response surface needs the",
-                    "all-pairs StepInteract (unbuilt); StepPolynomial itself exists.",
+                    "DIFF (variant only): the poly/interact response surface is",
+                    "StepPolynomial + StepInteract (every pair of the selected columns).",
                 ],
                 """normalized_rec <-
   recipe(compressive_strength ~ ., data = concrete_train) %>%
@@ -634,9 +631,11 @@ concrete_train, concrete_test = train_test_split(
     Recipe(data=concrete_train, target="compressive_strength")
     .add(StepNormalize(s.features()))
 )
-# poly_recipe = normalized_rec.add(
-#     StepPolynomial(s.features(), degree=2))
-#     # .add(StepInteract(s.features() * s.features()))  # GAP""",
+# poly_rec = (
+#     normalized_rec
+#     .add(StepPolynomial(s.features(), degree=2))
+#     .add(StepInteract(s.features(), keep_original_cols=True))
+# )""",
             ),
             (
                 "Model + tune",
@@ -702,22 +701,20 @@ print(rmse)                  # ran: 7.94 (R test: 8.57 — distance weights won)
         slug="tmwr16",
         id="TMWR-16",
         title="beans PCA, no model",
-        status="Both ran. StepPCA still unbuilt — sklearn PCA stands in outside the recipe; without orderNorm, PC1-4 variance = 55.4/26.5/8.0/5.1%.",
+        status="Both ran. StepOrderNorm and StepPca run inside the recipe; PC1-4 variance = 59.44/24.42/6.95/5.44% (R: 59.4/24.4/…).",
         sections=[
             (
                 "Setup",
                 ["Load the stack. No estimator anywhere — the recipe is the product."],
-                [
-                    "DIFF: sklearn appears only for PCA (the unbuilt step), not for a model."
-                ],
+                ["DIFF: sklearn appears only for the split helper, not for a model."],
                 """library(tidymodels)
 tidymodels_prefer()
 library(beans)
 library(bestNormalize)""",
                 """import polars as pl
-from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from mlfeatures import Recipe, StepDropZeroVariance, StepNormalize
+from mlfeatures import (Recipe, StepDropZeroVariance, StepNormalize,
+                        StepOrderNorm, StepPca)
 from mlfeatures import Selectors as s""",
             ),
             (
@@ -747,9 +744,7 @@ bean_validation, bean_test = train_test_split(
                     "the step ordering. fit() ~ prep(); transform() ~ bake().",
                 ],
                 [
-                    "DIFF (GAP): step_orderNorm (bestNormalize's ORQ transform) has no mlfeatures",
-                    "analog — not even designed. Omitted: skewed shape features stay skewed,",
-                    "so components will differ somewhat from the book's.",
+                    "DIFF: StepOrderNorm = step_orderNorm (bestNormalize's ORQ transform).",
                 ],
                 """bean_rec <-
   recipe(class ~ ., data = bean_train) %>%
@@ -762,7 +757,7 @@ bake(bean_rec_trained, new_data = bean_validation) %>% head()""",
                 """bean_rec = (
     Recipe(data=bean_train, target="class")
     .add(StepDropZeroVariance(s.numeric_features()))
-
+    .add(StepOrderNorm(s.numeric_features()))
     .add(StepNormalize(s.numeric_features()))
 )
 fitted = bean_rec.fit(bean_train)
@@ -774,9 +769,7 @@ fitted.transform(bean_validation).head()""",
                     "Four components, estimated on training data only, scored on validation."
                 ],
                 [
-                    "DIFF (GAP): StepPCA is designed-but-unbuilt — sklearn PCA consumes the",
-                    "recipe's output OUTSIDE the replay boundary. When it lands, this block",
-                    "collapses into .add(StepPCA(s.numeric_features(), num_comp=4)).",
+                    "DIFF: StepPca runs inside the recipe, so transform() returns the scores.",
                     "DIFF: R pipes a NEW step onto the already-prep()ed recipe and re-preps",
                     "(incremental fit); mlfeatures recipes are declared whole and fit once.",
                 ],
@@ -786,31 +779,29 @@ fitted.transform(bean_validation).head()""",
   prep()
 
 bake(bean_pca_rec, new_data = bean_validation) %>% head()""",
-                """pca = PCA(n_components=4, random_state=1601)
-pca.fit(fitted.transform(bean_train).select(num_cols))
+                """pca_rec = bean_rec.add(StepPca(s.numeric_features(), num_comp=4))
+pca_fitted = pca_rec.fit(bean_train)
 
-scores = pl.DataFrame(
-    pca.transform(fitted.transform(bean_validation).select(num_cols)),
-    schema=["PC1", "PC2", "PC3", "PC4"])
+scores = pca_fitted.transform(bean_validation)
 scores.head()""",
             ),
             (
                 "Loadings + variance",
                 ["The no-model deliverables: top loadings and percent variance."],
                 [
-                    'DIFF: tidy(id = "pca") -> pca.components_ / explained_variance_ratio_.',
-                    "A fitted StepPCA should expose the same queries on the recipe object.",
+                    'DIFF: tidy(id = "pca", type = "variance") -> score variance over total variance.',
+                    "DIFF (GAP): no public accessor for a fitted step's loadings yet, so the",
+                    "top-loadings table has no mlfeatures equivalent.",
                 ],
                 """tidy(bean_pca_rec, id = "pca") %>%
   group_by(component) %>%
   slice_max(abs(value), n = 5)
 
 tidy(bean_pca_rec, id = "pca", type = "variance")""",
-                """loadings = pl.DataFrame({"term": num_cols}).with_columns(
-    pl.Series(f"PC{i+1}", pca.components_[i]) for i in range(4))
-loadings.unpivot(index="term").sort("value", descending=True)
-
-print(pca.explained_variance_ratio_ * 100)""",
+                """total_var = (fitted.transform(bean_train).drop("class")
+             .select(pl.sum_horizontal(pl.all().var())).item())
+pca_fitted.transform(bean_train).select(
+    pl.col("^PC[0-9]+$").var() / total_var * 100)""",
             ),
         ],
     ),
@@ -819,7 +810,7 @@ print(pca.explained_variance_ratio_ * 100)""",
         slug="kuhn",
         id="KUHN",
         title="credit_data + glmnet logistic",
-        status="R: roc_auc 0.844 / acc 0.806 · Python ran: 0.829 / 0.796 — imputation spine ported 1:1; only step_other missing.",
+        status="R: roc_auc 0.844 / acc 0.806 · Python ran: 0.830 / 0.794 — the whole recipe ported 1:1, step_other included.",
         sections=[
             (
                 "Setup",
@@ -835,7 +826,7 @@ from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
 from sklearn.pipeline import Pipeline
 from mlfeatures import (Recipe, RecipeTransformer, StepDropZeroVariance,
                    StepDummy, StepImputeMedian, StepImputeMode,
-                   StepNormalize)
+                   StepNormalize, StepOther)
 from mlfeatures import Selectors as s""",
             ),
             (
@@ -868,11 +859,10 @@ credit_train, credit_test = train_test_split(
                 "Recipe",
                 ["impute -> collapse rare levels -> dummy -> filter -> normalize."],
                 [
-                    "DIFF (GAP): StepOther unbuilt — omitted; rare levels keep their dummies.",
-                    "The R run surfaced the design input: credit_data's Home column already",
-                    'HAS a level named "other", colliding with step_other\'s default label.',
-                    "StepOther needs a collision strategy, not just a default string.",
-                    "DIFF: everything else ports 1:1 — the imputation spine runs today.",
+                    "DIFF: StepOther = step_other. credit_data's Home column already HAS a",
+                    'level named "other", so the pooled level is "infrequent"; StepOther',
+                    "warns if that name collides with an existing level.",
+                    "DIFF: everything else ports 1:1.",
                 ],
                 """credit_rec <-
   recipe(Status ~ ., data = credit_train) %>%
@@ -887,8 +877,8 @@ credit_train, credit_test = train_test_split(
     Recipe(data=credit_train, target="Status")
     .add(StepImputeMedian(s.numeric_features()))
     .add(StepImputeMode(s.nominal_features()))
-
-    # .add(StepOther(s.nominal_features(), threshold=0.05))  # GAP
+    .add(StepOther(s.nominal_features(), threshold=0.05,
+                   other_level="infrequent"))
     .add(StepDummy(s.nominal_features()))
     .add(StepDropZeroVariance(s.features()))
     .add(StepNormalize(s.numeric_features()))
