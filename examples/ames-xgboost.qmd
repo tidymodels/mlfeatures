@@ -24,8 +24,6 @@ PARITY NOTES (differences from example.R that are structural, not bugs):
    target quartile; 5-fold shuffle), different rows.
  - xgboost defaults differ slightly between the R engine and XGBRegressor;
    metric magnitudes land near the R run (test rmse 0.0730), not identically.
- - Ames exported from R on first run: data/ames.csv (null_values="NA" —
-   polars does not auto-parse R's "NA" strings).
 ```
 *Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*

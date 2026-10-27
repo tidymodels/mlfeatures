@@ -2,26 +2,29 @@
 title: "Ames realistic: the canonical linear-model recipe"
 ---
 
-The workhorse recipe TMwR grows step by motivated step. The runnable subset here trails the R metrics — the delta measures the not-yet-built steps. Ported from [Tidy Modeling with R, ch. 8](https://www.tmwr.org/recipes).
+The workhorse recipe TMwR grows step by motivated step: log, pool rare neighborhoods, dummy-encode, interact, spline. Ported from [Tidy Modeling with R, ch. 8](https://www.tmwr.org/recipes).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/tmwr03-r-vs-py.html){target="_blank"} · R original (full recipe): CV rmse 0.0791, test rsq 0.798.
 
 ::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
 ```
-THE BIGGEST-GAP PORT, deliberately: this is the example that best *sells*
-mlfeatures's provenance selectors, and it cannot fully run until three steps land.
+THE FULL TMWR RECIPE: log, pool rare levels, dummy, interact, spline. Every
+step runs inside the recipe, so the fitted recipe replays all of it, including
+in each cross-validation fold.
 
 PARITY NOTES:
- - GAP: step_log -> pre-recipe polars (static, safe; outside replay boundary).
- - GAP: step_other(Neighborhood, 0.01) -> StepOther is unbuilt (backlog
-   priority 3). Omitted — and the first run PROVED the cost: rare fold-level
-   'Landmark' nulled CV predictions (cross_val_score = nan). The gap breaks
-   CV, not just accuracy.
- - GAP: step_interact -> StepInteract unbuilt (the has_source showcase);
-   target form shown commented in place.
- - GAP: step_ns -> no spline steps. Omitted.
- => The runnable subset (log + dummy + lm) trails the R metrics — that
-    delta is a *measurement of the gaps*.
+ - step_log -> StepLog(s.col("Gr_Liv_Area"), base=10). The target is still
+   logged outside the recipe, as in TMwR Ch. 5.
+ - step_other(Neighborhood, 0.01) -> StepOther(..., threshold=0.01). Rare
+   levels, and levels unseen at fit time, pool into "other", so a level that
+   only appears in a CV fold (e.g. 'Landmark') no longer nulls predictions
+   (a run without this step scored cross_val_score = nan).
+ - step_interact(~ Gr_Liv_Area:starts_with("Bldg_Type_")) -> StepInteract over
+   Gr_Liv_Area and the Bldg_Type_ dummies, with keep_original_cols=True. It
+   multiplies every pair in its selection, so it also adds the dummy-by-dummy
+   products R's formula omits; they are all zero (one building type excludes
+   the others), so they add nothing to the fit.
+ - step_ns(Latitude, Longitude, deg_free = 20) -> StepSplineNatural.
 ```
 *Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
@@ -36,7 +39,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 
-from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import (Recipe, RecipeTransformer, StepDummy, StepInteract,
+                        StepLog, StepOther, StepSplineNatural)
 from mlfeatures import Selectors as s
 
 # ── Data + target transform (outside the recipe, per TMwR Ch. 5)
@@ -44,10 +48,7 @@ from mlfeatures import Selectors as s
 from mlfeatures.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Latitude", "Longitude", "Sale_Price"])
-ames = ames.with_columns(
-    pl.col("Sale_Price").log(base=10),
-    pl.col("Gr_Liv_Area").log(base=10),   # GAP workaround (step_log)
-)
+ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
 
 # ── Split (stratified 80/20 by target quartile)
 
@@ -56,16 +57,16 @@ ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
 
-# ── Recipe (the runnable subset of ames_rec; gaps marked in place)
+# ── Recipe (the full ames_rec)
 
 ames_rec = (
     Recipe(data=ames_train, target="Sale_Price")
-    # .add(StepOther(s.col("Neighborhood"), threshold=0.01))          # 🧪 GAP
+    .add(StepLog(s.col("Gr_Liv_Area"), base=10))
+    .add(StepOther(s.col("Neighborhood"), threshold=0.01))
     .add(StepDummy(s.nominal_features()))
-    # .add(StepInteract(s.col("Gr_Liv_Area") * s.starts_with("Bldg_Type_")))
-    #                                       # 🧪 GAP — the has_source showcase
-    # .add(StepSplineNatural(s.col("Latitude", "Longitude"), deg_free=20))
-    #                                       # 🧪 GAP — no spline steps yet
+    .add(StepInteract(s.col("Gr_Liv_Area") | s.starts_with("Bldg_Type_"),
+                      keep_original_cols=True))
+    .add(StepSplineNatural(s.col("Latitude", "Longitude"), deg_free=20))
 )
 
 # ── Model + workflow
@@ -86,8 +87,7 @@ cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 cv_rmse = -cross_val_score(lm_wflow, X_train, y_train, cv=cv,
                            scoring="neg_root_mean_squared_error")
 print(f"--- 5-fold CV rmse: {cv_rmse.mean():.4f} (+/- {cv_rmse.std():.4f}) ---")
-# First run: nan — unseen fold-level ('Landmark') nulled predictions.
-# R avoids this precisely because step_other pools rare levels first.
+# StepOther pools rare and unseen levels at fit time, so every fold scores.
 
 # Final fit on the full training set:
 lm_wflow.fit(X_train, y_train)
@@ -107,5 +107,5 @@ rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
 rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
             .select(pl.corr("y", "pred")).item() ** 2)
 print(f"\nrmse: {rmse:.4f}   rsq: {rsq:.3f}")
-# R run (full recipe): test rmse 0.0791, rsq 0.798
+# R run (full recipe): CV rmse 0.0791, test rsq 0.798
 ```

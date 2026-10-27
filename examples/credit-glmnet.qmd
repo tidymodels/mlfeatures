@@ -9,17 +9,14 @@ glmnet rejects NAs and factors outright, so every stage materializes: impute, en
 ::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
 ```
 THE IMPUTATION EXAMPLE, and (after concrete-KNN) the second-most portable:
-the impute/dummy/zv/normalize spine ports 1:1.
+the whole impute/other/dummy/zv/normalize recipe ports 1:1.
 
 PARITY NOTES:
- - GAP: step_other(threshold = 0.05, other = "infrequent") -> StepOther is
-   unbuilt (backlog priority 3). Omitted: rare levels each keep a dummy
-   column. Design input from the R run: credit_data's Home column already
-   HAS a level named "other", which collides with step_other()'s default
-   label — StepOther needs a collision strategy, not just a default string.
- - polars gotcha that MATTERS here: null_values="NA" is required — this
-   dataset's whole point is its NAs, and polars would read them as the
-   string "NA" (pandas auto-parses them; polars does not).
+ - step_other(threshold = 0.05, other = "infrequent") -> StepOther(...,
+   threshold=0.05, other_level="infrequent"). credit_data's Home column
+   already HAS a level named "other", which is why the R run pools into
+   "infrequent"; StepOther warns if the pooled-level name collides with an
+   existing level.
  - Model mapping: logistic_reg(penalty = tune(), mixture = 1) + glmnet ->
    LogisticRegression(l1_ratio=1.0, solver="liblinear") with C = 1/(n*lambda):
    glmnet minimizes MEAN loss + lambda*penalty; sklearn minimizes
@@ -42,7 +39,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_sp
 from sklearn.pipeline import Pipeline
 
 from mlfeatures import (Recipe, RecipeTransformer, StepDropZeroVariance, StepDummy,
-                   StepImputeMedian, StepImputeMode, StepNormalize)
+                   StepImputeMedian, StepImputeMode, StepNormalize, StepOther)
 from mlfeatures import Selectors as s
 
 # ── Data + split
@@ -57,15 +54,13 @@ credit_train, credit_test = train_test_split(
     random_state=55
 )
 
-# ── Recipe: impute -> (other GAP) -> dummy -> filter -> normalize
+# ── Recipe: impute -> other -> dummy -> filter -> normalize
 
 credit_rec = (
     Recipe(data=credit_train, target="Status")
     .add(StepImputeMedian(s.numeric_features()))
     .add(StepImputeMode(s.nominal_features()))
-    # .add(StepOther(s.nominal_features(), threshold=0.05))   # 🧪 GAP — and
-    #     the R run showed why the pooled-label default needs a collision
-    #     strategy: credit_data$Home already has a level named "other"
+    .add(StepOther(s.nominal_features(), threshold=0.05, other_level="infrequent"))
     .add(StepDummy(s.nominal_features()))
     .add(StepDropZeroVariance(s.features()))
     .add(StepNormalize(s.numeric_features()))
