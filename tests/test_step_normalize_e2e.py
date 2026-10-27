@@ -73,7 +73,7 @@ class TestEndToEnd:
         fitted = Recipe(steps=[StepNormalize(["a"])]).fit(train)
         new = pd.DataFrame({"a": [2.0, 6.0]})
         out = fitted.transform(new)
-        # (2-2)/2 = 0 ; (6-2)/2 = 2 — using TRAIN stats, not new-data stats.
+        # (2-2)/2 = 0 ; (6-2)/2 = 2, using TRAIN stats, not new-data stats.
         assert out["a"].tolist() == pytest.approx([0.0, 2.0])
 
     def test_transform_is_idempotent(self) -> None:

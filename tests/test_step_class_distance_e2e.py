@@ -87,7 +87,7 @@ class TestEndToEnd:
         )
         new = pd.DataFrame(
             {
-                # Same feature values, completely different labels — if the
+                # Same feature values, completely different labels. If the
                 # centroids were re-estimated from ``new``, the values would change.
                 "x": [0.0, 2.0, 10.0, 12.0],
                 "y": [0.0, 4.0, 10.0, 14.0],
@@ -112,7 +112,7 @@ class TestEndToEnd:
         )
         out = recipe.fit(df).transform(df)
         # Every distance is < raw distance (since log compresses for d > 1)
-        # but more importantly all finite — even when a row sits on a centroid.
+        # but more importantly all finite, even when a row sits on a centroid.
         for col in ("distance_a", "distance_b"):
             assert out[col].notna().all()
 
@@ -208,7 +208,7 @@ class TestEndToEnd:
 
 
 # ---------------------------------------------------------------------------
-# StepClassDistance — unit-level invariants
+# StepClassDistance: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

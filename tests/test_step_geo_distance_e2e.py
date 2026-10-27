@@ -81,7 +81,7 @@ class TestEndToEnd:
         ).fit(train)
         out = fitted.transform(new)
         # Reference point is fixed at construction time, not re-derived from
-        # ``new`` — distance from (0, 0) to Union Station is large but finite.
+        # ``new``: distance from (0, 0) to Union Station is large but finite.
         assert out["geo_dist"].iloc[0] > 0.0
 
     def test_source_columns_lose_roles(self) -> None:
@@ -143,7 +143,7 @@ class TestEndToEnd:
 
 
 # ---------------------------------------------------------------------------
-# StepGeoDistance — unit-level invariants
+# StepGeoDistance: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

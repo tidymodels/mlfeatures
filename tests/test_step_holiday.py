@@ -218,7 +218,7 @@ class TestApplyHoliday:
 
 
 # ---------------------------------------------------------------------------
-# StepHoliday — unit-level invariants
+# StepHoliday: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

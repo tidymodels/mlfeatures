@@ -224,7 +224,7 @@ class TestCompoundFeatures:
 
     ``y`` (float) and ``grp`` (categorical) are targets in the fixture, so
     ``numeric_features`` / ``double_features`` exclude ``y`` and
-    ``categorical_features`` / ``nominal_features`` exclude ``grp`` — proving
+    ``categorical_features`` / ``nominal_features`` exclude ``grp``: proving
     the role filter actually bites, not just the type filter.
     """
 

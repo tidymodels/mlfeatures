@@ -93,7 +93,7 @@ class TestApplyImputeMode:
         assert out["g"].dtype == nw.String
 
     def test_categorical_input_imputed_with_mode(self) -> None:
-        # impute_mode accepts Categorical as well as String — a pandas
+        # impute_mode accepts Categorical as well as String: a pandas
         # categorical column must have its nulls filled with the mode, and the
         # Categorical dtype must be preserved through transform.
         df = _df(("g", pd.Categorical(["a", "a", "b", None])))

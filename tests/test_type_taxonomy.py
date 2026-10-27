@@ -2,19 +2,19 @@
 
 The taxonomy in ``design/lineage.md`` (numeric/float/int, bool, str, categorical
 ordered/unordered, date, datetime, duration, list) is realized as **narwhals
-dtype classes** rather than a custom enum — see ``mlfeatures/types.py`` and the
+dtype classes** rather than a custom enum; see ``mlfeatures/types.py`` and the
 predicates in ``mlfeatures/_frame.py``. This module proves narwhals round-trips every
 category correctly from **both** polars and pandas: each predicate fires for its
 own category and only its own, and ``dtype_category`` names it.
 
 Backend coverage gaps are handled per category rather than skipped silently:
 
-* **list** and **date** — pandas surfaces neither as a narwhals dtype: a
+* **list** and **date** (pandas surfaces neither as a narwhals dtype): a
   variable-length list column has no first-class pandas dtype, and a column of
   ``datetime.date`` objects lands as ``object`` (narwhals ``Object``), not
   ``Date``. Both are exercised on polars only. Documented as pandas limitations,
   not defects. (``datetime`` *does* round-trip on pandas via ``datetime64``.)
-* **categorical ordered/unordered** — narwhals normalizes polars ``Enum`` and
+* **categorical ordered/unordered**: narwhals normalizes polars ``Enum`` and
   pandas ``Categorical(ordered=True)`` to ``Enum`` (ordered), and polars
   ``Categorical`` / pandas ``Categorical(ordered=False)`` to ``Categorical``
   (unordered). Both backends express both, so both are tested.

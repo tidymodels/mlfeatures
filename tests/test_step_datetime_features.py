@@ -111,7 +111,7 @@ class TestApplyDatetimeFeatures:
 
 
 # ---------------------------------------------------------------------------
-# StepDatetimeFeatures — unit-level invariants
+# StepDatetimeFeatures: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

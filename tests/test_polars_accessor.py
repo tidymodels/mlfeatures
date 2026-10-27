@@ -79,7 +79,7 @@ class TestRegistration:
 
 
 # Each case is (accessor method name, step class, shared args). We call the
-# wrapper and the constructor with the same args and assert they agree — i.e. the
+# wrapper and the constructor with the same args and assert they agree, i.e. the
 # wrapper forwards to the step it claims to. Step *behaviour* is covered by each
 # step's own test suite (and the equivalence machinery itself by the apply tests).
 @pytest.mark.parametrize(
@@ -135,7 +135,7 @@ class TestApplyAndChaining:
 
 
 # ---------------------------------------------------------------------------
-# Wrapper/step parity — the accessor must not silently fall out of sync
+# Wrapper/step parity: the accessor must not silently fall out of sync
 # ---------------------------------------------------------------------------
 
 

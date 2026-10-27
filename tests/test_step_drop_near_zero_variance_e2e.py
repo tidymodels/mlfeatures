@@ -51,7 +51,7 @@ class TestEndToEnd:
         assert list(out.columns) == ["a", "sparse", "b"]
 
     def test_string_sparse_column_dropped(self) -> None:
-        # Near-zero variance is type-agnostic — a sparse string column drops.
+        # Near-zero variance is type-agnostic: a sparse string column drops.
         df = pd.DataFrame(
             {"s": ["x"] * 999 + ["y"], "t": [str(i % 7) for i in range(1000)]}
         )
@@ -98,7 +98,7 @@ class TestEndToEnd:
             train
         )
         kept = set(fitted.transform(train).columns)
-        # New data where ``sparse`` now varies a lot must not resurrect it —
+        # New data where ``sparse`` now varies a lot must not resurrect it:
         # the drop decision is fixed at fit time.
         new = pd.DataFrame(
             {

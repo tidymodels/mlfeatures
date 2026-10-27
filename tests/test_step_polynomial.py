@@ -3,7 +3,7 @@
 The functions under test are written against the internal :data:`~mlfeatures.types.Frame`
 type (a narwhals ``DataFrame``), so these tests build inputs via
 :func:`narwhals.stable.v2.from_native` and inspect outputs as narwhals frames.
-We don't parametrize over pandas/polars here — the public contract is
+We don't parametrize over pandas/polars here: the public contract is
 narwhals-in, narwhals-out, and the underlying ops in
 :mod:`mlfeatures.step_polynomial` are backend-agnostic by construction.
 
@@ -36,7 +36,7 @@ def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
 
 
 # ---------------------------------------------------------------------------
-# fit_polynomial — return shape & ordering
+# fit_polynomial: return shape & ordering
 # ---------------------------------------------------------------------------
 
 
@@ -79,7 +79,7 @@ class TestFitReturnShape:
 
 
 # ---------------------------------------------------------------------------
-# fit_polynomial — degree computation (the "min" cap)
+# fit_polynomial: degree computation (the "min" cap)
 # ---------------------------------------------------------------------------
 
 
@@ -158,7 +158,7 @@ class TestFitDegreeComputation:
 
 
 # ---------------------------------------------------------------------------
-# fit_polynomial — input validation on `degree`
+# fit_polynomial: input validation on `degree`
 # ---------------------------------------------------------------------------
 
 
@@ -202,11 +202,11 @@ class TestFitDegreeValidation:
 
 
 # ---------------------------------------------------------------------------
-# apply_polynomial — parity with R's poly()
+# apply_polynomial: parity with R's poly()
 # ---------------------------------------------------------------------------
 
 
-# Both fixtures below are copied verbatim from ~/tmp/orth_poly_examples.Rout —
+# Both fixtures below are copied verbatim from ~/tmp/orth_poly_examples.Rout:
 # `poly(x, degree)` after `as.numeric` flattening. Used as exact ground truth
 # for the orthogonal-polynomial output.
 
@@ -344,7 +344,7 @@ class TestApplyMatchesRPoly:
 
 
 # ---------------------------------------------------------------------------
-# apply_polynomial — schema / column layout
+# apply_polynomial: schema / column layout
 # ---------------------------------------------------------------------------
 
 
@@ -419,7 +419,7 @@ class TestApplyColumnLayout:
 
 
 # ---------------------------------------------------------------------------
-# apply_polynomial — degree-zero handling
+# apply_polynomial: degree-zero handling
 # ---------------------------------------------------------------------------
 
 
@@ -476,7 +476,7 @@ class TestApplyDegreeZero:
 
 
 # ---------------------------------------------------------------------------
-# apply_polynomial — return type
+# apply_polynomial: return type
 # ---------------------------------------------------------------------------
 
 
@@ -488,7 +488,7 @@ class TestApplyReturnType:
 
     def test_integer_input_yields_float_output(self) -> None:
         # polynomial accepts integer columns, but the orthogonal basis is always
-        # real-valued — output columns must be float even when the input is int
+        # real-valued: output columns must be float even when the input is int
         # and the values could coincidentally be whole numbers.
         frame = _df({"x": [1, 2, 3, 4]})
         out = apply_polynomial(frame, fit_polynomial(frame, degree=2))
@@ -498,7 +498,7 @@ class TestApplyReturnType:
 
 
 # ---------------------------------------------------------------------------
-# apply_polynomial — missing-value behavior (per-row pass-through)
+# apply_polynomial: missing-value behavior (per-row pass-through)
 # ---------------------------------------------------------------------------
 
 
@@ -531,7 +531,7 @@ class TestApplyMissingValues:
         """Inserting a null shouldn't change the polynomial of the other rows.
 
         Inputs [1, 2, 3] and [1, 2, None, 3] share the same complete subset
-        ([1, 2, 3]) — so the polynomial values for rows 0, 1, and the last
+        ([1, 2, 3]), so the polynomial values for rows 0, 1, and the last
         row should be identical to the original R `poly()` output.
         """
         # The complete subset is the same as R case 1 ([1, 2, 3] at degree 2),
@@ -549,7 +549,7 @@ class TestApplyMissingValues:
     def test_multiple_scattered_nulls(self) -> None:
         """Multiple nulls scattered through the column are each masked
         independently and don't affect the other rows' polynomial values."""
-        # Complete subset is still [1, 2, 3, 4, 5] — same as a clean fit.
+        # Complete subset is still [1, 2, 3, 4, 5]: same as a clean fit.
         clean = _df({"x": [1.0, 2.0, 3.0, 4.0, 5.0]})
         clean_out = apply_polynomial(clean, fit_polynomial(clean, degree=3)).to_numpy()
 
@@ -572,7 +572,7 @@ class TestApplyMissingValues:
         """All-null + effective degree 0 still goes through the degree-0 path."""
         frame = _df({"x": [None, None, None]})
         # `fit_polynomial` returns degree 0 for this column, so the
-        # degree-0 branch fires and the column is kept untouched — we never
+        # degree-0 branch fires and the column is kept untouched: we never
         # evaluate the basis on an all-null vector.
         with pytest.warns(UserWarning) as record:
             out = apply_polynomial(frame, fit_polynomial(frame, degree=3))

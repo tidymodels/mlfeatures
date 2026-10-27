@@ -35,7 +35,7 @@ def _default_name(col: str, level: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# fit_dummy — basic level selection
+# fit_dummy: basic level selection
 # ---------------------------------------------------------------------------
 
 
@@ -104,7 +104,7 @@ class TestFitDummy:
 
 
 # ---------------------------------------------------------------------------
-# apply_dummy — shared transform utility
+# apply_dummy: shared transform utility
 # ---------------------------------------------------------------------------
 
 
@@ -251,7 +251,7 @@ class TestApplyDummy:
 
 
 # ---------------------------------------------------------------------------
-# StepDummy — correctness
+# StepDummy: correctness
 # ---------------------------------------------------------------------------
 
 
@@ -345,7 +345,7 @@ class TestStepDummyCorrectness:
 
 
 # ---------------------------------------------------------------------------
-# StepDummy — guards
+# StepDummy: guards
 # ---------------------------------------------------------------------------
 
 
@@ -397,7 +397,7 @@ class TestStepDummyGuards:
 
 
 # ---------------------------------------------------------------------------
-# StepDummy — infrastructure
+# StepDummy: infrastructure
 # ---------------------------------------------------------------------------
 
 
@@ -434,7 +434,7 @@ class TestIndicatorDtype:
 
     Before the fix, the ``when/then/otherwise`` chain (with its ``lit(None)``
     branch) produced ``Object``-dtype columns on the pandas backend even when no
-    row was null — making the dummies non-numeric and incompatible with
+    row was null, making the dummies non-numeric and incompatible with
     StepNormalize.
     """
 

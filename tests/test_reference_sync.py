@@ -77,8 +77,8 @@ def test_no_reference_page_for_a_deleted_export() -> None:
 def test_step_authoring_methods_are_all_documented() -> None:
     """Every public method `Step` itself defines has a reference row.
 
-    `Step` is the extension contract — a plugin author implements or calls each
-    of these — so its own surface is enumerated by hand in the ``Developing``
+    `Step` is the extension contract (a plugin author implements or calls each
+    of these), so its own surface is enumerated by hand in the ``Developing``
     section and must stay complete. Issue #197 found ``resolve_selection``
     missing precisely because the check above truncates ``Step.fit`` to
     ``Step`` and so proves nothing about members.

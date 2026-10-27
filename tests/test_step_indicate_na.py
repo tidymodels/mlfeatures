@@ -83,7 +83,7 @@ class TestApplyIndicateNA:
 
 
 # ---------------------------------------------------------------------------
-# StepIndicateNa — unit-level invariants
+# StepIndicateNa: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

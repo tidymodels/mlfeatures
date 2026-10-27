@@ -79,7 +79,7 @@ class TestIntercept:
 class TestRefitResetsMarker:
     def test_marker_resets_when_selection_later_matches(self) -> None:
         # A dtype selector that matches nothing in an all-string frame but
-        # matches in a numeric frame — exercises the per-fit marker reset.
+        # matches in a numeric frame: exercises the per-fit marker reset.
         recipe = Recipe(steps=[StepNormalize(nw.selectors.numeric())])
 
         strings = pd.DataFrame({"s": ["x", "y", "z"]})

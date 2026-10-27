@@ -3,8 +3,8 @@
 Beyond exercising each boundary helper, this module carries the conformance
 workload for issue #15: a prototype of ``step_normalize``'s data ops written once
 against the frame API and run over **both** pandas and polars inputs. If narwhals
-is thick enough to express normalize identically across backends — backend in,
-same backend out, same values — the decision to use it as the full internal
+is thick enough to express normalize identically across backends (backend in,
+same backend out, same values), the decision to use it as the full internal
 representation holds. Gaps surfaced here feed ``design/`` notes.
 """
 
@@ -167,7 +167,7 @@ def test_null_counts_and_has_nulls(construct: Constructor) -> None:
 
 # --- step_normalize data-ops prototype -------------------------------------
 #
-# Not a real Step (no selectors / id / schema lineage — those land in later step
+# Not a real Step (no selectors / id / schema lineage: those land in later step
 # issues). This is the data-ops core of step_normalize, written once against the
 # frame API to validate narwhals across backends.
 
@@ -220,14 +220,14 @@ def test_step_normalize_prototype(construct: Constructor) -> None:
 def test_step_normalize_prototype_transform_uses_train_stats(
     construct: Constructor,
 ) -> None:
-    # transform() applies fitted stats to *new* data — it never re-estimates.
+    # transform() applies fitted stats to *new* data: it never re-estimates.
     train = f.from_native(construct({"a": [0.0, 2.0, 4.0]}))
     stats = _fit_normalize(train, ["a"])
 
     new = f.from_native(construct({"a": [2.0, 6.0]}))
     out = _transform_normalize(new, stats)
 
-    # (2-2)/2 = 0 ; (6-2)/2 = 2  — using TRAIN mean/std, not new-data stats.
+    # (2-2)/2 = 0 ; (6-2)/2 = 2, using TRAIN mean/std, not new-data stats.
     assert out["a"].to_list() == pytest.approx([0.0, 2.0])
 
 

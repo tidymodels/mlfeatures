@@ -4,7 +4,7 @@
 ```` ```{python} ```` cells that ``test_doc_examples.py`` runs, so nothing has
 ever checked them. That is how ``design/extensibility.md`` came to open its
 base-classes section with ``from mlfeatures import Step, Check, RowOp`` when no
-``Check`` has ever existed (see issue #197) — a plugin author following the doc
+``Check`` has ever existed (see issue #197): a plugin author following the doc
 literally wrote an import that fails.
 
 We deliberately do **not** execute these blocks. Most are fragments or elide
@@ -28,13 +28,13 @@ import pytest
 
 DESIGN_DIR = Path(__file__).resolve().parent.parent / "design"
 
-# ```python\n ... \n``` — the plain display fence used throughout design/.
+# ```python\n ... \n```: the plain display fence used throughout design/.
 _BLOCK_RE = re.compile(r"^```python[^\n]*\n(.*?)\n```", re.DOTALL | re.MULTILINE)
 
 # `interfaces.md` weighs *candidate* construction interfaces against each other;
 # its blocks spell out proposed APIs (`from mlfeatures.steps import ImputeMedian`)
 # that were considered and not adopted. Those imports are supposed not to
-# resolve — rewriting them to the shipped names would destroy the comparison the
+# resolve: rewriting them to the shipped names would destroy the comparison the
 # document exists to make.
 _DELIBERATIVE = {"interfaces.md"}
 

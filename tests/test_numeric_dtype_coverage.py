@@ -9,9 +9,9 @@ step over its accepted numeric dtypes and asserting the expected output dtype.
 
 Dtypes fall into two groups:
 
-* **numpy-representable** (the 10 below) — the realistic scikit-learn boundary
+* **numpy-representable** (the 10 below): the realistic scikit-learn boundary
   surface; these round-trip through numpy/pandas and every step accepts them.
-* **polars-native** (``Int128``, ``UInt128``, ``Decimal``) — no numpy
+* **polars-native** (``Int128``, ``UInt128``, ``Decimal``): no numpy
   equivalent. ``step_normalize`` and the impute steps use polars-native ops and
   accept all three directly. ``step_polynomial`` and ``step_class_distance``
   route through ``Series.to_numpy()``, and polars' numpy bridge has no
