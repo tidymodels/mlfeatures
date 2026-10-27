@@ -9,16 +9,11 @@ The book's first recipe — the R formula's implicit preprocessing made explicit
 ::: {.callout-note collapse="true" title="Port notes: gaps and parity vs the R original"}
 ```
 PARITY NOTES:
- - GAP: step_log(Gr_Liv_Area, base = 10) has no mlfeatures analog (no individual-
-   transform steps yet; StepMutate is backlog priority 1). Worked around
-   PRE-recipe in polars — safe here because log is static (nothing learned),
-   but it means the transform is NOT replayed by the fitted recipe: new
-   frames must arrive already-logged. That trade *is* the escape-hatch lesson.
+ - step_log(Gr_Liv_Area, base = 10) -> StepLog(s.col("Gr_Liv_Area"), base=10),
+   inside the recipe, so the fitted recipe replays it on new frames. The
+   target is still logged outside the recipe, as in TMwR Ch. 5.
  - StepDummy = step_dummy (k-1 indicators, first level as reference).
  - Seeds don't transfer across languages; stratified 80/20 design matches.
- - Ames exported from R on first run (no PyPI package): data/ames.csv.
-   polars gotcha: null_values="NA" is required — polars does not auto-parse
-   R's "NA" strings as nulls (pandas does).
 ```
 *Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
@@ -32,7 +27,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
-from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import Recipe, RecipeTransformer, StepDummy, StepLog
 from mlfeatures import Selectors as s
 
 # ── Data + target transform (outside the recipe, per TMwR Ch. 5)
@@ -40,12 +35,7 @@ from mlfeatures import Selectors as s
 from mlfeatures.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Sale_Price"])
-ames = ames.with_columns(
-    pl.col("Sale_Price").log(base=10),
-    # GAP workaround: R does this inside the recipe as step_log(); mlfeatures has
-    # no transform step yet, so it happens here, outside the replay boundary.
-    pl.col("Gr_Liv_Area").log(base=10),
-)
+ames = ames.with_columns(pl.col("Sale_Price").log(base=10))
 
 # ── Split (stratified 80/20 by target quartile, mirroring initial_split)
 
@@ -54,10 +44,11 @@ ames_train, ames_test = train_test_split(
     ames, train_size=0.80, stratify=strata, random_state=502
 )
 
-# ── Recipe (what remains of simple_ames after the log moved out)
+# ── Recipe (simple_ames: log the living area, then dummy-encode)
 
 simple_ames = (
     Recipe(data=ames_train, target="Sale_Price")
+    .add(StepLog(s.col("Gr_Liv_Area"), base=10))
     .add(StepDummy(s.nominal_features()))
 )
 

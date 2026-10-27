@@ -12,16 +12,16 @@ The recipe IS the product: preprocessing estimated on training data, judged
 visually on the validation set. No estimator anywhere.
 
 PARITY NOTES:
- - GAP (blocking): step_pca -> StepPCA is designed-but-unbuilt (backlog
-   priority 2). Stopgap: mlfeatures does zv -> normalize, then sklearn's PCA
-   consumes fitted.transform(validation) OUTSIDE the recipe. When StepPCA
-   lands, the sklearn block collapses into .add(StepPCA(..., num_comp=4)).
- - GAP: step_orderNorm (bestNormalize's ORQ transform) has no mlfeatures analog
-   at all. Omitted: skewed shape features stay skewed; first run measured
-   the effect — PC1-4 variance 55.4/26.5/8.0/5.1%.
+ - step_orderNorm -> StepOrderNorm, step_pca -> StepPca(num_comp=4). Both are
+   steps of the recipe, so the fitted recipe produces the PC scores itself.
+   PC1-4 variance explained comes out as 59.44 / 24.42 / 6.95 / 5.44%, which
+   matches R's 59.4 / 24.4 for the first two components.
  - R composes by piping MORE steps onto an already-prep()ed recipe and
-   re-prepping; mlfeatures has no incremental fit — declared whole, fit once.
- - beans exported from R on first run: data/beans.csv.
+   re-prepping; mlfeatures has no incremental fit. pca_rec is bean_rec plus
+   StepPca, and is fit from the training data.
+ - mlfeatures has no public accessor for a fitted step's loadings (R's
+   tidy(id = "pca")), so the top-loadings table is not reproduced; variance
+   explained is computed from the scores instead.
 ```
 *Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
@@ -30,10 +30,10 @@ export these datasets from R's modeldata at first run.*
 ## Specify
 ```{python}
 import polars as pl
-from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 
-from mlfeatures import Recipe, StepDropZeroVariance, StepNormalize
+from mlfeatures import (Recipe, StepDropZeroVariance, StepNormalize, StepOrderNorm,
+                        StepPca)
 from mlfeatures import Selectors as s
 
 # ── Data
@@ -51,14 +51,18 @@ bean_validation, bean_test = train_test_split(
     random_state=1601
 )
 
-# ── Base recipe: zv -> (orderNorm GAP) -> normalize
+# ── Base recipe: zv -> orderNorm -> normalize
 
 bean_rec = (
     Recipe(data=bean_train, target="class")
     .add(StepDropZeroVariance(s.numeric_features()))
-    # .add(StepOrderNorm(s.numeric_features()))   # 🧪 GAP: no analog at all
+    .add(StepOrderNorm(s.numeric_features()))
     .add(StepNormalize(s.numeric_features()))
 )
+
+# ── PCA recipe: the base recipe plus the extraction step
+
+pca_rec = bean_rec.add(StepPca(s.numeric_features(), num_comp=4))
 ```
 ## Fit
 ```{python}
@@ -67,35 +71,25 @@ bean_rec = (
 fitted = bean_rec.fit(bean_train)
 bean_val_processed = fitted.transform(bean_validation)
 
-# PCA (the sklearn stopgap for the unbuilt StepPCA), estimated on TRAINING:
-num_cols = [c for c in bean_val_processed.columns if c != "class"]
-pca = PCA(n_components=4, random_state=1601)
-pca.fit(fitted.transform(bean_train).select(num_cols))
+pca_fitted = pca_rec.fit(bean_train)
 ```
 ## Report
 ```{python}
-print("--- transformed validation head (zv -> normalize) ---")
+print("--- transformed validation head (zv -> orderNorm -> normalize) ---")
 print(bean_val_processed.head())
 
-scores = pl.DataFrame(
-    pca.transform(bean_val_processed.select(num_cols)),
-    schema=[f"PC{i+1}" for i in range(4)],
-).with_columns(bean_val_processed["class"])               # kept for coloring
+scores = pca_fitted.transform(bean_validation)
 print("\n--- validation-set PC scores (plot-ready) ---")
 print(scores.head())
 
-# ── Loadings + variance (what tidy(id = "pca") gives in R)
+# ── Percent variance explained (R: tidy(id = "pca", type = "variance"))
+# Each PC's variance on the training scores, over the total variance of the
+# preprocessed training features.
 
-loadings = pl.DataFrame({"term": num_cols}).with_columns([
-    pl.Series(f"PC{i+1}", pca.components_[i]) for i in range(4)
-])
-top = (loadings.unpivot(index="term", variable_name="component")
-       .with_columns(pl.col("value").abs().alias("abs_value"))
-       .sort(["component", "abs_value"], descending=[False, True])
-       .group_by("component", maintain_order=True).head(5))
-print("\n--- top 5 loadings per component ---")
-print(top)
-
+total_var = (fitted.transform(bean_train).drop("class")
+             .select(pl.sum_horizontal(pl.all().var())).item())
+pct = (pca_fitted.transform(bean_train)
+       .select((pl.col("^PC[0-9]+$").var() / total_var * 100).round(2)))
 print("\n--- percent variance explained, PC1-PC4 ---")
-print((pca.explained_variance_ratio_ * 100).round(2))
+print(pct)
 ```

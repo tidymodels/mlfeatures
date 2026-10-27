@@ -18,9 +18,9 @@ PARITY NOTES:
  - Model mapping is approximate: kknn tunes neighbors/dist_power/weight_func
    (kernel weights); KNeighborsRegressor's analogs are n_neighbors/p/weights
    (only "uniform"/"distance") — same idea, coarser space.
- - The book's poly/interact variant: StepPolynomial exists ✓ but the
-   all-pairs step_interact does not (GAP) — variant left commented, as in R.
- - concrete exported from R on first run: data/concrete.csv.
+ - The book's poly/interact variant: StepPolynomial and StepInteract (every
+   pair of the selected columns) both exist, so it ports. It is left
+   commented, as in R, because it is the glmnet story, not KNN's.
 ```
 *Docs version loads the dataset from `mlfeatures.data`; the research originals
 export these datasets from R's modeldata at first run.*
@@ -64,8 +64,11 @@ normalized_rec = (
 )
 
 # Variant (the book's response-surface recipe; the glmnet story, not KNN's):
-# poly_recipe = normalized_rec.add(StepPolynomial(s.features(), degree=2))
-#     # .add(StepInteract(s.features() * s.features()))   # 🧪 GAP: all-pairs
+# poly_rec = (
+#     normalized_rec
+#     .add(StepPolynomial(s.features(), degree=2))
+#     .add(StepInteract(s.features(), keep_original_cols=True))
+# )
 
 # ── Model + workflow + tune
 
