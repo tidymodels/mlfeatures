@@ -84,31 +84,9 @@ print(result)
 - [Reference](https://tidymodels.github.io/mlfeatures/reference/index.html): every step and class.
 - [Design](https://github.com/tidymodels/mlfeatures/blob/main/design/README.md): the full specification.
 
-## Development
+## Contributing
 
-```bash
-uv sync   # install the package + dev tooling (the dev group syncs by default)
-
-uv run ruff check .             # lint
-uv run ruff format --check .    # formatting
-uv run mypy mlfeatures extras   # type check (strict)
-uv run pyright                  # type check (strict)
-uv run pytest --cov             # tests + coverage
-```
-
-Install the pre-commit hooks with `uv run pre-commit install`, or run them all at once with `uv run pre-commit run --all-files`.
-
-## Documentation
-
-The docs site is built with [great-docs](https://github.com/posit-dev/great-docs), which needs Python >= 3.11 and [Quarto](https://quarto.org/docs/get-started/):
-
-```bash
-uv sync --group docs       # install great-docs
-uv run great-docs build    # build into great-docs/
-uv run great-docs preview  # serve at localhost:3000
-```
-
-CI builds the site on every push and pull request. Pushes to `main` deploy it to Netlify; GitHub Pages publishing is switched off while the repo is private.
+Contributions are welcome. See [CONTRIBUTING](https://github.com/tidymodels/mlfeatures/blob/main/CONTRIBUTING.md) for setup, the checks CI runs, and how to build the docs.
 
 ## License
 
