@@ -100,6 +100,8 @@ normalized_rec &lt;-
 <span class="cm">#    step_poly(all_predictors()) %&gt;%</span>
 <span class="cm">#    step_interact(~ all_predictors():all_predictors())</span>
 
+
+
 <span class="bn"># Model + tune -------------------------------------------------------------</span>
 <span class="cm"># Tune the neighborhood over 5-fold CV.</span>
 <span class="cm">#</span>
@@ -173,16 +175,18 @@ concrete_train, concrete_test = train_test_split(
 <span class="cm"># One step. &quot;KNN ... require predictors that have been centered and scaled.&quot;</span>
 <span class="df"># DIFF: none — StepNormalize ports step_normalize exactly. This candidate</span>
 <span class="df"># runs in mlfeatures today.</span>
-<span class="gp"># DIFF (GAP, variant only): the poly/interact response surface needs the</span>
-<span class="gp"># all-pairs StepInteract (unbuilt); StepPolynomial itself exists.</span>
+<span class="df"># DIFF (variant only): the poly/interact response surface is</span>
+<span class="df"># StepPolynomial + StepInteract (every pair of the selected columns).</span>
 
 normalized_rec = (
     Recipe(data=concrete_train, target=&quot;compressive_strength&quot;)
     .add(StepNormalize(s.features()))
 )
-<span class="cm"># poly_recipe = normalized_rec.add(</span>
-<span class="cm">#     StepPolynomial(s.features(), degree=2))</span>
-<span class="cm">#     # .add(StepInteract(s.features() * s.features()))  # GAP</span>
+<span class="cm"># poly_rec = (</span>
+<span class="cm">#     normalized_rec</span>
+<span class="cm">#     .add(StepPolynomial(s.features(), degree=2))</span>
+<span class="cm">#     .add(StepInteract(s.features(), keep_original_cols=True))</span>
+<span class="cm"># )</span>
 
 <span class="bn"># Model + tune -------------------------------------------------------------</span>
 <span class="cm"># Tune the neighborhood over 5-fold CV.</span>

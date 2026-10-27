@@ -47,7 +47,7 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code> — R: roc_auc 0.844 / acc 0.806 · Python ran: 0.829 / 0.796 — imputation spine ported 1:1; only step_other missing.</p>
+Lightly condensed from <code>candidates/</code> — R: roc_auc 0.844 / acc 0.806 · Python ran: 0.830 / 0.794 — the whole recipe ported 1:1, step_other included.</p>
 <div class="cols">
 <div class="pane r"><h2>example.R — tidymodels (run)</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
@@ -83,7 +83,6 @@ credit_test  &lt;- testing(credit_split)
 
 <span class="bn"># Recipe -------------------------------------------------------------------</span>
 <span class="cm"># impute -&gt; collapse rare levels -&gt; dummy -&gt; filter -&gt; normalize.</span>
-<span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -147,7 +146,7 @@ from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
 from sklearn.pipeline import Pipeline
 from mlfeatures import (Recipe, RecipeTransformer, StepDropZeroVariance,
                    StepDummy, StepImputeMedian, StepImputeMode,
-                   StepNormalize)
+                   StepNormalize, StepOther)
 from mlfeatures import Selectors as s
 
 <span class="bn"># Data + split -------------------------------------------------------------</span>
@@ -168,18 +167,17 @@ credit_train, credit_test = train_test_split(
 
 <span class="bn"># Recipe -------------------------------------------------------------------</span>
 <span class="cm"># impute -&gt; collapse rare levels -&gt; dummy -&gt; filter -&gt; normalize.</span>
-<span class="gp"># DIFF (GAP): StepOther unbuilt — omitted; rare levels keep their dummies.</span>
-<span class="gp"># The R run surfaced the design input: credit_data&#x27;s Home column already</span>
-<span class="gp"># HAS a level named &quot;other&quot;, colliding with step_other&#x27;s default label.</span>
-<span class="gp"># StepOther needs a collision strategy, not just a default string.</span>
-<span class="df"># DIFF: everything else ports 1:1 — the imputation spine runs today.</span>
+<span class="df"># DIFF: StepOther = step_other. credit_data&#x27;s Home column already HAS a</span>
+<span class="df"># level named &quot;other&quot;, so the pooled level is &quot;infrequent&quot;; StepOther</span>
+<span class="df"># warns if that name collides with an existing level.</span>
+<span class="df"># DIFF: everything else ports 1:1.</span>
 
 credit_rec = (
     Recipe(data=credit_train, target=&quot;Status&quot;)
     .add(StepImputeMedian(s.numeric_features()))
     .add(StepImputeMode(s.nominal_features()))
-
-    # .add(StepOther(s.nominal_features(), threshold=0.05))  # GAP
+    .add(StepOther(s.nominal_features(), threshold=0.05,
+                   other_level=&quot;infrequent&quot;))
     .add(StepDummy(s.nominal_features()))
     .add(StepDropZeroVariance(s.features()))
     .add(StepNormalize(s.numeric_features()))

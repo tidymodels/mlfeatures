@@ -47,7 +47,7 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code> — Both ran. StepPCA still unbuilt — sklearn PCA stands in outside the recipe; without orderNorm, PC1-4 variance = 55.4/26.5/8.0/5.1%.</p>
+Lightly condensed from <code>candidates/</code> — Both ran. StepOrderNorm and StepPca run inside the recipe; PC1-4 variance = 59.44/24.42/6.95/5.44% (R: 59.4/24.4/…).</p>
 <div class="cols">
 <div class="pane r"><h2>example.R — tidymodels (run)</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
@@ -76,8 +76,6 @@ bean_test       &lt;- testing(bean_split)
 <span class="cm"># zv guard, tame the skew, shared scale — PCA&#x27;s preconditions generate</span>
 <span class="cm"># the step ordering. fit() ~ prep(); transform() ~ bake().</span>
 <span class="cm">#</span>
-<span class="cm">#</span>
-<span class="cm">#</span>
 
 bean_rec &lt;-
   recipe(class ~ ., data = bean_train) %&gt;%
@@ -93,8 +91,6 @@ bake(bean_rec_trained, new_data = bean_validation) %&gt;% head()
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
-<span class="cm">#</span>
-<span class="cm">#</span>
 
 bean_pca_rec &lt;-
   bean_rec_trained %&gt;%
@@ -103,9 +99,9 @@ bean_pca_rec &lt;-
 
 bake(bean_pca_rec, new_data = bean_validation) %&gt;% head()
 
-
 <span class="bn"># Loadings + variance ------------------------------------------------------</span>
 <span class="cm"># The no-model deliverables: top loadings and percent variance.</span>
+<span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 
@@ -118,12 +114,12 @@ tidy(bean_pca_rec, id = &quot;pca&quot;, type = &quot;variance&quot;)
 <div class="pane py"><h2>example.py — mlfeatures + sklearn (run)</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the stack. No estimator anywhere — the recipe is the product.</span>
-<span class="df"># DIFF: sklearn appears only for PCA (the unbuilt step), not for a model.</span>
+<span class="df"># DIFF: sklearn appears only for the split helper, not for a model.</span>
 
 import polars as pl
-from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from mlfeatures import Recipe, StepDropZeroVariance, StepNormalize
+from mlfeatures import (Recipe, StepDropZeroVariance, StepNormalize,
+                        StepOrderNorm, StepPca)
 from mlfeatures import Selectors as s
 
 <span class="bn"># 3-way split --------------------------------------------------------------</span>
@@ -141,14 +137,12 @@ bean_validation, bean_test = train_test_split(
 <span class="bn"># Base recipe --------------------------------------------------------------</span>
 <span class="cm"># zv guard, tame the skew, shared scale — PCA&#x27;s preconditions generate</span>
 <span class="cm"># the step ordering. fit() ~ prep(); transform() ~ bake().</span>
-<span class="gp"># DIFF (GAP): step_orderNorm (bestNormalize&#x27;s ORQ transform) has no mlfeatures</span>
-<span class="gp"># analog — not even designed. Omitted: skewed shape features stay skewed,</span>
-<span class="gp"># so components will differ somewhat from the book&#x27;s.</span>
+<span class="df"># DIFF: StepOrderNorm = step_orderNorm (bestNormalize&#x27;s ORQ transform).</span>
 
 bean_rec = (
     Recipe(data=bean_train, target=&quot;class&quot;)
     .add(StepDropZeroVariance(s.numeric_features()))
-
+    .add(StepOrderNorm(s.numeric_features()))
     .add(StepNormalize(s.numeric_features()))
 )
 fitted = bean_rec.fit(bean_train)
@@ -156,30 +150,28 @@ fitted.transform(bean_validation).head()
 
 <span class="bn"># PCA ----------------------------------------------------------------------</span>
 <span class="cm"># Four components, estimated on training data only, scored on validation.</span>
-<span class="gp"># DIFF (GAP): StepPCA is designed-but-unbuilt — sklearn PCA consumes the</span>
-<span class="gp"># recipe&#x27;s output OUTSIDE the replay boundary. When it lands, this block</span>
-<span class="gp"># collapses into .add(StepPCA(s.numeric_features(), num_comp=4)).</span>
+<span class="df"># DIFF: StepPca runs inside the recipe, so transform() returns the scores.</span>
 <span class="df"># DIFF: R pipes a NEW step onto the already-prep()ed recipe and re-preps</span>
 <span class="df"># (incremental fit); mlfeatures recipes are declared whole and fit once.</span>
 
-pca = PCA(n_components=4, random_state=1601)
-pca.fit(fitted.transform(bean_train).select(num_cols))
+pca_rec = bean_rec.add(StepPca(s.numeric_features(), num_comp=4))
+pca_fitted = pca_rec.fit(bean_train)
 
-scores = pl.DataFrame(
-    pca.transform(fitted.transform(bean_validation).select(num_cols)),
-    schema=[&quot;PC1&quot;, &quot;PC2&quot;, &quot;PC3&quot;, &quot;PC4&quot;])
+scores = pca_fitted.transform(bean_validation)
 scores.head()
+
 
 <span class="bn"># Loadings + variance ------------------------------------------------------</span>
 <span class="cm"># The no-model deliverables: top loadings and percent variance.</span>
-<span class="df"># DIFF: tidy(id = &quot;pca&quot;) -&gt; pca.components_ / explained_variance_ratio_.</span>
-<span class="df"># A fitted StepPCA should expose the same queries on the recipe object.</span>
+<span class="df"># DIFF: tidy(id = &quot;pca&quot;, type = &quot;variance&quot;) -&gt; score variance over total variance.</span>
+<span class="gp"># DIFF (GAP): no public accessor for a fitted step&#x27;s loadings yet, so the</span>
+<span class="gp"># top-loadings table has no mlfeatures equivalent.</span>
 
-loadings = pl.DataFrame({&quot;term&quot;: num_cols}).with_columns(
-    pl.Series(f&quot;PC{i+1}&quot;, pca.components_[i]) for i in range(4))
-loadings.unpivot(index=&quot;term&quot;).sort(&quot;value&quot;, descending=True)
+total_var = (fitted.transform(bean_train).drop(&quot;class&quot;)
+             .select(pl.sum_horizontal(pl.all().var())).item())
+pca_fitted.transform(bean_train).select(
+    pl.col(&quot;^PC[0-9]+$&quot;).var() / total_var * 100)
 
-print(pca.explained_variance_ratio_ * 100)
 </pre></div>
 </div>
 </div>

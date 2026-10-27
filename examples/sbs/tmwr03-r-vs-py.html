@@ -47,7 +47,7 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code> — R: CV rmse 0.0791 · Python ran: test 0.0825, CV = nan — unseen fold-levels nulled predictions; the gaps broke CV itself (see py-run-results.md).</p>
+Lightly condensed from <code>candidates/</code> — R: CV rmse 0.0791 · Python ran: CV 0.0780, test rmse 0.0792 / rsq 0.789 — the full recipe runs; StepOther pools unseen fold-levels, so every CV fold scores.</p>
 <div class="cols">
 <div class="pane r"><h2>example.R — tidymodels (run)</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
@@ -62,13 +62,12 @@ tidymodels_prefer()
 
 
 
+
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Six features now (adds Latitude/Longitude); log10 the target pre-split.</span>
-<span class="cm">#</span>
 
 data(ames, package = &quot;modeldata&quot;)
 ames &lt;- ames %&gt;% mutate(Sale_Price = log10(Sale_Price))
-
 
 
 
@@ -83,8 +82,6 @@ ames_test  &lt;- testing(ames_split)
 <span class="bn"># Recipe -------------------------------------------------------------------</span>
 <span class="cm"># The canonical recipe. Ordering is load-bearing twice: other pools rare</span>
 <span class="cm"># levels BEFORE dummy; interact targets the GENERATED Bldg_Type_* columns.</span>
-<span class="cm">#</span>
-<span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -135,18 +132,17 @@ import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
-from mlfeatures import Recipe, RecipeTransformer, StepDummy
+from mlfeatures import (Recipe, RecipeTransformer, StepDummy, StepInteract,
+                        StepLog, StepOther, StepSplineNatural)
 from mlfeatures import Selectors as s
 
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Six features now (adds Latitude/Longitude); log10 the target pre-split.</span>
-<span class="gp"># DIFF (GAP): step_log again worked around pre-recipe (see TMWR-01).</span>
 
 ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
 ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Year_Built&quot;, &quot;Bldg_Type&quot;,
                     &quot;Latitude&quot;, &quot;Longitude&quot;, &quot;Sale_Price&quot;])
-ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10),
-                         pl.col(&quot;Gr_Liv_Area&quot;).log(base=10))  # was step_log
+ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10))
 
 <span class="bn"># Split --------------------------------------------------------------------</span>
 <span class="cm"># Stratified 80/20 split on the target (same as TMWR-01).</span>
@@ -159,21 +155,19 @@ ames_train, ames_test = train_test_split(
 <span class="bn"># Recipe -------------------------------------------------------------------</span>
 <span class="cm"># The canonical recipe. Ordering is load-bearing twice: other pools rare</span>
 <span class="cm"># levels BEFORE dummy; interact targets the GENERATED Bldg_Type_* columns.</span>
-<span class="gp"># DIFF (GAP): step_other unbuilt — rare Neighborhoods keep their own dummies,</span>
-<span class="gp"># so the design matrix is wider and sparser than R&#x27;s.</span>
-<span class="gp"># DIFF (GAP): step_interact unbuilt — interactions over generated columns is</span>
-<span class="gp"># exactly mlfeatures&#x27;s has_source pitch; target form shown in place.</span>
-<span class="gp"># DIFF (GAP): step_ns unbuilt — no spline steps at all.</span>
+<span class="df"># DIFF: StepInteract multiplies every pair in its selection, so it also adds</span>
+<span class="df"># the dummy-by-dummy products R&#x27;s formula omits; they are all zero.</span>
+<span class="df"># DIFF: keep_original_cols=True keeps the source columns, as R does.</span>
 
 ames_rec = (
     Recipe(data=ames_train, target=&quot;Sale_Price&quot;)
-
-    # .add(StepOther(s.col(&quot;Neighborhood&quot;), threshold=0.01))   # GAP
+    .add(StepLog(s.col(&quot;Gr_Liv_Area&quot;), base=10))
+    .add(StepOther(s.col(&quot;Neighborhood&quot;), threshold=0.01))
     .add(StepDummy(s.nominal_features()))
-    # .add(StepInteract(s.col(&quot;Gr_Liv_Area&quot;)
-    #                   * s.starts_with(&quot;Bldg_Type_&quot;)))         # GAP
-    # .add(StepSplineNatural(s.col(&quot;Latitude&quot;, &quot;Longitude&quot;),
-    #                        deg_free=20))                      # GAP
+    .add(StepInteract(s.col(&quot;Gr_Liv_Area&quot;) | s.starts_with(&quot;Bldg_Type_&quot;),
+                      keep_original_cols=True))
+    .add(StepSplineNatural(s.col(&quot;Latitude&quot;, &quot;Longitude&quot;),
+                           deg_free=20))
 )
 
 <span class="bn"># Resampled performance ----------------------------------------------------</span>
@@ -186,8 +180,8 @@ cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 cv_rmse = -cross_val_score(lm_wflow, X_train, y_train, cv=cv,
                            scoring=&quot;neg_root_mean_squared_error&quot;)
 print(cv_rmse.mean())
-<span class="cm"># ran: nan! unseen fold-level (&#x27;Landmark&#x27;) nulled predictions — the</span>
-<span class="cm"># missing step_other doesn&#x27;t just cost accuracy, it breaks CV</span>
+<span class="cm"># ran: 0.0780 (R: 0.0791) — StepOther pools unseen fold-levels, so every</span>
+<span class="cm"># fold scores</span>
 
 <span class="bn"># Final fit + proof + metrics ----------------------------------------------</span>
 <span class="cm"># Fit on all of training; transform the test set; score once.</span>
