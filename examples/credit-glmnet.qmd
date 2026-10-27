@@ -2,7 +2,7 @@
 title: "Credit + regularized logistic: the imputation example"
 ---
 
-glmnet rejects NAs and factors outright, so every stage materializes: impute, encode, filter, normalize — the fullest chain of the six. Ported from recipes 'Simple example' vignette + Max Kuhn's applied-ML workshop pattern (reconstructed; see the side-by-side for provenance).
+glmnet rejects NAs and factors outright, so every stage materializes: impute, encode, filter, normalize. It is the fullest chain of the six. Ported from recipes 'Simple example' vignette + Max Kuhn's applied-ML workshop pattern (reconstructed; see the side-by-side for provenance).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/kuhn-r-vs-py.html){target="_blank"} · R original: test roc_auc 0.844, accuracy 0.806.
 
@@ -20,7 +20,7 @@ PARITY NOTES:
  - Model mapping: logistic_reg(penalty = tune(), mixture = 1) + glmnet ->
    LogisticRegression(l1_ratio=1.0, solver="liblinear") with C = 1/(n*lambda):
    glmnet minimizes MEAN loss + lambda*penalty; sklearn minimizes
-   C*TOTAL loss + penalty. (A first draft used C = 1/lambda — off by a
+   C*TOTAL loss + penalty. (A first draft used C = 1/lambda: off by a
    factor of n; the giveaway was best-C pinning to the grid edge.)
  - roc_auc event level pinned: Status maps to bad=1 (R scores "bad", the
    first factor level).

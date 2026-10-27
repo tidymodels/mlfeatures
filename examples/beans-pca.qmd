@@ -2,7 +2,7 @@
 title: "Beans PCA: a recipe with no model"
 ---
 
-The recipe is the product — extraction estimated on training data, judged on the validation set. No estimator anywhere. Ported from [Tidy Modeling with R, ch. 16](https://www.tmwr.org/dimensionality).
+The recipe is the product: extraction estimated on training data, judged on the validation set. No estimator anywhere. Ported from [Tidy Modeling with R, ch. 16](https://www.tmwr.org/dimensionality).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/tmwr16-r-vs-py.html){target="_blank"} · R original: PC1–PC4 variance 59.4 / 24.4 / … (with orderNorm).
 
@@ -66,7 +66,7 @@ pca_rec = bean_rec.add(StepPca(s.numeric_features(), num_comp=4))
 ```
 ## Fit
 ```{python}
-# fit() ~ prep(); transform() ~ bake() — the chapter doubles as the book's
+# fit() ~ prep(); transform() ~ bake(): the chapter doubles as the book's
 # prep/bake tutorial, and this file doubles as mlfeatures's fit/transform one.
 fitted = bean_rec.fit(bean_train)
 bean_val_processed = fitted.transform(bean_validation)

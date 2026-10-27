@@ -2,4 +2,4 @@
 title: "Serializing recipes"
 ---
 
-*Stub — content to come.*
+*Stub: content to come.*

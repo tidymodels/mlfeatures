@@ -10,9 +10,9 @@ Steps that reshape numeric columns, one column at a time (the grouping follows
 
 Three steps to know:
 
-- `StepNormalize` — center and scale to z-scores.
-- `StepPolynomial` — expand a column into polynomial basis features.
-- A log transform for skewed columns — planned, see
+- `StepNormalize`: center and scale to z-scores.
+- `StepPolynomial`: expand a column into polynomial basis features.
+- A log transform for skewed columns: planned, see
   [#208](https://github.com/tidymodels/shoez/issues/208).
 
-*Stub — content to come.*
+*Stub: content to come.*

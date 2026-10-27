@@ -2,7 +2,7 @@
 title: "Ames + xgboost: the model flips the recipe"
 ---
 
-Same data and features as the realistic linear model, entirely different recipe — for boosting, preprocessing shrinks to encode-and-guard. Ported from [Tidy Modeling with R, ch. 13](https://www.tmwr.org/grid-search).
+Same data and features as the realistic linear model, entirely different recipe: for boosting, preprocessing shrinks to encode-and-guard. Ported from [Tidy Modeling with R, ch. 13](https://www.tmwr.org/grid-search).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/tmwr11-r-vs-py.html){target="_blank"} · R original: test rmse 0.0730.
 
@@ -15,7 +15,7 @@ for workflow() + tune_grid(), via mlfeatures's RecipeTransformer bridge.
 
 PARITY NOTES (differences from example.R that are structural, not bugs):
  - GAP (the reason this example was chosen): R's step_novel() has no mlfeatures
-   analog yet — StepNovel is designed-but-unbuilt, and StepUnknown fills only
+   analog yet: StepNovel is designed-but-unbuilt, and StepUnknown fills only
    *nulls*, not unseen levels. This port simply omits the guard; mlfeatures's
    StepOneHot/StepDummy warn and emit nulls for unseen levels at transform
    time instead of encoding a "new" bucket. When StepNovel lands, add
@@ -93,7 +93,7 @@ y_train = ames_train["Sale_Price"]
 
 # CV folds warn: rare Neighborhood levels (e.g. 'Landmark') land in held-out
 # folds unseen at fit; the one-hot emits nulls for them, and xgboost handles
-# nulls natively — exactly why boosting's recipe can skip the novel guard.
+# nulls natively: exactly why boosting's recipe can skip the novel guard.
 search = GridSearchCV(
     pipe, param_grid, cv=cv,
     scoring="neg_root_mean_squared_error",

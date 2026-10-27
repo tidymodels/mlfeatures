@@ -7,4 +7,4 @@ runs late so the selector re-resolves to catch freshly created columns
 (dummies, interactions), not just the original measurements. Filled today by
 `StepNormalize`.
 
-*Stub — content to come.*
+*Stub: content to come.*

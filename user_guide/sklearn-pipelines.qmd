@@ -72,7 +72,7 @@ pipe
 
 ## Cross-validation and tuning
 
-Because the adapter stores the recipe verbatim, it clones cleanly — so it works
+Because the adapter stores the recipe verbatim, it clones cleanly, so it works
 inside `GridSearchCV` and any other tool that re-fits across folds:
 
 ```{python}

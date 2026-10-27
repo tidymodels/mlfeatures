@@ -2,7 +2,7 @@
 title: "Ames mini: a first linear regression"
 ---
 
-The book's first recipe — the R formula's implicit preprocessing made explicit and sequential. Deliberately tiny: the end-to-end arc is the lesson. Ported from [Tidy Modeling with R, ch. 8](https://www.tmwr.org/recipes).
+The book's first recipe: the R formula's implicit preprocessing made explicit and sequential. Deliberately tiny: the end-to-end arc is the lesson. Ported from [Tidy Modeling with R, ch. 8](https://www.tmwr.org/recipes).
 
 **Compare with R:** [side-by-side R ↔ Python](sbs/tmwr01-r-vs-py.html){target="_blank"} · R original: test rmse 0.0764, rsq 0.824 (log10 units).
 

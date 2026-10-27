@@ -13,8 +13,8 @@ No mlfeatures step fills this family yet; three planned steps
 ([#61](https://github.com/tidymodels/shoez/issues/61),
 [#217](https://github.com/tidymodels/shoez/issues/217)):
 
-- Date features — year, month, day of week, and friends from a date column.
-- Datetime features — the same plus hour, minute, and second resolution.
-- Holiday indicators — indicator columns for holidays near each date.
+- Date features: year, month, day of week, and friends from a date column.
+- Datetime features: the same plus hour, minute, and second resolution.
+- Holiday indicators: indicator columns for holidays near each date.
 
-*Stub — content to come.*
+*Stub: content to come.*

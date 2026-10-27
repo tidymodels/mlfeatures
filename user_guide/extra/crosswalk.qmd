@@ -8,7 +8,7 @@ format:
 [Step families](../families/numeric-features.qmd) and the
 [eight positions](../basics/four-stages-eight-steps.qmd) are two groupings of
 the same steps: a family says what kind of column a step works on, a position
-says when it runs. Crossing them shows where each step lives — and that the
+says when it runs. Crossing them shows where each step lives, and that the
 two cut across each other rather than nesting.
 
 *Italicized* steps are planned or not yet in this build; see the family pages
@@ -19,7 +19,7 @@ for the tracking issues.
 | [1. Missing: impute](../four-stages/missing-impute.qmd) | | | | `step_impute_mean` `step_impute_median` `step_impute_mode` | | |
 | [2. Missing: category levels](../four-stages/missing-category-levels.qmd) | | `step_unknown` *`step_other`* *`step_novel`* | | `step_unknown` | | |
 | [3. Wrangle: transforms](../four-stages/wrangle-transforms.qmd) | *`step_log`* *`step_order_norm`* | | *`step_date_features`* *`step_datetime_features`* | | | |
-| [4. Wrangle: discretize](../four-stages/wrangle-discretize.qmd) | — | | | | | |
+| [4. Wrangle: discretize](../four-stages/wrangle-discretize.qmd) | none | | | | | |
 | [5. Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd) | | `step_dummy` `step_one_hot` | *`step_holiday`* | | | |
 | [6. Model prep: interactions](../four-stages/model-prep-interactions.qmd) | `step_polynomial` *`step_interact`* | | | | | |
 | [7. Model prep: normalize](../four-stages/model-prep-normalize.qmd) | `step_normalize` *`step_range`* | | | | | |
@@ -27,10 +27,10 @@ for the tracking issues.
 
 Reading the empty space is as useful as reading the cells:
 
-- **[Text features](../families/text-features.qmd) has no entries at all** — that family
+- **[Text features](../families/text-features.qmd) has no entries at all**: that family
   is handled at the recipe's boundary today, not by steps.
-- **Position 4 (discretize) is empty by design** — no step fills it, and R
+- **Position 4 (discretize) is empty by design**: no step fills it, and R
   recipes itself discourages it.
-- **The filter steps don't appear** — `step_drop_zero_variance` and
+- **The filter steps don't appear**: `step_drop_zero_variance` and
   `step_drop_corr` hold no position; see
   [dropping columns](../basics/dropping-columns.qmd).

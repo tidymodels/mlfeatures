@@ -17,7 +17,7 @@ PARITY NOTES:
    group_by/agg. Deliberately outside the recipe in both.
  - Model mapping is approximate: kknn tunes neighbors/dist_power/weight_func
    (kernel weights); KNeighborsRegressor's analogs are n_neighbors/p/weights
-   (only "uniform"/"distance") — same idea, coarser space.
+   (only "uniform"/"distance"): same idea, coarser space.
  - The book's poly/interact variant: StepPolynomial and StepInteract (every
    pair of the selected columns) both exist, so it ports. It is left
    commented, as in R, because it is the glmnet story, not KNN's.
@@ -45,7 +45,7 @@ from mlfeatures.data import concrete
 ingredients = [c for c in concrete.columns if c != "compressive_strength"]
 concrete = (concrete.group_by(ingredients)
                     .agg(pl.col("compressive_strength").mean())
-                    .sort(ingredients))  # group_by output is unordered —
+                    .sort(ingredients))  # group_by output is unordered:
                                          # sort makes the split deterministic
 
 # ── Split (stratified by target quartile, mirroring initial_split)
@@ -56,7 +56,7 @@ concrete_train, concrete_test = train_test_split(
     concrete, train_size=0.75, stratify=strata, random_state=1501
 )
 
-# ── Recipe (ports 1:1 — the whole story for KNN is the shared scale)
+# ── Recipe (ports 1:1; the whole story for KNN is the shared scale)
 
 normalized_rec = (
     Recipe(data=concrete_train, target="compressive_strength")
