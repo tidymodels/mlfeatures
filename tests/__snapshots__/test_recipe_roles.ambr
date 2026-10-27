@@ -5,7 +5,7 @@
 # name: TestSetRolesIntegration.test_repr_summarises_roles
   '''
   Recipe (untrained)
-    Inputs: 3 columns — 2 features, 1 target
+    Inputs: 3 columns (2 features, 1 target)
     Steps:
       <none>
   '''

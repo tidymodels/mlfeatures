@@ -94,7 +94,7 @@ def _format_recipe(
     else:
         role_summary = "no roles assigned"
     if n_columns is not None:
-        inputs = f"  Inputs: {n_columns} columns — {role_summary}"
+        inputs = f"  Inputs: {n_columns} columns ({role_summary})"
     else:
         inputs = f"  Inputs: {role_summary}"
 
