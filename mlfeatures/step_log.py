@@ -153,7 +153,7 @@ def apply_log(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``columns``
+    narwhals.DataFrame: the input frame with each column in ``columns``
     replaced in place by its logarithm. Column names, order, and structure are
     unchanged.
 

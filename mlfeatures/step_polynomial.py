@@ -4,7 +4,7 @@ The *fit* half (`fit_polynomial()`) inspects training data to pick a
 polynomial degree per column and **learns the orthogonal basis** (centering
 mean + QR transform matrix) for each fittable column. The *apply* half
 (`apply_polynomial()`) reuses those statistics to expand each selected
-column; the basis is never recomputed from new data — train/serve parity with
+column; the basis is never recomputed from new data: train/serve parity with
 R's `stats::poly()`. `StepPolynomial` wraps both into the
 `Step` lifecycle so a `Recipe` can fit
 and apply them.
@@ -64,7 +64,7 @@ class PolynomialFit:
     ----------
     degree
         Effective polynomial degree for this column. ``0`` for constant /
-        all-null columns where no orthogonal expansion is possible — those
+        all-null columns where no orthogonal expansion is possible: those
         are passed through untouched at apply time (with a warning).
     mean
         Training-set mean of the column's non-null values. Applied as
@@ -89,7 +89,7 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
     """Learn the orthogonal polynomial basis for each column.
 
     For each column, picks an *effective* degree of
-    ``min(degree, n_unique_non_null - 1)``, clamped at zero — a column with
+    ``min(degree, n_unique_non_null - 1)``, clamped at zero: a column with
     ``k`` unique values can support at most ``k - 1`` orthogonal polynomial
     terms before the Vandermonde becomes rank-deficient. For columns whose
     effective degree is positive, computes the centering mean and the QR
@@ -106,7 +106,7 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
     degree
         Maximum polynomial degree. Must be an ``int`` strictly greater than
         zero. Booleans are rejected even though ``bool`` is a subclass of
-        ``int`` in Python — ``degree=True`` is almost always a caller bug.
+        ``int`` in Python: ``degree=True`` is almost always a caller bug.
 
     Returns
     -------
@@ -167,8 +167,8 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
         )
         # QR factorization: V = Q @ R. At apply time we want
         #     Z = polyvander(x_new - mean, d) @ inv(R) @ diag(sign(diag(R)))
-        # because that equals Q_new * sign(diag(R)) — i.e. the same basis the
-        # training values would have produced — but evaluated at the new x.
+        # because that equals Q_new * sign(diag(R)) (i.e. the same basis the
+        # training values would have produced, but evaluated at the new x).
         # We precompute `transform = inv(R) @ diag(sign(diag(R)))` here so
         # apply_polynomial only has to do a single matmul.
         _, r = np.linalg.qr(vander)
@@ -202,7 +202,7 @@ def apply_polynomial(
     - If it is in ``fit_result`` with effective degree ``d > 0``, replace it
       in place (same positional slot) with ``d`` orthogonal polynomial
       columns named ``{column}_1``, ``{column}_2``, ..., ``{column}_d``,
-      using the fit-time mean and transform matrix — the basis is **not
+      using the fit-time mean and transform matrix: the basis is **not
       recomputed** from ``data``. With ``keep_original_cols`` the source
       column stays in its slot and the expansion follows it.
     - If its effective degree is ``0``, keep the original column and emit a
@@ -210,7 +210,7 @@ def apply_polynomial(
       zero-variance drop step to remove such columns.
 
     Columns named in ``fit_result`` that are absent from ``data`` are silently
-    skipped — same schema-drift tolerance as
+    skipped: same schema-drift tolerance as
     `mlfeatures._frame.apply_drop()` (see ``design/lifecycle.md``).
 
     Parameters
@@ -238,7 +238,7 @@ def apply_polynomial(
     """
     # Plan the final column ordering and which columns to expand. We add new
     # polynomial columns via `with_columns` (which preserves the frame's row
-    # alignment — `nw.concat(how="horizontal")` on pandas is index-based and
+    # alignment: `nw.concat(how="horizontal")` on pandas is index-based and
     # silently produces NaN when the frame has a non-default index, e.g. after
     # a train/test split), then drop the expanded source columns, and finally
     # `.select(final_order)` to slot the expansions into their original spot.
@@ -248,7 +248,7 @@ def apply_polynomial(
     for col_name in data.columns:
         fit = fit_result.get(col_name)
         if fit is None:
-            # Column wasn't selected for polynomial expansion — pass through.
+            # Column wasn't selected for polynomial expansion: pass through.
             final_order.append(col_name)
             continue
         if fit.degree <= 0:
@@ -301,7 +301,7 @@ def _apply_ortho_poly(
     non-null rows and drops the leading constant column, returning a full-size
     ``(n, fit.degree)`` array with NaN rows wherever the input was null. The
     centering mean and transform matrix come from the training-set QR stored
-    in ``fit`` — they are not re-estimated from ``series``.
+    in ``fit``: they are not re-estimated from ``series``.
 
     Parameters
     ----------
@@ -311,7 +311,7 @@ def _apply_ortho_poly(
         every other row is unaffected by their presence.
     fit
         Stored basis from `fit_polynomial()`. ``fit.degree`` must be
-        positive — the caller (``apply_polynomial``) handles the degree-0 case
+        positive: the caller (``apply_polynomial``) handles the degree-0 case
         before invoking this helper.
     """
     # narwhals nulls become NumPy NaN at the to_numpy() boundary; we mask
@@ -328,7 +328,7 @@ def _apply_ortho_poly(
     # was built from the training-data QR, so this evaluates the **same**
     # orthogonal basis the training values produced, at the new x's.
     z_complete = vander @ fit.transform
-    # Drop the constant (degree-0) column — we keep only the polynomial terms.
+    # Drop the constant (degree-0) column: we keep only the polynomial terms.
     z_complete = z_complete[:, 1:]
     # Re-embed into a full-size, NaN-prefilled array so output rows align with
     # the input series row-for-row.
@@ -345,7 +345,7 @@ class StepPolynomial(Step):
     kept alongside them when ``keep_original_cols`` is ``True``. The orthogonal
     basis is a centering mean plus a QR transform matrix.
 
-    The effective degree per column is capped at ``n_unique_non_null - 1`` — a
+    The effective degree per column is capped at ``n_unique_non_null - 1``: a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
     polynomial terms. Constant (or all-null) columns get an effective degree
     of ``0``; `transform()` leaves those columns untouched and emits a

@@ -1,7 +1,7 @@
 """Tests for `mlfeatures._spline`, the machinery shared by the two spline steps.
 
 Knot-placement values below were verified against live R output
-(`stats::quantile(x, probs = (1:n)/(n+1))`, R's default quantile type 7) —
+(`stats::quantile(x, probs = (1:n)/(n+1))`, R's default quantile type 7):
 see the plan for issues tidymodels/shoez#214/#215 for the exact R snippets.
 """
 

@@ -95,7 +95,7 @@ def fit_dummy(selected: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     Returns
     -------
     dict[str, list[Any]]
-        Maps each column name to its retained sorted levels — the full sorted
+        Maps each column name to its retained sorted levels: the full sorted
         level list minus the first element (the reference/dropped level).
 
     Raises
@@ -141,7 +141,7 @@ def apply_dummy(
     frame:
         Internal narwhals frame to transform.
     levels:
-        Retained level mapping — the levels that produce indicator columns.
+        Retained level mapping: the levels that produce indicator columns.
         For ``StepDummy`` this excludes the reference level; for
         ``StepOneHot`` it includes all levels.
     col_name_fn:
@@ -163,7 +163,7 @@ def apply_dummy(
 
         out_names = [col_name_fn(col, str(lvl)) for lvl in retained_levels]
 
-        # Detect truly unseen levels — values not seen at fit time at all.
+        # Detect truly unseen levels: values not seen at fit time at all.
         # The reference level (present in all_known but not in retained_levels)
         # is NOT unseen; it legitimately produces zeros in all indicator columns.
         known: set[Any] = (

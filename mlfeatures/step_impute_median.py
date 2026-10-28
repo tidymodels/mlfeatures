@@ -89,7 +89,7 @@ def apply_impute_median(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with nulls in each mapped column filled
+    narwhals.DataFrame: the input frame with nulls in each mapped column filled
     by its median (columns with a ``NaN`` median are left as-is). Column names,
     order, and structure are unchanged.
     """

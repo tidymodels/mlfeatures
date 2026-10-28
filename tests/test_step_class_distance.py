@@ -52,7 +52,7 @@ SMALL_TARGET: list[int] = [0, 0, 1, 1]
 
 
 # ---------------------------------------------------------------------------
-# fit_class_distance — return type & shape
+# fit_class_distance: return type & shape
 # ---------------------------------------------------------------------------
 
 
@@ -79,7 +79,7 @@ class TestFitReturnType:
 
 
 # ---------------------------------------------------------------------------
-# fit_class_distance — centroid values
+# fit_class_distance: centroid values
 # ---------------------------------------------------------------------------
 
 
@@ -114,7 +114,7 @@ class TestFitCentroids:
         np.testing.assert_allclose(result.centroids[:, 1], [11.0, 12.0])
 
     def test_three_classes(self) -> None:
-        # Three single-row "classes" — each centroid is just that row.
+        # Three single-row "classes": each centroid is just that row.
         selected = _df({"x": [10.0, 20.0, 30.0], "y": [100.0, 200.0, 300.0]})
         result = fit_class_distance(selected, _series(["a", "b", "c"]))
         assert result.classes == ["a", "b", "c"]
@@ -125,7 +125,7 @@ class TestFitCentroids:
 
 
 # ---------------------------------------------------------------------------
-# fit_class_distance — ordering & determinism
+# fit_class_distance: ordering & determinism
 # ---------------------------------------------------------------------------
 
 
@@ -155,7 +155,7 @@ class TestFitOrdering:
 
 
 # ---------------------------------------------------------------------------
-# fit_class_distance — null target handling
+# fit_class_distance: null target handling
 # ---------------------------------------------------------------------------
 
 
@@ -185,7 +185,7 @@ class TestFitNullTarget:
 
 
 # ---------------------------------------------------------------------------
-# apply_class_distance — output shape & passthrough
+# apply_class_distance: output shape & passthrough
 # ---------------------------------------------------------------------------
 
 
@@ -224,7 +224,7 @@ class TestApplyShape:
 
     def test_integer_features_yield_float_distance_columns(self) -> None:
         # class_distance accepts integer feature columns, but distances are
-        # real-valued — the new columns must be float even when the inputs are
+        # real-valued: the new columns must be float even when the inputs are
         # int and a distance could coincidentally land on a whole number.
         selected = _df({"x": [0, 2, 10, 12], "y": [0, 4, 10, 14]})
         assert selected["x"].dtype.is_integer()  # integer in
@@ -235,7 +235,7 @@ class TestApplyShape:
 
 
 # ---------------------------------------------------------------------------
-# apply_class_distance — column naming
+# apply_class_distance: column naming
 # ---------------------------------------------------------------------------
 
 
@@ -262,7 +262,7 @@ class TestApplyColumnNames:
 
 
 # ---------------------------------------------------------------------------
-# apply_class_distance — Euclidean distance values
+# apply_class_distance: Euclidean distance values
 # ---------------------------------------------------------------------------
 
 
@@ -291,7 +291,7 @@ class TestApplyDistancesEuclidean:
 
 
 # ---------------------------------------------------------------------------
-# apply_class_distance — Manhattan metric
+# apply_class_distance: Manhattan metric
 # ---------------------------------------------------------------------------
 
 
@@ -334,7 +334,7 @@ class TestMetricManhattan:
 
 
 # ---------------------------------------------------------------------------
-# apply_class_distance — log_distance and eps
+# apply_class_distance: log_distance and eps
 # ---------------------------------------------------------------------------
 
 
@@ -377,7 +377,7 @@ class TestLogDistance:
 
 
 # ---------------------------------------------------------------------------
-# apply_class_distance — missing-value propagation
+# apply_class_distance: missing-value propagation
 # ---------------------------------------------------------------------------
 
 
@@ -403,7 +403,7 @@ class TestApplyMissingValues:
             {"x": [0.0, float("nan"), 10.0, 12.0], "y": [0.0, 4.0, 10.0, 14.0]}
         )
         out = apply_class_distance(with_nan, fit)
-        # Rows 0, 2, 3 must be finite — the NaN in row 1 doesn't propagate.
+        # Rows 0, 2, 3 must be finite: the NaN in row 1 doesn't propagate.
         for row in (0, 2, 3):
             assert math.isfinite(float(out["distance_0"][row]))
             assert math.isfinite(float(out["distance_1"][row]))

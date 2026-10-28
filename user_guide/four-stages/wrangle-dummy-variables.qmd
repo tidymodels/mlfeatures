@@ -7,4 +7,4 @@ numeric indicator columns, after the level guards have settled the vocabulary.
 Filled today by `StepDummy` (drop-one) and `StepOneHot` (all levels). By the
 end of this position, everything is a number.
 
-*Stub — content to come.*
+*Stub: content to come.*

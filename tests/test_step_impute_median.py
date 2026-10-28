@@ -73,7 +73,7 @@ class TestFitImputeMedian:
         # numpy may also emit a RuntimeWarning ("Mean of empty slice"); select
         # our UserWarning explicitly rather than relying on record order.
         assert str(record.pop(UserWarning).message) == snapshot
-        # "empty" is NOT dropped — it stays with a NaN median.
+        # "empty" is NOT dropped: it stays with a NaN median.
         assert list(medians) == ["a", "empty"]
         assert medians["a"] == pytest.approx(2.0)
         assert math.isnan(medians["empty"])

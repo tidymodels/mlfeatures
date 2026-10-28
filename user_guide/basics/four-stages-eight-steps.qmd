@@ -24,8 +24,8 @@ Each position has its own page (e.g. "Missing: impute").
 | | [7. Model prep: normalize](../four-stages/model-prep-normalize.qmd) | `StepNormalize`, `StepRange` |
 | 4. Multivariate transforms | [8. Multivariate transforms](../four-stages/multivariate-transforms.qmd) | `StepPca`, `StepPls`, `StepClassDistance` |
 
-Each stage exists so the next one works: handle missing first — impute the
-numeric gaps and give missing categorical levels an explicit value — because
+Each stage exists so the next one works: handle missing first (impute the
+numeric gaps and give missing categorical levels an explicit value), because
 every later step wants complete columns, and the guard levels must exist
 before the dummy step freezes its vocabulary; wrangle everything into numbers
 next; model prep after, so interactions can cross indicator columns with
@@ -98,7 +98,7 @@ fitted.transform(credit_validation).head()
 ## Filtering-related steps
 
 The ordering is deliberately silent on the filter steps (`StepDropZeroVariance`,
-`StepDropNearZeroVariance`, `StepDropCorr`) — [dropping columns](dropping-columns.qmd) is not a stage. In
+`StepDropNearZeroVariance`, `StepDropCorr`): [dropping columns](dropping-columns.qmd) is not a stage. In
 practice filters run as two passes: after stage 1, to drop dead or redundant
 raw columns before effort is spent encoding and scaling them, and again after
 the dummy step, where a rare level can produce an all-zero indicator column.

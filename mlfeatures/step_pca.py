@@ -7,7 +7,7 @@ output descends from the whole input set rather than a single source column.
 
 The *fit* half (`fit_pca()`) learns the centering mean and the component
 loadings from the training data via an SVD; the *apply* half (`apply_pca()`)
-reuses those statistics to project any frame onto the learned components — the
+reuses those statistics to project any frame onto the learned components: the
 basis is never recomputed from new data, giving train/serve parity.
 `StepPca` wraps both into the `Step` lifecycle so a `Recipe` can fit and apply
 them.
@@ -91,7 +91,7 @@ def fit_pca(selected: Frame, num_comp: int) -> PcaFit:
     num_comp
         Number of principal components to keep. Must be an ``int`` strictly
         greater than zero. Booleans are rejected even though ``bool`` is an
-        ``int`` subclass in Python — ``num_comp=True`` is almost always a bug.
+        ``int`` subclass in Python: ``num_comp=True`` is almost always a bug.
 
     Returns
     -------
@@ -138,7 +138,7 @@ def apply_pca(
     The input columns named in ``fit`` are dropped (unless ``keep_original_cols``)
     and ``fit.num_comp`` score columns named ``{prefix}1 ... {prefix}{num_comp}``
     are appended, computed as ``(X - fit.mean) @ fit.loadings``. Rows with a
-    missing input value yield ``NaN`` scores. The basis comes from ``fit`` — it
+    missing input value yield ``NaN`` scores. The basis comes from ``fit``: it
     is not recomputed from ``data``.
 
     Parameters

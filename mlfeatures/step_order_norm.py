@@ -187,7 +187,7 @@ def apply_order_norm(selected: Frame, fits: dict[str, OrderNormFit]) -> Frame:
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``fits`` replaced
+    narwhals.DataFrame: the input frame with each column in ``fits`` replaced
     in place by its normal-quantile score. Missing input values pass through
     as missing. Column names, order, and structure are unchanged.
     """

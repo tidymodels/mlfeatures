@@ -56,7 +56,7 @@ class TestFitImputeMean:
         # numpy may also emit a RuntimeWarning ("Mean of empty slice"); select
         # our UserWarning explicitly rather than relying on record order.
         assert str(record.pop(UserWarning).message) == snapshot
-        # "empty" is NOT dropped — it stays with a NaN mean.
+        # "empty" is NOT dropped: it stays with a NaN mean.
         assert list(means) == ["a", "empty"]
         assert means["a"] == pytest.approx(1.5)
         assert math.isnan(means["empty"])

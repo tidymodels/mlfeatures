@@ -5,12 +5,12 @@ Port of R ``recipes``'s ``step_spline_monotone()``, which wraps
 training data to place interior knots (by quantile, or the caller's own
 explicit `knots`) and stores them alongside the training boundary; the
 *apply* half (`apply_spline_monotone()`) reuses those stored knots to expand
-each selected column — the basis is never recomputed from new data, matching
+each selected column: the basis is never recomputed from new data, matching
 `mlfeatures.step_polynomial` and `mlfeatures.step_spline_natural`. `StepSplineMonotone`
 wraps both into the `Step` lifecycle so a `Recipe` can fit and apply them.
 
 Unlike scikit-learn's ``SplineTransformer`` (B-spline only, no shape
-constraints), each basis column here is non-negative and non-decreasing —
+constraints), each basis column here is non-negative and non-decreasing:
 when used with a fitting procedure that produces non-negative coefficients,
 the resulting fit is guaranteed monotonic in the column. This is a genuine
 gap in the Python ecosystem, not a wrapper around an existing transformer.
@@ -23,7 +23,7 @@ M-spline is just a rescaled B-spline (``M_i(x) = order / (t[i+order] - t[i])
 ``BSpline.antiderivative()`` computes the *exact* antiderivative of a
 B-spline (via the standard coefficient cumulative-sum identity, not numerical
 quadrature), so the I-spline basis is a direct, exact port with no bespoke
-matrix to derive — verified bit-for-bit against live R `splines2` output,
+matrix to derive, verified bit-for-bit against live R `splines2` output,
 including out-of-boundary extrapolation, which needs no special-casing here
 (unlike the natural spline): SciPy's default polynomial-continuation
 extrapolation reproduces R's own (documented as potentially ill-conditioned)
@@ -78,7 +78,7 @@ class SplineMonotoneFit:
     underlying M-spline degree, and the effective number of output columns.
     Marked ``frozen=True`` so the fitted state can't be mutated and drift
     train-to-serve. As with `mlfeatures.step_spline_natural`'s ``SplineNaturalFit``,
-    no separate transform matrix is stored — the knots are the pinned state.
+    no separate transform matrix is stored: the knots are the pinned state.
 
     Attributes
     ----------
@@ -95,7 +95,7 @@ class SplineMonotoneFit:
         Whether the first basis column is included in the output.
     deg_free
         Effective number of output columns. ``0`` for a degenerate column
-        (fewer than 2 distinct training values) — those are passed through
+        (fewer than 2 distinct training values): those are passed through
         untouched at apply time (with a warning).
     """
 
@@ -220,7 +220,7 @@ def apply_spline_monotone(
     - If it is in ``fit_result`` with ``deg_free > 0``, replace it in place
       (same positional slot) with ``deg_free`` basis columns named
       ``{column}_1``, ``{column}_2``, ..., ``{column}_{deg_free}``, using the
-      fit-time knots — the basis is **not recomputed** from ``data``. With
+      fit-time knots: the basis is **not recomputed** from ``data``. With
       ``keep_original_cols`` the source column stays in its slot and the
       expansion follows it.
     - If its ``deg_free`` is ``0``, keep the original column and emit a
@@ -228,7 +228,7 @@ def apply_spline_monotone(
 
     New data falling outside the fit-time boundary knots continues the local
     polynomial piece rather than clamping or linearly extrapolating (matching
-    R `splines2`'s own documented behavior) — the basis can become
+    R `splines2`'s own documented behavior): the basis can become
     non-monotonic and leave ``[0, 1]`` out there, since the shape guarantee
     is only made within the training range.
 
@@ -309,7 +309,7 @@ def _ispline_basis(
     B-spline (M-spline) basis function, shifted so it is zero at the lower
     boundary knot. ``extrapolate=True`` on the underlying `BSpline` is what
     reproduces R `splines2`'s raw polynomial-continuation behavior past the
-    boundary (verified bit-for-bit against live R output) — no special-casing
+    boundary (verified bit-for-bit against live R output): no special-casing
     needed, unlike the natural spline. Missing entries become rows of ``NaN``.
     """
     bspline_cls = import_optional(
@@ -357,7 +357,7 @@ class StepSplineMonotone(Step):
     support a boundary at all; `transform()` leaves such a column untouched
     and emits a `UserWarning`. New data outside the fit-time boundary
     continues the local polynomial piece and can leave ``[0, 1]`` or lose
-    monotonicity — the shape guarantee only holds within the training range.
+    monotonicity: the shape guarantee only holds within the training range.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.

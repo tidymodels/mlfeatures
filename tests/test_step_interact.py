@@ -22,7 +22,7 @@ def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
 
 
 # ---------------------------------------------------------------------------
-# fit_interact — pair enumeration
+# fit_interact: pair enumeration
 # ---------------------------------------------------------------------------
 
 
@@ -60,7 +60,7 @@ class TestFitPairs:
 
 
 # ---------------------------------------------------------------------------
-# apply_interact — pairwise products
+# apply_interact: pairwise products
 # ---------------------------------------------------------------------------
 
 

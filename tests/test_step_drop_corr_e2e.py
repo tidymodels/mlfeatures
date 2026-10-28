@@ -65,7 +65,7 @@ class TestEndToEnd:
         fitted = Recipe(steps=[StepDropCorr(["a", "b", "c"], threshold=0.9)]).fit(train)
         kept = set(fitted.transform(train).columns)
         # New data with different correlation structure must not change which
-        # columns are dropped — the decision is fixed at fit time.
+        # columns are dropped: the decision is fixed at fit time.
         new = pd.DataFrame({"a": [1.0, 9.0], "b": [9.0, 1.0], "c": [3.0, 3.0]})
         assert set(fitted.transform(new).columns) == kept
 

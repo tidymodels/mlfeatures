@@ -90,7 +90,7 @@ class StepError(Exception):
     columns:
         The column(s) the step was operating on, or ``[]`` if unknown.
     phase:
-        ``'fit'`` or ``'transform'`` — the lifecycle stage the failure occurred in.
+        ``'fit'`` or ``'transform'``: the lifecycle stage the failure occurred in.
     """
 
     def __init__(
@@ -122,8 +122,8 @@ class Step(ABC):
     and store statistics, and then applied to new data.
 
     **Everything a step needs is computed at fit time.** Whatever a step has to
-    learn from data — statistics, level sets, a basis, the list of columns to
-    drop — is estimated once from the training frame and stored on the step.
+    learn from data (statistics, level sets, a basis, the list of columns to
+    drop) is estimated once from the training frame and stored on the step.
     ``transform()`` only applies that stored state; it never re-estimates
     anything, however different the new data looks. This is what makes a fitted
     recipe reproducible and free of train-to-serve skew, and it holds for every
@@ -140,7 +140,7 @@ class Step(ABC):
     downstream code should select columns by name rather than by position.
 
     ``Step`` subclasses always run at transform time; `RowOp` subclasses never
-    run on new data. There is intentionally no ``skip`` flag — whether a step
+    run on new data. There is intentionally no ``skip`` flag: whether a step
     runs at transform time is determined structurally by its type.
 
     A subclass' ``__init__`` stores its own arguments and then calls
@@ -168,7 +168,7 @@ class Step(ABC):
     #: defaulted ones may be renamed to resolve a collision.
     _id_explicit: bool = False
     #: Whether this step has been fitted. Set by ``recipe.fit()`` after
-    #: ``step.fit()`` returns — not by the step itself.
+    #: ``step.fit()`` returns, not by the step itself.
     trained: bool
     #: The shape of this step's input/output relationship. Declared by every
     #: concrete step; the framework reads it for lineage and to decide whether
@@ -187,7 +187,7 @@ class Step(ABC):
     #: resolves to zero columns. A marked step is the identity transform: it is
     #: kept in the fitted pipeline for inspection but never fitted and never run.
     #: This makes "empty selection ⇒ no-op" structural rather than a per-step
-    #: convention — mirroring how `RowOp` makes the transform-time skip
+    #: convention, mirroring how `RowOp` makes the transform-time skip
     #: structural. Defaults to ``False``.
     _empty_selection: bool = False
     #: What ``fit()`` estimated from the training data, or ``None`` before
@@ -372,7 +372,7 @@ class Step(ABC):
         The recipe consults this to populate the column-lineage DAG (see
         ``design/lineage.md``) and validates the keys against the post-step frame.
 
-        The default returns ``{}`` — correct for steps that create no new columns
+        The default returns ``{}``: correct for steps that create no new columns
         (in-place ``ONE_TO_ONE`` such as ``step_normalize``; ``REMOVING``;
         ``ROW_OP``). Steps that add columns override this to declare per-output
         provenance: ``ONE_TO_MANY`` (each ``a1, a2 ← a``), ``MANY_TO_MANY`` (every
@@ -389,8 +389,8 @@ class Step(ABC):
         so its keys are necessarily unique), this is an ordered list that
         *preserves duplicates*: a step that would emit two columns with the same
         name reports that name twice. The recipe validates this list for
-        uniqueness — both against the existing schema and within the step
-        itself — *before* the step runs, which is the single centralized
+        uniqueness (both against the existing schema and within the step
+        itself) *before* the step runs, which is the single centralized
         name-collision check every column-adding step relies on. Validating up
         front means the error is clean on every backend (polars raises a
         backend-specific error when two columns share a name; pandas silently
@@ -596,7 +596,7 @@ class Step(ABC):
 class RowOp(Step):
     """Row-altering steps.
 
-    ``transform()`` is a no-op on new data — these steps only take effect during
+    ``transform()`` is a no-op on new data: these steps only take effect during
     ``fit()`` (e.g. filtering or shuffling training rows). The behaviour is
     structural: because the framework dispatches on type, a ``RowOp`` can never
     accidentally run at transform time.

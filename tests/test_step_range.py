@@ -52,7 +52,7 @@ class TestGuards:
             pd.DataFrame({"a": pd.Series([], dtype="float64")}), eager_only=True
         )
         bounds = fit_range(df)
-        # NaN bounds are not treated as constant — the column is kept.
+        # NaN bounds are not treated as constant: the column is kept.
         assert list(bounds) == ["a"]
         lo, hi = bounds["a"]
         assert math.isnan(lo)
@@ -250,7 +250,7 @@ class TestMissingValues:
         assert math.isnan(out["x"].to_list()[1])
 
     def test_all_null_column_yields_nan_bounds(self) -> None:
-        # No non-null values to compare, so the column is not "constant" — it
+        # No non-null values to compare, so the column is not "constant": it
         # is kept with NaN bounds, the same signal as a zero-row fit.
         bounds = fit_range(_df(("a", [None, None, None])))
         assert list(bounds) == ["a"]
@@ -307,7 +307,7 @@ class TestInfiniteValues:
 
     def test_infinite_bound_degrades_the_rescaling(self) -> None:
         # An infinite range divides every finite deviation to 0, and the
-        # infinite value itself becomes NaN (inf - inf) — which is what the
+        # infinite value itself becomes NaN (inf - inf), which is what the
         # fit-time warning is for.
         df = _df(("a", [2.0, 3.0, float("inf")]))
         with pytest.warns(UserWarning):

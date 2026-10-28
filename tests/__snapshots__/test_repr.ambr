@@ -2,7 +2,7 @@
 # name: TestFittedRecipeRepr.test_resolved_columns_shown
   '''
   Recipe (trained)
-    Inputs: 3 columns — 2 features, 1 target
+    Inputs: 3 columns (2 features, 1 target)
     Steps:
       step_normalize(age)  [trained]
   '''
@@ -10,7 +10,7 @@
 # name: TestFittedRecipeRepr.test_trained_header_and_step_markers
   '''
   Recipe (trained)
-    Inputs: 4 columns — 3 features, 1 target
+    Inputs: 4 columns (3 features, 1 target)
     Steps:
       step_normalize(age)                   [trained]
       step_dummy(city → city_NYC, city_SF)  [trained]
@@ -35,7 +35,7 @@
 # name: TestRecipeRepr.test_roles_and_column_count
   '''
   Recipe (untrained)
-    Inputs: 3 columns — 2 features, 1 target
+    Inputs: 3 columns (2 features, 1 target)
     Steps:
       <none>
   '''
@@ -43,7 +43,7 @@
 # name: TestRecipeRepr.test_steps_listed_untrained
   '''
   Recipe (untrained)
-    Inputs: 3 columns — 2 features, 1 target
+    Inputs: 3 columns (2 features, 1 target)
     Steps:
       step_normalize(['age'])  [untrained]
       step_dummy(['city'])     [untrained]

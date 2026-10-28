@@ -58,7 +58,7 @@ def fit_range(
     ``dict`` mapping each rescalable column name to its ``(lo, hi)`` pair.
     Empty when ``selected`` has no columns.
 
-    Columns whose range ``hi - lo`` is ``0`` (constant columns — every value the
+    Columns whose range ``hi - lo`` is ``0`` (constant columns: every value the
     same) cannot be spread across the target range, so they are **omitted** from
     the result and a `UserWarning` is emitted naming them.
 
@@ -71,7 +71,7 @@ def fit_range(
     -----
     Based on the ``prep`` step of ``step_range`` in the R ``recipes`` package,
     which warns about the same two degenerate fits. A ``NaN`` bound (e.g. from a
-    zero-row fit) is not treated as constant — it is kept and propagates as
+    zero-row fit) is not treated as constant: it is kept and propagates as
     ``NaN`` at transform time, signalling a degenerate fit.
     """
     bounds: dict[str, tuple[float, float]] = {}
@@ -133,7 +133,7 @@ def apply_range(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``bounds`` replaced
+    narwhals.DataFrame: the input frame with each column in ``bounds`` replaced
     in place by ``(x - lo) / (hi - lo) * (max - min) + min``. Column names,
     order, and structure are unchanged.
     """

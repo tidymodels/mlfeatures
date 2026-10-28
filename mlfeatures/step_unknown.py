@@ -59,9 +59,9 @@ def fit_unknown(
 
     Returns
     -------
-    list[str] — the column names to recode, in input order. Every selected
+    list[str]: the column names to recode, in input order. Every selected
     column is returned (not only those with nulls in the training data), so that
-    nulls appearing at transform time are still recoded — guaranteeing
+    nulls appearing at transform time are still recoded, guaranteeing
     train/serve parity.
 
     A `UserWarning` is emitted if ``new_level`` already appears as a value
@@ -89,14 +89,14 @@ def apply_unknown(
     selected:
         A narwhals DataFrame to recode.
     columns:
-        The column names to recode — the columns returned by `fit_unknown()`.
+        The column names to recode: the columns returned by `fit_unknown()`.
         Any column of ``selected`` not in this list is passed through untouched.
     new_level:
         The level that null values are recoded to. Default ``"unknown"``.
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with each column in ``columns`` cast to
+    narwhals.DataFrame: the input frame with each column in ``columns`` cast to
     ``String`` and its nulls filled with ``new_level``. Column names, order, and
     structure are unchanged.
     """

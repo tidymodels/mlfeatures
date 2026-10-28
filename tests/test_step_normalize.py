@@ -51,7 +51,7 @@ class TestGuards:
             pd.DataFrame({"a": pd.Series([], dtype="float64")}), eager_only=True
         )
         stats = fit_normalize(df)
-        # NaN std is not treated as constant — the column is kept.
+        # NaN std is not treated as constant: the column is kept.
         assert list(stats) == ["a"]
         mean, std = stats["a"]
         assert math.isnan(mean)
@@ -160,7 +160,7 @@ class TestApplyNormalize:
         with pytest.warns(UserWarning):
             fitted = fit_normalize(df)
         out = apply_normalize(df, fitted)
-        # "c" was dropped at fit time, so it is not normalized — left as-is.
+        # "c" was dropped at fit time, so it is not normalized: left as-is.
         assert out["c"].to_list() == [5.0, 5.0, 5.0]
         assert out["x"].mean() == pytest.approx(0.0)
 

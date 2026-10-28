@@ -3,7 +3,7 @@ title: "8. Multivariate transforms"
 ---
 
 Position 8, the whole of stage 4: transformations that consume many columns at
-once — they want the finished, scaled matrix the first three stages built.
+once: they want the finished, scaled matrix the first three stages built.
 Filled today by `StepPca` and `StepClassDistance`.
 
-*Stub — content to come.*
+*Stub: content to come.*

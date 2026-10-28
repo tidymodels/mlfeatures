@@ -155,7 +155,7 @@ class TestNameCollisions:
 
 
 # ---------------------------------------------------------------------------
-# StepInteract — unit-level invariants
+# StepInteract: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

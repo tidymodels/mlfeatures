@@ -30,7 +30,7 @@ def _schema() -> SchemaInfo:
 
 
 # ---------------------------------------------------------------------------
-# fit_one_hot — level selection (all levels retained)
+# fit_one_hot: level selection (all levels retained)
 # ---------------------------------------------------------------------------
 
 
@@ -96,7 +96,7 @@ class TestFitOneHot:
 
 
 # ---------------------------------------------------------------------------
-# StepOneHot — correctness. Null/unseen-level handling is re-tested here
+# StepOneHot: correctness. Null/unseen-level handling is re-tested here
 # because StepOneHot drives apply_dummy via the all_known=None path, which
 # differs from the explicit all_known set that StepDummy passes.
 # ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ class TestStepOneHotCorrectness:
 
 
 # ---------------------------------------------------------------------------
-# StepOneHot — guards
+# StepOneHot: guards
 # ---------------------------------------------------------------------------
 
 
@@ -292,7 +292,7 @@ class TestStepOneHotGuards:
 
 
 # ---------------------------------------------------------------------------
-# StepOneHot — infrastructure
+# StepOneHot: infrastructure
 # ---------------------------------------------------------------------------
 
 

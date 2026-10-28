@@ -14,7 +14,7 @@ instead of only surfacing in the docs build.
 The behavior mirrors Quarto's: each reference page runs in its own kernel, so
 all cells of a single docstring share one namespace and run in source order (a
 hidden ``#| echo: false`` setup cell followed by the visible call). We collect
-docstrings straight from the source with ``ast`` — that gives exact source
+docstrings straight from the source with ``ast``: that gives exact source
 ordering and a line number for failures, and sidesteps import/inheritance
 quirks of runtime introspection.
 """
@@ -31,7 +31,7 @@ import pytest
 PACKAGE_DIR = Path(__file__).resolve().parent.parent / "mlfeatures"
 USER_GUIDE_DIR = Path(__file__).resolve().parent.parent / "user_guide"
 
-# ```{python}\n ... \n``` — the fenced executable cell great-docs runs. The
+# ```{python}\n ... \n```: the fenced executable cell great-docs runs. The
 # ``{python}`` marker (with braces) is what distinguishes an executable cell
 # from a plain ```` ```python ```` display block, which is rendered verbatim.
 _CELL_RE = re.compile(r"^```\{python\}[^\n]*\n(.*?)\n```", re.DOTALL | re.MULTILINE)
@@ -67,7 +67,7 @@ def _collect_cells() -> list[tuple[str, str]]:
     """Find every docstring holding at least one executable cell.
 
     Returns ``(id, source)`` pairs where ``source`` is the docstring's cells
-    concatenated in order into one script — the unit Quarto would execute for
+    concatenated in order into one script: the unit Quarto would execute for
     that reference page.
     """
     cases: list[tuple[str, str]] = []

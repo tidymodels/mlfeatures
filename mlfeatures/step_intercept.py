@@ -9,7 +9,7 @@ This is the ``ADDING``-mode prototype from ``design/steps-catalog.md``, based on
 ``step_intercept`` from the R ``recipes`` package and generalised from a column
 of ones to a configurable fixed value. An intercept estimates nothing from the
 data, so unlike a filter such as `fit_drop_corr()`
-there is no *fit* half — only this *apply* half.
+there is no *fit* half: only this *apply* half.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def add_intercept(
         Internal `Frame` (narwhals). Native frames are
         wrapped via `mlfeatures._frame.from_native()` at the recipe boundary.
     value
-        The constant to fill the new column with. Default ``1.0`` — a column of
+        The constant to fill the new column with. Default ``1.0``: a column of
         ones, the classic regression intercept. The column's dtype follows the
         literal, so an ``int`` ``value`` gives an integer column.
     name
@@ -167,7 +167,7 @@ class StepIntercept(Step):
         return add_intercept(new_data, self.value, self.name)
 
     def schema_in(self) -> ColSchema:
-        """Schema of the columns this step consumed — none; it only adds."""
+        """Schema of the columns this step consumed: none; it only adds."""
         return ColSchema(columns=[])
 
     def schema_out(self) -> ColSchema:
@@ -177,7 +177,7 @@ class StepIntercept(Step):
         return self._schema_out
 
     def output_parents(self) -> dict[str, list[str]]:
-        """The intercept column is a constant — it has no parent columns."""
+        """The intercept column is a constant: it has no parent columns."""
         if self._output_parents is None:
             raise RuntimeError("StepIntercept.output_parents() called before fit()")
         return self._output_parents

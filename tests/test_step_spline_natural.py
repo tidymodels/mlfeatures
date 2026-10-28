@@ -30,7 +30,7 @@ def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_natural — return shape
+# fit_spline_natural: return shape
 # ---------------------------------------------------------------------------
 
 
@@ -52,7 +52,7 @@ class TestFitReturnShape:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_natural — knot count / effective deg_free
+# fit_spline_natural: knot count / effective deg_free
 # ---------------------------------------------------------------------------
 
 
@@ -86,7 +86,7 @@ class TestFitKnotCount:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_natural — explicit knots
+# fit_spline_natural: explicit knots
 # ---------------------------------------------------------------------------
 
 
@@ -114,7 +114,7 @@ class TestFitExplicitKnots:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_natural — validation
+# fit_spline_natural: validation
 # ---------------------------------------------------------------------------
 
 
@@ -132,7 +132,7 @@ class TestFitValidation:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_natural — degenerate columns
+# fit_spline_natural: degenerate columns
 # ---------------------------------------------------------------------------
 
 
@@ -165,7 +165,7 @@ class TestFitDegenerateColumns:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_natural — parity with R splines2::naturalSpline
+# apply_spline_natural: parity with R splines2::naturalSpline
 # ---------------------------------------------------------------------------
 
 # Verified: R `recipes::step_spline_natural(x, deg_free = 4)` (complete_set =
@@ -276,7 +276,7 @@ class TestApplyMatchesR:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_natural — column layout
+# apply_spline_natural: column layout
 # ---------------------------------------------------------------------------
 
 
@@ -314,7 +314,7 @@ class TestApplyColumnLayout:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_natural — degenerate (deg_free == 0) handling
+# apply_spline_natural: degenerate (deg_free == 0) handling
 # ---------------------------------------------------------------------------
 
 
@@ -346,7 +346,7 @@ class TestApplyDegenerate:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_natural — return type / missing values
+# apply_spline_natural: return type / missing values
 # ---------------------------------------------------------------------------
 
 

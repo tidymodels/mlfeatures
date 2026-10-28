@@ -1,7 +1,7 @@
 """Tests for :func:`mlfeatures.step_drop_near_zero_variance.fit_drop_near_zero_variance`.
 
 Every test is parametrized over a *backend* factory so the same logic
-runs against both pandas and polars — that's the contract the narwhals
+runs against both pandas and polars: that's the contract the narwhals
 abstraction is supposed to give us. Native frames are wrapped via
 :func:`mlfeatures._frame.from_native` before the fitter sees them, matching
 the lifecycle (the recipe boundary does the wrapping; steps only ever

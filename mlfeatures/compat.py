@@ -164,7 +164,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         block as-is instead (the trained view once fitted). Note this is only used
         when printing the transformer directly; inside a ``Pipeline`` the text
         ``repr`` is produced by sklearn's pretty-printer, which we cannot override
-        (use the HTML/diagram view there — see ``_sk_visual_block_``).
+        (use the HTML/diagram view there; see ``_sk_visual_block_``).
         """
         indented = "\n".join(
             "  " + line for line in repr(self._display_recipe()).splitlines()

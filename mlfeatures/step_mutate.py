@@ -69,7 +69,7 @@ def apply_mutate(selected: Frame, mutations: Mapping[str, Mutation]) -> Frame:
 
 
 class StepMutate(Step):
-    """Apply arbitrary column expressions — the escape hatch.
+    """Apply arbitrary column expressions: the escape hatch.
 
     Each supplied mutation either adds a new column or overwrites an existing
     one, so the exact column change is only known after the mutations run on
@@ -80,7 +80,7 @@ class StepMutate(Step):
     New columns are attributed to no declared parents (``output_parents`` maps
     each to ``[]``): the expressions are opaque callables, so mlfeatures does not try
     to infer which inputs a mutation read. This is the deliberate trade-off of
-    an escape hatch — full flexibility, coarse lineage.
+    an escape hatch: full flexibility, coarse lineage.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.

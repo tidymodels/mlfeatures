@@ -30,7 +30,7 @@ def _df(data: dict[str, list[Any]]) -> nw.DataFrame[Any]:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_monotone — return shape
+# fit_spline_monotone: return shape
 # ---------------------------------------------------------------------------
 
 
@@ -52,7 +52,7 @@ class TestFitReturnShape:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_monotone — knot count / effective deg_free
+# fit_spline_monotone: knot count / effective deg_free
 # ---------------------------------------------------------------------------
 
 
@@ -87,7 +87,7 @@ class TestFitKnotCount:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_monotone — explicit knots
+# fit_spline_monotone: explicit knots
 # ---------------------------------------------------------------------------
 
 
@@ -110,7 +110,7 @@ class TestFitExplicitKnots:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_monotone — validation
+# fit_spline_monotone: validation
 # ---------------------------------------------------------------------------
 
 
@@ -133,7 +133,7 @@ class TestFitValidation:
 
 
 # ---------------------------------------------------------------------------
-# fit_spline_monotone — degenerate columns
+# fit_spline_monotone: degenerate columns
 # ---------------------------------------------------------------------------
 
 
@@ -162,7 +162,7 @@ class TestFitDegenerateColumns:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_monotone — parity with R splines2::iSpline
+# apply_spline_monotone: parity with R splines2::iSpline
 # ---------------------------------------------------------------------------
 
 # Verified: R `recipes::step_spline_monotone(x, deg_free = 4, degree = 3)`
@@ -304,7 +304,7 @@ class TestApplyMatchesR:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_monotone — column layout
+# apply_spline_monotone: column layout
 # ---------------------------------------------------------------------------
 
 
@@ -354,7 +354,7 @@ class TestApplyColumnLayout:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_monotone — degenerate (deg_free == 0) handling
+# apply_spline_monotone: degenerate (deg_free == 0) handling
 # ---------------------------------------------------------------------------
 
 
@@ -387,7 +387,7 @@ class TestApplyDegenerate:
 
 
 # ---------------------------------------------------------------------------
-# apply_spline_monotone — return type / missing values
+# apply_spline_monotone: return type / missing values
 # ---------------------------------------------------------------------------
 
 

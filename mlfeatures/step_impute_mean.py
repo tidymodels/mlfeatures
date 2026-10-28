@@ -84,7 +84,7 @@ def apply_impute_mean(
 
     Returns
     -------
-    narwhals.DataFrame — the input frame with nulls in each mapped column filled
+    narwhals.DataFrame: the input frame with nulls in each mapped column filled
     by its mean (columns with a ``NaN`` mean are left as-is). Column names,
     order, and structure are unchanged.
     """

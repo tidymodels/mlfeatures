@@ -40,7 +40,7 @@ COORDS: dict[str, list[float]] = {
 
 
 # ---------------------------------------------------------------------------
-# fit_geo_distance — return type & fields
+# fit_geo_distance: return type & fields
 # ---------------------------------------------------------------------------
 
 
@@ -88,7 +88,7 @@ class TestFitReturnType:
 
 
 # ---------------------------------------------------------------------------
-# apply_geo_distance — output shape & passthrough
+# apply_geo_distance: output shape & passthrough
 # ---------------------------------------------------------------------------
 
 
@@ -157,7 +157,7 @@ class TestApplyShape:
 
 
 # ---------------------------------------------------------------------------
-# apply_geo_distance — haversine distance values
+# apply_geo_distance: haversine distance values
 # ---------------------------------------------------------------------------
 
 
@@ -215,7 +215,7 @@ class TestHaversine:
 
 
 # ---------------------------------------------------------------------------
-# apply_geo_distance — euclidean distance values
+# apply_geo_distance: euclidean distance values
 # ---------------------------------------------------------------------------
 
 
@@ -239,7 +239,7 @@ class TestEuclidean:
 
 
 # ---------------------------------------------------------------------------
-# apply_geo_distance — log_distance
+# apply_geo_distance: log_distance
 # ---------------------------------------------------------------------------
 
 
@@ -267,7 +267,7 @@ class TestLogDistance:
 
 
 # ---------------------------------------------------------------------------
-# apply_geo_distance — missing-value propagation
+# apply_geo_distance: missing-value propagation
 # ---------------------------------------------------------------------------
 
 

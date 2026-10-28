@@ -22,19 +22,19 @@
 # SOFTWARE.
 """Optional-dependency machinery.
 
-mlfeatures keeps a small required core (narwhals) and treats heavier libraries —
-numpy, pandas, polars, scikit-learn — as *optional*. This module is the single
+mlfeatures keeps a small required core (narwhals) and treats heavier libraries
+(numpy, pandas, polars, scikit-learn) as *optional*. This module is the single
 place that turns "the library might be absent" into a predictable, friendly
 failure instead of an ``ImportError`` at ``import mlfeatures`` time.
 
 Two tools, for two situations:
 
-- `import_optional()` — eager import-or-raise. Use it where you need the
+- `import_optional()`: eager import-or-raise. Use it where you need the
   module object right now (e.g. inside a step's ``fit``/``apply`` body, or when
   guarding a class definition). On a missing module it raises
   `MissingDependencyError` with an install hint.
 
-- `numpy` (and friends, via `_lazy_import()`) — a *lazy* module proxy.
+- `numpy` (and friends, via `_lazy_import()`): a *lazy* module proxy.
   Importing it never fails; the real import is deferred to first attribute
   access, and a missing library surfaces there as `MissingDependencyError`.
   This lets a step write ``from mlfeatures._dependencies import numpy as np`` and keep
@@ -169,7 +169,7 @@ class _LazyModule(ModuleType):
         module = import_optional(self.__dict__["_module_name"])
         # Copy the real module's namespace onto the proxy so subsequent attribute
         # access resolves via ordinary __dict__ lookup and never re-enters this
-        # method — steps touch ``np.<...>`` in hot loops. (Adapted from polars'
+        # method: steps touch ``np.<...>`` in hot loops. (Adapted from polars'
         # _LazyModule._import.)
         self.__dict__.update(module.__dict__)
         return getattr(module, name)

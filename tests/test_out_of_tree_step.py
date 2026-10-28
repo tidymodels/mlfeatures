@@ -10,7 +10,7 @@ Three things are asserted here, and a fourth elsewhere:
 1. The fixture step imports nothing private (``test_imports_only_public_names``).
 2. It satisfies the full step contract (``TestDemoMaxAbsConformance``).
 3. It works through a real `Recipe`, which is what a user would do with it.
-4. It type-checks under ``mypy --strict`` and ``pyright --strict`` — enforced by
+4. It type-checks under ``mypy --strict`` and ``pyright --strict``, enforced by
    CI running both over ``extras/``, not by a test here. Shelling out to a type
    checker from pytest would make the suite slow and network-dependent for a
    guarantee the lint job already gives us on every push.

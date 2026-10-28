@@ -49,7 +49,7 @@ class TestEndToEnd:
         assert list(out.columns) == ["a", "const", "b"]
 
     def test_string_constant_column_dropped(self) -> None:
-        # Zero variance is type-agnostic — a constant string column is dropped.
+        # Zero variance is type-agnostic: a constant string column is dropped.
         df = pd.DataFrame({"s": ["x", "x", "x"], "t": ["a", "b", "c"]})
         recipe = Recipe(steps=[StepDropZeroVariance(["s", "t"])])
         out = recipe.fit(df).transform(df)
@@ -85,7 +85,7 @@ class TestEndToEnd:
         train = pd.DataFrame(_data())
         fitted = Recipe(steps=[StepDropZeroVariance(["a", "const", "b"])]).fit(train)
         kept = set(fitted.transform(train).columns)
-        # New data where ``const`` now varies must not resurrect it — the drop
+        # New data where ``const`` now varies must not resurrect it: the drop
         # decision is fixed at fit time.
         new = pd.DataFrame({"a": [1.0, 2.0], "const": [7.0, 9.0], "b": [5.0, 1.0]})
         assert set(fitted.transform(new).columns) == kept
@@ -99,7 +99,7 @@ class TestStepDropZeroVarianceGuards:
 
     def test_accepts_any_dtype(self) -> None:
         accepted = StepDropZeroVariance(["a", "const"]).accepts_dtypes()
-        # ANY_DTYPE accepts everything — numeric and non-numeric alike.
+        # ANY_DTYPE accepts everything: numeric and non-numeric alike.
         assert nw.Float64 in accepted
         assert nw.String in accepted
 

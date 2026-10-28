@@ -2,7 +2,7 @@
 
 `step_filter` is the ``ROW_OP`` prototype from ``design/steps-catalog.md``,
 modelled on ``step_filter`` from the R ``recipes`` package. It is a `RowOp`, so
-it only ever takes effect on the **training** frame during ``fit()`` — the
+it only ever takes effect on the **training** frame during ``fit()``; the
 framework skips it structurally at ``transform()`` time on new data (see
 ``design/step-contract.md``). This is exactly what "exercises skip-at-transform"
 means: a filter must not drop rows from the data being scored.
@@ -60,7 +60,7 @@ def apply_filter(selected: Frame, predicate: Predicate) -> Frame:
     -------
     Frame
         ``selected`` with the non-matching rows removed. The column schema is
-        never touched — this is a pure row operation.
+        never touched: this is a pure row operation.
     """
     return selected.filter(predicate(selected))
 
@@ -187,13 +187,13 @@ class StepFilter(RowOp):
         return apply_filter(new_data, self.predicate)
 
     def schema_in(self) -> ColSchema:
-        """Schema of the columns this step consumed — the frame passes through."""
+        """Schema of the columns this step consumed: the frame passes through."""
         if self._schema is None:
             raise RuntimeError("StepFilter.schema_in() called before fit()")
         return self._schema
 
     def schema_out(self) -> ColSchema:
-        """Schema this step produced — identical to the input; only rows change."""
+        """Schema this step produced: identical to the input; only rows change."""
         if self._schema is None:
             raise RuntimeError("StepFilter.schema_out() called before fit()")
         return self._schema

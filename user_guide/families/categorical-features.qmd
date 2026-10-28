@@ -10,12 +10,12 @@ the [eight-position ordering](../basics/four-stages-eight-steps.qmd) these fill
 
 Three steps to know:
 
-- `StepDummy` — expand levels into drop-one indicator columns (`StepOneHot`
+- `StepDummy`: expand levels into drop-one indicator columns (`StepOneHot`
   keeps all levels).
-- `StepUnknown` — give missing categorical values their own level before
+- `StepUnknown`: give missing categorical values their own level before
   encoding.
-- `StepOther` — collapse infrequent levels into a single ``"other"`` level;
+- `StepOther`: collapse infrequent levels into a single ``"other"`` level;
   merged on main ([#236](https://github.com/tidymodels/shoez/pull/236)) and
   not yet in this build.
 
-*Stub — content to come.*
+*Stub: content to come.*

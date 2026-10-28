@@ -53,7 +53,7 @@ class TestEndToEnd:
         assert list(out.columns) == ["a_1", "a_2", "const", "b"]
 
     def test_polynomial_values_match_r_poly(self) -> None:
-        # poly([1, 2, 3], 2) — the same ground truth used in the unit tests.
+        # poly([1, 2, 3], 2): the same ground truth used in the unit tests.
         expected = np.array(
             [
                 [-7.071067812e-01, 0.4082482905],
@@ -78,7 +78,7 @@ class TestEndToEnd:
         df = pd.DataFrame(_data())
         recipe = Recipe(steps=[StepPolynomial(["a", "const"], degree=2)])
         # Warn at fit (during the inline transform in Recipe.fit), and warn
-        # again on the explicit transform — both come from apply_polynomial.
+        # again on the explicit transform: both come from apply_polynomial.
         with pytest.warns(UserWarning) as record:
             fitted = recipe.fit(df)
         assert str(record[0].message) == snapshot
@@ -173,9 +173,9 @@ class TestEndToEnd:
     def test_basis_is_pinned_at_fit_not_recomputed_at_transform(self) -> None:
         # The orthogonal basis (centering mean + QR transform matrix) must be
         # learned at fit time on the training data and reused unchanged at
-        # transform time. Concretely: if we transform the same rows twice —
-        # once embedded in their original training context, once together with
-        # held-out rows that would shift the recomputed mean — the matching
+        # transform time. Concretely: if we transform the same rows twice
+        # (once embedded in their original training context, once together with
+        # held-out rows that would shift the recomputed mean), the matching
         # rows must produce identical polynomial values.
         train = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
         fitted = Recipe(steps=[StepPolynomial(["a"], degree=3)]).fit(train)
@@ -208,7 +208,7 @@ class TestEndToEnd:
         # Regression: when a pandas frame has a shuffled / non-default index
         # (e.g. coming out of sklearn.train_test_split), an earlier version
         # used `nw.concat(how="horizontal")` to assemble the output, which
-        # is index-aligned on pandas — producing all-NaN rows wherever the
+        # is index-aligned on pandas, producing all-NaN rows wherever the
         # source index didn't match the polynomial frame's RangeIndex.
         df = pd.DataFrame(
             {"a": [1.0, 2.0, 3.0, 4.0, 5.0], "b": [10.0, 20.0, 30.0, 40.0, 50.0]},
@@ -222,7 +222,7 @@ class TestEndToEnd:
 
 
 # ---------------------------------------------------------------------------
-# StepPolynomial — unit-level invariants
+# StepPolynomial: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

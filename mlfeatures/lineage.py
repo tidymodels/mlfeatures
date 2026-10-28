@@ -1,6 +1,6 @@
 """The column-lineage DAG.
 
-The recipe maintains an internal **column-lineage DAG** — not a flat table —
+The recipe maintains an internal **column-lineage DAG** (not a flat table)
 that is updated after each step's ``fit()`` (see ``design/lineage.md``). R
 ``recipes`` used a flat ``var_info`` / ``term_info`` table, which made
 provenance impossible and caused years of issues. A DAG instead records, per
@@ -40,7 +40,7 @@ class ColumnNode:
     A node is mutable: an in-place step (e.g. ``step_normalize``) updates
     ``dtype`` and appends to ``dtype_history`` without creating a new node, and
     a step that drops a column sets ``removed_by`` and the node is archived
-    rather than discarded — so ancestry still resolves through it.
+    rather than discarded, so ancestry still resolves through it.
 
     Attributes
     ----------
@@ -53,7 +53,7 @@ class ColumnNode:
     source
         Which step *produced* this column: ``"original"`` for an input column,
         otherwise the producing step's ``id``. An in-place transform does not
-        change ``source`` — it does not *produce* a column.
+        change ``source``: it does not *produce* a column.
     parent_cols
         The input column name(s) this column descends from. Empty for original
         columns and for parent-less produced columns (e.g. ``step_intercept``).
@@ -108,7 +108,7 @@ class Lineage:
     --------
     The DAG is built by the recipe; read it back from ``FittedRecipe.lineage``.
     Here a small pipeline imputes a missing value, rescales the numerics, and
-    dummy-encodes a categorical — composed step by step with ``.add()``:
+    dummy-encodes a categorical, composed step by step with ``.add()``:
 
     ```{python}
     import pandas as pd
@@ -134,7 +134,7 @@ class Lineage:
     ```
 
     ``age`` stayed in place through both numeric steps, so its ``source`` is
-    still ``"original"`` — but ``dtype_history`` records the int → float cast
+    still ``"original"``, but ``dtype_history`` records the int → float cast
     that ``StepNormalize`` applied:
 
     ```{python}
@@ -208,7 +208,7 @@ class Lineage:
     def check_additions(self, step_id: str, produced: list[str]) -> None:
         """Validate the columns a step will *add*, before it runs.
 
-        ``produced`` is the step's ``produced_columns()`` — an ordered list of
+        ``produced`` is the step's ``produced_columns()``: an ordered list of
         the names it adds, preserving duplicates. This is the single centralized
         name-collision check: it rejects a produced name that already exists in
         the live lineage *and* a name the step would emit more than once. Running
@@ -248,8 +248,8 @@ class Lineage:
         ``step.transform()``. The algorithm is **frame-driven**: the transformed
         frame is the source of truth for which columns now exist, their order,
         and their dtypes, while ``step.output_parents()`` is the source of truth
-        for the provenance of any *new* columns. ``step.mode`` is not consulted
-        — the shape is read off the frame.
+        for the provenance of any *new* columns. ``step.mode`` is not consulted;
+        the shape is read off the frame.
 
         Concretely, comparing the live columns against ``frame_after``:
 
@@ -257,7 +257,7 @@ class Lineage:
           with ``removed_by`` set, so ancestry still resolves through them.
         - **Surviving** columns have their roles refreshed and, if the dtype
           changed, the new dtype appended to ``dtype_history``. ``source`` is
-          left unchanged — an in-place transform does not *produce* a column.
+          left unchanged: an in-place transform does not *produce* a column.
         - **Added** columns become new nodes with ``source = step.id``,
           ``parent_cols`` from ``output_parents()``, and ``sparse`` from
           ``produces_sparse``.
@@ -348,7 +348,7 @@ class Lineage:
     def summary(self) -> DataFrame:
         """The live lineage as a tidy frame (see ``design/lineage.md``).
 
-        Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse`` — one row
+        Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse``: one row
         per live column, in frame order. ``dtype`` is the taxonomy category
         (``"float"``, ``"categorical_unordered"``, …) from
         `mlfeatures._frame.dtype_category`; ``roles`` is the sorted role set joined
@@ -420,7 +420,7 @@ class Lineage:
         )
         ```
 
-        Select every column a step produced — the dummy indicators:
+        Select every column a step produced (the dummy indicators):
 
         ```{python}
         lineage.columns_from_source("dummy")
@@ -467,8 +467,8 @@ class Lineage:
 
         Walks ``parent_cols`` through archived nodes too, so a column traces
         back through removed intermediates (e.g. a reduced component back to a
-        dummy column back to the categorical it replaced). Cycles — which a DAG
-        should never contain — are guarded against defensively.
+        dummy column back to the categorical it replaced). Cycles (which a DAG
+        should never contain) are guarded against defensively.
 
         Examples
         --------

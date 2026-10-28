@@ -105,7 +105,7 @@ class TestApplyDateFeatures:
 
 
 # ---------------------------------------------------------------------------
-# StepDateFeatures — unit-level invariants
+# StepDateFeatures: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

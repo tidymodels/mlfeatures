@@ -106,7 +106,7 @@ class TestCoreAlgorithm:
         assert result == ["a"]
 
     def test_integer_columns_drop_row_variable(self) -> None:
-        # drop_corr accepts every numeric dtype, not just float — a perfectly
+        # drop_corr accepts every numeric dtype, not just float: a perfectly
         # correlated *integer* pair must behave the same as a float pair,
         # dropping the row variable "a" on the tie.
         df = _df(("a", [1, 2, 3, 4]), ("b", [2, 4, 6, 8]))
@@ -114,7 +114,7 @@ class TestCoreAlgorithm:
         assert result == ["a"]
 
     def test_negatively_correlated_pair_dropped(self) -> None:
-        # abs(r) is what matters — strong negative correlation should also
+        # abs(r) is what matters: strong negative correlation should also
         # trigger; the tie-break still drops the row variable "a".
         df = _df(("a", [1.0, 2.0, 3.0]), ("b", [-1.0, -2.0, -3.0]))
         result = fit_drop_corr(df, threshold=0.9)
@@ -145,7 +145,7 @@ class TestCoreAlgorithm:
         df = nw.from_native(pd.DataFrame(data))
         result = fit_drop_corr(df, threshold=0.5)
         # Deterministic for this fixed seed: the row variable of each correlated
-        # pair is dropped — V1 (from the V1/duplicate pair) and V6 (from the
+        # pair is dropped: V1 (from the V1/duplicate pair) and V6 (from the
         # V2/V6 pair). Asserting exact removals makes the test falsifiable.
         assert sorted(result) == ["V1", "V6"]
 

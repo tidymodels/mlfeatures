@@ -9,7 +9,7 @@ validates the incoming frame against it; the snapshot rides along on the
 any step runs (see ``design/lifecycle.md``).
 
 Steps are pure: ``Recipe(steps=[...])`` and ``.add(...)`` return a *new*
-``Recipe`` with the step appended — they never touch data. ``fit()`` runs each step's ``fit`` on the
+``Recipe`` with the step appended: they never touch data. ``fit()`` runs each step's ``fit`` on the
 training data in order, feeding the transformed output of one step into the next
 (``RowOp`` steps are fitted but not applied in the fit loop). ``transform()``
 applies the fitted steps to new data, skipping ``RowOp`` steps entirely.
@@ -94,7 +94,7 @@ def _format_recipe(
     else:
         role_summary = "no roles assigned"
     if n_columns is not None:
-        inputs = f"  Inputs: {n_columns} columns — {role_summary}"
+        inputs = f"  Inputs: {n_columns} columns ({role_summary})"
     else:
         inputs = f"  Inputs: {role_summary}"
 
@@ -181,7 +181,7 @@ class Recipe:
     #: The optional prototype frame backs column-existence checks during role
     #: assignment and the pre-fit ``summary()``. It is never mutated, so
     #: clones share the reference. The lineage DAG is derived from it on
-    #: demand rather than stored — see ``summary()``.
+    #: demand rather than stored; see ``summary()``.
     _prototype_frame: Frame | None
     #: The roles declared on the recipe.
     roles: Roles
@@ -470,8 +470,8 @@ class Recipe:
 
         The transformed output of step *i* is the input to step *i+1*'s
         ``fit()``, so later steps see the lineage as modified by earlier ones.
-        ``RowOp`` steps *are* applied here — a row operation reshapes the
-        training frame every later step then fits on — but never run during
+        ``RowOp`` steps *are* applied here (a row operation reshapes the
+        training frame every later step then fits on) but never run during
         ``transform()`` on new data, which the framework enforces structurally.
 
         Each fit works on *copies* of the steps, so the recipe is left unchanged
@@ -515,7 +515,7 @@ class Recipe:
         # estimates, ``trained``, and ``_empty_selection`` onto a step, so
         # sharing them would let a later fit overwrite an earlier
         # FittedRecipe's state. Deep, so a step whose ``fit()`` mutates its
-        # state in place is isolated too — the guarantee must not depend on how
+        # state in place is isolated too: the guarantee must not depend on how
         # a step author wrote ``fit()``.
         steps = [copy.deepcopy(step) for step in self.steps]
         live_roles = self.roles.copy()
@@ -554,7 +554,7 @@ class Recipe:
             # the per-step guards used to handle). Steps with no input selector
             # (``StepIntercept``, the ``ADDING`` prototype; ``StepFilter``, a
             # ``RowOp``; ``StepMutate``, the ``UNCONSTRAINED`` escape hatch) are
-            # exempt — they have no ``columns`` to resolve and must always run.
+            # exempt: they have no ``columns`` to resolve and must always run.
             # They are detected structurally by the absence of a ``columns``
             # attribute rather than by enumerating their types.
             has_selector = hasattr(step, "columns")
@@ -569,7 +569,7 @@ class Recipe:
                 continue
             # Dtype validation, also at the recipe boundary and also before the
             # step runs: a step declares what it accepts, the framework enforces
-            # it (see design/step-contract.md). Only at fit time — the schema
+            # it (see design/step-contract.md). Only at fit time: the schema
             # already pins dtypes at transform time.
             if has_selector:
                 _check_accepted_dtypes(step, current, selected)
@@ -759,7 +759,7 @@ class FittedRecipe:
         ``RowOp`` steps never run on new data; steps whose primary selection
         resolved to zero columns at fit time (``_empty_selection``) are the
         identity transform and pass the frame through unchanged. Both are
-        skipped here — structurally, by inspecting the step rather than by any
+        skipped here, structurally, by inspecting the step rather than by any
         per-step convention. Never re-estimates. Returns a native frame at the
         sklearn boundary.
 

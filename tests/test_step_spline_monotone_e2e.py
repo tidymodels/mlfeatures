@@ -50,7 +50,7 @@ class TestEndToEnd:
         assert list(out.columns) == ["x_1", "x_2", "x_3", "x_4", "const", "b"]
 
     def test_monotone_values_match_r_splines2(self) -> None:
-        # step_spline_monotone(x, deg_free = 4, degree = 3) — the same ground
+        # step_spline_monotone(x, deg_free = 4, degree = 3): the same ground
         # truth used in the unit tests.
         expected = np.array(
             [
@@ -211,7 +211,7 @@ class TestEndToEnd:
 
 
 # ---------------------------------------------------------------------------
-# StepSplineMonotone — unit-level invariants
+# StepSplineMonotone: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

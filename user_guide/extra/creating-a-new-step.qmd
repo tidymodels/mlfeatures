@@ -2,4 +2,4 @@
 title: "Creating a new Step"
 ---
 
-*Stub — content to come.*
+*Stub: content to come.*

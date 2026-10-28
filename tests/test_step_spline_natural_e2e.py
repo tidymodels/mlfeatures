@@ -50,7 +50,7 @@ class TestEndToEnd:
         assert list(out.columns) == ["x_1", "x_2", "const", "b"]
 
     def test_natural_values_match_r_splines2(self) -> None:
-        # step_spline_natural(x, deg_free = 4) — the same ground truth used in
+        # step_spline_natural(x, deg_free = 4): the same ground truth used in
         # the unit tests.
         expected = np.array(
             [
@@ -173,7 +173,7 @@ class TestEndToEnd:
 
 
 # ---------------------------------------------------------------------------
-# StepSplineNatural — unit-level invariants
+# StepSplineNatural: unit-level invariants
 # ---------------------------------------------------------------------------
 
 

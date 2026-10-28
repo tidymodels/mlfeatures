@@ -35,7 +35,7 @@ class TestSkipAtTransform:
 
 class TestFilterAffectsFit:
     """A RowOp reshapes the training frame, so a downstream step estimates on the
-    filtered rows — the whole point of applying row ops at fit time."""
+    filtered rows: the whole point of applying row ops at fit time."""
 
     def test_downstream_stats_use_filtered_rows(self) -> None:
         df = pd.DataFrame(_data())

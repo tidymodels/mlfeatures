@@ -14,7 +14,7 @@ frame schema (dtypes), the recipe roles, and the column-lineage DAG are all
 available. They are the recommended, fully composable selector surface for
 mlfeatures. ``mlfeatures`` also still accepts raw polars / narwhals selectors anywhere a
 selector is expected (see ``mlfeatures._frame.select``), but those compose cleanly
-only *within* their own family — see ``design/selectors.md`` and `Selectors.wrap`.
+only *within* their own family; see ``design/selectors.md`` and `Selectors.wrap`.
 
 See ``design/selectors.md`` for the full design.
 """
@@ -38,7 +38,7 @@ class FeaturesSelector:
 
     Subclasses implement `resolve`. Instances compose with ``&`` (intersection),
     ``|`` (union), ``~`` (complement), and ``-`` (difference). A mlfeatures-native
-    selector must **lead** any cross-family expression — ``mlfeatures_sel & cs.numeric()``
+    selector must **lead** any cross-family expression: ``mlfeatures_sel & cs.numeric()``
     works (the right operand is coerced via `wrap`), but ``cs.numeric() & mlfeatures_sel``
     does not: polars raises ``TypeError`` and narwhals silently produces a broken
     ``Expr``, neither of which mlfeatures can intercept. Use `Selectors.wrap` to put a
@@ -89,7 +89,7 @@ class _ForeignSelector(FeaturesSelector):
 
     Resolution defers to ``mlfeatures._frame.select``'s existing type dispatch, so a
     polars selector still expands via the schema and a narwhals selector via
-    narwhals — for any backend.
+    narwhals, for any backend.
     """
 
     def __init__(self, value: object) -> None:
