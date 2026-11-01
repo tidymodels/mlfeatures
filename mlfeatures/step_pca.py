@@ -191,6 +191,9 @@ class StepPca(Step):
     Rows with a missing value are excluded when the components are computed, and
     such a row gets ``NaN`` for every component.
 
+    See [Principal Component Analysis](https://feaz-book.com/too-many-pca) in
+    *Feature Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

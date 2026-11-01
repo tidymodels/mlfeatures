@@ -170,6 +170,9 @@ class StepIndicateNa(Step):
     `StepImputeMedian`, `StepImputeMode`, `StepUnknown`) still needs that
     column to fill in.
 
+    See [Missing Values Indicators](https://feaz-book.com/missing-indicator) in
+    *Feature Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

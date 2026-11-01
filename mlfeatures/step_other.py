@@ -177,6 +177,9 @@ class StepOther(Step):
     the recipe has not seen. Nulls stay null; use ``StepUnknown`` first when
     missingness should become a level of its own.
 
+    See [Collapsing Categories](https://feaz-book.com/categorical-collapse) in
+    *Feature Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

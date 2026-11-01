@@ -148,6 +148,9 @@ class StepDropCorr(ColumnDropStep):
     with no usable correlation at all (constant or all-null), and no new
     columns are produced.
 
+    See [High Correlation Filter](https://feaz-book.com/correlated-filter) in
+    *Feature Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

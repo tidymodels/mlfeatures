@@ -203,6 +203,9 @@ class StepLog(Step):
     formula, so passing both is an error rather than a silently ignored
     argument.
 
+    See [Logarithms](https://feaz-book.com/numeric-logarithms) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

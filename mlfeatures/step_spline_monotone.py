@@ -359,6 +359,9 @@ class StepSplineMonotone(Step):
     continues the local polynomial piece and can leave ``[0, 1]`` or lose
     monotonicity: the shape guarantee only holds within the training range.
 
+    See [Splines](https://feaz-book.com/numeric-splines) in *Feature Engineering
+    A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

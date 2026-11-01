@@ -164,6 +164,9 @@ class StepRange(Step):
     infinite value is rescaled against an infinite bound, which yields ``NaN``;
     that too is warned about at fit time.
 
+    See [Range Scaling](https://feaz-book.com/numeric-range) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

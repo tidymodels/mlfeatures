@@ -270,6 +270,9 @@ class StepGeoDistance(Step):
     with ``"euclidean"`` it is the flat-plane distance between the raw
     ``lat``/``lon`` values.
 
+    See [Spatial Distance](https://feaz-book.com/spatial-distance) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

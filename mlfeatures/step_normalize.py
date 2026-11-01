@@ -130,6 +130,9 @@ class StepNormalize(Step):
     unit variance; they are dropped from the normalization (with a warning) and
     pass through ``transform`` untouched.
 
+    See [Normalization](https://feaz-book.com/numeric-normalization) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

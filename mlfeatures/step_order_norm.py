@@ -230,6 +230,11 @@ class StepOrderNorm(Step):
     Not a base R ``recipes`` step; this is a port of ``orderNorm()`` from the R
     ``bestNormalize`` package.
 
+    See [Percentile Scaling](https://feaz-book.com/numeric-percentile) in
+    *Feature Engineering A to Z* for the closely related rank-based scaling;
+    it is not a perfect match, since it maps ranks onto [0, 1] rather than
+    onto normal quantiles.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

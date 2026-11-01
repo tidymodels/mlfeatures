@@ -164,6 +164,10 @@ class StepInteract(Step):
     interaction terms. A caller who needs one can write it explicitly with
     `StepMutate`.
 
+    See [Arithmetic](https://feaz-book.com/numeric-arithmetic) in *Feature
+    Engineering A to Z* for background on products of columns (feature
+    crosses).
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

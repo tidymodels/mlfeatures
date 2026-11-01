@@ -87,6 +87,9 @@ class StepOneHot(Step):
     is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
     the missing values. Unlike `StepDummy`, no reference level is dropped.
 
+    See [Dummy Encoding](https://feaz-book.com/categorical-dummy) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 
