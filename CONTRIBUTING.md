@@ -1,6 +1,6 @@
 # Contributing to mlfeatures
 
-This page covers setting up, the checks CI runs, and building the docs. Read [`design/README.md`](design/README.md) first for how the package fits together. Docstring, error-message, and example conventions are written up in [`CLAUDE.md`](CLAUDE.md).
+This page covers setting up, the checks CI runs, and building the docs. Docstring, error-message, and example conventions are written up in [`CLAUDE.md`](CLAUDE.md).
 
 ## Setup
 
@@ -32,7 +32,7 @@ Change dependencies with `uv add` and `uv remove`, or edit `pyproject.toml` and 
 
 ## Adding a step
 
-- Add a `tests/test_step_x_infrastructure.py` that subclasses `mlfeatures.testing.StepConformanceTest` and supplies `make_step()` and `training_data`. Every step must pass this contract, described in [`design/step-contract.md`](design/step-contract.md). The `test` extra installs pytest for authors who run the contract outside this repo.
+- Add a `tests/test_step_x_infrastructure.py` that subclasses `mlfeatures.testing.StepConformanceTest` and supplies `make_step()` and `training_data`. Every step must pass this contract, which checks the properties every step must satisfy. The `test` extra installs pytest for authors who run the contract outside this repo.
 - Add a matching `step_*` method to `MlfNamespace` in [`mlfeatures/polars.py`](mlfeatures/polars.py) so the step is reachable through the `df.mlf` accessor. Tests fail if a public step has no wrapper.
 - Update the `reference:` section of [`great-docs.yml`](great-docs.yml) when a public export is added or renamed.
 - Write docstring examples as executable `{python}` cells, not `>>>` blocks. [`tests/test_doc_examples.py`](tests/test_doc_examples.py) runs every cell.

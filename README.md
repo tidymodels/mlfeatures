@@ -120,8 +120,6 @@ print(result)
   R recipes and scikit-learn terms, side by side.
 - [Reference](https://tidymodels.github.io/mlfeatures/reference/index.html):
   every step and class.
-- [Design](https://github.com/tidymodels/mlfeatures/blob/main/design/README.md):
-  the full specification.
 
 ## Contributing
 

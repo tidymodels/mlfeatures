@@ -210,7 +210,7 @@ reference:
   - title: Serialization
     desc: >-
       Save a fitted recipe to a diffable JSON or YAML format and reload it, or
-      strip fit-only artifacts with minimize(). See design/serialization.md.
+      strip fit-only artifacts with minimize().
     contents:
       - name: to_dict
       - name: from_dict
