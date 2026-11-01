@@ -253,6 +253,9 @@ class StepPls(Step):
     selected-column value gets ``NaN`` for every component at transform
     time.
 
+    See [Partial Least Squares](https://feaz-book.com/too-many-pls) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

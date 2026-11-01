@@ -402,6 +402,9 @@ class StepSplineNatural(Step):
     extrapolated linearly, not as a wild polynomial continuation: this is
     what "natural" means for this basis.
 
+    See [Splines](https://feaz-book.com/numeric-splines) in *Feature Engineering
+    A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

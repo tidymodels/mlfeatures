@@ -47,6 +47,9 @@ class StepDropZeroVariance(ColumnDropStep):
     The selected columns whose observed values are all the same (or all
     missing) are dropped, and no new columns are produced.
 
+    See [Zero Variance Filter](https://feaz-book.com/too-many-zv) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

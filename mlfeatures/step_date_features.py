@@ -187,6 +187,9 @@ class StepDateFeatures(Step):
     A Datetime column (carrying a time-of-day component) is not accepted here;
     use `StepDatetimeFeatures` for those.
 
+    See [Value Extraction](https://feaz-book.com/datetime-extraction) in
+    *Feature Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

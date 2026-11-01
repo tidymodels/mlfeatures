@@ -106,6 +106,9 @@ class StepImputeMedian(Step):
     is left unchanged (not dropped) with a warning, and passes through
     ``transform`` untouched.
 
+    See [Simple Imputation](https://feaz-book.com/missing-simple) in *Feature
+    Engineering A to Z* for background on this technique.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 

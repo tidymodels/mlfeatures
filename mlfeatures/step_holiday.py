@@ -353,6 +353,10 @@ class StepHoliday(Step):
     the moment it was built, so it should be given one early enough to cover
     the data it is matched against.
 
+    See [Advanced Features](https://feaz-book.com/datetime-advanced) in *Feature
+    Engineering A to Z* for background on indicators for irregular events such
+    as holidays.
+
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.
 
