@@ -90,7 +90,7 @@ class StepIntercept(Step):
 
     Examples
     --------
-    A constant ``intercept`` column of ones is appended; the input columns pass
+    A constant ``intercept`` column of ones is added; the input columns pass
     through untouched:
 
     ```{python}
@@ -119,13 +119,13 @@ class StepIntercept(Step):
     fitted
     ```
 
-    `transform()` appends the column:
+    `transform()` adds the column:
 
     ```{python}
     fitted.transform(df)
     ```
 
-    ``value`` and ``name`` control what is appended:
+    ``value`` and ``name`` control what is added:
 
     ```{python}
     recipe = Recipe().add(StepIntercept(value=0.0, name="bias"))
