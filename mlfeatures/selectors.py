@@ -14,9 +14,7 @@ frame schema (dtypes), the recipe roles, and the column-lineage DAG are all
 available. They are the recommended, fully composable selector surface for
 mlfeatures. ``mlfeatures`` also still accepts raw polars / narwhals selectors anywhere a
 selector is expected (see ``mlfeatures._frame.select``), but those compose cleanly
-only *within* their own family; see ``design/selectors.md`` and `Selectors.wrap`.
-
-See ``design/selectors.md`` for the full design.
+only *within* their own family; see `Selectors.wrap`.
 """
 
 from __future__ import annotations
@@ -374,7 +372,7 @@ class Selectors:
     """Namespace of factory methods for built-in mlfeatures column selectors.
 
     All factories return a `FeaturesSelector` that composes with ``&`` / ``|`` /
-    ``~`` / ``-``. See ``design/selectors.md``.
+    ``~`` / ``-``.
 
     Examples
     --------

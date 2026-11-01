@@ -1,6 +1,6 @@
 """scikit-learn interoperability.
 
-Per ``design/ecosystem.md`` §"Sklearn adapter", a trained recipe should drop into
+A trained recipe should drop into
 `sklearn.pipeline.Pipeline` as a single transformer. `RecipeTransformer`
 is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
 without re-implementing it.

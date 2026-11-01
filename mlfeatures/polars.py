@@ -17,9 +17,8 @@ layer over `Recipe`: it adds no new data-operation surface and
 delegates conversion to the recipe lifecycle.
 
 Boundary note: this is the **one** module in ``mlfeatures`` that imports ``polars`` at
-runtime, a deliberate exception to the package's no-runtime-backend-import rule
-(``design/ecosystem.md``, boundary rule #5). The accessor is an explicitly
-polars-only convenience and is kept out of the backend-agnostic core: it is never
+runtime, a deliberate exception to the package's no-runtime-backend-import rule.
+The accessor is an explicitly polars-only convenience and is kept out of the backend-agnostic core: it is never
 imported by `mlfeatures.__init__`, so users opt in with ``import mlfeatures.polars``.
 polars is already a hard dependency, so this adds no new requirement.
 """
@@ -76,7 +75,7 @@ if TYPE_CHECKING:
     from mlfeatures.types import Frame, Selector
 else:
     # Runtime: this opt-in module is the one sanctioned place that imports polars
-    # at runtime (``design/ecosystem.md`` boundary rule #5). Route it through
+    # at runtime. Route it through
     # import_optional so a missing polars surfaces as a friendly, greppable
     # MissingDependencyError at ``import mlfeatures.polars`` rather than a bare error.
     pl = import_optional("polars", purpose="for the `df.mlf` accessor")

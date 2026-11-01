@@ -1,8 +1,7 @@
 """Arbitrary column mutation: the ``UNCONSTRAINED`` escape hatch.
 
-`step_mutate` is the ``UNCONSTRAINED`` prototype from
-``design/steps-catalog.md``, modelled on ``step_mutate`` from the R ``recipes``
-package. It applies caller-supplied expressions to the frame, so its
+`step_mutate` is the ``UNCONSTRAINED`` prototype,
+modelled on ``step_mutate`` from the R ``recipes`` package. It applies caller-supplied expressions to the frame, so its
 input/output relationship cannot be declared in advance: a mutation may add new
 columns, overwrite existing ones in place, or change a column's dtype. Because
 of that, `StepMutate` reads the concrete effect off the training frame at

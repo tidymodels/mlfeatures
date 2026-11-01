@@ -1,4 +1,4 @@
-"""The schema snapshot and boundary validation. See ``design/lifecycle.md``.
+"""The schema snapshot and boundary validation.
 
 A **schema** is a zero-row structural snapshot of the training data:
 column names, dtypes, and role assignments. It is captured at ``Recipe.fit()``
@@ -72,7 +72,7 @@ class Schema:
         The training frame's column dtypes, as a narwhals schema: an ordered
         name→dtype mapping.
     roles
-        Role assignments captured at fit (see ``design/roles.md``).
+        Role assignments captured at fit.
     transform_required
         Per-column flag: ``True`` if the column must be present in new data at
         ``transform()`` time. Computed once at fit from role requirements and

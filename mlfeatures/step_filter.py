@@ -1,10 +1,9 @@
 """Row filter: keep only the rows matching a predicate.
 
-`step_filter` is the ``ROW_OP`` prototype from ``design/steps-catalog.md``,
+`step_filter` is the ``ROW_OP`` prototype,
 modelled on ``step_filter`` from the R ``recipes`` package. It is a `RowOp`, so
 it only ever takes effect on the **training** frame during ``fit()``; the
-framework skips it structurally at ``transform()`` time on new data (see
-``design/step-contract.md``). This is exactly what "exercises skip-at-transform"
+framework skips it structurally at ``transform()`` time on new data. This is exactly what "exercises skip-at-transform"
 means: a filter must not drop rows from the data being scored.
 
 The *apply* half lives in `apply_filter()` as a plain function so the row

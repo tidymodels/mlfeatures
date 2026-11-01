@@ -1,4 +1,4 @@
-"""Diffable JSON/YAML serialization for fitted recipes (``design/serialization.md``).
+"""Diffable JSON/YAML serialization for fitted recipes.
 
 A `FittedRecipe` is serialized to a plain, human-readable ``dict`` (and from
 there to JSON or YAML) that captures every step's **hyperparameters and learned

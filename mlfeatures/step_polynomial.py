@@ -211,7 +211,7 @@ def apply_polynomial(
 
     Columns named in ``fit_result`` that are absent from ``data`` are silently
     skipped: same schema-drift tolerance as
-    `mlfeatures._frame.apply_drop()` (see ``design/lifecycle.md``).
+    `mlfeatures._frame.apply_drop()`.
 
     Parameters
     ----------

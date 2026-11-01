@@ -1,7 +1,7 @@
 """The column-lineage DAG.
 
 The recipe maintains an internal **column-lineage DAG** (not a flat table)
-that is updated after each step's ``fit()`` (see ``design/lineage.md``). R
+that is updated after each step's ``fit()``. R
 ``recipes`` used a flat ``var_info`` / ``term_info`` table, which made
 provenance impossible and caused years of issues. A DAG instead records, per
 column, where it came from and how its dtype evolved, so that provenance
@@ -35,7 +35,7 @@ __all__ = ["ColumnNode", "Lineage"]
 
 @dataclass
 class ColumnNode:
-    """One column's lineage record. See ``design/lineage.md``.
+    """One column's lineage record.
 
     A node is mutable: an in-place step (e.g. ``step_normalize``) updates
     ``dtype`` and appends to ``dtype_history`` without creating a new node, and
@@ -49,7 +49,7 @@ class ColumnNode:
     dtype
         Current narwhals dtype (may change across steps).
     roles
-        Current role labels (see ``design/roles.md``).
+        Current role labels.
     source
         Which step *produced* this column: ``"original"`` for an input column,
         otherwise the producing step's ``id``. An in-place transform does not
@@ -61,7 +61,7 @@ class ColumnNode:
         The dtype trajectory: the creation dtype followed by an entry for each
         step that *changed* the dtype (not one per step boundary).
     sparse
-        Whether this column is currently sparse (see ``design/ecosystem.md``).
+        Whether this column is currently sparse.
     removed_by
         ``None`` while the column is live; set to the dropping step's ``id``
         once it has been removed from the frame and archived.
@@ -346,7 +346,7 @@ class Lineage:
         return {name: node.dtype for name, node in self._live.items()}
 
     def summary(self) -> DataFrame:
-        """The live lineage as a tidy frame (see ``design/lineage.md``).
+        """The live lineage as a tidy frame.
 
         Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse``: one row
         per live column, in frame order. ``dtype`` is the taxonomy category
