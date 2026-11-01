@@ -98,8 +98,8 @@ def _install_command(module_name: str, *, dist_name: str | None = None) -> str:
     install = dist_name if dist_name is not None else top
     extra = _EXTRAS.get(top)
     if extra is not None:
-        return f"`pip install 'mlfeatures[{extra}]'` (or `pip install {install}`)"
-    return f"`pip install {install}`"
+        return f"'pip install mlfeatures[{extra}]' (or 'pip install {install}')"
+    return f"'pip install {install}'"
 
 
 def _install_hint(module_name: str) -> str:
@@ -253,12 +253,12 @@ def require_packages(requirements: list[str], *, purpose: str) -> None:
     missing = [req for req in requirements if not _requirement_available(req)]
     if not missing:
         return
-    names = ", ".join(f"`{_requirement_name(req)}`" for req in missing)
+    names = ", ".join(repr(_requirement_name(req)) for req in missing)
     hint = " and ".join(_requirement_hint(req) for req in missing)
     verb = "is" if len(missing) == 1 else "are"
     raise MissingDependencyError(
         f"{names} {verb} required {purpose} but {verb} not installed; "
-        f"install with {hint}."
+        f"install with {hint}"
     )
 
 

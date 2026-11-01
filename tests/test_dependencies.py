@@ -14,6 +14,7 @@ import sys
 import textwrap
 
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
 from mlfeatures import _dependencies
 from mlfeatures._dependencies import (
@@ -127,6 +128,21 @@ class TestRequirePackages:
         assert "by step 'x' (step_x)" in message
         assert "pip install mlfeatures_no_such_dependency_zzz" in message
 
+    def test_message_single_package(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(
+                ["mlfeatures_no_such_dependency_zzz"], purpose="by step 'x'"
+            )
+        assert str(excinfo.value) == snapshot
+
+    def test_message_several_packages(self, snapshot: SnapshotAssertion) -> None:
+        with pytest.raises(MissingDependencyError) as excinfo:
+            require_packages(
+                ["mlfeatures_no_such_a_zzz", "mlfeatures_no_such_b_zzz"],
+                purpose="by step 'x'",
+            )
+        assert str(excinfo.value) == snapshot
+
     def test_lists_every_missing_package(self) -> None:
         with pytest.raises(MissingDependencyError) as excinfo:
             require_packages(
@@ -139,7 +155,7 @@ class TestRequirePackages:
         assert "numpy" not in message  # installed; not reported
         # The two install commands read as a list, not run together.
         assert (
-            "`pip install mlfeatures_no_such_a_zzz` and `pip install mlfeatures_no_such_b_zzz`"
+            "'pip install mlfeatures_no_such_a_zzz' and 'pip install mlfeatures_no_such_b_zzz'"
             in message
         )
 

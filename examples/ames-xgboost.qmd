@@ -126,7 +126,7 @@ rsq = float(pl.DataFrame({"y": y_test, "pred": pred})
 print(f"\n--- test metrics (best: {search.best_params_}) ---")
 print(f"rmse: {rmse:.4f}   rsq: {rsq:.3f}")
 
-# Baked head: proof the recipe works standalone, sans sklearn.
+# Transformed head: proof the recipe works standalone, sans sklearn.
 print("\n--- transformed training head (mlfeatures fit/transform, no pipeline) ---")
 print(fitted.transform(ames_train).head())
 print("\n--- lineage: columns the one-hot step produced ---")

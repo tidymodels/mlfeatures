@@ -103,7 +103,7 @@ def fit_order_norm(selected: Frame) -> dict[str, OrderNormFit]:
     Empty when ``selected`` has no columns.
 
     Missing values are dropped before ranking. A column with fewer than 2
-    distinct non-missing values (every value the same, or too few observations)
+    distinct non-missing values (every value the same, or too few samples)
     cannot be mapped onto a spread of normal quantiles, so it is **omitted**
     from the result and a `UserWarning` is emitted naming it.
 

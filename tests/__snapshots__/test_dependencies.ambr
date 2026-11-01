@@ -1,0 +1,7 @@
+# serializer version: 1
+# name: TestRequirePackages.test_message_several_packages
+  "'mlfeatures_no_such_a_zzz', 'mlfeatures_no_such_b_zzz' are required by step 'x' but are not installed; install with 'pip install mlfeatures_no_such_a_zzz' and 'pip install mlfeatures_no_such_b_zzz'"
+# ---
+# name: TestRequirePackages.test_message_single_package
+  "'mlfeatures_no_such_dependency_zzz' is required by step 'x' but is not installed; install with 'pip install mlfeatures_no_such_dependency_zzz'"
+# ---

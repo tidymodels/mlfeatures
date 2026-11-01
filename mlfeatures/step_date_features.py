@@ -280,7 +280,7 @@ class StepDateFeatures(Step):
     fitted.transform(df)
     ```
 
-    ``categorical`` names level labels instead of raw numbers for ``month`` and ``dow``:
+    ``categorical`` names level names instead of raw numbers for ``month`` and ``dow``:
 
     ```{python}
     recipe = Recipe().add(
