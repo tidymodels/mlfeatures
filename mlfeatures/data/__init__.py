@@ -65,7 +65,7 @@ of each bean, heavily correlated with one another; the dimensionality
 reduction example in Tidy Modeling with R, ch. 16.
 
 Source: Koklu & Ozkan (2020) via the R ``beans`` package,
-https://github.com/tidymodels/beans
+https://cran.r-project.org/package=beans
 """
 
 concrete: pl.DataFrame

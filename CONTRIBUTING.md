@@ -1,6 +1,6 @@
 # Contributing to mlfeatures
 
-This page covers setting up, the checks CI runs, and building the docs. Docstring, error-message, and example conventions are written up in [`CLAUDE.md`](CLAUDE.md).
+This page covers setting up, the checks CI runs, and building the docs. Docstring, error-message, and example conventions are written up in [`CLAUDE.md`](https://github.com/tidymodels/mlfeatures/blob/main/CLAUDE.md).
 
 ## Setup
 
@@ -12,7 +12,7 @@ uv sync
 
 ## Checks
 
-Run these before opening a pull request. They mirror the CI workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+Run these before opening a pull request. They mirror the CI workflow in [`.github/workflows/ci.yml`](https://github.com/tidymodels/mlfeatures/blob/main/.github/workflows/ci.yml):
 
 ```bash
 uv run pytest --cov             # tests + coverage
@@ -33,9 +33,9 @@ Change dependencies with `uv add` and `uv remove`, or edit `pyproject.toml` and 
 ## Adding a step
 
 - Add a `tests/test_step_x_infrastructure.py` that subclasses `mlfeatures.testing.StepConformanceTest` and supplies `make_step()` and `training_data`. Every step must pass this contract, which checks the properties every step must satisfy. The `test` extra installs pytest for authors who run the contract outside this repo.
-- Add a matching `step_*` method to `MlfNamespace` in [`mlfeatures/polars.py`](mlfeatures/polars.py) so the step is reachable through the `df.mlf` accessor. Tests fail if a public step has no wrapper.
-- Update the `reference:` section of [`great-docs.yml`](great-docs.yml) when a public export is added or renamed.
-- Write docstring examples as executable `{python}` cells, not `>>>` blocks. [`tests/test_doc_examples.py`](tests/test_doc_examples.py) runs every cell.
+- Add a matching `step_*` method to `MlfNamespace` in [`mlfeatures/polars.py`](https://github.com/tidymodels/mlfeatures/blob/main/mlfeatures/polars.py) so the step is reachable through the `df.mlf` accessor. Tests fail if a public step has no wrapper.
+- Update the `reference:` section of [`great-docs.yml`](https://github.com/tidymodels/mlfeatures/blob/main/great-docs.yml) when a public export is added or renamed.
+- Write docstring examples as executable `{python}` cells, not `>>>` blocks. [`tests/test_doc_examples.py`](https://github.com/tidymodels/mlfeatures/blob/main/tests/test_doc_examples.py) runs every cell.
 
 ## Documentation
 

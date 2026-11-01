@@ -12,10 +12,10 @@ toc: true
 It's designed to support common Python modeling workflows:
 
 - **DataFrame-agnostic.** Works with pandas or polars (thanks to [narwhals](https://narwhals-dev.github.io/narwhals/)).
-- **Column selectors.** Use Polars selectors to target columns for pre-processing.
+- **Column selectors.** Use mlfeatures selectors (or polars and narwhals selectors) to target columns for pre-processing.
 - **Steps for all kinds of workflows.** Many built-in steps to support pre-processing data for a wide range of models. Organized into a [four stages, eight steps workflow](basics/four-stages-eight-steps.qmd).
 - **Polars .mlf accessor**: Run steps directly on a polars DataFrame.
-- **Sci-kit learn support**: Recipes plug into scikit-learn pipelines.
+- **scikit-learn support**: Recipes plug into scikit-learn pipelines.
 
 ## Installing
 
@@ -25,10 +25,11 @@ Install mlfeatures using your package manager of choice:
 pip install mlfeatures
 ```
 
+A few steps need an optional package, such as scipy for `StepOrderNorm` (used below). Install the matching extra, for example `pip install "mlfeatures[scipy]"`. The [README](https://github.com/tidymodels/mlfeatures#installation) lists them all.
 
 ## Quickstart
 
-Here is a quick snippet that normalize numeric columns and then runs PCA on a Polars DataFrame (using the `.mlf` accessor).
+Here is a quick snippet that normalizes numeric columns and then runs PCA on a Polars DataFrame (using the `.mlf` accessor).
 
 ```python
 import mlfeatures.polars  # registers the `df.mlf` accessor
@@ -98,9 +99,9 @@ def plot_pairs(frame):
 
 Importing `mlfeatures.polars` registers a `mlf` namespace on polars DataFrames. Each
 `df.mlf.step_*()` call fits that step on the frame, applies it, and returns a
-new frame. 
+new frame.
 
-For example, the code below drops constant, normalizes each measurement, then projects onto 4 principal components.
+For example, the code below drops constant columns, rank-normalizes and then normalizes each measurement, then projects onto 4 principal components.
 
 ```{python}
 import mlfeatures.polars  # registers the `df.mlf` accessor
@@ -123,14 +124,14 @@ plot_pairs(bean_pcs)
 ```
 
 Each `mlf` call estimated its step on `beans` and applied it right there, which is useful for exploring data.
-However, modelling usually involves fitting pre-processing on a training set, and the using that to transform a test set.
+However, modelling usually involves fitting pre-processing on a training set, and then using that to transform a test set.
 To handle this workflow, mlfeatures provides a `Recipe` class for specifying steps, fitting, and transforming.
 
 ## Example: sklearn Recipe PCA
 
-While the previous example used a single DataFrame, this example splits it into a training and test frames.
+While the previous example used a single DataFrame, this example splits it into training and test frames.
 It uses the `Recipe` class to specify the pre-processing, fit to the training frame, and then transform the test frame.
-Then, it shows how the `Recipe` can be used in a scikit-pipeline.
+Then, it shows how the `Recipe` can be used in a scikit-learn pipeline.
 
 ### Split data and specify Recipe
 
@@ -166,7 +167,7 @@ scores.head()
 
 ### Pass to a scikit-learn pipeline
 
-In order to use the `Recipe` object in a scikit pipeline, wrap it in `RecipeTransformer`.
+In order to use the `Recipe` object in a scikit-learn pipeline, wrap it in `RecipeTransformer`.
 For example, the code below uses our pre-processing steps as part of fitting a logistic regression.
 
 ```{python}
@@ -213,7 +214,7 @@ More general transforming and dropping can be done with `StepMutate` and `StepFi
 
 ## Use with polars (`.mlf`)
 
-Import `mlfeatures.polars` to use the `polars.DataFrame.mlf`accessor.
+Import `mlfeatures.polars` to use the `polars.DataFrame.mlf` accessor.
 Each method of the accessor returns a new DataFrame.
 
 ```{python}
