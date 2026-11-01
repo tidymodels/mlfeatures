@@ -274,8 +274,10 @@ class StepPls(Step):
         categorical target. Read at fit time only; the column is *not*
         declared as an input feature in `schema_in()`.
     num_comp
-        Number of components to keep. Must be a positive integer. Default
-        ``5``.
+        Number of components to keep. Must be a positive integer. Capped at
+        the number of selected columns and at the number of complete
+        (null-free) training samples, so fewer components are produced when either is smaller than
+        ``num_comp``. Default ``5``.
     prefix
         Prefix for the produced component column names. Default ``"PLS"``.
     keep_original_cols

@@ -383,8 +383,9 @@ class StepSplineMonotone(Step):
         Degree of the underlying M-spline; the I-spline's pieces have degree
         ``degree + 1``. Must be a non-negative integer. Default ``3``.
     complete_set
-        Whether to include the first basis column in the output. Default
-        ``True``.
+        Whether to keep the first column of the complete I-spline basis;
+        when ``False`` it is dropped. Keeping it adds one to the minimum
+        ``deg_free``. Default ``True``.
     knots
         Explicit interior knot locations, shared across every selected
         column, instead of the default quantile placement. Each column's

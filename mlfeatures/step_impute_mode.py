@@ -149,7 +149,7 @@ class StepImputeMode(Step):
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only categorical
-        columns are meaningful here.
+        columns (string, categorical, and enum) are meaningful here.
     id
         Stable step identifier. Defaults to ``"impute_mode"``; a second step
         of this type in the same recipe becomes ``"impute_mode_2"``, and

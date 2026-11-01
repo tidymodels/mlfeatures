@@ -192,7 +192,7 @@ class StepOther(Step):
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only categorical
-        columns are meaningful here.
+        columns (string, categorical, and enum) are meaningful here.
     threshold
         Smallest share of a column's non-null rows a level may hold and still be
         kept, as a proportion strictly between 0 and 1. Default ``None``;

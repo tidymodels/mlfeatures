@@ -135,7 +135,7 @@ class StepUnknown(Step):
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only categorical
-        columns are meaningful here.
+        columns (string, categorical, and enum) are meaningful here.
     new_level
         The level that replaces nulls. Default ``"unknown"``. A `UserWarning` is
         emitted if a selected column already contains this level, since the
