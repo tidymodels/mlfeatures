@@ -1,6 +1,6 @@
 """Principal component analysis: fit + apply.
 
-`step_pca` is the ``MANY_TO_MANY`` prototype from ``design/steps-catalog.md``,
+`step_pca` is the ``MANY_TO_MANY`` prototype,
 modelled on ``step_pca`` from the R ``recipes`` package. A *set* of numeric input
 columns is replaced by a new *set* of principal-component columns, so every
 output descends from the whole input set rather than a single source column.

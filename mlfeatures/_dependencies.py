@@ -40,8 +40,6 @@ Two tools, for two situations:
   This lets a step write ``from mlfeatures._dependencies import numpy as np`` and keep
   every ``np.<...>`` call site unchanged, while ``import mlfeatures`` stays cheap and
   works even when numpy is not installed.
-
-See ``design/dependencies.md`` for the step-author guide.
 """
 
 from __future__ import annotations

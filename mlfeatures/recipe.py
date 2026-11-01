@@ -1,12 +1,12 @@
 """The `Recipe` lifecycle driver.
 
 A minimal, vertical-slice implementation of the ``specify → fit → transform``
-lifecycle described in ``design/lifecycle.md``. It exercises the step contract
-end to end and maintains the column-lineage DAG (``design/lineage.md``) across
+lifecycle. It exercises the step contract
+end to end and maintains the column-lineage DAG across
 ``fit()``. At ``fit()`` it snapshots the training data into a ``Schema`` and
 validates the incoming frame against it; the snapshot rides along on the
 ``FittedRecipe`` so ``transform()`` can re-check new data at the boundary before
-any step runs (see ``design/lifecycle.md``).
+any step runs.
 
 Steps are pure: ``Recipe(steps=[...])`` and ``.add(...)`` return a *new*
 ``Recipe`` with the step appended: they never touch data. ``fit()`` runs each step's ``fit`` on the
@@ -77,7 +77,7 @@ def _format_recipe(
 ) -> str:
     """Render the shared ``repr`` block for `Recipe` / `FittedRecipe`.
 
-    Follows the layout in ``design/inspection.md``: a header tagging the
+    The layout is a header tagging the
     training state, an ``Inputs`` line summarising column roles, and the steps
     aligned so their ``[trained]`` / ``[untrained]`` markers line up.
     """
@@ -150,10 +150,9 @@ def _resolve_step_ids(existing: list[Step], incoming: tuple[Step, ...]) -> list[
 class Recipe:
     """A declarative, unfitted pipeline of feature-engineering steps.
 
-    Steps are first-class `Step` objects (Option A in
-    ``design/interfaces.md``). Assemble a recipe with the immutable `add()`
-    builder, which returns a new recipe each call (preserving the purity
-    guarantee in ``design/lifecycle.md``):
+    Steps are first-class `Step` objects. Assemble a recipe with the immutable
+    `add()` builder, which returns a new recipe each call (specifying a recipe
+    never touches data):
 
     ```python
     from mlfeatures import Selectors as s
@@ -210,7 +209,7 @@ class Recipe:
         )
 
     def __repr__(self) -> str:
-        """A human-readable, untrained view of the pipeline (``design/inspection.md``).
+        """A human-readable, untrained view of the pipeline.
 
         Shows the declared role assignments and the steps with their unresolved
         selectors, each tagged ``[untrained]``. Column counts come from the
@@ -432,8 +431,6 @@ class Recipe:
         targets never are); passing either as a string ``role`` raises. A
         selector that happens to catch a feature or target column is silently
         a no-op for that column (the hardcoded role wins), so it does not raise.
-
-        See ``design/lifecycle.md`` for the per-role requirement defaults.
         """
         if isinstance(role, str) and role in _NON_CONFIGURABLE_ROLES:
             raise ValueError(f"requirement for role {role!r} is not configurable")
@@ -536,7 +533,7 @@ class Recipe:
         schema = Schema.from_frame(current, live_roles, overrides)
         schema.check(current, context="fit")
         # The column-lineage DAG, seeded from the training frame and updated
-        # after each column-changing step (see design/lineage.md). RowOp and
+        # after each column-changing step. RowOp and
         # empty-selection steps make no schema change and are skipped below.
         lineage = Lineage.from_frame(current, live_roles)
         fitted_steps: list[Step] = []
@@ -569,7 +566,7 @@ class Recipe:
                 continue
             # Dtype validation, also at the recipe boundary and also before the
             # step runs: a step declares what it accepts, the framework enforces
-            # it (see design/step-contract.md). Only at fit time: the schema
+            # it. Only at fit time: the schema
             # already pins dtypes at transform time.
             if has_selector:
                 _check_accepted_dtypes(step, current, selected)
@@ -606,7 +603,7 @@ class Recipe:
         )
 
     def summary(self) -> DataFrame:
-        """The initial (pre-fit) lineage as a tidy frame. See ``design/lineage.md``.
+        """The initial (pre-fit) lineage as a tidy frame.
 
         Shows the prototype columns before any step runs. Requires a prototype:
         construct the recipe with ``Recipe(data=...)``, or call ``fit()`` and use
@@ -658,15 +655,15 @@ class FittedRecipe:
     ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
-        #: The post-all-steps column-lineage DAG (``design/lineage.md``), or
+        #: The post-all-steps column-lineage DAG, or
         #: ``None`` if the recipe was constructed without one.
         self.lineage = lineage
-        #: The training-data schema snapshot (``design/lifecycle.md``) used to
+        #: The training-data schema snapshot used to
         #: validate new data in ``transform()``, or ``None`` if absent.
         self.schema = schema
 
     def __repr__(self) -> str:
-        """A human-readable, trained view of the fitted pipeline (``design/inspection.md``).
+        """A human-readable, trained view of the fitted pipeline.
 
         Shows the post-fit role assignments and each step with the concrete
         columns its selector resolved to at fit time, tagged ``[trained]``. This
@@ -809,7 +806,7 @@ class FittedRecipe:
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
-        """The fitted (post-all-steps) lineage as a tidy frame. See ``design/lineage.md``.
+        """The fitted (post-all-steps) lineage as a tidy frame.
 
         Examples
         --------

@@ -1,7 +1,7 @@
 """Shared type aliases and sentinels for the step contract.
 
 Several of these are placeholders for types owned by other foundation issues
-(notably the lineage subsystem; see ``design/lineage.md``). They exist so that
+(notably the lineage subsystem). They exist so that
 the `mlfeatures.step` contract is importable and type-checkable today. The
 concrete implementations will replace the placeholder bodies here without
 changing the names the rest of the team codes against.
@@ -54,7 +54,7 @@ else:
 
 #: The internal frame type that flows between steps. A backend-agnostic narwhals
 #: ``DataFrame`` wrapping the user's native frame; steps write their data ops
-#: against this via `mlfeatures._frame`. See ``design/ecosystem.md``.
+#: against this via `mlfeatures._frame`.
 Frame: TypeAlias = nw.DataFrame[Any]
 
 #: The type of every step's ``columns`` parameter: a single column name, an
@@ -95,7 +95,7 @@ class ColSchema:
     describe what it consumed (``schema_in``) and produced (``schema_out``).
     This is the lightweight step-facing report; the recipe-side column-lineage
     DAG that tracks roles, source, sparsity, and provenance is
-    `mlfeatures.lineage.Lineage` (``design/lineage.md``).
+    `mlfeatures.lineage.Lineage`.
 
     Examples
     --------
@@ -133,7 +133,7 @@ class SchemaInfo:
 
     Carries the current column names, their dtype names, and the live `Roles`.
     In practice a step reads only ``roles`` (for selector resolution). The
-    recipe-side column-lineage DAG (`mlfeatures.lineage.Lineage`, ``design/lineage.md``)
+    recipe-side column-lineage DAG (`mlfeatures.lineage.Lineage`)
     is maintained separately by the recipe and is not handed to steps for their
     own logic; ``lineage`` and ``producing_steps`` are populated by the recipe
     purely so provenance selectors (``has_source`` / ``has_ancestor``) can
@@ -197,7 +197,7 @@ class SchemaInfo:
 
 
 class Roles:
-    """Column → set of role names. See ``design/roles.md``.
+    """Column → set of role names.
 
     Every column carries **zero or more** roles stored as a ``set[str]``. The
     standard roles are ``"target"``, ``"feature"``, and ``"case_weights"``;
@@ -328,7 +328,7 @@ ANY_DTYPE = _AnyDtype()
 #: Return type of ``Step.accepts_dtypes()``: an explicit set of narwhals dtype
 #: classes, or the `ANY_DTYPE` sentinel. Using narwhals' own dtype types
 #: rather than a custom string taxonomy keeps the framework aligned with the one
-#: backend-agnostic type system it already depends on (see ``design/lineage.md``).
+#: backend-agnostic type system it already depends on.
 AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
 
 #: The narwhals numeric dtypes: a convenience set for steps that only accept
@@ -359,7 +359,7 @@ _CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.S
 class Mode(Enum):
     """Shape of a step's input/output relationship.
 
-    Informs how the framework records lineage. See ``design/step-contract.md``.
+    Informs how the framework records lineage.
 
     Examples
     --------
@@ -394,7 +394,7 @@ class KeepOriginals(Enum):
     ones (``ONE_TO_MANY``, ``MANY_TO_MANY``) is ``CONFIGURABLE``, because keeping
     the sources beside the derived columns is a legitimate thing to want; every
     other mode has only one sensible answer, so ``Step.__init__`` fixes the value
-    and ``keep_original_cols`` is read-only. See ``design/step-contract.md``.
+    and ``keep_original_cols`` is read-only.
 
     Examples
     --------

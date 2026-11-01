@@ -5,7 +5,7 @@ can be exercised on its own; `StepIntercept` wraps it in the
 `Step` lifecycle so a `Recipe` can fit
 and apply it.
 
-This is the ``ADDING``-mode prototype from ``design/steps-catalog.md``, based on
+This is the ``ADDING``-mode prototype, based on
 ``step_intercept`` from the R ``recipes`` package and generalised from a column
 of ones to a configurable fixed value. An intercept estimates nothing from the
 data, so unlike a filter such as `fit_drop_corr()`

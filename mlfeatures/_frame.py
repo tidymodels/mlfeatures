@@ -1,6 +1,6 @@
 """Internal dataframe boundary: the single data-ops API steps write against.
 
-Per ``design/ecosystem.md``, narwhals is the *full internal representation* for
+narwhals is the *full internal representation* for
 v0.1: a step is written once against this surface and narwhals dispatches to the
 user's native backend (pandas in → pandas out, polars in → polars out). There are
 no per-backend code paths.
@@ -189,7 +189,7 @@ def apply_drop(frame: Frame, drop_cols: list[str]) -> Frame:
 
     Names not present in ``frame`` are skipped rather than raising, which
     matches the framework's policy of tolerating schema drift at transform
-    time (see ``design/lifecycle.md``).
+    time.
     """
     present = [c for c in drop_cols if c in frame.columns]
     return drop(frame, present)
@@ -298,7 +298,7 @@ def is_list(frame: Frame, column: str) -> bool:
 
 
 def dtype_category(dtype: nw.dtypes.DType) -> str:
-    """Classify a narwhals dtype into a `design/lineage.md` taxonomy category.
+    """Classify a narwhals dtype into a lineage taxonomy category.
 
     Returns one of the taxonomy leaf names: ``"float"``, ``"int"``,
     ``"decimal"``, ``"bool"``, ``"str"``, ``"categorical_ordered"``,
@@ -307,7 +307,7 @@ def dtype_category(dtype: nw.dtypes.DType) -> str:
     maps to ``"other"``.
 
     This is the single place that names the taxonomy categories; the lineage
-    DAG and ``recipe.summary()`` (see ``design/lineage.md``) will consume it.
+    DAG and ``recipe.summary()`` consume it.
     ``"decimal"`` is split out from the numeric group because narwhals'
     ``Decimal`` is neither ``is_float`` nor ``is_integer``, so it has no home
     under the float/int leaves of the taxonomy tree.

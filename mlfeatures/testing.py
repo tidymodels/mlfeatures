@@ -1,6 +1,6 @@
 """The executable step contract: `StepConformanceTest`.
 
-``design/step-contract.md`` defines the properties every step must satisfy. This
+The step contract is the set of properties every step must satisfy. This
 module makes them runnable against *any* step, first-party or third-party, by
 parameterizing them over two hooks a subclass supplies: `make_step` and
 `training_data`.
@@ -188,8 +188,8 @@ class StepConformanceTest:
     """The step contract, runnable against any step.
 
     Subclass it, implement `make_step`, set `training_data`, and pytest runs the
-    whole contract. Every check is a generic property from
-    ``design/step-contract.md``, never step-specific behaviour; a step's own
+    whole contract. Every check is a generic property of
+    the step contract, never step-specific behaviour; a step's own
     logic belongs in its unit tests.
     """
 
@@ -308,8 +308,8 @@ class StepConformanceTest:
         ``ONE_TO_MANY`` and ``MANY_TO_MANY`` steps expose it as a constructor
         argument defaulting to ``False``; every other mode fixes it (``True`` for
         the modes that keep their inputs, ``False`` for the ones that consume
-        them) and must not offer the argument at all. This is the rule from
-        ``design/step-contract.md``, checked rather than merely written down.
+        them) and must not offer the argument at all. This is a rule of
+        the step contract, checked rather than merely written down.
         """
         step = self.make_step()
         policy = KeepOriginals.for_mode(type(step).mode)
@@ -371,7 +371,7 @@ class StepConformanceTest:
     def test_json_preserves_transform_output(self) -> None:
         """A fitted step round-trips through JSON to identical transform() output.
 
-        Doubles as the no-closure guarantee (``design/serialization.md``): a
+        Doubles as the no-closure guarantee: a
         closure cannot be JSON-encoded, so a passing round-trip proves the step
         and its selectors captured only plain data.
         """

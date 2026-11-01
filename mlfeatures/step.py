@@ -1,7 +1,7 @@
 """The ``Step`` / ``RowOp`` contract.
 
 These abstract base classes define the contract every feature-engineering step
-codes against. They are transcribed from ``design/step-contract.md`` and are, for
+codes against. They are, for
 now, importable stubs: the abstract methods raise `NotImplementedError`.
 Selector resolution, content-derived ``id`` generation, ``StepError`` wrapping,
 and the conformance test suite are implemented in later issues (#17, #18, #21).
@@ -43,7 +43,7 @@ def _step_type_label(step: "Step | type[Step]") -> str:
 
     Derived from the class name: the ``Step`` prefix is dropped and the
     remaining CamelCase is converted to ``snake_case`` (``StepDropCorr`` →
-    ``step_drop_corr``). Used by the printing methods in ``design/inspection.md``
+    ``step_drop_corr``). Used by the printing methods
     and by the polars accessor's parity test. Accepts either a step instance or a
     step class.
     """
@@ -369,8 +369,8 @@ class Step(ABC):
 
         Known after ``fit()``. The keys are exactly the columns this step adds to
         the frame; each value lists the input columns that column descends from.
-        The recipe consults this to populate the column-lineage DAG (see
-        ``design/lineage.md``) and validates the keys against the post-step frame.
+        The recipe consults this to populate the column-lineage DAG
+        and validates the keys against the post-step frame.
 
         The default returns ``{}``: correct for steps that create no new columns
         (in-place ``ONE_TO_ONE`` such as ``step_normalize``; ``REMOVING``;
@@ -505,8 +505,7 @@ class Step(ABC):
         Every hyperparameter and learned statistic already lives as a plain
         instance attribute, so the default encodes ``self.__dict__`` through the
         shared value codec -- no per-step boilerplate. The step class itself is
-        recorded separately (by qualified name) by `mlfeatures.serialization`. See
-        ``design/serialization.md``.
+        recorded separately (by qualified name) by `mlfeatures.serialization`.
         """
         from mlfeatures.serialization import (
             _encode,  # pyright: ignore[reportPrivateUsage]
@@ -550,7 +549,7 @@ class Step(ABC):
         The default is a no-op: it returns ``self`` unchanged. Steps that retain
         training artifacts only needed at fit time (e.g. a future KNN imputer's
         neighbor matrix) override this to return a lighter copy that still
-        transforms identically. See ``recipe.minimize`` / ``design/serialization.md``.
+        transforms identically. See ``recipe.minimize``.
         """
         return self
 
@@ -559,8 +558,7 @@ class Step(ABC):
 
         Untrained: the unresolved selector (``all_numeric_features()``,
         ``['age']``). Trained: the concrete columns the selector resolved to at
-        fit time, mirroring the resolved/unresolved distinction in
-        ``design/inspection.md``. A column-adding step additionally shows the
+        fit time. A column-adding step additionally shows the
         columns it produced (``city → city_LA, city_NYC``) so the expansion is
         visible once fitted. A trained identity step (empty selection)
         and a step that consumes no columns (e.g. ``step_intercept``) describe

@@ -14,8 +14,6 @@ Two things enforce that, and neither works if this step lives under ``tests/``:
 
 So the awkward-looking constraint below is the point of the file: everything
 comes from the top-level ``mlfeatures`` namespace, and nothing else does.
-
-See ``design/extensibility.md`` and issue #197.
 """
 
 from __future__ import annotations
