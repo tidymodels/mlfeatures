@@ -8,13 +8,12 @@ transforms training, validation, and production data the same way, and it
 can be serialized to do so anywhere.
 
 ::: {.callout-note collapse="true" title="Key points"}
-* fitting stores parameters on the step object
-* selectors resolve at fit time
-* transform skips RowOps
-* recipes do not mutate (.fit() returns a new, FittedRecipe)
-* FitRecipe object important to know
-* Transform applies to training, validation, and production
-* serializing to apply transform anywhere
+* `fit()` estimates what each step needs and stores it on the fitted steps
+* selectors are resolved once, at fit time
+* `fit()` returns a new `FittedRecipe` and leaves the recipe untouched
+* row filters such as `StepFilter` run at fit time only, never in `transform()`
+* `transform()` applies the same estimates to training, validation, and production data
+* a `FittedRecipe` can be serialized and applied anywhere
 :::
 
 ## Setup
