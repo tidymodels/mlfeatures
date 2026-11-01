@@ -293,10 +293,14 @@ class StepGeoDistance(Step):
         distance in meters, or ``"euclidean"`` for the flat-plane distance
         between the raw ``lat``/``lon`` values.
     log_distance
-        Whether to return ``log(distance)`` instead of the raw distance.
+        Whether to return ``log(distance)`` instead of the raw distance. A
+        row exactly at the reference point has distance 0, which gives
+        ``-inf``; there is no ``eps`` offset as in ``StepClassDistance``.
         Default ``False``.
     name
-        Name of the output distance column. Default ``"geo_dist"``.
+        Name of the output distance column. Default ``"geo_dist"``. A
+        `Recipe` rejects the step if the frame already has a column of this
+        name.
     keep_original_cols
         If ``True``, the ``lat``/``lon`` columns are kept alongside the
         distance column instead of being dropped. Default ``False``.

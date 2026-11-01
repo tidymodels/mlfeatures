@@ -179,13 +179,13 @@ class StepIndicateNa(Step):
     Parameters
     ----------
     columns
-        Columns to project. Accepts a single column name, a list of names, a
+        Columns to flag. Accepts a single column name, a list of names, a
         mlfeatures selector such as ``Selectors.features()`` (see `Selectors` for
         the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
         Selectors are resolved against the frame's schema when the recipe is
         fitted, so the same selector works on any backend. Any dtype is
-        meaningful here.
+        accepted.
     keep_original_cols
         If ``True``, the source columns are kept alongside their indicator
         columns instead of being dropped. Default ``False``.

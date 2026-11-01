@@ -383,8 +383,8 @@ class StepClassDistance(Step):
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     target
-        Name of the column in the training frame that holds the class labels.
-        Read at fit time only; the column is *not* declared as an input
+        Name of the column in the training frame that holds the target
+        classes. Read at fit time only; the column is *not* declared as an input
         feature in `schema_in()`.
     metric
         Distance function: ``"euclidean"`` (default) or ``"manhattan"``.

@@ -209,7 +209,9 @@ class StepPca(Step):
         are meaningful here.
     num_comp
         Number of principal components to keep. Must be a positive integer.
-        Default ``5``.
+        Capped at the number of selected columns and at the number of
+        complete (null-free) training samples, so fewer components are produced when either is
+        smaller than ``num_comp``. Default ``5``.
     prefix
         Prefix for the produced component column names. Default ``"PC"``.
     keep_original_cols

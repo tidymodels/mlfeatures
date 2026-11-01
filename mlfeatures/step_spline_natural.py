@@ -420,11 +420,12 @@ class StepSplineNatural(Step):
         are meaningful here.
     deg_free
         Number of output basis columns per (non-degenerate) selected column.
-        Must be an integer >= 2. Default ``10``. Ignored when `knots` is
-        given.
+        Must be an integer >= 2. The columns include the constant basis
+        column when `complete_set` is ``True``, which leaves one fewer
+        interior knot. Default ``10``. Ignored when `knots` is given.
     complete_set
-        Whether to include the constant basis column in the output. Default
-        ``False``.
+        Whether to keep the constant column of the complete natural spline
+        basis; when ``False`` it is dropped. Default ``False``.
     knots
         Explicit interior knot locations, shared across every selected
         column, instead of the default quantile placement. Each column's

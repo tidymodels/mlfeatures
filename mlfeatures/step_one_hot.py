@@ -102,7 +102,8 @@ class StepOneHot(Step):
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
         Selectors are resolved against the frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only discrete
-        columns are meaningful here.
+        columns (string, categorical, enum, boolean, and integer) are
+        meaningful here.
     name_fn
         Callable mapping ``(source_column, level_as_str)`` to the indicator
         column's name. Default ``None``, which names them ``"{column}_{level}"``.
