@@ -9,7 +9,7 @@ many columns they produce:
 
 | Step | What it does |
 |---|---|
-| `step_dummy` | Drop-one (treatment) encoding: *k−1* columns per input |
+| `step_dummy` | Drop-one (treatment) encoding: *k-1* columns per input |
 | `step_one_hot` | Full indicator encoding: *k* columns per input |
 
 The transform logic is identical between the two; it is extracted into a shared
@@ -320,7 +320,7 @@ return apply_dummy(new_data, self._levels, self._col_name, self.keep_original_co
 | Case | Expected |
 |---|---|
 | Two-level column | One level retained (the non-first) |
-| Three-level column | *k−1* levels retained, sorted ascending |
+| Three-level column | *k-1* levels retained, sorted ascending |
 | Null values in column | Nulls excluded from level list |
 | Single-level column (after dropping nulls) | `ValueError` |
 | Integer column | Levels sorted numerically; indicators named `{col}_{level}` |
@@ -346,7 +346,7 @@ return apply_dummy(new_data, self._levels, self._col_name, self.keep_original_co
 
 | Case | Expected |
 |---|---|
-| Basic fit+transform on training data | Correct *k−1* indicator columns, source col dropped |
+| Basic fit+transform on training data | Correct *k-1* indicator columns, source col dropped |
 | Multi-column input | Each column independently expanded |
 | `keep_original_cols=True` | Source columns retained |
 | Values correct for known fixed data | Indicator values match hand-computed expected matrix |
@@ -384,7 +384,7 @@ return apply_dummy(new_data, self._levels, self._col_name, self.keep_original_co
 ### `StepOneHot` — correctness and infrastructure
 
 All `StepDummy` correctness and infrastructure cases carry over, with *k*
-indicator columns expected instead of *k−1*. The `apply_dummy` edge cases
+indicator columns expected instead of *k-1*. The `apply_dummy` edge cases
 (null, novel, collision, keep_original_cols, 0/1 rows) are not re-tested here
 because they are covered by the `apply_dummy` unit tests in
 `test_step_dummy.py`.

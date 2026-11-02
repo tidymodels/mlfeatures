@@ -281,14 +281,15 @@ def dummy_update_roles(
 
 
 class StepDummy(Step):
-    """Expand discrete columns into *k−1* binary indicator columns.
+    """Expand categorical columns into *k-1* binary indicator columns.
 
-    Each selected column is replaced by *k−1* indicator columns where *k* is
+    Each selected column is replaced by *k-1* indicator columns where *k* is
     the number of unique non-null levels seen during ``fit()``. Indicators are
     ``nw.Int8`` (0/1); a column that contains null-source or unseen-level rows
     is ``nw.Float64`` instead (0.0/1.0/NaN), since pandas' ``Int8`` cannot hold
     the missing values. The first level in ascending sort order is the
-    reference level and is dropped.
+    reference level and is dropped. To keep an indicator for every level, use
+    `StepOneHot` instead.
 
     See [Dummy Encoding](https://feaz-book.com/categorical-dummy) in *Feature
     Engineering A to Z* for background on this technique.
@@ -323,7 +324,7 @@ class StepDummy(Step):
 
     Examples
     --------
-    Each categorical column is replaced by *k−1* indicators; the first level in
+    Each categorical column is replaced by *k-1* indicators; the first level in
     sort order (``blue``) is the dropped reference:
 
     ```{python}
