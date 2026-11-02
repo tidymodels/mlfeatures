@@ -154,14 +154,12 @@ def apply_interact(
 class StepInteract(Step):
     """Add the pairwise product of every pair of selected columns.
 
-    For every unordered pair among the selected columns, adds one column
-    holding their elementwise product, named by joining the two source names
-    with ``sep``, or kept alongside the source columns when
-    ``keep_original_cols`` is ``True``. ``n`` selected columns produce
-    ``n * (n - 1) / 2`` interaction columns.
+    For every pair among the selected columns, adds one column holding their
+    elementwise product, named by joining the two source names with ``sep``.
+    ``n`` selected columns produce ``n * (n - 1) / 2`` interaction columns.
 
     This step is **pairwise only**: it does not build 3-way-or-higher
-    interaction terms. A caller who needs one can write it explicitly with
+    interaction terms. A user who needs one can write it explicitly with
     `StepMutate`.
 
     See [Arithmetic](https://feaz-book.com/numeric-arithmetic) in *Feature

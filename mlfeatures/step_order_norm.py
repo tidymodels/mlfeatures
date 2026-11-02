@@ -215,20 +215,17 @@ class StepOrderNorm(Step):
     Each selected numeric column's training values are ranked (ties averaged)
     and mapped to normal quantiles, producing a lookup table between the
     original values and their normal-quantile scores. Every selected column is
-    replaced in place by its score under that table; new values falling
+    replaced in place by its score using that table. New values falling
     outside the training range are extrapolated using the slope of the nearest
     boundary segment rather than clamped.
 
     Unlike `StepNormalize`, which only recenters and rescales, this reshapes
-    the column's whole distribution, so it also corrects skew.
+    the column's whole distribution.
 
     A column with fewer than 2 distinct training values cannot be mapped onto
     a spread of normal quantiles; it is dropped from the normalization (with a
     warning) and passes through ``transform`` untouched. Missing values pass
     through as missing.
-
-    Not a base R ``recipes`` step; this is a port of ``orderNorm()`` from the R
-    ``bestNormalize`` package.
 
     See [Percentile Scaling](https://feaz-book.com/numeric-percentile) in
     *Feature Engineering A to Z* for the closely related rank-based scaling;

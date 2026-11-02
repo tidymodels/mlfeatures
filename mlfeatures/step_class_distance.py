@@ -365,8 +365,7 @@ class StepClassDistance(Step):
 
     The selected columns are read to learn one centroid per target class, then
     replaced by one ``distance_<class>`` column per class holding each row's
-    distance to that class's centroid, or kept alongside them when
-    ``keep_original_cols`` is ``True``. Each distance is computed from all the
+    distance to that class's centroid. Each distance is computed from all the
     selected columns at once, so no distance column belongs to any one of them.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)

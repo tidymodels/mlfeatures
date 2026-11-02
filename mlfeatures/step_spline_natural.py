@@ -388,11 +388,11 @@ class StepSplineNatural(Step):
     """Replace numeric columns with a natural cubic spline basis expansion.
 
     Each selected numeric column ``x`` is replaced by ``deg_free`` natural
-    cubic spline basis columns ``{x}_1``, ``{x}_2``, ..., ``{x}_{deg_free}``,
-    or kept alongside them when ``keep_original_cols`` is ``True``. A natural
-    spline is a piecewise cubic polynomial constrained to be linear beyond its
-    boundary knots, which avoids the wild swings an ordinary polynomial or
-    unconstrained cubic spline can show near the edges of the data.
+    cubic spline basis columns ``{x}_1``, ``{x}_2``, ..., ``{x}_{deg_free}``.
+    A natural spline is a piecewise cubic polynomial constrained to be linear
+    beyond its boundary knots, which avoids the wild swings an ordinary
+    polynomial or unconstrained cubic spline can show near the edges of the
+    data.
 
     Interior knots are placed at quantiles of each column's own training
     values (or at the caller-supplied `knots`, shared across every selected

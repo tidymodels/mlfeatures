@@ -128,7 +128,8 @@ class StepNormalize(Step):
 
     Constant (zero-variance) columns among the selection cannot be scaled to
     unit variance; they are dropped from the normalization (with a warning) and
-    pass through ``transform`` untouched.
+    pass through ``transform`` untouched. You can get rid of these warnings by
+    adding a `StepDropZeroVariance` before this step.
 
     See [Normalization](https://feaz-book.com/numeric-normalization) in *Feature
     Engineering A to Z* for background on this technique.
