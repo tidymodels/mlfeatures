@@ -79,7 +79,8 @@ class StepDropNearZeroVariance(ColumnDropStep):
     has few unique values relative to the number of samples: the ratio of the
     most common value's count to the second most common value's count exceeds
     ``freq_cut``, and the percentage of unique values is at or below
-    ``unique_cut``. No new columns are produced.
+    ``unique_cut``. No new columns are produced. To drop only columns with a
+    single unique value, see `StepDropZeroVariance`.
 
     See [Zero Variance Filter](https://feaz-book.com/too-many-zv) in *Feature
     Engineering A to Z* for background on this technique.

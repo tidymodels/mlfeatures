@@ -154,8 +154,7 @@ class StepIndicateNa(Step):
     """Add a binary indicator column flagging missing values.
 
     Each selected column gets a companion ``{column}_na`` column that is
-    ``1`` where the source value is missing and ``0`` otherwise, or kept
-    alongside its source when ``keep_original_cols`` is ``True``. Nothing is
+    ``1`` where the source value is missing and ``0`` otherwise. Nothing is
     estimated from the training data: missingness is an elementwise property
     of each row's value, so the transform is identical on training and new
     data, and a column with no missing values at fit time still gets an

@@ -232,8 +232,7 @@ class StepPls(Step):
     """Project numeric columns onto partial-least-squares components.
 
     The selected numeric columns are replaced by ``num_comp`` component
-    columns ``{prefix}1 ... {prefix}{num_comp}``, or kept alongside them when
-    ``keep_original_cols`` is ``True``. Each component is a linear
+    columns ``{prefix}1 ... {prefix}{num_comp}``. Each component is a linear
     combination of all the input columns chosen to covary with ``target``,
     so no single component belongs to any one of the input columns.
     Unlike unsupervised extraction such as `StepPca`, the components depend
