@@ -20,7 +20,9 @@ class StepDrop(ColumnDropStep):
 
     Every column the selector matches is dropped, and no new columns are
     produced. Nothing is estimated: which columns to drop is decided by the
-    selector alone, fixed against the training frame's schema.
+    selector alone, fixed against the training frame's schema. To drop columns
+    by a data-driven rule instead, see `StepDropCorr`, `StepDropZeroVariance`
+    or `StepDropNearZeroVariance`.
 
     The selection is taken at face value, so a selector that reaches a column
     with a role other than ``"feature"`` drops that column too.

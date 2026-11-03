@@ -392,7 +392,8 @@ class StepSplineNatural(Step):
     A natural spline is a piecewise cubic polynomial constrained to be linear
     beyond its boundary knots, which avoids the wild swings an ordinary
     polynomial or unconstrained cubic spline can show near the edges of the
-    data.
+    data. For a basis that keeps a model monotonic in ``x``, see
+    `StepSplineMonotone`; for a lower-degree global fit, see `StepPolynomial`.
 
     Interior knots are placed at quantiles of each column's own training
     values (or at the caller-supplied `knots`, shared across every selected

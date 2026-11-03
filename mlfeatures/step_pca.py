@@ -181,7 +181,8 @@ class StepPca(Step):
     principal-component columns ``{prefix}1 ... {prefix}{num_comp}``. Each
     component is a linear combination of all the input columns, so no single
     component belongs to any one of them. Asking for more components than there
-    are input columns yields fewer.
+    are input columns yields fewer. To choose components that covary with the
+    target instead, see `StepPls`.
 
     The columns are centered but not scaled, so a column measured on a larger
     numeric range contributes more to the components; normalize first if that is

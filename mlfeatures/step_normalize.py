@@ -124,7 +124,9 @@ class StepNormalize(Step):
     """Center and scale numeric columns to zero mean and unit variance.
 
     Each selected numeric column ``x`` is replaced in place by
-    ``(x - mean) / std``, using the column's mean and standard deviation.
+    ``(x - mean) / std``, using the column's mean and standard deviation. To
+    scale onto a fixed interval instead, see `StepRange`; to reshape a skewed
+    distribution, see `StepOrderNorm`.
 
     Constant (zero-variance) columns among the selection cannot be scaled to
     unit variance; they are dropped from the normalization (with a warning) and

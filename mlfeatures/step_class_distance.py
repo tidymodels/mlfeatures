@@ -367,6 +367,7 @@ class StepClassDistance(Step):
     replaced by one ``distance_<class>`` column per class holding each row's
     distance to that class's centroid. Each distance is computed from all the
     selected columns at once, so no distance column belongs to any one of them.
+    For the distance to a single fixed point, see `StepGeoDistance`.
 
     See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
     for the arguments this step shares with the others.

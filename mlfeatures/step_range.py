@@ -153,6 +153,8 @@ class StepRange(Step):
     ``(x - low) / (high - low) * (max - min) + min``, where ``low`` and ``high``
     are the column's smallest and largest values in the training data. On the
     training data itself the result therefore spans exactly ``min`` to ``max``.
+    To center and scale to zero mean and unit variance instead, see
+    `StepNormalize`.
 
     New values falling outside the training bounds would land outside the target
     range; by default (``clipping=True``) they are clamped back into the range.

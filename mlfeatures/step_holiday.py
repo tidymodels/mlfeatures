@@ -333,7 +333,8 @@ class StepHoliday(Step):
     non-alphanumeric characters collapsed to underscores), that is ``1``
     where the value falls on that holiday or matches that rule and ``0``
     otherwise. A Datetime value is compared by its date part; time of day
-    never affects the result.
+    never affects the result. For calendar parts such as month or day of week,
+    see `StepDateFeatures` and `StepDatetimeFeatures`.
 
     Named holidays (``holidays``) are looked up in the `holidays` PyPI
     package's calendar for ``country`` (and, if given, ``subdiv``), rebuilt

@@ -129,7 +129,9 @@ class StepImputeMode(Step):
 
     Mode imputation is for categorical columns (it accepts
     ``Categorical``/``Enum``/``String``, not numeric dtypes) and is
-    dtype-preserving: the fill value is an observed level of the column.
+    dtype-preserving: the fill value is an observed level of the column. For
+    numeric columns, see `StepImputeMean` or `StepImputeMedian`; to make
+    missingness a level of its own, see `StepUnknown`.
 
     A column that is entirely null at fit time has no mode; it is left unchanged
     (not dropped) with a warning, and passes through ``transform`` untouched.

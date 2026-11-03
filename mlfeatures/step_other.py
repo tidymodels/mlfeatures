@@ -174,7 +174,7 @@ class StepOther(Step):
     in the training data and has every other level replaced in place by
     ``other_level``. Levels that never appeared during fitting are pooled into
     ``other_level`` as well, so new data can never introduce a level the rest of
-    the recipe has not seen. Nulls stay null; use ``StepUnknown`` first when
+    the recipe has not seen. Nulls stay null; use `StepUnknown` first when
     missingness should become a level of its own.
 
     See [Collapsing Categories](https://feaz-book.com/categorical-collapse) in

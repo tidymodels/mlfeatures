@@ -184,6 +184,9 @@ class StepLog(Step):
 
     Each selected column ``x`` is replaced by ``log(x + offset) / log(base)``.
 
+    For a transform that handles skew without any domain restriction, see
+    `StepOrderNorm`.
+
     A value equal to ``-offset`` becomes ``-inf`` and anything smaller becomes
     ``NaN``. These pass through with a warning naming the columns, at both fit
     and transform time. A positive ``offset`` brings zeros into the domain.

@@ -67,7 +67,8 @@ def apply_filter(selected: Frame, predicate: Predicate) -> Frame:
 class StepFilter(RowOp):
     """Remove rows that do not match a predicate.
 
-    Rows for which ``predicate`` is not ``True`` are dropped.
+    Rows for which ``predicate`` is not ``True`` are dropped. To add or change
+    columns instead, see `StepMutate`.
 
     Filtering applies to the training data only. Fitting a recipe drops the
     non-matching training rows, but transforming new data returns every row
