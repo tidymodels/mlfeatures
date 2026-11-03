@@ -178,11 +178,11 @@ class StepPca(Step):
     """Project numeric columns onto their principal components.
 
     The selected numeric columns are replaced by ``num_comp``
-    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``, or kept
-    alongside them when ``keep_original_cols`` is ``True``. Each
+    principal-component columns ``{prefix}1 ... {prefix}{num_comp}``. Each
     component is a linear combination of all the input columns, so no single
     component belongs to any one of them. Asking for more components than there
-    are input columns yields fewer.
+    are input columns yields fewer. To choose components that covary with the
+    target instead, see `StepPls`.
 
     The columns are centered but not scaled, so a column measured on a larger
     numeric range contributes more to the components; normalize first if that is

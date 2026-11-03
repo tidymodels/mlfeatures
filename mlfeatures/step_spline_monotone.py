@@ -345,11 +345,11 @@ class StepSplineMonotone(Step):
     """Replace numeric columns with a monotone (I-spline) basis expansion.
 
     Each selected numeric column ``x`` is replaced by ``deg_free`` I-spline
-    basis columns ``{x}_1``, ``{x}_2``, ..., ``{x}_{deg_free}``, or kept
-    alongside them when ``keep_original_cols`` is ``True``. Every basis column
-    is non-negative and non-decreasing in ``x``; fit with a procedure that
-    keeps its coefficients non-negative (e.g. non-negative least squares), the
-    resulting model is monotonic in ``x``.
+    basis columns ``{x}_1``, ``{x}_2``, ..., ``{x}_{deg_free}``. Every basis
+    column is non-negative and non-decreasing in ``x``; fit with a procedure
+    that keeps its coefficients non-negative (e.g. non-negative least squares),
+    the resulting model is monotonic in ``x``. For an unconstrained flexible
+    fit, see `StepSplineNatural`.
 
     Interior knots are placed at quantiles of each column's own training
     values (or at the caller-supplied `knots`, shared across every selected

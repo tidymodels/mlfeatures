@@ -264,8 +264,7 @@ class StepGeoDistance(Step):
     """Add the distance from each row to a fixed reference point.
 
     Replaces the ``lat``/``lon`` columns with a single ``name`` column
-    holding each row's distance to ``(ref_lat, ref_lon)``, or keeps them
-    alongside it when ``keep_original_cols`` is ``True``. With the default
+    holding each row's distance to ``(ref_lat, ref_lon)``. With the default
     ``"haversine"`` metric the result is the great-circle distance in meters;
     with ``"euclidean"`` it is the flat-plane distance between the raw
     ``lat``/``lon`` values.

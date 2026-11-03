@@ -341,15 +341,16 @@ class StepPolynomial(Step):
     """Replace numeric columns with their orthogonal polynomial expansion.
 
     Each selected numeric column ``x`` is replaced by up to ``degree``
-    orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``, or
-    kept alongside them when ``keep_original_cols`` is ``True``. The orthogonal
-    basis is a centering mean plus a QR transform matrix.
+    orthogonal polynomial columns ``{x}_1``, ``{x}_2``, ..., ``{x}_degree``.
+    The orthogonal basis is a centering mean plus a QR transform matrix. For a
+    more local, flexible fit, see `StepSplineNatural`.
 
     The effective degree per column is capped at ``n_unique_non_null - 1``: a
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
     polynomial terms. Constant (or all-null) columns get an effective degree
     of ``0``; `transform()` leaves those columns untouched and emits a
-    warning. The caller can chain a zero-variance drop step to clean them up.
+    warning. You can get rid of these warnings by adding a
+    `StepDropZeroVariance` before this step.
 
     See [Polynomial Expansion](https://feaz-book.com/numeric-polynomial) in
     *Feature Engineering A to Z* for background on this technique.

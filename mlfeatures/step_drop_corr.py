@@ -146,7 +146,9 @@ class StepDropCorr(ColumnDropStep):
 
     The selected columns that exceed ``threshold`` are dropped, as are columns
     with no usable correlation at all (constant or all-null), and no new
-    columns are produced.
+    columns are produced. To drop columns with no variation rather than
+    correlated ones, see `StepDropZeroVariance` and
+    `StepDropNearZeroVariance`.
 
     See [High Correlation Filter](https://feaz-book.com/correlated-filter) in
     *Feature Engineering A to Z* for background on this technique.

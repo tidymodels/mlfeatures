@@ -100,7 +100,9 @@ class StepImputeMedian(Step):
     """Impute missing numeric values with the column median.
 
     Each selected numeric column has its nulls filled in place with that
-    column's median.
+    column's median, which is less sensitive to outliers than the mean (see
+    `StepImputeMean`). Categorical columns need `StepImputeMode`. To keep a
+    record of which values were missing, see `StepIndicateNa`.
 
     A column that is entirely null at fit time has no median to impute with; it
     is left unchanged (not dropped) with a warning, and passes through

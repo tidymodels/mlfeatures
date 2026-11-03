@@ -332,9 +332,9 @@ class StepHoliday(Step):
     ``{column}_{name}`` (the holiday or rule name lowercased with
     non-alphanumeric characters collapsed to underscores), that is ``1``
     where the value falls on that holiday or matches that rule and ``0``
-    otherwise, or kept alongside the source when ``keep_original_cols`` is
-    ``True``. A Datetime value is compared by its date part; time of day
-    never affects the result.
+    otherwise. A Datetime value is compared by its date part; time of day
+    never affects the result. For calendar parts such as month or day of week,
+    see `StepDateFeatures` and `StepDatetimeFeatures`.
 
     Named holidays (``holidays``) are looked up in the `holidays` PyPI
     package's calendar for ``country`` (and, if given, ``subdiv``), rebuilt

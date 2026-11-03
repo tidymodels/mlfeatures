@@ -118,7 +118,7 @@ class StepUnknown(Step):
     """Recode missing categorical levels to an explicit ``"unknown"`` level.
 
     Each selected categorical column has its nulls replaced in place by
-    ``new_level``.
+    ``new_level``. To also pool infrequent levels, see `StepOther`.
 
     See [Simple Imputation](https://feaz-book.com/missing-simple) in *Feature
     Engineering A to Z* for background on this technique.

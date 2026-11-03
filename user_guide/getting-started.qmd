@@ -201,7 +201,7 @@ Here is a representative subset of each kind of step:
 |-------|------|--------------|
 | Handle missing values | `StepImputeMedian` | fill missing numeric values with the training median |
 | | `StepUnknown` | recode missing categorical values to an explicit `"unknown"` level |
-| Wrangle | `StepDummy` | expand a categorical column into *k−1* indicator columns |
+| Wrangle | `StepDummy` | expand a categorical column into *k-1* indicator columns |
 | | `StepOneHot` | expand into all *k* indicator columns |
 | Model prep | `StepNormalize` | center and scale each column to mean 0, sd 1 |
 | | `StepOrderNorm` | rank-normalize each column onto a standard normal |

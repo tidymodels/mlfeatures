@@ -45,7 +45,9 @@ class StepDropZeroVariance(ColumnDropStep):
     """Remove columns that have a single unique value (zero variance).
 
     The selected columns whose observed values are all the same (or all
-    missing) are dropped, and no new columns are produced.
+    missing) are dropped, and no new columns are produced. For a looser rule
+    that also drops columns dominated by one value, see
+    `StepDropNearZeroVariance`.
 
     See [Zero Variance Filter](https://feaz-book.com/too-many-zv) in *Feature
     Engineering A to Z* for background on this technique.

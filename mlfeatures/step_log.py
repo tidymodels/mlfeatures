@@ -182,32 +182,25 @@ def apply_log(
 class StepLog(Step):
     """Take the logarithm of numeric columns.
 
-    Each selected numeric column ``x`` is replaced in place by
-    ``log(x + offset) / log(base)``. Nothing is estimated from the training
-    data: the transform is elementwise, so it is identical on training and new
-    data.
+    Each selected column ``x`` is replaced by ``log(x + offset) / log(base)``.
 
-    The logarithm is undefined at and below ``-offset``: a value equal to
-    ``-offset`` becomes ``-inf`` and anything smaller becomes ``NaN``. Those
-    values pass through rather than raising, and a warning names the columns
-    they appear in. Because new data can hold such values even when the
-    training data did not, the check runs at fit *and* transform time. Setting
-    ``offset`` to a positive number is the usual way to bring zeros into the
-    domain.
+    For a transform that handles skew without any domain restriction, see
+    `StepOrderNorm`.
 
-    ``signed`` is the other way to handle a column that spans zero. It computes
-    ``sign(x) * log(|x|)`` instead, flattening ``|x| < 1`` to ``0`` so the
-    result is continuous through the origin. Every real value is then in the
-    domain and no warning is possible, at the cost of a transform that is flat
-    across the interval from ``-1`` to ``1``. ``offset`` takes no part in that
-    formula, so passing both is an error rather than a silently ignored
-    argument.
+    A value equal to ``-offset`` becomes ``-inf`` and anything smaller becomes
+    ``NaN``. These pass through with a warning naming the columns, at both fit
+    and transform time. A positive ``offset`` brings zeros into the domain.
+
+    ``signed=True`` suits columns that span zero. It computes
+    ``sign(x) * log(|x|)`` with ``|x| < 1`` flattened to ``0``, so every real
+    value is valid and the result is continuous through the origin, but flat
+    between ``-1`` and ``1``. It does not use ``offset``, so passing both is an
+    error.
 
     See [Logarithms](https://feaz-book.com/numeric-logarithms) in *Feature
-    Engineering A to Z* for background on this technique.
-
-    See [Arguments shared across steps](../user-guide/common-step-arguments.qmd)
-    for the arguments this step shares with the others.
+    Engineering A to Z* for background on this technique. See [Arguments shared
+    across steps](../user-guide/common-step-arguments.qmd) for the arguments
+    this step shares with the others.
 
     Parameters
     ----------
@@ -220,14 +213,14 @@ class StepLog(Step):
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     base
-        Base of the logarithm. Defaults to ``math.e`` (the natural logarithm),
-        and must be positive and not ``1``.
+        Base of the logarithm; must be positive and not ``1``. Defaults to
+        ``math.e`` (the natural logarithm).
     offset
-        Added to every value before the logarithm, which shifts what counts as
-        out of domain. Defaults to ``0.0``. Cannot be combined with ``signed``.
+        Added to every value before the logarithm. Defaults to ``0.0``. Cannot
+        be combined with ``signed``.
     signed
-        Whether to compute ``sign(x) * log(|x|)``, with ``|x| < 1`` flattened to
-        ``0``, instead of the plain logarithm. Defaults to ``False``.
+        Whether to use the signed formula described above instead of the plain
+        logarithm. Defaults to ``False``.
     id
         Stable step identifier. Defaults to ``"log"``; a second step of this
         type in the same recipe becomes ``"log_2"``, and passing an ``id``
@@ -235,7 +228,7 @@ class StepLog(Step):
 
     Examples
     --------
-    Each selected column is replaced in place by its logarithm:
+    Each selected column is replaced by its logarithm:
 
     ```{python}
     #| echo: false
@@ -291,15 +284,14 @@ class StepLog(Step):
     ).transform(counts)
     ```
 
-    A column spanning zero has negatives too, which no offset would fix without
-    distorting the large values:
+    A column spanning zero has negatives too:
 
     ```{python}
     spread = pd.DataFrame({"x": [-100.0, -1.0, 0.0, 1.0, 100.0]})
     spread
     ```
 
-    ``signed`` logs each side on its own scale and flattens the middle:
+    ``signed`` logs each side separately and flattens the middle:
 
     ```{python}
     Recipe().add(StepLog(s.numeric_features(), base=10, signed=True)).fit(

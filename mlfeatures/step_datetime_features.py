@@ -204,11 +204,10 @@ class StepDatetimeFeatures(Step):
 
     Each selected Datetime column is replaced by one integer column per
     requested entry of ``features`` (``year``, ``month``, ``day``, ``hour``,
-    ``minute``, ``second``, ``dow``, ``doy``), named ``{column}_{feature}``,
-    or kept alongside them when ``keep_original_cols`` is ``True``. Nothing is
-    estimated from the training data: every calendar part is an elementwise
-    function of the column's value, so the transform is identical on training
-    and new data.
+    ``minute``, ``second``, ``dow``, ``doy``), named ``{column}_{feature}``.
+    Nothing is estimated from the training data: every calendar part is an
+    elementwise function of the column's value, so the transform is identical
+    on training and new data.
 
     ``dow`` is the ISO day of week (``1`` = Monday, ``7`` = Sunday); ``doy`` is
     the ordinal day of year (``1``-``366``). Produced columns are ``Int32``

@@ -134,7 +134,7 @@ def apply_range(
     Returns
     -------
     narwhals.DataFrame: the input frame with each column in ``bounds`` replaced
-    in place by ``(x - lo) / (hi - lo) * (max - min) + min``. Column names,
+    in place by ``(x - low) / (high - low) * (max - min) + min``. Column names,
     order, and structure are unchanged.
     """
     exprs: list[nw.Expr] = []
@@ -147,22 +147,24 @@ def apply_range(
 
 
 class StepRange(Step):
-    """Scale numeric columns to a fixed range using training-set bounds.
+    """Scale numeric columns to a fixed range.
 
     Each selected numeric column ``x`` is replaced in place by
-    ``(x - lo) / (hi - lo) * (max - min) + min``, where ``lo`` and ``hi`` are
-    the column's smallest and largest values in the training data. On the
+    ``(x - low) / (high - low) * (max - min) + min``, where ``low`` and ``high``
+    are the column's smallest and largest values in the training data. On the
     training data itself the result therefore spans exactly ``min`` to ``max``.
+    To center and scale to zero mean and unit variance instead, see
+    `StepNormalize`.
 
     New values falling outside the training bounds would land outside the target
-    range; by default they are clamped back into it, which ``clipping=False``
-    turns off.
+    range; by default (``clipping=True``) they are clamped back into the range.
 
-    Constant columns among the selection have a zero range and cannot be spread
-    across the target range; they are dropped from the rescaling (with a
-    warning) and pass through ``transform`` untouched. A column holding an
-    infinite value is rescaled against an infinite bound, which yields ``NaN``;
-    that too is warned about at fit time.
+    Constant columns (zero variance) among the selection have a zero range. They
+    are dropped from the rescaling (with a warning) and pass through
+    ``transform`` untouched. You can get rid of these warnings by adding a
+    `StepDropZeroVariance` before this step.
+
+    A column containing an infinite value yields ``NaN`` with a warning.
 
     See [Range Scaling](https://feaz-book.com/numeric-range) in *Feature
     Engineering A to Z* for background on this technique.
