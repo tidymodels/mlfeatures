@@ -175,8 +175,7 @@ class StepDateFeatures(Step):
 
     Each selected Date column is replaced by one integer column per requested
     entry of ``features`` (``year``, ``month``, ``day``, ``dow``, ``doy``),
-    named ``{column}_{feature}``, or kept alongside them when
-    ``keep_original_cols`` is ``True``. Nothing is estimated from the training
+    named ``{column}_{feature}``. Nothing is estimated from the training
     data: every calendar part is an elementwise function of the column's
     value, so the transform is identical on training and new data.
 
