@@ -348,8 +348,8 @@ class StepPolynomial(Step):
     column with ``k`` unique values can support at most ``k - 1`` orthogonal
     polynomial terms. Constant (or all-null) columns get an effective degree
     of ``0``; `transform()` leaves those columns untouched and emits a
-    warning. You can get rid of these warnings by adding a `StepDropZeroVariance`
-    before this step.
+    warning. You can get rid of these warnings by adding a
+    `StepDropZeroVariance` before this step.
 
     See [Polynomial Expansion](https://feaz-book.com/numeric-polynomial) in
     *Feature Engineering A to Z* for background on this technique.

@@ -155,14 +155,14 @@ class StepRange(Step):
     training data itself the result therefore spans exactly ``min`` to ``max``.
 
     New values falling outside the training bounds would land outside the target
-    range; by default (``clipping=False``) they are clamped back into the range.
+    range; by default (``clipping=True``) they are clamped back into the range.
 
     Constant columns (zero variance) among the selection have a zero range. They
     are dropped from the rescaling (with a warning) and pass through
     ``transform`` untouched. You can get rid of these warnings by adding a
     `StepDropZeroVariance` before this step.
-    
-    A column containing infinite value will yields ``NaN`` with a warning.
+
+    A column containing an infinite value yields ``NaN`` with a warning.
 
     See [Range Scaling](https://feaz-book.com/numeric-range) in *Feature
     Engineering A to Z* for background on this technique.

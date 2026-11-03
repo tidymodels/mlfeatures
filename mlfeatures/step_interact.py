@@ -154,7 +154,7 @@ def apply_interact(
 class StepInteract(Step):
     """Add the pairwise product of every pair of selected columns.
 
-    For every pair among the selected columns, adds one column holding their
+    For every unordered pair among the selected columns, adds one column holding their
     elementwise product, named by joining the two source names with ``sep``.
     ``n`` selected columns produce ``n * (n - 1) / 2`` interaction columns.
 
