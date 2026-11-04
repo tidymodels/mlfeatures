@@ -395,6 +395,37 @@ def test_summary_of_empty_schema_has_headers_but_no_rows() -> None:
     assert out.shape[0] == 0
 
 
+def test_removed_lists_archived_nodes_in_removal_order() -> None:
+    lineage, _ = _apply(
+        [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
+    )
+    assert [n.name for n in lineage.removed] == ["g"]
+    assert lineage.removed[0].removed_by == "dummy"
+    # a copy: mutating the returned list does not touch the lineage
+    lineage.removed.clear()
+    assert len(lineage.removed) == 1
+
+
+def test_summary_include_removed_appends_archived_rows() -> None:
+    lineage, _ = _apply(
+        [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
+    )
+    out = nw.from_native(lineage.summary(include_removed=True))
+
+    assert out.columns == [
+        "name",
+        "dtype",
+        "roles",
+        "source",
+        "sparse",
+        "parents",
+        "removed_by",
+    ]
+    assert out["name"].to_list() == ["h", "g_b", "g"]
+    assert out["parents"].to_list() == ["", "g", ""]
+    assert out["removed_by"].to_list() == [None, None, "dummy"]
+
+
 def test_columns_from_source() -> None:
     lineage, _ = _apply(
         [StepDummy(["g"])], "polars", {"g": ["a", "b", "a"], "h": ["x", "y", "x"]}
