@@ -345,8 +345,20 @@ class Lineage:
         """Map of live column name to its current narwhals dtype."""
         return {name: node.dtype for name, node in self._live.items()}
 
-    def summary(self) -> DataFrame:
-        """The live lineage as a tidy frame.
+    @property
+    def removed(self) -> list[ColumnNode]:
+        """Archived nodes of the columns that steps have removed.
+
+        In removal order. Each node has ``removed_by`` set to the id of the step
+        that dropped it.
+        """
+        return list(self._history)
+
+    def summary(self, include_removed: bool = False) -> DataFrame:
+        """The lineage as a tidy frame.
+
+        With ``include_removed=True``, removed columns are appended and
+        ``parents`` and ``removed_by`` columns are added.
 
         Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse``: one row
         per live column, in frame order. ``dtype`` is the taxonomy category
@@ -384,6 +396,8 @@ class Lineage:
         ```
         """
         nodes = list(self._live.values())
+        if include_removed:
+            nodes += self._history
         data: dict[str, list[Any]] = {
             "name": [n.name for n in nodes],
             "dtype": [_frame.dtype_category(n.dtype) for n in nodes],
@@ -391,6 +405,9 @@ class Lineage:
             "source": [n.source for n in nodes],
             "sparse": [n.sparse for n in nodes],
         }
+        if include_removed:
+            data["parents"] = [", ".join(n.parent_cols) for n in nodes]
+            data["removed_by"] = [n.removed_by for n in nodes]
         return nw.from_dict(data, backend="polars").to_native()
 
     def columns_from_source(self, step_id: str) -> list[str]:

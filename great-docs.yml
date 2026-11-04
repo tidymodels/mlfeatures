@@ -200,6 +200,7 @@ reference:
     contents:
       - name: Lineage
         members: false
+      - Lineage.removed
       - Lineage.summary
       - Lineage.columns_from_source
       - Lineage.parents
