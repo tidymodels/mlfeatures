@@ -1,20 +1,21 @@
 """The column-lineage DAG.
 
-The recipe maintains an internal **column-lineage DAG** (not a flat table)
-that is updated after each step's ``fit()``. R
-``recipes`` used a flat ``var_info`` / ``term_info`` table, which made
-provenance impossible and caused years of issues. A DAG instead records, per
-column, where it came from and how its dtype evolved, so that provenance
-queries (``has_source``, ancestry) resolve and ``recipe.summary()`` can report
-the live lineage.
+A recipe records, for every column, where it came from and how its dtype
+changed along the way. The record is a **column-lineage DAG** rather than a
+flat table: each column is a node, and an edge points from a produced column to
+the columns it was built from. It is updated after each step's ``fit()``, so a
+fitted recipe can answer provenance questions (which step produced this
+column, which original columns does it descend from) and report the live
+lineage through ``summary()``.
 
-This module defines the structure (`ColumnNode`, `Lineage`) and its initial
-construction from a frame. The ``update()`` step-application logic, ``summary()``
-and the provenance queries land in later commits of issue #19.
+This module defines the structure (`ColumnNode`, `Lineage`), its construction
+from a frame, the update applied after each step, and the provenance queries
+(``summary``, ``columns_from_source``, ``parents``, ``ancestors``).
 
 The DAG is **recipe-side state**: it is not handed to steps (steps receive a
 `mlfeatures.types.SchemaInfo`, which only needs roles). It is consumed by
-``recipe.summary()``, provenance queries, and the ``has_source`` selector.
+``recipe.summary()``, the provenance queries, and the ``has_source`` and
+``has_ancestor`` selectors.
 """
 
 from __future__ import annotations
@@ -37,10 +38,11 @@ __all__ = ["ColumnNode", "Lineage"]
 class ColumnNode:
     """One column's lineage record.
 
-    A node is mutable: an in-place step (e.g. ``step_normalize``) updates
+    A node is mutable: an in-place step (e.g. `StepNormalize`) updates
     ``dtype`` and appends to ``dtype_history`` without creating a new node, and
     a step that drops a column sets ``removed_by`` and the node is archived
-    rather than discarded, so ancestry still resolves through it.
+    rather than discarded, so ancestry still resolves through it. Live nodes
+    are read with ``lineage["name"]``; archived ones through `Lineage.removed`.
 
     Attributes
     ----------
@@ -49,14 +51,15 @@ class ColumnNode:
     dtype
         Current narwhals dtype (may change across steps).
     roles
-        Current role labels.
+        Current role names, as a set (unordered).
     source
         Which step *produced* this column: ``"original"`` for an input column,
         otherwise the producing step's ``id``. An in-place transform does not
         change ``source``: it does not *produce* a column.
     parent_cols
         The input column name(s) this column descends from. Empty for original
-        columns and for parent-less produced columns (e.g. ``step_intercept``).
+        columns and for parent-less produced columns (e.g. those added by
+        `StepIntercept`).
     dtype_history
         The dtype trajectory: the creation dtype followed by an entry for each
         step that *changed* the dtype (not one per step boundary).
@@ -68,16 +71,38 @@ class ColumnNode:
 
     Examples
     --------
-    Nodes are read off a fitted recipe's `Lineage` by column name:
+    Nodes are read off a fitted recipe's `Lineage` by column name. Here a
+    numeric column is normalized in place, and `StepDummy` then expands a
+    categorical column:
 
     ```{python}
-    import pandas as pd
-    from mlfeatures import Recipe, StepDummy
+    from mlfeatures import Recipe, StepNormalize, StepDummy
     from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
 
-    df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-    node = Recipe().add(StepDummy(s.nominal_features())).fit(df).lineage["color_red"]
+    recipe = (
+        Recipe(target="Status")
+        .add(StepNormalize(s.numeric_features()))
+        .add(StepDummy(s.nominal_features()))
+    )
+    fitted = recipe.fit(credit)
+    lineage = fitted.lineage
+    node = lineage["Home_rent"]
     node.name, node.source, node.parent_cols
+    ```
+
+    ``Age`` was normalized in place, so it is still an ``"original"`` column
+    but its dtype history records the integer to float cast:
+
+    ```{python}
+    lineage["Age"].source, lineage["Age"].dtype_history
+    ```
+
+    ``Home`` was consumed by the dummy step, so it is archived with
+    ``removed_by`` set:
+
+    ```{python}
+    [(n.name, n.removed_by) for n in lineage.removed if n.name == "Home"]
     ```
     """
 
@@ -94,12 +119,16 @@ class ColumnNode:
 class Lineage:
     """The column-lineage DAG: live columns plus archived removed columns.
 
-    ``_live`` maps each current column name to its `ColumnNode`, in frame
-    order. ``_history`` retains the nodes of columns that have been removed, so
+    The *live* columns are the ones currently in the frame, in frame order.
+    Columns a step has removed are *archived* rather than discarded, so
     provenance can be traced *through* a dropped intermediate (e.g. a dummy
-    column back to the categorical it replaced). Together they form the DAG;
-    ``columns`` / ``dtypes`` and (later) ``summary()`` expose only the live
-    view, while the provenance queries also consult history.
+    column back to the categorical it replaced).
+
+    ``lineage["name"]`` returns a live `ColumnNode`, ``"name" in lineage`` and
+    ``len(lineage)`` look only at live columns, and ``columns`` and ``dtypes``
+    expose the live names and dtypes. ``removed`` lists the archived nodes.
+    ``parents`` and ``ancestors`` also resolve archived columns; asking for a
+    column that never existed raises ``KeyError``.
 
     Build the initial DAG with `from_frame`; the recipe then calls ``update()``
     after each step to keep it in sync with the transformed frame.
@@ -107,56 +136,51 @@ class Lineage:
     Examples
     --------
     The DAG is built by the recipe; read it back from ``FittedRecipe.lineage``.
-    Here a small pipeline imputes a missing value, rescales the numerics, and
-    dummy-encodes a categorical, composed step by step with ``.add()``:
+    Here a small pipeline imputes missing values, rescales the numerics, and
+    dummy-encodes the categoricals, composed step by step with ``.add()``:
 
     ```{python}
-    import pandas as pd
     from mlfeatures import Recipe, StepImputeMean, StepNormalize, StepDummy
     from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
 
-    df = pd.DataFrame(
-        {
-            "age": [25, 41, 33, 52],
-            "income": [50000.0, None, 62000.0, 88000.0],
-            "city": ["NYC", "LA", "NYC", "SF"],
-        }
-    )
-    lineage = (
-        Recipe()
+    recipe = (
+        Recipe(target="Status")
         .add(StepImputeMean(s.numeric_features()))
         .add(StepNormalize(s.numeric_features()))
         .add(StepDummy(s.nominal_features()))
-        .fit(df)
-        .lineage
     )
+    fitted = recipe.fit(credit)
+    lineage = fitted.lineage
     lineage.summary()
     ```
 
-    ``age`` stayed in place through both numeric steps, so its ``source`` is
-    still ``"original"``, but ``dtype_history`` records the int → float cast
-    that ``StepNormalize`` applied:
+    ``Age`` stayed in place through the numeric steps, so its ``source`` is
+    still ``"original"``, but ``dtype_history`` records the integer to float
+    cast that `StepNormalize` applied:
 
     ```{python}
-    lineage["age"].source, lineage["age"].dtype_history
+    lineage["Age"].source, lineage["Age"].dtype_history
     ```
 
-    ``city`` was expanded into indicators and dropped. ``columns_from_source``
-    grabs everything a step produced; ``ancestors`` traces an indicator back
-    through the now-removed ``city`` column:
+    ``Home`` was expanded into indicators and dropped. ``columns_from_source``
+    grabs everything a step produced:
 
     ```{python}
     lineage.columns_from_source("dummy")
     ```
 
+    ``ancestors`` traces an indicator back through the now-removed ``Home``
+    column:
+
     ```{python}
-    lineage.ancestors("city_NYC")
+    lineage.ancestors("Home_rent")
     ```
     """
 
-    #: The node for each column currently in the frame, keyed by column name.
+    # Node for each column currently in the frame, keyed by name, in frame order.
     _live: dict[str, ColumnNode]
-    #: Every node ever created, in creation order, including removed columns.
+    # Nodes of removed columns, in removal order.
     _history: list[ColumnNode]
 
     def __init__(self) -> None:
@@ -350,49 +374,62 @@ class Lineage:
         """Archived nodes of the columns that steps have removed.
 
         In removal order. Each node has ``removed_by`` set to the id of the step
-        that dropped it.
+        that dropped it. These are the intermediates that `parents` and
+        `ancestors` trace through; a column dropped and later re-created under
+        the same name appears here once per removal.
         """
         return list(self._history)
 
     def summary(self, include_removed: bool = False) -> DataFrame:
         """The lineage as a tidy frame.
 
-        With ``include_removed=True``, removed columns are appended and
-        ``parents`` and ``removed_by`` columns are added.
-
         Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse``: one row
-        per live column, in frame order. ``dtype`` is the taxonomy category
-        (``"float"``, ``"categorical_unordered"``, …) from
-        `mlfeatures._frame.dtype_category`; ``roles`` is the sorted role set joined
-        with ``", "``. Built on the polars backend and returned native.
+        per live column, in frame order. ``dtype`` is the dtype category
+        (``"float"``, ``"int"``, ``"str"``, ``"categorical_unordered"``, ...) and
+        ``roles`` is the sorted role set joined with ``", "``.
+
+        The result is always a polars ``DataFrame``, whatever backend the
+        recipe was fitted on.
+
+        Parameters
+        ----------
+        include_removed
+            If ``True``, append a row for each removed column (in removal
+            order) and add two columns: ``parents``, the immediate parent
+            columns joined with ``", "``, and ``removed_by``, the id of the step
+            that dropped the column (null for live columns). Default ``False``.
 
         Examples
         --------
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
 
-        df = pd.DataFrame(
-            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
-        )
-        lineage = (
-            Recipe()
+        recipe = (
+            Recipe(target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
-            .lineage
         )
+        fitted = recipe.fit(credit)
+        lineage = fitted.lineage
         ```
 
-        One row per live column, mixing the normalized ``age`` (source
+        One row per live column, mixing the normalized numerics (source
         ``"original"``, now ``float``) with the dummy indicators (source
         ``"dummy"``):
 
         ```{python}
         lineage.summary()
+        ```
+
+        With ``include_removed=True`` the dropped categoricals appear too, along
+        with each column's parents:
+
+        ```{python}
+        lineage.summary(include_removed=True)
         ```
         """
         nodes = list(self._live.values())
@@ -413,28 +450,39 @@ class Lineage:
     def columns_from_source(self, step_id: str) -> list[str]:
         """Live columns produced by the step with ``id == step_id``.
 
-        The primitive behind the ``has_source(step_id)`` selector (#20). Pass
-        ``"original"`` for the input columns that survive to the live lineage.
+        This is what the ``has_source`` selector resolves to. A step's ``id`` is
+        the one passed to it, or by default the step type's short name
+        (``"dummy"`` for `StepDummy`); a second step of the same type in one
+        recipe becomes ``"dummy_2"``.
+
+        Parameters
+        ----------
+        step_id
+            The producing step's ``id``, or ``"original"`` for the input columns
+            that survive to the live lineage.
+
+        Returns
+        -------
+        list of str
+            Matching column names in frame order; empty if the step produced no
+            live column or no step has that id.
 
         Examples
         --------
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
 
-        df = pd.DataFrame(
-            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
-        )
-        lineage = (
-            Recipe()
+        recipe = (
+            Recipe(target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
-            .lineage
         )
+        fitted = recipe.fit(credit)
+        lineage = fitted.lineage
         ```
 
         Select every column a step produced (the dummy indicators):
@@ -443,8 +491,9 @@ class Lineage:
         lineage.columns_from_source("dummy")
         ```
 
-        ``"original"`` picks the inputs that survive to the output (``age`` is
-        still here; ``city`` was consumed by the dummy step):
+        ``"original"`` picks the inputs that survive to the output (the numerics
+        and the target are still here; the categoricals were consumed by the
+        dummy step):
 
         ```{python}
         lineage.columns_from_source("original")
@@ -455,23 +504,39 @@ class Lineage:
     def parents(self, name: str) -> list[str]:
         """Immediate parent columns of ``name`` (live or archived).
 
+        Parameters
+        ----------
+        name
+            A column that is live or has been removed.
+
+        Returns
+        -------
+        list of str
+            The columns ``name`` was built from; empty for an original column.
+
+        Raises
+        ------
+        KeyError
+            If no column called ``name`` ever existed.
+
         Examples
         --------
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
 
-        df = pd.DataFrame({"color": ["red", "green", "blue", "red"]})
-        lineage = Recipe().add(StepDummy(s.nominal_features())).fit(df).lineage
+        recipe = Recipe(target="Status").add(StepDummy(s.nominal_features()))
+        fitted = recipe.fit(credit)
+        lineage = fitted.lineage
         ```
 
         Each indicator's immediate parent is the column it was encoded from:
 
         ```{python}
-        lineage.parents("color_green")
+        lineage.parents("Home_rent")
         ```
         """
         node = self._node(name)
@@ -483,49 +548,54 @@ class Lineage:
         """All columns ``name`` descends from, transitively.
 
         Walks ``parent_cols`` through archived nodes too, so a column traces
-        back through removed intermediates (e.g. a reduced component back to a
-        dummy column back to the categorical it replaced). Cycles (which a DAG
-        should never contain) are guarded against defensively.
+        back through removed intermediates (e.g. a polynomial term back to a
+        distance column back to the numeric features it was computed from). The
+        result is an unordered set; wrap it in ``sorted()`` for stable display.
+
+        Parameters
+        ----------
+        name
+            A column that is live or has been removed.
+
+        Returns
+        -------
+        set of str
+            Every column ``name`` descends from; empty for an original column.
+
+        Raises
+        ------
+        KeyError
+            If no column called ``name`` ever existed.
 
         Examples
         --------
         ``ancestors`` walks the whole chain, even through columns that later
-        steps removed. Here ``StepClassDistance`` builds ``distance_0`` from the
-        features ``x`` and ``y``, then ``StepPolynomial`` consumes ``distance_0``
-        and expands it into ``distance_0_1`` / ``distance_0_2``:
+        steps removed. Here `StepClassDistance` builds ``distance_good`` from
+        the numeric features, then `StepPolynomial` consumes ``distance_good``
+        and expands it into polynomial terms:
 
         ```{python}
-        #| echo: false
-        #| output: false
-        import pandas as pd
-        from mlfeatures import Recipe, StepClassDistance, StepPolynomial
+        from mlfeatures import Recipe, StepImputeMean, StepClassDistance
+        from mlfeatures import StepPolynomial
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
 
-        df = pd.DataFrame(
-            {
-                "x": [1.0, 2.0, 5.0, 9.0],
-                "y": [2.0, 1.0, 8.0, 7.0],
-                "cls": [0, 0, 1, 1],
-            }
+        recipe = (
+            Recipe(target="Status")
+            .add(StepImputeMean(s.numeric_features()))
+            .add(StepClassDistance(s.numeric_features(), target="Status"))
+            .add(StepPolynomial(s.col("distance_good"), degree=2))
         )
-        lineage = (
-            Recipe()
-            .add(
-                StepClassDistance(
-                    s.numeric_features() - s.col("cls"), target="cls"
-                )
-            )
-            .add(StepPolynomial(s.col("distance_0"), degree=2))
-            .fit(df)
-            .lineage
-        )
+        fitted = recipe.fit(credit)
+        lineage = fitted.lineage
+        lineage.columns
         ```
 
-        ``distance_0_1`` traces back through the now-removed ``distance_0`` to
-        the original features it was built from:
+        A polynomial term traces back through the now-removed ``distance_good``
+        to the original features it was built from:
 
         ```{python}
-        sorted(lineage.ancestors("distance_0_1"))
+        sorted(lineage.ancestors("distance_good_1"))
         ```
         """
         result: set[str] = set()
