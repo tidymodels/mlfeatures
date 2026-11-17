@@ -644,7 +644,54 @@ class Recipe:
 
 
 class FittedRecipe:
-    """A fitted pipeline: applies stored statistics to new data."""
+    """A trained pipeline: applies statistics learned at fit time to new data.
+
+    A `FittedRecipe` is what `Recipe.fit()` returns. It contains all the information
+    it needs to be able to apply the transformations to new data:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, StepDummy
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = (
+        Recipe(data=credit, target="Status")
+        .add(StepNormalize(s.numeric_features()))
+        .add(StepDummy(s.nominal_features()))
+    )
+    fitted = recipe.fit(credit)
+    ```
+
+    The `repr` shows the columns each step resolved to:
+
+    ```{python}
+    fitted
+    ```
+
+    Use `transform()` to apply the recipe to new data and `summary()` to
+    inspect the resulting columns. A trained recipe can be saved and restored
+    with `to_json()` and `from_json()` (or the `dict` and YAML equivalents).
+
+    Attributes
+    ----------
+    steps
+        The trained steps, in the order they run.
+    roles
+        The role assignments after fitting, including any columns the steps
+        added.
+    lineage
+        How each output column was derived from the input columns, as a
+        `Lineage`, or ``None`` if the recipe was built without one.
+    schema
+        The `Schema` of the training data, which `transform()` checks new
+        data against, or ``None`` if the recipe was built without one.
+    """
 
     def __init__(
         self,
@@ -655,11 +702,11 @@ class FittedRecipe:
     ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
-        #: The post-all-steps column-lineage DAG, or
-        #: ``None`` if the recipe was constructed without one.
+        #: The column lineage after all steps have run, or ``None`` if the
+        #: recipe was constructed without one.
         self.lineage = lineage
-        #: The training-data schema snapshot used to
-        #: validate new data in ``transform()``, or ``None`` if absent.
+        #: A snapshot of the training-data schema, used to validate new data
+        #: in ``transform()``, or ``None`` if absent.
         self.schema = schema
 
     def __repr__(self) -> str:
@@ -728,7 +775,13 @@ class FittedRecipe:
         return serialization.from_yaml(text, trusted=trusted)
 
     def minimize(self) -> "FittedRecipe":
-        """Return a copy with fit-only artifacts stripped. See `mlfeatures.serialization`."""
+        """Return a smaller copy that keeps only what `transform()` needs.
+
+        Anything a step stored purely for inspection after fitting, rather
+        than for applying it to new data, is dropped. The copy transforms new
+        data identically; the original is left unchanged. See
+        `mlfeatures.serialization`.
+        """
         from mlfeatures import serialization
 
         return serialization.minimize(self)
@@ -751,39 +804,52 @@ class FittedRecipe:
         return self
 
     def transform(self, data: DataFrame) -> DataFrame:
-        """Apply each fitted step in order, skipping ``RowOp`` and identity steps.
+        """Apply each trained step, in order, to new data.
 
-        ``RowOp`` steps never run on new data; steps whose primary selection
-        resolved to zero columns at fit time (``_empty_selection``) are the
-        identity transform and pass the frame through unchanged. Both are
-        skipped here, structurally, by inspecting the step rather than by any
-        per-step convention. Never re-estimates. Returns a native frame at the
-        sklearn boundary.
+        Every step applies the statistics stored at fit time. Steps that only
+        act on training samples (such as row filters) are skipped, as are steps
+        whose selection matched no columns. The result is a frame of the same
+        type as ``data``.
+
+        Parameters
+        ----------
+        data
+            The frame to transform. Its columns and dtypes must match the
+            training data; a mismatch raises an error naming the difference.
+
+        Raises
+        ------
+        StepError
+            If a step fails while transforming; the error names the step and
+            the columns it was working on.
 
         Examples
         --------
-        ``transform()`` applies the fitted statistics to new data, returning a
-        native frame with the same schema the recipe learned at fit time:
+        ``transform()`` applies the trained recipe to new data, returning a
+        frame with the columns the recipe learned at fit time:
 
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
         ```
 
         ```{python}
-        df = pd.DataFrame(
-            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
-        )
-        fitted = (
-            Recipe()
+        recipe = (
+            Recipe(data=credit, target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
         )
-        fitted.transform(df)
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
+        result = fitted.transform(credit.head(5))
+        result
         ```
         """
         # A deserialized recipe may be transformed in an environment that lacks
@@ -806,32 +872,43 @@ class FittedRecipe:
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
-        """The fitted (post-all-steps) lineage as a tidy frame.
+        """The columns the recipe produces, as a tidy frame.
+
+        One row per output column, with its dtype, role, and the step that
+        created it (``"original"`` for columns passed through from the input).
+
+        Raises
+        ------
+        RuntimeError
+            If the recipe was constructed without a lineage.
 
         Examples
         --------
-        After fitting, the summary reflects the transformed schema: ``city`` has
-        been expanded into dummy indicators (source ``"dummy"``) while the
-        normalized ``age`` keeps its feature role:
+        After fitting, the summary reflects the transformed columns: the
+        nominal columns have been expanded into dummy indicators (source
+        ``"dummy"``) while the normalized numeric columns keep their feature
+        role:
 
         ```{python}
-        import pandas as pd
+        #| echo: false
+        #| output: false
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
 
-        df = pd.DataFrame(
-            {
-                "price": [10.0, 22.5, 7.0, 30.0],
-                "age": [25, 41, 33, 52],
-                "city": ["NYC", "LA", "NYC", "SF"],
-            }
-        )
-        fitted = (
-            Recipe(data=df, target="price", features=["age", "city"])
+        credit = credit.drop_nulls()
+        ```
+
+        ```{python}
+        recipe = (
+            Recipe(data=credit, target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
         )
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
         fitted.summary()
         ```
         """
