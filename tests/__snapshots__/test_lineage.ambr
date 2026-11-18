@@ -12,7 +12,7 @@
   "step 'reduce' produces column(s) ['h'] that already exist in the lineage; output column names must be unique"
 # ---
 # name: test_update_rejects_undeclared_produced_column
-  "step 'reduce': declared produced columns ['pc1'] do not match the columns it added to the frame ['pc1', 'pc2']"
+  "step 'reduce': declared produced columns ['pc1'] do not match the columns it added to the data frame ['pc1', 'pc2']"
 # ---
 # name: test_update_rejects_unknown_parent
   "step 'reduce' declares parent column(s) ['ghost'] that are not in the lineage"
