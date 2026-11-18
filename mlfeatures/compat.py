@@ -1,9 +1,10 @@
 """scikit-learn interoperability.
 
-A trained recipe should drop into
+Why: so feature engineering is fitted, cross-validated, and tuned together with
+the model, without leaking information from held-out data. A recipe should drop into
 `sklearn.pipeline.Pipeline` as a single transformer. `RecipeTransformer`
-is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
-without re-implementing it.
+is that bridge: it wraps an untrained `Recipe` and drives its ``fit`` /
+``transform`` lifecycle from sklearn's API without re-implementing it.
 
 The adapter resolves one impedance mismatch between the two worlds. mlfeatures fits on a *single*
 data frame in which the target is identified by its ``"target"`` role; sklearn calls
@@ -55,30 +56,72 @@ def _visual_block_class() -> Any:
 class RecipeTransformer(BaseEstimator, TransformerMixin):
     """Wrap a `Recipe` as a scikit-learn transformer.
 
+    Use it to put a recipe in front of any scikit-learn model, so the feature
+    engineering is trained, cross-validated, and tuned together with the model
+    instead of being applied by hand beforehand.
+
     Usable as a single step in a `sklearn.pipeline.Pipeline`:
 
     ```python
-    from mlfeatures.compat import RecipeTransformer
+    from mlfeatures import RecipeTransformer
 
     pipe = Pipeline([
-        ("recipe", RecipeTransformer(rec)),
+        ("recipe", RecipeTransformer(recipe)),
         ("model", LogisticRegression()),
     ])
     pipe.fit(X_train, y_train)
     ```
 
-    The recipe is stored verbatim so that `sklearn.base.clone()` (and therefore
-    cross-validation / grid search) round-trips correctly; `Recipe` is immutable, so
-    this is safe.
+    The wrapped recipe is untrained: ``fit()`` trains it, and ``transform()``
+    applies the trained result. The recipe is stored verbatim so that
+    `sklearn.base.clone()` (and therefore cross-validation / grid search)
+    round-trips correctly; `Recipe` is immutable, so this is safe.
 
     Step hyperparameters are tunable through sklearn's nested parameter names,
     keyed on step ``id``: ``recipe__<step id>__<parameter>``, for example
-    ``GridSearchCV(pipe, {"prep__recipe__corr__threshold": [0.8, 0.9]})``. A
-    step's ``id`` and ``columns`` are not tunable.
+    ``GridSearchCV(pipe, {"recipe__recipe__corr__threshold": [0.8, 0.9]})``
+    when the transformer is named ``"recipe"`` in the pipeline. A step's ``id``
+    and ``columns`` are not tunable.
 
     It implements `get_feature_names_out()` and therefore composes inside a
     `sklearn.compose.ColumnTransformer` and supports
     ``set_output(transform="pandas" | "polars")``.
+
+    **Target handling.** sklearn keeps ``X`` and ``y`` apart, while a recipe
+    identifies the target by its ``"target"`` role. At fit time ``y`` is joined
+    onto ``X`` under the recipe's target column name, and ``transform()``
+    returns the feature columns only, with the target column removed. Passing
+    ``y`` to a recipe with no ``"target"`` role raises a ``ValueError``, as does
+    a recipe with more than 1 target column. A step that reads the target
+    column also raises a ``ValueError`` at fit time, because sklearn's
+    ``transform()`` never receives ``y``; transform the target outside the
+    pipeline instead (for example with
+    ``sklearn.compose.TransformedTargetRegressor``). With no ``y`` (an
+    unsupervised recipe), ``X`` is used as given.
+
+    Parameters
+    ----------
+    recipe
+        The untrained recipe to wrap. Required.
+
+    Attributes
+    ----------
+    recipe
+        The untrained recipe passed to the constructor.
+    fitted_
+        The trained recipe; set by ``fit()``.
+    feature_names_in_
+        Column names of the ``X`` seen by ``fit()``.
+    n_features_in_
+        Number of columns of the ``X`` seen by ``fit()``.
+    feature_names_out_
+        Column names of the output of ``transform()``.
+
+    Raises
+    ------
+    NotFittedError
+        If ``transform()`` or ``get_feature_names_out()`` is called before
+        ``fit()``.
 
     Examples
     --------
@@ -90,11 +133,11 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     import pandas as pd
     from mlfeatures import Recipe, StepNormalize, StepDummy
     from mlfeatures import Selectors as s
-    from mlfeatures.compat import RecipeTransformer
+    from mlfeatures import RecipeTransformer
     ```
 
     ```{python}
-    X = pd.DataFrame(
+    X =pd.DataFrame(
         {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
     )
     rec = (
@@ -121,6 +164,8 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     fitted_: FittedRecipe
     #: Column names seen by ``fit()``, following sklearn's ``feature_names_in_``.
     feature_names_in_: list[str]
+    #: Number of columns seen by ``fit()``, following sklearn's ``n_features_in_``.
+    n_features_in_: int
     #: Column names the fitted recipe produces; cached by ``fit()``.
     feature_names_out_: list[str]
 
@@ -200,6 +245,7 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         self.fitted_ = self.recipe.fit(data)
         self._check_no_target_steps()
         self.feature_names_in_ = list(_frame.columns(_frame.from_native(X)))
+        self.n_features_in_ = len(self.feature_names_in_)
         # Output column names are fixed at fit time (the transform is deterministic),
         # so cache them for get_feature_names_out / set_output. Compute via the fitted
         # recipe directly rather than self.transform, whose set_output wrapper would
@@ -225,6 +271,8 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         ``input_features`` is accepted for sklearn-API compatibility but ignored: the
         output names are determined by the recipe, not the caller. Enables
         `ColumnTransformer` composition and ``set_output``.
+
+        Raises ``NotFittedError`` before ``fit()``.
         """
         if not hasattr(self, "feature_names_out_"):
             raise NotFittedError(

@@ -17,7 +17,11 @@ have it installed.
 > `pyproject.toml` still lists these libraries as required dependencies. Both
 > are being migrated incrementally — adopt the patterns below in new or
 > touched steps; we are intentionally *not* rewriting every step in one pass, to
-> avoid merge conflicts with in-flight step work.
+> avoid merge conflicts with in-flight step work. The scikit-learn adapter
+> below is one of the pieces not yet migrated: `RecipeTransformer` currently
+> imports `sklearn` at module top level, and `scikit-learn` is a required
+> dependency in `pyproject.toml`. The guarded-import example shows the target
+> pattern, not today's code.
 
 ## The two tools
 

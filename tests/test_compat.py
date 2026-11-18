@@ -52,6 +52,11 @@ class TestRoundTrip:
         rt = RecipeTransformer(_supervised_recipe()).fit(X, y)
         assert rt.feature_names_in_ == ["x1", "x2"]
 
+    def test_n_features_in_recorded(self) -> None:
+        X, y = _X_y()
+        rt = RecipeTransformer(_supervised_recipe()).fit(X, y)
+        assert rt.n_features_in_ == 2
+
 
 class TestAssemble:
     def test_unsupervised_recipe_passes_through(self) -> None:

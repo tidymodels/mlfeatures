@@ -55,10 +55,10 @@ Sparse output format: `scipy.sparse`, mirroring `sparsevctrs` in R.
 
 ## Sklearn adapter
 
-A trained `Recipe` exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
+`RecipeTransformer` wraps an untrained `Recipe` and exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
 
 ```python
-from mlfeatures.compat import RecipeTransformer
+from mlfeatures import RecipeTransformer
 
 pipe = Pipeline([
     ("recipe", RecipeTransformer(rec)),
@@ -68,6 +68,8 @@ pipe.fit(X_train, y_train)
 ```
 
 This is the bridge to the existing Python ML ecosystem. The adapter wraps the `fit` / `transform` lifecycle; it does not re-implement it.
+
+sklearn keeps `X` and `y` apart, while a recipe identifies the target by its `"target"` role. The adapter joins `y` onto `X` under the recipe's target column name at fit time and drops the target column from `transform()` output, so it returns features only. It rejects `y` when the recipe has no target role, recipes with more than one target column, and any fitted step that reads the target column (sklearn's `transform()` never receives `y`; transform the target outside the pipeline, e.g. with `TransformedTargetRegressor`). After `fit` it sets `fitted_`, `feature_names_in_`, `n_features_in_` and caches the output names for `get_feature_names_out()` and `set_output`.
 
 ### Tuning
 
