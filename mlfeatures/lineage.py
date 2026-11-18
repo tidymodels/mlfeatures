@@ -298,7 +298,7 @@ class Lineage:
         """Fold one fitted, transformed step into the DAG.
 
         Called by the recipe after ``step.fit()`` and (for non-``RowOp`` steps)
-        ``step.transform()``. The algorithm is **data-frame-driven**: the
+        ``step.transform()``. The algorithm is **driven by the data frame**: the
         transformed data frame is the source of truth for which columns now exist, their order,
         and their dtypes, while ``step.output_parents()`` is the source of truth
         for the provenance of any *new* columns. ``step.mode`` is not consulted;

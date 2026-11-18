@@ -20,7 +20,7 @@ class StepDrop(ColumnDropStep):
 
     Every column the selector matches is dropped, and no new columns are
     produced. Nothing is estimated: which columns to drop is decided by the
-    selector alone, fixed against the training frame's schema. To drop columns
+    selector alone, fixed against the training data frame's schema. To drop columns
     by a data-driven rule instead, see `StepDropCorr`, `StepDropZeroVariance`
     or `StepDropNearZeroVariance`.
 
@@ -37,7 +37,7 @@ class StepDrop(ColumnDropStep):
         mlfeatures selector such as ``Selectors.features()`` (see `Selectors` for the
         full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Any dtype is
         accepted.
     id

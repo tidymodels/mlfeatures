@@ -53,7 +53,7 @@ Known limitations
 - ``Datetime`` (time-unit, time zone) and ``Duration`` (time-unit) *do*
   round-trip their parameters (see `_encode_dtype_instance` /
   `_decode_dtype_instance`) -- `StepDatetimeFeatures`'s conformance suite
-  depends on it: a pandas frame's nanosecond-precision ``Datetime`` must still
+  depends on it: a pandas data frame's nanosecond-precision ``Datetime`` must still
   match the schema snapshot after a JSON round-trip.
 - Raw polars / narwhals selectors are not serializable. Only mlfeatures `Selectors`
   and plain name lists are; a native selector raises a clear ``TypeError``.

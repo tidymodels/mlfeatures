@@ -7,7 +7,7 @@ format:
 
 A `Recipe` is a pre-processing pipeline with three phases. You **specify** it
 as a sequence of steps, **fit** it to training data, and **transform** any
-frame with what it learned.
+data frame with what it learned.
 
 ::: {.callout-note collapse="true" title="Key points"}
 * Steps operate on DataFrames, using polars selectors to choose columns to operate on.
@@ -63,8 +63,8 @@ and it is what lets a scikit-learn pipeline hand the recipe its `y` later.
 `data=` lets the recipe check column names as steps are added.
 
 ::: {.callout-tip title="Exploring with polars"}
-Importing `mlfeatures.polars` registers a `mlf` accessor on polars frames, and
-every step becomes a `.mlf.step_*()` call that fits on the frame and applies
+Importing `mlfeatures.polars` registers a `mlf` accessor on polars data frames, and
+every step becomes a `.mlf.step_*()` call that fits on the data frame and applies
 right there:
 
 ```python
@@ -79,7 +79,7 @@ result = (
 ```
 
 That is convenient while exploring, but the estimates are gone as soon as
-the frame is. A recipe keeps them, so the same medians, modes, and means
+the data frame is. A recipe keeps them, so the same medians, modes, and means
 can be applied to any other frame. See
 [With polars extension (.mlf)](../polars-extension.qmd).
 :::
@@ -89,7 +89,7 @@ can be applied to any other frame. See
 `recipe.fit(training_data)` runs the steps in order, and each step estimates
 what it needs from the data as it goes: the medians, the modes, the levels
 of each string column, the means and standard deviations. Fitting also
-transforms the training frame step by step, so each selector is resolved
+transforms the training data frame step by step, so each selector is resolved
 against the output of the step before it.
 
 ```{python}
@@ -104,7 +104,7 @@ resolved after it, picked those up along with the original numerics.
 
 ## Transforming test data
 
-`fitted.transform(frame)` applies the stored estimates to any frame with the
+`fitted.transform(frame)` applies the stored estimates to any data frame with the
 same columns and re-estimates nothing: the test set is filled with the
 training medians and modes and scaled by the training means.
 

@@ -6,7 +6,7 @@ is that bridge: it wraps the ``fit`` / ``transform`` lifecycle of `Recipe`
 without re-implementing it.
 
 The adapter resolves one impedance mismatch between the two worlds. mlfeatures fits on a *single*
-frame in which the target is identified by its ``"target"`` role; sklearn calls
+data frame in which the target is identified by its ``"target"`` role; sklearn calls
 ``fit(X, y=None)`` with features and target kept apart and expects ``transform`` to return the
 feature matrix only (``y`` flows around the transformer inside a pipeline). So this adapter
 re-joins ``y`` onto ``X`` under the recipe's target-role column name before fitting, and strips

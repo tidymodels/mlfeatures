@@ -48,7 +48,7 @@ This gives us the best of both worlds:
 
 ## `recipe.minimize()`
 
-Strips training artifacts that are not needed for `transform()` — for example, the KNN imputer's retained neighbor matrix. Available from day one. Steps that need training data at predict time (e.g. `step_impute_knn`) explicitly retain only the columns they need, not the whole frame.
+Strips training artifacts that are not needed for `transform()` — for example, the KNN imputer's retained neighbor matrix. Available from day one. Steps that need training data at predict time (e.g. `step_impute_knn`) explicitly retain only the columns they need, not the whole data frame.
 
 ---
 

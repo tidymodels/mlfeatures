@@ -7,7 +7,7 @@ output descends from the whole input set rather than a single source column.
 
 The *fit* half (`fit_pca()`) learns the centering mean and the component
 loadings from the training data via an SVD; the *apply* half (`apply_pca()`)
-reuses those statistics to project any frame onto the learned components: the
+reuses those statistics to project any data frame onto the learned components: the
 basis is never recomputed from new data, giving train/serve parity.
 `StepPca` wraps both into the `Step` lifecycle so a `Recipe` can fit and apply
 them.
@@ -86,7 +86,7 @@ def fit_pca(selected: Frame, num_comp: int) -> PcaFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the numeric columns to project.
-        Native frames are wrapped via `mlfeatures._frame.from_native()` at the
+        Native data frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
     num_comp
         Number of principal components to keep. Must be an ``int`` strictly
@@ -96,7 +96,7 @@ def fit_pca(selected: Frame, num_comp: int) -> PcaFit:
     Returns
     -------
     PcaFit
-        The fitted basis. Pair with `apply_pca()` to project a frame.
+        The fitted basis. Pair with `apply_pca()` to project a data frame.
 
     Raises
     ------
@@ -204,7 +204,7 @@ class StepPca(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     num_comp

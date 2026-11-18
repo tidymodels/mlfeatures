@@ -52,8 +52,8 @@ else:
         _backends = [("polars", "Expr")]
 
 
-#: The internal frame type that flows between steps. A backend-agnostic narwhals
-#: ``DataFrame`` wrapping the user's native frame; steps write their data ops
+#: The internal data frame type that flows between steps. A backend-agnostic narwhals
+#: ``DataFrame`` wrapping the user's native data frame; steps write their data ops
 #: against this via `mlfeatures._frame`.
 Frame: TypeAlias = nw.DataFrame[Any]
 
@@ -63,7 +63,7 @@ Frame: TypeAlias = nw.DataFrame[Any]
 #: narwhals or polars selector (``narwhals.selectors.numeric()``,
 #: ``polars.selectors.numeric()``). A polars column selection such as
 #: ``polars.col("a")`` is accepted too. Any selector is resolved against the
-#: frame's schema at fit time, so the same selector works on any backend.
+#: data frame's schema at fit time, so the same selector works on any backend.
 Selector: TypeAlias = Union[
     str, Sequence[str], NwSelector, "PlSelector", "PlExpr", "FeaturesSelector"
 ]
@@ -141,7 +141,7 @@ class SchemaInfo:
 
     Examples
     --------
-    Build a snapshot from a frame with `from_frame`; steps read ``columns``,
+    Build a snapshot from a data frame with `from_frame`; steps read ``columns``,
     ``dtypes``, and ``roles`` off it during ``fit()``:
 
     ```{python}

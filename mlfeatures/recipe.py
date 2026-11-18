@@ -4,7 +4,7 @@ A minimal, vertical-slice implementation of the ``specify → fit → transform`
 lifecycle. It exercises the step contract
 end to end and maintains the column-lineage DAG across
 ``fit()``. At ``fit()`` it snapshots the training data into a ``Schema`` and
-validates the incoming frame against it; the snapshot rides along on the
+validates the incoming data frame against it; the snapshot rides along on the
 ``FittedRecipe`` so ``transform()`` can re-check new data at the boundary before
 any step runs.
 
@@ -202,7 +202,7 @@ class Recipe:
         Steps to start from, equivalent to chaining `add()` once per step.
         Default ``None`` (no steps).
     data
-        A frame whose column names are used to check role assignments as soon
+        A data frame whose column names are used to check role assignments as soon
         as they are made, and which backs `summary()` before fitting. Nothing
         is estimated from it and it is never modified, so a small sample with
         the right columns is enough. Default ``None``.
@@ -222,7 +222,7 @@ class Recipe:
 
     #: The steps, in the order they run.
     steps: list[Step]
-    #: The optional prototype frame backs column-existence checks during role
+    #: The optional prototype data frame backs column-existence checks during role
     #: assignment and the pre-fit ``summary()``. It is never mutated, so
     #: clones share the reference. The lineage DAG is derived from it on
     #: demand rather than stored; see ``summary()``.
@@ -231,7 +231,7 @@ class Recipe:
     roles: Roles
     #: Pending transform-time requirement overrides, applied at ``fit()``.
     #: Each entry is a (target, transform_required) pair where target is a
-    #: role name or a selector resolved against the training frame.
+    #: role name or a selector resolved against the training data frame.
     _role_req_overrides: list[tuple[str | FeaturesSelector, bool]]
 
     def __init__(
@@ -258,7 +258,7 @@ class Recipe:
 
         Shows the declared role assignments and the steps with their unresolved
         selectors, each tagged ``[untrained]``. Column counts come from the
-        prototype frame when one was supplied; otherwise only the explicitly
+        prototype data frame when one was supplied; otherwise only the explicitly
         assigned roles are summarised. ``FittedRecipe`` has its own ``repr`` that
         shows resolved columns and the ``trained`` state instead.
         """
@@ -560,7 +560,7 @@ class Recipe:
         role
             A role name (e.g. ``"id"``), or a selector such as
             ``Selectors.starts_with("id_")`` resolved against the training
-            frame when the recipe is fitted. Passing ``"feature"`` or
+            data frame when the recipe is fitted. Passing ``"feature"`` or
             ``"target"`` raises ``ValueError``. A selector that happens to
             match a feature or target column leaves that column unchanged.
         transform_required
@@ -656,7 +656,7 @@ class Recipe:
         Parameters
         ----------
         data
-            The training frame.
+            The training data frame.
 
         Raises
         ------
@@ -721,12 +721,12 @@ class Recipe:
                 if col not in reserved:
                     live_roles.add(col, "feature")
         # Snapshot the training data into a schema and validate the incoming
-        # frame against it (all columns required at fit). The snapshot rides on
+        # data frame against it (all columns required at fit). The snapshot rides on
         # the FittedRecipe so transform() can re-check new data at the boundary.
         overrides = self._resolve_role_req_overrides(current, live_roles)
         schema = Schema.from_frame(current, live_roles, overrides)
         schema.check(current, context="fit")
-        # The column-lineage DAG, seeded from the training frame and updated
+        # The column-lineage DAG, seeded from the training data frame and updated
         # after each column-changing step. RowOp and
         # empty-selection steps make no schema change and are skipped below.
         lineage = Lineage.from_frame(current, live_roles)
@@ -1009,13 +1009,13 @@ class FittedRecipe:
 
         Every step applies the statistics stored at fit time. Steps that only
         act on training samples (such as row filters) are skipped, as are steps
-        whose selection matched no columns. The result is a frame of the same
+        whose selection matched no columns. The result is a data frame of the same
         type as ``data``.
 
         Parameters
         ----------
         data
-            The frame to transform. Its columns and dtypes must match the
+            The data frame to transform. Its columns and dtypes must match the
             training data; a mismatch raises an error naming the difference.
 
         Raises
@@ -1027,7 +1027,7 @@ class FittedRecipe:
         Examples
         --------
         ``transform()`` applies the trained recipe to new data, returning a
-        frame with the columns the recipe learned at fit time:
+        data frame with the columns the recipe learned at fit time:
 
         ```{python}
         #| echo: false

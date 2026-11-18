@@ -151,7 +151,7 @@ def fit_class_distance(
     # Drop rows where the target is null: a null value isn't a class, so it
     # can't contribute to any centroid. Filtering on the target side keeps the
     # rest of the function dealing only with rows that have a real label.
-    # We build a single-column frame so the standard ``drop_nulls()`` semantics
+    # We build a single-column data frame so the standard ``drop_nulls()`` semantics
     # apply, then read back the filtered indices via a boolean mask.
     target_np = target.to_numpy()
     # ``pd.isna`` would also work here; ``np.equal`` against itself catches NaN
@@ -161,7 +161,7 @@ def fit_class_distance(
     not_null = np.array([x is not None and not _is_nan(x) for x in target_np])
 
     # Pull the feature columns into a (n, p) float array. ``to_numpy()`` on a
-    # narwhals frame returns an ndarray with the columns in ``selected.columns``
+    # narwhals data frame returns an ndarray with the columns in ``selected.columns``
     # order, so the row index of the resulting centroid matrix maps 1-to-1 to
     # that list.
     x = _frame.to_float_array(selected)
@@ -272,7 +272,7 @@ def apply_class_distance(
     # *index*, which silently produces NaN when ``data`` has a non-default
     # index (e.g. after ``sklearn.train_test_split``). ``with_columns`` on a
     # series built with the same backend is positional, preserving the input
-    # frame's index.
+    # data frame's index.
     new_series = [
         nw.new_series(
             name=f"{prefix}_{cls}",
@@ -327,7 +327,7 @@ def _compute_distances(
     own way: square + sum + sqrt for Euclidean, abs + sum for Manhattan.
     """
     # Compute the (n, p, c) difference tensor once and reuse it. For very large
-    # n × p × c this is wasteful; with the small frames it's the clearest
+    # n × p × c this is wasteful; with the small data frames it's the clearest
     # expression of the math.
     diff = x[:, :, None] - centroids[None, :, :]
 
@@ -379,11 +379,11 @@ class StepClassDistance(Step):
         of names, a mlfeatures selector such as ``Selectors.numeric_features()``
         (see `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     target
-        Name of the column in the training frame that holds the target
+        Name of the column in the training data frame that holds the target
         classes. Read at fit time only; the column is *not* declared as an input
         feature in `schema_in()`.
     metric

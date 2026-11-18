@@ -5,7 +5,7 @@ toc: true
 
 Most steps take the same handful of arguments: `columns`, `keep_original_cols`, `role`, and `id`. Each step's reference page documents what *that* step does with them, which is the right place for the specifics. This page explains the concepts once: what a selector resolves to and when, what dropping a source column does to a recipe's column lineage, what a role is for, and why a step has an identifier at all.
 
-Every example below uses the same frame: three feature columns (two numeric, one nominal) and a numeric target.
+Every example below uses the same data frame: three feature columns (two numeric, one nominal) and a numeric target.
 
 ```{python}
 import pandas as pd
@@ -42,7 +42,7 @@ Passing an option positionally is a `TypeError` rather than a silent mis-assignm
 
 ## `columns`
 
-`columns` says which columns a step applies to. It accepts a single column name, a list of names, a mlfeatures selector, or a narwhals or polars selector. A selector is the form to reach for: it says what the step is *for* rather than naming today's columns, so it keeps working when the frame changes and when an earlier step in the recipe has already added or removed columns. See `Selectors` for the full set.
+`columns` says which columns a step applies to. It accepts a single column name, a list of names, a mlfeatures selector, or a narwhals or polars selector. A selector is the form to reach for: it says what the step is *for* rather than naming today's columns, so it keeps working when the data frame changes and when an earlier step in the recipe has already added or removed columns. See `Selectors` for the full set.
 
 ```{python}
 recipe = base.add(StepNormalize(s.numeric_features()))
@@ -50,7 +50,7 @@ fitted = recipe.fit(df)
 fitted.transform(df)
 ```
 
-The selector is resolved **once, at fit time**, against the training frame's schema. A fitted step holds the concrete column names it resolved to, and `transform()` applies itself to exactly those columns; it never re-resolves the selector against new data. This is what a fitted recipe's `repr` shows in place of the selector:
+The selector is resolved **once, at fit time**, against the training data frame's schema. A fitted step holds the concrete column names it resolved to, and `transform()` applies itself to exactly those columns; it never re-resolves the selector against new data. This is what a fitted recipe's `repr` shows in place of the selector:
 
 ```{python}
 fitted
@@ -70,7 +70,7 @@ fitted.transform(df)
 
 ## `keep_original_cols`
 
-Steps that *derive* new columns take `keep_original_cols`. It controls whether the columns the step consumed stay in the frame alongside the columns it produced. The default is `False`: the source columns are dropped.
+Steps that *derive* new columns take `keep_original_cols`. It controls whether the columns the step consumed stay in the data frame alongside the columns it produced. The default is `False`: the source columns are dropped.
 
 Only those steps take it. For every other kind of step there is one right answer, so the argument does not exist and the value is fixed: a step that edits its columns in place or drops them keeps nothing, and one that only adds columns or touches rows keeps everything. The value is settled when the step is constructed and cannot be reassigned afterwards.
 
@@ -110,7 +110,7 @@ What the live lineage does lose is the dropped columns' **roles**. A dropped sou
 
 ### Name collisions
 
-A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the frame for the new ones to clash with. The recipe checks the names *before* the step runs and raises if any of them is already taken, so the failure is the same on every backend rather than a backend-specific error (polars) or a silently dropped column (pandas).
+A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the data frame for the new ones to clash with. The recipe checks the names *before* the step runs and raises if any of them is already taken, so the failure is the same on every backend rather than a backend-specific error (polars) or a silently dropped column (pandas).
 
 ## `role`
 

@@ -2,7 +2,7 @@
 
 `step_filter` is the ``ROW_OP`` prototype,
 modelled on ``step_filter`` from the R ``recipes`` package. It is a `RowOp`, so
-it only ever takes effect on the **training** frame during ``fit()``; the
+it only ever takes effect on the **training** data frame during ``fit()``; the
 framework skips it structurally at ``transform()`` time on new data. This is exactly what "exercises skip-at-transform"
 means: a filter must not drop rows from the data being scored.
 
@@ -46,14 +46,14 @@ def apply_filter(selected: Frame, predicate: Predicate) -> Frame:
     Parameters
     ----------
     selected
-        Internal `Frame` (narwhals). Native frames are wrapped via
+        Internal `Frame` (narwhals). Native data frames are wrapped via
         `mlfeatures._frame.from_native()` at the recipe boundary.
     predicate
         Callable taking ``selected`` and returning a boolean narwhals
         expression or series, ``True`` for the rows to retain (``dplyr::filter``
-        / ``pl.DataFrame.filter`` semantics). The mask is built from the frame
+        / ``pl.DataFrame.filter`` semantics). The mask is built from the data frame
         it is applied to, so it works unchanged across backends and on 0-row and
-        1-row frames.
+        1-row data frames.
 
     Returns
     -------
@@ -81,7 +81,7 @@ class StepFilter(RowOp):
     Parameters
     ----------
     predicate
-        Callable taking the frame and returning a boolean narwhals expression or
+        Callable taking the data frame and returning a boolean narwhals expression or
         series, ``True`` for the rows to keep. Must be callable.
     id
         Stable step identifier. Defaults to ``"filter"``; a second step of
@@ -127,7 +127,7 @@ class StepFilter(RowOp):
     """
 
     #: Populated by ``fit()``. A filter changes no columns, so ``schema_in``
-    #: and ``schema_out`` are the same frame schema.
+    #: and ``schema_out`` are the same data frame schema.
     _schema: ColSchema | None
 
     def __init__(
@@ -179,7 +179,7 @@ class StepFilter(RowOp):
     def transform(self, new_data: Frame) -> Frame:
         """Keep only the rows matching the predicate.
 
-        The framework calls this only on the training frame while fitting;
+        The framework calls this only on the training data frame while fitting;
         transforming new data never filters rows.
         """
         if self._schema is None:
@@ -187,7 +187,7 @@ class StepFilter(RowOp):
         return apply_filter(new_data, self.predicate)
 
     def schema_in(self) -> ColSchema:
-        """Schema of the columns this step consumed: the frame passes through."""
+        """Schema of the columns this step consumed: the data frame passes through."""
         if self._schema is None:
             raise RuntimeError("StepFilter.schema_in() called before fit()")
         return self._schema

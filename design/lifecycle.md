@@ -130,7 +130,7 @@ A rough sketch of what `fit()` and `transform()` do internally. This is not fina
 ```python
 def fit(self, data):
     # 1. snapshot the training data into a schema, then validate the training
-    #    frame against it — all columns required at fit time. The snapshot is
+    #    data frame against it — all columns required at fit time. The snapshot is
     #    captured here (not at construction), so role-defaulting has run and the
     #    per-role transform requirements are known.
     schema = Schema.from_frame(data, roles, overrides)
@@ -201,4 +201,4 @@ Key points:
 
 ## Lazy vs. eager evaluation
 
-Open question — see [goals.md § open questions](goals.md). Decision must be made explicitly before v0.1; R `recipes` never decided and paid for it. Recommendation: `transform()` returns an eager polars frame by default; a `transform_lazy()` variant can be added later.
+Open question — see [goals.md § open questions](goals.md). Decision must be made explicitly before v0.1; R `recipes` never decided and paid for it. Recommendation: `transform()` returns an eager polars data frame by default; a `transform_lazy()` variant can be added later.

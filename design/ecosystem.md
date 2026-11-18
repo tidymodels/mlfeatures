@@ -15,9 +15,9 @@ Beyond that boundary, users may pass in whatever dataframe type they have. Rathe
 
 **Decision (v0.1): narwhals is the full internal representation.** Steps are written once against the narwhals API; narwhals dispatches to the user's native backend (pandas in → pandas out, polars in → polars out). We do **not** commit to polars internally, and steps do **not** carry per-backend code paths. Consequences:
 
-- A step that needs an operation narwhals does not expose may drop to the native frame via `nw.to_native(...)`, but every such escape is treated as a defect to upstream into narwhals, not a license to branch on backend. The prototype step set [#18] is the conformance workload that validates narwhals is thick enough — categoricals (`step_unknown`), row ops (`step_filter`), and sparse output (`step_dummy`) are the riskiest probes.
+- A step that needs an operation narwhals does not expose may drop to the native data frame via `nw.to_native(...)`, but every such escape is treated as a defect to upstream into narwhals, not a license to branch on backend. The prototype step set [#18] is the conformance workload that validates narwhals is thick enough — categoricals (`step_unknown`), row ops (`step_filter`), and sparse output (`step_dummy`) are the riskiest probes.
 - The sklearn boundary contract is fixed regardless: `transform()` returns something sklearn can consume (numpy array or pandas DataFrame), converting out of the native type at that one boundary.
-- If narwhals proves too thin during #18, the fallback is polars as a concrete internal frame type — but that reopens this decision explicitly rather than being assumed.
+- If narwhals proves too thin during #18, the fallback is polars as a concrete internal data frame type — but that reopens this decision explicitly rather than being assumed.
 
 Additional requirements:
 

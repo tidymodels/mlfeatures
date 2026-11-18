@@ -3,7 +3,7 @@
 A **schema** is a zero-row structural snapshot of the training data:
 column names, dtypes, and role assignments. It is captured at ``Recipe.fit()``
 and stored on the resulting ``FittedRecipe``; both ``fit()`` and
-``transform()`` validate the incoming frame against it before any step runs.
+``transform()`` validate the incoming data frame against it before any step runs.
 This catches the two most common boundary failures: the wrong dataframe passed
 in, or a column silently changing dtype between training and serving.
 
@@ -69,7 +69,7 @@ class Schema:
     Attributes
     ----------
     dtypes
-        The training frame's column dtypes, as a narwhals schema: an ordered
+        The training data frame's column dtypes, as a narwhals schema: an ordered
         name→dtype mapping.
     roles
         Role assignments captured at fit.

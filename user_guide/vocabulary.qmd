@@ -41,6 +41,8 @@ A few words mean something different here than you might expect, so they are wor
 
 **`level`, not `label`, for a category's values.** The distinct values of a categorical column are its **levels**, following R's factor terminology. `StepDummy` and `StepOneHot` learn a column's levels at fit time, and `StepUnknown` deals with missing ones. A level is a value *within* a column, which is a different thing from a role, which is a property *of* a column.
 
+**A table of rows and columns is a data frame.** Prose says "data frame", not a bare "frame". The bare word survives only in code, as the internal `Frame` type alias and the `_frame` module.
+
 **`sample` also has its statistical sense.** mlfeatures says "sample" for one row of data, but "sample standard deviation" in `StepNormalize` means the `ddof=1` estimator, not anything about rows.
 
 ## mlfeatures-specific terms

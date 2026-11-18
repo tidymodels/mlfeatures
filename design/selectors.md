@@ -35,7 +35,7 @@ s.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
 s.everything()
 ```
 
-`s.col` is **tolerant**: names not present in the frame are silently skipped (like R's `any_of`). Passing a plain `list` of names as an operand is **strict** and raises on a missing column (like `all_of`) — so `s.col("a", "missing")` is a no-op on the absent name, while `... & ["a", "missing"]` raises. Reach for `col` when absence should be a no-op, and a bare list when a missing name is a mistake worth surfacing.
+`s.col` is **tolerant**: names not present in the data frame are silently skipped (like R's `any_of`). Passing a plain `list` of names as an operand is **strict** and raises on a missing column (like `all_of`) — so `s.col("a", "missing")` is a no-op on the absent name, while `... & ["a", "missing"]` raises. Reach for `col` when absence should be a no-op, and a bare list when a missing name is a mistake worth surfacing.
 
 There is deliberately **no positional range selector** (recipes' `beds:sqft`, selecting every column between two positions). Position is a brittle thing to depend on: it changes as upstream steps add and drop columns, so a range that is correct when the recipe is written can silently capture the wrong columns at fit time. Select by name pattern (`starts_with`, `matches`, `num_range`), by role, or by type instead.
 
@@ -79,7 +79,7 @@ The lineage DAG distinguishes between a column whose **immediate** parent is a g
 - **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Lineage.columns_from_source`.
 - **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Lineage.ancestors`.
 
-Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
+Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a data frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
 
 ---
 
@@ -132,7 +132,7 @@ s.has_source(step_type=StepDummy) | s.categorical()  # dummies or categoricals
 ~s.has_source(step_type=StepPCA)                           # everything except PCA outputs
 ```
 
-Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set operations preserve the frame's column order regardless of operand order. Multiple positional arguments to a step are treated as a union.
+Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set operations preserve the data frame's column order regardless of operand order. Multiple positional arguments to a step are treated as a union.
 
 ---
 
@@ -148,12 +148,12 @@ At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolv
 
 The native `Selectors` DSL is the recommended surface: it covers name, type, role, and provenance in **one family** that always composes with `&` / `|` / `~` / `-`, and resolves against the lineage DAG.
 
-`mlfeatures` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
+`mlfeatures` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the data frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
 
 ```python
 import polars.selectors as cs
 
-StepNormalize(cs.numeric())   # accepted; resolves fine on pandas- or polars-backed frames
+StepNormalize(cs.numeric())   # accepted; resolves fine on pandas- or polars-backed data frames
 ```
 
 A polars **column-selection expression** is accepted the same way, since `pl.col()` is what a polars user reaches for first:

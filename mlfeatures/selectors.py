@@ -10,7 +10,7 @@ StepPCA(s.has_source(step_type=StepDummy))
 ```
 
 Selectors are resolved to a list of column names **at fit time**, when the
-frame schema (dtypes), the recipe roles, and the column-lineage DAG are all
+data frame schema (dtypes), the recipe roles, and the column-lineage DAG are all
 available. They are the recommended, fully composable selector surface for
 mlfeatures. ``mlfeatures`` also still accepts raw polars / narwhals selectors anywhere a
 selector is expected (see ``mlfeatures._frame.select``), but those compose cleanly
@@ -112,7 +112,7 @@ class _ForeignSelector(FeaturesSelector):
 
 
 class _CompositeSelector(FeaturesSelector):
-    """Set-op over child selectors, preserving frame column order."""
+    """Set-op over child selectors, preserving data frame column order."""
 
     def __init__(self, op: str, children: Sequence[FeaturesSelector]) -> None:
         self._op = op
@@ -139,12 +139,12 @@ class _CompositeSelector(FeaturesSelector):
             keep = resolved[0]
             for other in resolved[1:]:
                 keep = keep & other if self._op == "and" else keep | other
-        # Restore deterministic frame order.
+        # Restore deterministic column order.
         return [c for c in _frame.columns(frame) if c in keep]
 
 
 class _Complement(FeaturesSelector):
-    """Everything in the frame *except* the wrapped selector's columns."""
+    """Everything in the data frame *except* the wrapped selector's columns."""
 
     def __init__(self, inner: FeaturesSelector) -> None:
         self._inner = inner
@@ -212,7 +212,7 @@ class _RoleTypeSelector(FeaturesSelector):
 
 
 class _NameSelector(FeaturesSelector):
-    """Columns whose names match a serializable name rule, in frame order.
+    """Columns whose names match a serializable name rule, in column order.
 
     The match rule is stored as a ``kind`` string plus its ``params`` (never a
     closure), so the selector serializes to plain data -- the no-closure
@@ -377,7 +377,7 @@ class Selectors:
     Examples
     --------
     A selector stands in for an explicit column list and is resolved against the
-    frame at fit time. Here ``starts_with("x")`` picks up ``x1`` and ``x2`` but
+    data frame at fit time. Here ``starts_with("x")`` picks up ``x1`` and ``x2`` but
     leaves ``y`` untouched:
 
     ```{python}
@@ -404,7 +404,7 @@ class Selectors:
     def col(cls, *names: str) -> FeaturesSelector:
         """The named column(s), if present.
 
-        Names that aren't in the frame are silently skipped (tolerant, like R's
+        Names that aren't in the data frame are silently skipped (tolerant, like R's
         ``any_of``). This differs from passing a plain ``list`` of names as a
         selector operand, which is strict and raises on a missing column (like
         ``all_of``); use `col` when absence should be a no-op.

@@ -96,7 +96,7 @@ def apply_unknown(
 
     Returns
     -------
-    narwhals.DataFrame: the input frame with each column in ``columns`` cast to
+    narwhals.DataFrame: the input data frame with each column in ``columns`` cast to
     ``String`` and its nulls filled with ``new_level``. Column names, order, and
     structure are unchanged.
     """
@@ -133,7 +133,7 @@ class StepUnknown(Step):
         mlfeatures selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only categorical
         columns (string, categorical, and enum) are meaningful here.
     new_level
