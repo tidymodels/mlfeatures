@@ -923,19 +923,77 @@ class FittedRecipe:
         )
 
     def to_dict(self) -> dict[str, object]:
-        """Serialize to a diffable, JSON-safe ``dict``. See `mlfeatures.serialization`."""
+        """Serialize to a diffable, JSON-safe ``dict``. See `mlfeatures.to_dict` for the layout.
+
+        Returns
+        -------
+        dict
+            Plain data holding the roles, schema, lineage, and every step's
+            hyperparameters and learned statistics.
+
+        Raises
+        ------
+        TypeError
+            If a step holds something that cannot be serialized, such as a raw
+            polars or narwhals selector, a ``dateutil`` rule, or a function.
+
+        Warns
+        -----
+        UserWarning
+            If a step comes from a package that `mlfeatures.from_dict` refuses
+            by default.
+        """
         from mlfeatures import serialization
 
         return serialization.to_dict(self)
 
     def to_json(self, *, indent: int = 2) -> str:
-        """Serialize to a diffable JSON string. See `mlfeatures.serialization`."""
+        """Serialize to a diffable JSON string. See `mlfeatures.to_json`.
+
+        Parameters
+        ----------
+        indent
+            Spaces of indentation per level. Defaults to 2.
+
+        Returns
+        -------
+        str
+            The JSON text. Load it again with `FittedRecipe.from_json`.
+
+        Raises
+        ------
+        TypeError
+            As for `FittedRecipe.to_dict`.
+
+        Warns
+        -----
+        UserWarning
+            As for `FittedRecipe.to_dict`.
+        """
         from mlfeatures import serialization
 
         return serialization.to_json(self, indent=indent)
 
     def to_yaml(self) -> str:
-        """Serialize to a diffable YAML string. See `mlfeatures.serialization`."""
+        """Serialize to a diffable YAML string. See `mlfeatures.to_yaml`.
+
+        Returns
+        -------
+        str
+            The YAML text. Load it again with `FittedRecipe.from_yaml`.
+
+        Raises
+        ------
+        ImportError
+            If the optional ``pyyaml`` package is not installed.
+        TypeError
+            As for `FittedRecipe.to_dict`.
+
+        Warns
+        -----
+        UserWarning
+            As for `FittedRecipe.to_dict`.
+        """
         from mlfeatures import serialization
 
         return serialization.to_yaml(self)
@@ -944,10 +1002,23 @@ class FittedRecipe:
     def from_dict(
         cls, data: dict[str, object], *, trusted: Iterable[type] = ()
     ) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_dict` output. See `mlfeatures.serialization`.
+        """Reconstruct a fitted recipe from `FittedRecipe.to_dict` output. See `mlfeatures.from_dict`.
 
-        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
-        the registered step plugins, and the packages of the ``trusted`` classes.
+        Parameters
+        ----------
+        data
+            The ``dict`` produced by `FittedRecipe.to_dict`.
+        trusted
+            Classes whose top-level packages the payload may also name classes
+            from, for a step that is not registered. Defaults to none.
+
+        Raises
+        ------
+        ValueError
+            If the payload is malformed, has a ``format_version`` this
+            mlfeatures does not read, or names a class outside ``mlfeatures``,
+            the registered step plugins, and the packages of the ``trusted``
+            classes.
         """
         from mlfeatures import serialization
 
@@ -955,10 +1026,21 @@ class FittedRecipe:
 
     @classmethod
     def from_json(cls, text: str, *, trusted: Iterable[type] = ()) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_json` output. See `mlfeatures.serialization`.
+        """Reconstruct a fitted recipe from `FittedRecipe.to_json` output. See `mlfeatures.from_json`.
 
-        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
-        the registered step plugins, and the packages of the ``trusted`` classes.
+        Parameters
+        ----------
+        text
+            The JSON text produced by `FittedRecipe.to_json`.
+        trusted
+            Classes whose top-level packages the payload may also name classes
+            from, for a step that is not registered. Defaults to none.
+
+        Raises
+        ------
+        ValueError
+            As for `FittedRecipe.from_dict`; text that is not valid JSON raises
+            ``json.JSONDecodeError``, a ``ValueError`` subclass.
         """
         from mlfeatures import serialization
 
@@ -966,22 +1048,34 @@ class FittedRecipe:
 
     @classmethod
     def from_yaml(cls, text: str, *, trusted: Iterable[type] = ()) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_yaml` output. See `mlfeatures.serialization`.
+        """Reconstruct a fitted recipe from `FittedRecipe.to_yaml` output. See `mlfeatures.from_yaml`.
 
-        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
-        the registered step plugins, and the packages of the ``trusted`` classes.
+        Parameters
+        ----------
+        text
+            The YAML text produced by `FittedRecipe.to_yaml`.
+        trusted
+            Classes whose top-level packages the payload may also name classes
+            from, for a step that is not registered. Defaults to none.
+
+        Raises
+        ------
+        ValueError
+            As for `FittedRecipe.from_dict`.
+        ImportError
+            If the optional ``pyyaml`` package is not installed.
         """
         from mlfeatures import serialization
 
         return serialization.from_yaml(text, trusted=trusted)
 
     def minimize(self) -> "FittedRecipe":
-        """Return a smaller copy that keeps only what `transform()` needs.
+        """Return a recipe that keeps only what `transform()` needs. See `mlfeatures.minimize`.
 
-        Anything a step stored purely for inspection after fitting, rather
-        than for applying it to new data, is dropped. The copy transforms new
-        data identically; the original is left unchanged. See
-        `mlfeatures.serialization`.
+        Each step drops what it can: anything kept only for inspection after
+        fitting, or only because fitting needed it. The result transforms new
+        data identically and ``self`` is left unchanged. A step with nothing
+        to drop is shared with ``self`` rather than copied.
         """
         from mlfeatures import serialization
 

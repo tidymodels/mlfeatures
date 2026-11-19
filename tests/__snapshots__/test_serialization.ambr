@@ -11,6 +11,15 @@
     'step type is not a string': "expected a class name as a string; got 'int'",
   })
 # ---
+# name: TestMalformedTopLevelPayloads.test_wrong_shape_raises_value_error
+  dict({
+    'empty': "payload is missing required key(s) ['roles', 'steps']",
+    'not a mapping': "expected the payload to be a mapping, got 'list'",
+    'roles not a mapping': "expected 'roles' to be a mapping of column to roles",
+    'steps missing': "payload is missing required key(s) ['steps']",
+    'steps not a list': "expected 'steps' to be a list of step payloads",
+  })
+# ---
 # name: TestPayloadCannotRunCode.test_a_trusted_module_cannot_launder_a_third_party_class
   "cannot locate 'mlfeatures.recipe.Laundered' for deserialization; it resolves to a class defined in 'tests.test_serialization', which is not a trusted package"
 # ---

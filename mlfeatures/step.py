@@ -549,7 +549,7 @@ class Step(ABC):
         The default is a no-op: it returns ``self`` unchanged. Steps that retain
         training artifacts only needed at fit time (e.g. a future KNN imputer's
         neighbor matrix) override this to return a lighter copy that still
-        transforms identically. See ``recipe.minimize``.
+        transforms identically. See `minimize`.
         """
         return self
 
