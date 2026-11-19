@@ -242,6 +242,8 @@ reference:
     contents:
       - name: Selectors
         members: true
+      - name: FeaturesSelector
+        members: false
       - Selector
       - name: ColSchema
         members: false

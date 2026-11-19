@@ -30,13 +30,14 @@ A column may carry multiple roles simultaneously. Validation **rejects nonsensic
 ```python
 # A timestamp column used both as a feature and for time-based splitting
 rec = Recipe(data=df).set_roles(
-    target=["price"],
+    target="price",
     feature=["sqft", "timestamp"],
-).add_role("timestamp", role="date_split")
+    date_split="timestamp",          # any extra keyword is a custom role
+)
 # timestamp now has roles {"feature", "date_split"}
 
 # A weight column used both for model weighting and as a feature
-rec = rec.add_role("sample_weight", role="case_weights")
+rec = rec.set_roles(case_weights="sample_weight", feature="sample_weight")
 # sample_weight now has roles {"feature", "case_weights"}
 
 # Survival analysis: both time and event columns are targets
@@ -47,13 +48,17 @@ rec = Recipe(data=df).set_roles(
 # surv_time and event each have role {"target"}
 ```
 
-A column with no role is retained in the schema but is not selected by `s.features()` etc.
+`set_roles()` only *adds* roles, and accepts column names, not selectors. A column that ends up with no role is retained in the schema but is not selected by `s.features()` etc.
+
+**Default features.** If a recipe declares no `"feature"` column at all, fitting gives the role to every column that is not a target or a case-weights column. That includes a column that only has a custom role such as `"id"`, so declare `features` explicitly whenever such a column should stay out of the model inputs.
 
 Targets are a structured object (or a role applied to multiple columns), not a single formula LHS. This generalizes cleanly to multi-output regression, survival, and multitask learning. See [goals.md § open questions](goals.md).
 
 ---
 
-## Role management API
+## Role management API (planned, not implemented)
+
+> **Status:** only `Recipe.set_roles()` and `Recipe.update_role_requirements()` exist today. Roles are assigned on the recipe before any step runs; there is no way yet to add, change, or remove a role mid-pipeline, and the methods below do not exist. This section is the target design.
 
 ```python
 recipe.add_role("col", role="group")

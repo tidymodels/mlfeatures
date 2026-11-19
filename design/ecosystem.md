@@ -11,7 +11,7 @@
 
 The primary design constraint is **scikit-learn compatibility**: the output of `transform()` must be consumable by any sklearn estimator. That means returning a 2D numeric array or a type sklearn accepts at its boundary (pandas DataFrame, numpy array).
 
-Beyond that boundary, users may pass in whatever dataframe type they have. Rather than writing separate code paths for polars, pandas, and future libraries, we use **[narwhals](https://github.com/narwhals-dev/narwhals)** as the internal abstraction layer. Narwhals provides a dataframe-agnostic API that works across polars, pandas, cuDF, Modin, and others, allowing steps to be written once against a stable interface.
+Beyond that boundary, users may pass in whatever dataframe type they have. Rather than writing separate code paths for polars, pandas, and future libraries, we use **[narwhals](https://github.com/narwhals-dev/narwhals)** as the internal abstraction layer. Narwhals provides a dataframe-agnostic API that works across polars, pandas, cuDF, Modin, and others, allowing steps to be written once against a stable interface. In practice mlfeatures tests and annotates (`DataFrame`) only **pandas and polars**; the other backends narwhals supports are a possibility the design leaves open, not a tested guarantee.
 
 **Decision (v0.1): narwhals is the full internal representation.** Steps are written once against the narwhals API; narwhals dispatches to the user's native backend (pandas in → pandas out, polars in → polars out). We do **not** commit to polars internally, and steps do **not** carry per-backend code paths. Consequences:
 

@@ -120,7 +120,15 @@ class _CompositeSelector(FeaturesSelector):
 
     def __repr__(self) -> str:
         joiner = " & " if self._op == "and" else " | "
-        return joiner.join(repr(child) for child in self._children)
+
+        def show(child: FeaturesSelector) -> str:
+            # A nested composite of the other operator needs parentheses, or
+            # the repr reads as a different expression.
+            if isinstance(child, _CompositeSelector) and child._op != self._op:
+                return f"({child!r})"
+            return repr(child)
+
+        return joiner.join(show(child) for child in self._children)
 
     def resolve(
         self,
@@ -150,6 +158,8 @@ class _Complement(FeaturesSelector):
         self._inner = inner
 
     def __repr__(self) -> str:
+        if isinstance(self._inner, _CompositeSelector):
+            return f"~({self._inner!r})"
         return f"~{self._inner!r}"
 
     def resolve(
@@ -407,11 +417,31 @@ class Selectors:
         Names that aren't in the data frame are silently skipped (tolerant, like R's
         ``any_of``). This differs from passing a plain ``list`` of names as a
         selector operand, which is strict and raises on a missing column (like
-        ``all_of``); use `col` when absence should be a no-op.
+        ``all_of``); use `col` when absence should be a no-op. A bare list that
+        names a missing column raises the backend's own column-not-found error,
+        not a mlfeatures one.
 
-        ```python
-        s.col("x1")
-        s.col("x1", "x2")
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from mlfeatures import Recipe, StepNormalize
+        from mlfeatures import Selectors as s
+
+        df = pd.DataFrame(
+            {"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "y": [7.0, 8.0, 9.0]}
+        )
+        ```
+
+        ``"missing"`` is not a column, so it is skipped and only ``x1`` is
+        normalized:
+
+        ```{python}
+        recipe = Recipe().add(StepNormalize(s.col("x1", "missing")))
+        fitted = recipe.fit(df)
+        fitted.transform(df)
         ```
         """
         label = f"col({', '.join(repr(n) for n in names)})"
@@ -419,24 +449,33 @@ class Selectors:
 
     @classmethod
     def starts_with(cls, prefix: str) -> FeaturesSelector:
-        """Columns whose name starts with ``prefix``."""
+        """Columns whose name starts with ``prefix``.
+
+        Matching is case-sensitive and takes a single prefix. This differs from
+        tidyselect, which ignores case by default and accepts several prefixes;
+        combine selectors with ``|`` for the latter.
+        """
         return _NameSelector("starts_with", [prefix], f"starts_with({prefix!r})")
 
     @classmethod
     def ends_with(cls, suffix: str) -> FeaturesSelector:
-        """Columns whose name ends with ``suffix``."""
+        """Columns whose name ends with ``suffix``.
+
+        Matching is case-sensitive and takes a single suffix, like `starts_with`.
+        """
         return _NameSelector("ends_with", [suffix], f"ends_with({suffix!r})")
 
     @classmethod
     def contains(cls, substring: str) -> FeaturesSelector:
-        """Columns whose name contains ``substring``."""
+        """Columns whose name contains ``substring`` (case-sensitive)."""
         return _NameSelector("contains", [substring], f"contains({substring!r})")
 
     @classmethod
     def matches(cls, pattern: str) -> FeaturesSelector:
         """Columns whose name matches the regular expression ``pattern``.
 
-        Uses ``re.search`` (anchor explicitly with ``^``/``$`` if desired).
+        Uses ``re.search`` and is case-sensitive (anchor explicitly with
+        ``^``/``$`` if desired, and use ``(?i)`` to ignore case).
         """
         return _NameSelector("matches", [pattern], f"matches({pattern!r})")
 
@@ -444,8 +483,28 @@ class Selectors:
     def num_range(cls, prefix: str, rng: Iterable[int]) -> FeaturesSelector:
         """Columns named ``f"{prefix}{i}"`` for ``i`` in ``rng`` (e.g. x1..x5).
 
-        ```python
-        s.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
+        Names that aren't in the data frame are skipped, as with `col`. There
+        is no zero-padding option (R's ``width``); spell padded names out with
+        `col`.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from mlfeatures import Recipe, StepNormalize
+        from mlfeatures import Selectors as s
+
+        df = pd.DataFrame(
+            {"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0], "x3": [7.0, 8.0, 9.0]}
+        )
+        ```
+
+        ```{python}
+        recipe = Recipe().add(StepNormalize(s.num_range("x", range(1, 3))))
+        fitted = recipe.fit(df)
+        fitted.transform(df)
         ```
         """
         rng = list(rng)
@@ -461,7 +520,12 @@ class Selectors:
 
     @classmethod
     def has_role(cls, role: str) -> FeaturesSelector:
-        """All columns carrying ``role``."""
+        """All columns carrying ``role``.
+
+        Roles are those of the recipe at fit time, so a column that an earlier
+        step dropped is not selected. A role that no column carries selects
+        nothing.
+        """
         return _RoleTypeSelector(role=role, dtype=None)
 
     @classmethod
@@ -478,7 +542,11 @@ class Selectors:
 
     @classmethod
     def numeric(cls) -> FeaturesSelector:
-        """All numeric (int + float) columns."""
+        """All numeric columns: integer, floating-point, and decimal.
+
+        Decimal columns only exist as such on polars; pandas stores them as
+        ``object``, which is not numeric.
+        """
         return _RoleTypeSelector(role=None, dtype=nw.dtypes.NumericType)
 
     @classmethod
@@ -506,12 +574,21 @@ class Selectors:
 
     @classmethod
     def ordered(cls) -> FeaturesSelector:
-        """All ordered-categorical columns (narwhals ``Enum``)."""
+        """All ordered-categorical columns.
+
+        narwhals reports a polars ``Enum`` and a pandas ``Categorical`` with
+        ``ordered=True`` both as ``Enum``, which is what this selects.
+        """
         return _RoleTypeSelector(role=None, dtype=nw.Enum)
 
     @classmethod
     def unordered(cls) -> FeaturesSelector:
-        """All unordered-categorical columns (narwhals ``Categorical``)."""
+        """All unordered-categorical columns.
+
+        narwhals reports a polars ``Categorical`` and a pandas ``Categorical``
+        with ``ordered=False`` both as ``Categorical``, which is what this
+        selects.
+        """
         return _RoleTypeSelector(role=None, dtype=nw.Categorical)
 
     @classmethod
@@ -605,11 +682,31 @@ class Selectors:
         Unlike a dtype or role selector, matching nothing is an error, not the
         identity transform: raises `ValueError` if no step earlier in the recipe
         has that id (or is an instance of that type). Pass ``"original"`` as the
-        id for the input columns that survive to this point.
+        id for the input columns that survive to this point. Passing both
+        ``step`` and ``step_type``, or neither, also raises `ValueError`.
 
-        ```python
-        s.has_source("dummy")
-        s.has_source(step_type=StepDummy)
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
+        from mlfeatures import Recipe, StepDummy, StepNormalize
+        from mlfeatures import Selectors as s
+
+        df = pd.DataFrame({"city": ["a", "b", "a"], "x": [1.0, 2.0, 3.0]})
+        ```
+
+        Normalize only the indicator columns that ``StepDummy`` produced:
+
+        ```{python}
+        recipe = (
+            Recipe()
+            .add(StepDummy(s.string()))
+            .add(StepNormalize(s.has_source(step_type=StepDummy)))
+        )
+        fitted = recipe.fit(df)
+        fitted.transform(df)
         ```
         """
         return _SourceSelector(step=step, step_type=step_type, ancestral=False)
@@ -625,6 +722,8 @@ class Selectors:
 
         The ancestral counterpart of `has_source`: matches columns even after
         they were further transformed (e.g. dummies that were then normalized).
+        Takes the same arguments as `has_source`, including its ``ValueError``
+        for an id or type that names no earlier step.
         """
         return _SourceSelector(step=step, step_type=step_type, ancestral=True)
 
@@ -635,13 +734,28 @@ class Selectors:
         """Lift a raw name / list / polars / narwhals selector into mlfeatures-land.
 
         Use this to let a polars or narwhals selector *lead* a composed
-        expression, since ``cs.numeric() & mlfeatures_sel`` cannot work directly:
+        expression, since ``cs.numeric() & mlfeatures_sel`` cannot work directly.
 
-        ```python
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        import pandas as pd
         import polars.selectors as cs
+        from mlfeatures import Recipe, StepNormalize
         from mlfeatures import Selectors as s
 
-        s.wrap(cs.starts_with("x_")) & s.features()
+        df = pd.DataFrame(
+            {"x_1": [1.0, 2.0, 3.0], "x_2": [4.0, 5.0, 6.0], "y": [7.0, 8.0, 9.0]}
+        )
+        ```
+
+        ```{python}
+        selector = s.wrap(cs.starts_with("x_")) & s.features()
+        recipe = Recipe().add(StepNormalize(selector))
+        fitted = recipe.fit(df)
+        fitted.transform(df)
         ```
         """
         return _coerce(selector)

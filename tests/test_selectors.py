@@ -653,3 +653,19 @@ class TestInRecipe:
             .transform(df)
         )
         pd.testing.assert_frame_equal(out, df)
+
+
+class TestReprParentheses:
+    """A composite's repr keeps the grouping it was built with."""
+
+    def test_or_inside_and_is_parenthesized(self) -> None:
+        sel = (Selectors.col("a") | Selectors.col("b")) & Selectors.numeric()
+        assert repr(sel) == "(col('a') | col('b')) & select(type=NumericType)"
+
+    def test_complement_of_composite_is_parenthesized(self) -> None:
+        sel = ~(Selectors.col("a") & Selectors.col("b"))
+        assert repr(sel) == "~(col('a') & col('b'))"
+
+    def test_same_operator_chain_is_flat(self) -> None:
+        sel = Selectors.col("a") & Selectors.col("b") & Selectors.col("c")
+        assert repr(sel) == "col('a') & col('b') & col('c')"
