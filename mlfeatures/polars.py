@@ -89,6 +89,13 @@ class MlfNamespace:
 
     Registered on import; reach it as ``df.mlf``. Each method builds the
     corresponding step, fits it on the data frame, and returns the transformed data frame.
+
+    Use it to try a step on a data frame, or to apply a one-off transform. Every
+    call fits and applies in one go and keeps nothing, so the statistics it
+    estimates cannot be reused on new data. Calling it again on a test set would
+    re-estimate them from that set, which is train/serve skew. Build a `Recipe`
+    and fit it once whenever the same transform has to be applied to data you
+    have not seen yet.
     """
 
     def __init__(self, df: pl.DataFrame) -> None:

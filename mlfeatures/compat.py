@@ -240,7 +240,13 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         )
 
     def fit(self, X: DataFrame, y: Any = None) -> "RecipeTransformer":
-        """Fit the wrapped recipe on ``X`` (with ``y`` re-joined as the target)."""
+        """Fit the wrapped recipe on ``X`` (with ``y`` re-joined as the target).
+
+        Inside a ``Pipeline``, ``cross_val_score``, or ``GridSearchCV``, this
+        runs on the training portion of each split only, so the statistics the
+        recipe learns never see the held-out samples. Applying a recipe by hand
+        before splitting would fit them on all samples, which leaks.
+        """
         data = self._assemble(X, y)
         self.fitted_ = self.recipe.fit(data)
         self._check_no_target_steps()
@@ -255,7 +261,11 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
-        """Apply the fitted recipe to ``X`` and return the feature matrix only."""
+        """Apply the fitted recipe to ``X`` and return the feature matrix only.
+
+        It reuses the statistics learned in ``fit()`` and never re-estimates
+        them, so a held-out fold is transformed with the training fold's values.
+        """
         if not hasattr(self, "fitted_"):
             raise NotFittedError(
                 "This RecipeTransformer is not fitted yet; call 'fit' before 'transform'."

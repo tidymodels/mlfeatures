@@ -442,6 +442,11 @@ class Lineage:
         The result is always a polars ``DataFrame``, whatever backend the
         recipe was fitted on.
 
+        This is the same table `FittedRecipe.summary` returns for the live
+        columns. Reach for it when you also want the removed columns
+        (``include_removed=True``) and which step dropped each; use `parents`
+        and `ancestors` to trace a single column.
+
         Parameters
         ----------
         include_removed

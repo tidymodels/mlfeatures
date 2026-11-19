@@ -853,7 +853,11 @@ def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
 
     The ``dict`` holds plain data only (strings, numbers, booleans, lists, and
     mappings), so it round-trips through `from_dict` and is stable enough to
-    diff in code review. It has these keys, in this order:
+    diff in code review. Unlike a pickle, it can be read and checked without
+    running anything, and loading it only builds classes from trusted packages
+    (see `from_dict`). Use `to_json` or `to_yaml` to write it to a file, and the
+    ``dict`` itself when embedding the recipe in a larger payload. It has these
+    keys, in this order:
 
     - ``mlfeatures_version``: the version of mlfeatures that wrote it.
     - ``format_version``: the layout version, which `from_dict` checks.
@@ -1013,7 +1017,9 @@ def to_json(recipe: FittedRecipe, *, indent: int = 2) -> str:
     """Serialize a `FittedRecipe` to a diffable JSON string.
 
     The string is the `to_dict` payload as strictly valid JSON (non-finite
-    floats are encoded explicitly, never as a bare ``NaN``). Warns like
+    floats are encoded explicitly, never as a bare ``NaN``). It needs no
+    optional dependency, so it is the default choice for storing a recipe next
+    to a model. Warns like
     `to_dict` when the recipe names a class that `from_json` refuses by default.
 
     Parameters
@@ -1124,8 +1130,10 @@ def to_yaml(recipe: FittedRecipe) -> str:
 
     The same `to_dict` payload as `to_json`, written as YAML with the keys in
     their stable order and a block layout that diffs cleanly in review, so the
-    two formats round-trip identically. Warns like `to_dict` when the recipe
-    names a class that `from_yaml` refuses by default.
+    two formats round-trip identically. Choose it over `to_json` when people
+    will read or review the file; it needs the optional ``pyyaml`` package.
+    Warns like `to_dict` when the recipe names a class that `from_yaml` refuses
+    by default.
 
     Parameters
     ----------
@@ -1231,6 +1239,12 @@ def minimize(recipe: FittedRecipe) -> FittedRecipe:
     nothing to drop is kept as is, shared with ``recipe`` rather than copied,
     and ``recipe`` itself is never modified. The roles, schema, and lineage are kept, so the minimized recipe
     still validates new data at the boundary and reports its lineage.
+
+    Call it before `to_dict`, `to_json`, or `to_yaml` when the recipe is going
+    to be shipped with a model, so the saved file carries only what scoring
+    needs; the writers save the recipe as it is and do not minimize it. No
+    shipped step currently holds anything to drop, so today the result is an
+    equivalent recipe.
 
     Parameters
     ----------

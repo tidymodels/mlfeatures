@@ -41,6 +41,12 @@ class FeaturesSelector:
     does not: polars raises ``TypeError`` and narwhals silently produces a broken
     ``Expr``, neither of which mlfeatures can intercept. Use `Selectors.wrap` to put a
     polars / narwhals selector first.
+
+    Prefer these over ``polars.selectors`` when a step should respect roles or
+    column provenance. A polars selector knows only names and dtypes, so
+    ``cs.numeric()`` also matches the target; mlfeatures selectors can restrict
+    to the ``feature`` role or to columns derived from a given source. A polars
+    selector is still accepted anywhere a selector is.
     """
 
     def resolve(
@@ -384,6 +390,12 @@ class Selectors:
     All factories return a `FeaturesSelector` that composes with ``&`` / ``|`` /
     ``~`` / ``-``.
 
+    Prefer a selector to a hard-coded list of column names. A list goes stale as
+    soon as an earlier step adds or removes columns (a dummy step replaces
+    ``city`` with ``city_LA`` and ``city_NYC``), while a selector is resolved
+    against the columns each step actually sees, so it keeps working when the
+    data frame changes.
+
     Examples
     --------
     A selector stands in for an explicit column list and is resolved against the
@@ -546,6 +558,10 @@ class Selectors:
 
         Decimal columns only exist as such on polars; pandas stores them as
         ``object``, which is not numeric.
+
+        This matches by dtype alone, so it also picks up the target and any ID
+        column. In a step's ``columns``, prefer `numeric_features`, which also
+        requires the ``feature`` role.
         """
         return _RoleTypeSelector(role=None, dtype=nw.dtypes.NumericType)
 
@@ -615,7 +631,14 @@ class Selectors:
 
     @classmethod
     def numeric_features(cls) -> FeaturesSelector:
-        """All feature columns that are numeric."""
+        """All feature columns that are numeric.
+
+        Unlike `numeric`, this requires the ``feature`` role, so a numeric target
+        or case-weights column is left out. It is the one to use in a step's
+        ``columns`` unless you really mean every numeric column. The other
+        ``*_features`` selectors differ from their bare counterparts in the same
+        way.
+        """
         return _RoleTypeSelector(role="feature", dtype=nw.dtypes.NumericType)
 
     @classmethod

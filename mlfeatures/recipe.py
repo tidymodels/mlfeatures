@@ -332,6 +332,10 @@ class Recipe:
         the recipe's roles and prototype data carry over; ``self`` is left
         untouched.
 
+        Use it to change a hyperparameter of a step already in the recipe, such
+        as a threshold you are tuning, without respecifying the pipeline. To
+        change which steps run, use `add` instead.
+
         Parameters
         ----------
         **params
@@ -466,6 +470,13 @@ class Recipe:
         checked against it; without a prototype there is nothing to check
         against, so any name is accepted and typos surface later, when the
         recipe is fitted.
+
+        Roles are what let a step say "all numeric features" without also
+        picking up the target or case weights: selectors such as
+        ``Selectors.numeric_features()`` only match columns carrying the
+        ``feature`` role. Declare ``feature`` explicitly to keep other columns,
+        such as an ID, out of those selections. A custom role marks columns for
+        your own selectors, or for `update_role_requirements`.
 
         Roles apply to the columns of the input data. Columns that steps create
         get their roles from the step that creates them. ``set_roles()`` only
@@ -644,11 +655,16 @@ class Recipe:
 
         Every call estimates everything from scratch: the recipe is not
         changed, it can be fitted again on other data, and each `FittedRecipe`
-        is independent of the recipe and of every other fit. Missing values are
-        handled by the individual steps, not by the recipe. The training data
-        is not kept, so to get the transformed training data call
-        `FittedRecipe.transform()` on it. To see which columns each step added
-        or removed, use `FittedRecipe.summary()`.
+        is independent of the recipe and of every other fit. Returning a
+        separate trained object keeps the untrained specification reusable
+        (for example inside cross-validation, where it is fitted once per
+        fold) and makes the object that holds the statistics the one you save
+        and apply to new data. Missing values are handled by the individual
+        steps, not by the recipe. The training data is not kept, so to get the
+        transformed training data call `FittedRecipe.transform()` on it; there
+        is no ``fit_transform()``. Note that ``transform()`` skips row filters,
+        so it can return more rows than the steps were fitted on. To see which
+        columns each step added or removed, use `FittedRecipe.summary()`.
 
         When no ``features`` were declared, every column that is not a target
         or a case weight is given the ``"feature"`` role (see `Recipe`).
@@ -805,6 +821,9 @@ class Recipe:
         data: construct the recipe with ``Recipe(data=...)``, or fit it and
         use `FittedRecipe.summary()` for the columns the recipe produces.
 
+        Use it to check that the roles you assigned landed on the columns you
+        meant before fitting; it cannot show what the steps will add or remove.
+
         Raises
         ------
         ValueError
@@ -925,6 +944,10 @@ class FittedRecipe:
     def to_dict(self) -> dict[str, object]:
         """Serialize to a diffable, JSON-safe ``dict``. See `mlfeatures.to_dict` for the layout.
 
+        Use the ``dict`` when you are embedding the recipe in a larger payload
+        or handing it to your own writer; for a file, prefer `to_json` or
+        `to_yaml`.
+
         Returns
         -------
         dict
@@ -949,6 +972,9 @@ class FittedRecipe:
 
     def to_json(self, *, indent: int = 2) -> str:
         """Serialize to a diffable JSON string. See `mlfeatures.to_json`.
+
+        JSON needs no optional dependency and is readable by any tool, so it is
+        the default choice for storing a recipe next to a model.
 
         Parameters
         ----------
@@ -976,6 +1002,10 @@ class FittedRecipe:
 
     def to_yaml(self) -> str:
         """Serialize to a diffable YAML string. See `mlfeatures.to_yaml`.
+
+        Choose YAML over JSON when people will read or review the file, since
+        the block layout diffs more cleanly. It needs the optional ``pyyaml``
+        package.
 
         Returns
         -------
@@ -1076,6 +1106,12 @@ class FittedRecipe:
         fitting, or only because fitting needed it. The result transforms new
         data identically and ``self`` is left unchanged. A step with nothing
         to drop is shared with ``self`` rather than copied.
+
+        Call it before saving or shipping a recipe, so the artifact carries
+        only what scoring needs. `FittedRecipe.to_dict` and the JSON and YAML
+        writers save the recipe as it is and do not minimize it. No shipped
+        step currently holds anything to drop, so today this returns an
+        equivalent recipe.
         """
         from mlfeatures import serialization
 
@@ -1171,6 +1207,10 @@ class FittedRecipe:
 
         One row per output column, with its dtype, role, and the step that
         created it (``"original"`` for columns passed through from the input).
+
+        Use it to see which columns the trained recipe will hand to a model and
+        which step each came from. For where a single column came from, or what
+        it descends from, use the `Lineage` in the ``lineage`` attribute.
 
         Raises
         ------
