@@ -248,16 +248,61 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
         before splitting would fit them on all samples, which leaks.
         """
         data = self._assemble(X, y)
-        self.fitted_ = self.recipe.fit(data)
-        self._check_no_target_steps()
-        self.feature_names_in_ = list(_frame.columns(_frame.from_native(X)))
-        self.n_features_in_ = len(self.feature_names_in_)
+        fitted = self.recipe.fit(data)
+        # Everything is built locally and assigned together at the end, so a
+        # fit that raises (here or in the recipe) leaves no half-updated state:
+        # ``fitted_`` and the cached names always belong to the same fit.
+        if (
+            y is not None
+            and fitted.schema is not None
+            and not fitted.schema.roles.columns_with_role("target")
+        ):
+            # Only reachable when a role operation using a selector took the
+            # target role away, which could not be known before fitting.
+            raise ValueError(
+                "y was provided but the recipe declares no 'target' role; "
+                "a role operation removed it from the column 'y' was attached to"
+            )
+        if y is not None and fitted.schema is not None:
+            # sklearn's transform(X) never carries the column y was attached to,
+            # so a later role operation that makes it required at transform
+            # (a feature, an id) could never be applied; say so here instead of
+            # failing inside the output-name probe below.
+            leading = fitted.schema.roles.columns_with_role("target")
+            required = [c for c in leading if fitted.schema.transform_required.get(c)]
+            if required:
+                raise ValueError(
+                    f"column(s) {required!r} hold y at fit but a role operation "
+                    "written after the first step makes them required at transform; "
+                    "sklearn's transform() never receives y, so keep the 'target' "
+                    "role or mark the column with "
+                    "update_role_requirements(..., transform_required=False)"
+                )
+        self._check_no_target_steps(fitted)
+        names_in = list(_frame.columns(_frame.from_native(X)))
         # Output column names are fixed at fit time (the transform is deterministic),
         # so cache them for get_feature_names_out / set_output. Compute via the fitted
         # recipe directly rather than self.transform, whose set_output wrapper would
         # call get_feature_names_out before the cache exists.
-        out = self._drop_targets(self.fitted_.transform(X))
-        self.feature_names_out_ = list(_frame.columns(_frame.from_native(out)))
+        out = self._drop_targets(
+            fitted.transform(X), fitted.roles.columns_with_role("target")
+        )
+        # A column the recipe does not require at transform (case weights, say)
+        # may be missing from the data later, so it cannot be part of an output
+        # that is promised to match these names whatever ``X`` carries.
+        # A step that reads or rewrites such a column makes it real output, so
+        # this is decided from the fitted recipe, never from whether the values
+        # happened to come back unchanged on this one training set.
+        optional = _optional_columns(fitted)
+        names_out = [
+            name
+            for name in _frame.columns(_frame.from_native(out))
+            if name not in optional
+        ]
+        self.fitted_ = fitted
+        self.feature_names_in_ = names_in
+        self.n_features_in_ = len(names_in)
+        self.feature_names_out_ = names_out
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
@@ -265,13 +310,21 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
 
         It reuses the statistics learned in ``fit()`` and never re-estimates
         them, so a held-out fold is transformed with the training fold's values.
+        The output has exactly the columns of ``get_feature_names_out()``, in
+        that order, whatever the order of ``X``'s columns or any extra columns
+        it carries. A column the recipe does not require at transform time (a
+        case-weights column, or one marked with
+        ``update_role_requirements(..., transform_required=False)``) is never
+        part of the output, so the result does not depend on whether ``X``
+        carries it.
         """
         if not hasattr(self, "fitted_"):
             raise NotFittedError(
                 "This RecipeTransformer is not fitted yet; call 'fit' before 'transform'."
             )
         out = self.fitted_.transform(X)
-        return self._drop_targets(out)
+        out = self._drop_targets(out, self.fitted_.roles.columns_with_role("target"))
+        return self._conform(out)
 
     def get_feature_names_out(
         self, input_features: Any = None
@@ -292,24 +345,52 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
 
     # -- internal helpers ---------------------------------------------------
 
-    def _target_columns(self) -> list[str]:
-        """Target-role column names declared on the recipe (may be empty)."""
-        return self.recipe.roles.columns_with_role("target")
-
     def _assemble(self, X: DataFrame, y: Any) -> DataFrame:
         """Re-join ``y`` onto ``X`` under the recipe's target-role column name.
 
-        With no target role (an unsupervised recipe) or no ``y`` (transform time), ``X`` is
-        passed through unchanged. A declared target role with no ``y`` at fit time, or more
-        than one target column, is rejected with a clear error.
+        With no ``y`` (an unsupervised use, or transform time) ``X`` is passed
+        through unchanged, even when the recipe declares a target. A ``y`` given
+        to a recipe with no target role, more than one target column, a ``y``
+        that is not 1-dimensional, or a ``y`` whose length differs from ``X``'s
+        is rejected with a clear error.
         """
-        targets = self._target_columns()
+        # Always the declared view: a stale ``fitted_`` from an earlier fit
+        # must not decide how this fit's ``y`` is joined.
         if y is None:
             return X
+        targets = self.recipe._declared_targets()  # pyright: ignore[reportPrivateUsage]
         if not targets:
+            recipe = self.recipe
+            # Only a selector that could hand out the target role makes the
+            # target unknowable without data; any other selector operation
+            # leaves the plain answer (no target role) intact.
+            if recipe._prototype_frame is None and any(  # pyright: ignore[reportPrivateUsage]
+                op.position == 0
+                and op.plain_names() is None
+                and op.role == "target"
+                and op.kind != "remove"
+                for op in recipe._role_ops  # pyright: ignore[reportPrivateUsage]
+            ):
+                raise ValueError(
+                    "y was provided but the recipe's target cannot be determined: "
+                    "a role operation uses a selector, which needs Recipe(data=...) "
+                    "to resolve; pass column names or give the recipe prototype data"
+                )
+            late = [
+                op
+                for op in recipe._role_ops  # pyright: ignore[reportPrivateUsage]
+                if op.role == "target" and op.kind != "remove" and op.position > 0
+            ]
+            hint = (
+                "; a role operation written after the first step cannot define "
+                "the target, so declare it with set_roles(target=...) or write "
+                "it before the first step"
+                if late
+                else ""
+            )
             raise ValueError(
                 "y was provided but the recipe declares no 'target' role; "
-                "assign one with set_roles(target=...) or pass y=None"
+                f"assign one with set_roles(target=...) or pass y=None{hint}"
             )
         if len(targets) > 1:
             raise ValueError(
@@ -317,20 +398,32 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
                 "declare a single target column"
             )
         frame = _frame.from_native(X)
-        return _frame.to_native(_frame.with_column(frame, targets[0], y))
+        values = _as_1d_target(y)
+        n_rows, n_values = frame.shape[0], len(values)
+        if n_rows != n_values:
+            raise ValueError(
+                f"X and y have inconsistent numbers of samples: {n_rows} and {n_values}"
+            )
+        return _frame.to_native(_frame.with_column(frame, targets[0], values))
 
-    def _check_no_target_steps(self) -> None:
+    def _check_no_target_steps(self, fitted: FittedRecipe) -> None:
         """Reject fitted steps that consume a target column.
 
         sklearn's ``transform(X)`` never receives ``y``, so a step reading the target
         would fail on the missing column the first time the transformer is applied.
         ``RowOp`` steps and identity (empty-selection) steps never run at transform
-        time, so they are allowed.
+        time, so they are allowed. Only columns that were targets before the first
+        step count: a column that a later role operation turns into the target was
+        an ordinary feature when the step ran. The schema records exactly those,
+        with every role operation written before the first step (selectors
+        included) already resolved against the training data.
         """
-        targets = set(self._target_columns())
+        if fitted.schema is None:
+            return
+        targets = set(fitted.schema.roles.columns_with_role("target"))
         if not targets:
             return
-        for step in self.fitted_.steps:
+        for step in fitted.steps:
             if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
                 continue
             used = [c for c in step.schema_in().columns if c in targets]
@@ -342,10 +435,90 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
                     "outside the pipeline (e.g. with sklearn's TransformedTargetRegressor)"
                 )
 
-    def _drop_targets(self, data: DataFrame) -> DataFrame:
-        """Strip target-role columns from transformed output (features only)."""
-        targets = self._target_columns()
+    def _drop_targets(self, data: DataFrame, targets: list[str]) -> DataFrame:
+        """Strip target-role columns from transformed output (features only).
+
+        ``targets`` comes from the trained recipe's roles, so it includes a
+        column a later role operation turned into the target.
+        """
         if not targets:
             return data
         frame = _frame.from_native(data)
         return _frame.to_native(_frame.apply_drop(frame, targets))
+
+    def _conform(self, data: DataFrame) -> DataFrame:
+        """Select and order the columns as ``feature_names_out_`` says.
+
+        A recipe guarantees which columns exist, not where they sit, and it
+        passes unknown extra columns through; sklearn expects a stable layout
+        matching ``get_feature_names_out()`` (a model reads columns by
+        position, and ``set_output`` relabels them by name list). Columns the
+        recipe does not require at transform are not in ``feature_names_out_``,
+        so they are dropped here whether or not the data has them.
+        """
+        frame = _frame.from_native(data)
+        wanted = self.feature_names_out_
+        present = list(_frame.columns(frame))
+        if wanted == present:
+            return data
+        missing = [name for name in wanted if name not in present]
+        if missing:
+            raise ValueError(
+                f"transform output is missing column(s) {missing!r} that fit() produced"
+            )
+        return _frame.to_native(frame.select(wanted))
+
+
+def _optional_columns(fitted: FittedRecipe) -> set[str]:
+    """Input columns that may be absent at transform and that no step touches.
+
+    The recipe's schema says which columns ``transform()`` does not require. A
+    step that reads or rewrites one of them still makes it real output, so those
+    are excluded: ``schema_in()`` of a step with a column selector lists what it
+    consumed, and a step without one contributes the columns it adds. Row
+    operations are skipped at transform and steps with an empty selection never
+    ran, so neither touches anything.
+    """
+    if fitted.schema is None:
+        return set()
+    touched: set[str] = set()
+    for step in fitted.steps:
+        if isinstance(step, RowOp) or step._empty_selection:  # pyright: ignore[reportPrivateUsage]
+            continue
+        touched.update(step.schema_in().columns)
+        touched.update(step.produced_columns())
+    return {
+        name
+        for name, required in fitted.schema.transform_required.items()
+        if not required and name not in touched
+    }
+
+
+def _as_1d_target(y: Any) -> Any:
+    """``y`` as 1-dimensional values; a single-column 2-D ``y`` is flattened.
+
+    sklearn commonly passes a column vector (``shape (n, 1)``) or a one-column
+    data frame; anything wider is a multi-output target, which a recipe's single
+    target column cannot hold.
+    """
+    shape = getattr(y, "shape", None)
+    if shape is None:
+        return y
+    if len(shape) == 0:
+        raise ValueError("y must be 1-dimensional or a single column; got a scalar")
+    if len(shape) < 2:
+        # A Series keeps its dtype; ``with_column`` attaches it to X by position.
+        return y
+    if len(shape) == 2 and shape[1] == 1:
+        # A one-column data frame yields its column as a Series so the dtype
+        # (categorical, string, nullable integer) survives.
+        if hasattr(y, "iloc"):
+            return y.iloc[:, 0]
+        if hasattr(y, "to_series"):
+            return y.to_series(0)
+        if hasattr(y, "to_numpy"):
+            return y.to_numpy().ravel()
+        return np.asarray(y).ravel()
+    raise ValueError(
+        f"y must be 1-dimensional or a single column; got shape {tuple(shape)!r}"
+    )

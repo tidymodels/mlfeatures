@@ -388,6 +388,15 @@ class Lineage:
         # 4. reorder the live view to match the data frame
         self._live = {name: self._live[name] for name in after}
 
+    def refresh_roles(self, roles: Roles) -> None:
+        """Re-read every live column's roles from ``roles``.
+
+        Called by the recipe after a role operation, which changes roles
+        without changing any column, so `update` is not run.
+        """
+        for name, node in self._live.items():
+            node.roles = set(roles.of(name))
+
     @property
     def columns(self) -> list[str]:
         """Live column names, in data frame order."""

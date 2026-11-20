@@ -132,7 +132,7 @@ fitted = recipe.fit(df)
 fitted.lineage.summary()
 ```
 
-Two related recipe-level APIs are worth knowing about. `Recipe.set_roles` assigns roles to columns that already exist in the input data, which is the other half of the same picture: `role` is for columns a step creates, `set_roles` for columns that arrived with the data. `Recipe.update_role_requirements` controls whether a role's columns must be present when `FittedRecipe.transform` is called on new data, which is where a custom role usually needs a decision: an identifier column you carry through the pipeline is required at transform time, an auxiliary column used only during fitting is not.
+Two related recipe-level APIs are worth knowing about. `Recipe.set_roles` assigns roles to columns that already exist in the input data, which is the other half of the same picture: `role` is for columns a step creates, `set_roles` for columns that arrived with the data. To change a role part way through the pipeline, `Recipe.add_role`, `Recipe.update_role` and `Recipe.remove_role` take effect from where they are written. `Recipe.update_role_requirements` controls whether a role's columns must be present when `FittedRecipe.transform` is called on new data, which is where a custom role usually needs a decision: an identifier column you carry through the pipeline is required at transform time, an auxiliary column used only during fitting is not.
 
 ## `id`
 

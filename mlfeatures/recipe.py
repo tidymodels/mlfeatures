@@ -19,15 +19,17 @@ from __future__ import annotations
 
 import copy
 import warnings
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, Literal, cast
 
 from mlfeatures import _frame
 from mlfeatures.lineage import Lineage
 from mlfeatures.schema import (
     _NON_CONFIGURABLE_ROLES,  # pyright: ignore[reportPrivateUsage]
     Schema,
+    column_transform_required,
 )
-from mlfeatures.selectors import FeaturesSelector
+from mlfeatures.selectors import FeaturesSelector, Selectors
 from mlfeatures.step import (
     RowOp,
     Step,
@@ -37,8 +39,11 @@ from mlfeatures.step import (
 from mlfeatures.types import (
     DataFrame,
     Frame,
+    NwSelector,
+    PlExpr,
     Roles,
     SchemaInfo,
+    Selector,
     _apply_role_assignments,  # pyright: ignore[reportPrivateUsage]
 )
 
@@ -72,8 +77,227 @@ def _check_accepted_dtypes(step: Step, data: Frame, selected: list[str]) -> None
         )
 
 
+#: Capitalized names a backend's error message may open with. They read like an
+#: ordinary sentence start, so the lowercase-the-first-word rule would mangle them.
+_PROPER_NAMES = frozenset({"Polars", "Pandas", "Narwhals", "Modin", "Dask"})
+
+
+def _lower(exc: Exception) -> str:
+    """The text of ``exc`` as one phrase in the house message style.
+
+    Every non-empty line is kept (narwhals puts its "did you mean" suggestion
+    on a later line, behind a ``Hint:`` label that reads oddly mid-message and
+    is dropped), joined with ``;`` and stripped of a trailing period (an
+    ellipsis is kept). A line's first word is lowercased unless it is an
+    identifier that is naturally capitalized, such as a class name or the name
+    of a backend library.
+    """
+    parts: list[str] = []
+    for line in str(exc).splitlines():
+        text = line.strip()
+        if text.endswith(".") and not text.endswith("..."):
+            text = text.rstrip(".")
+        if text[:5].lower() == "hint:":
+            text = text[5:].strip()
+        if not text:
+            continue
+        word = text.split(maxsplit=1)[0]
+        if (
+            len(word) > 1
+            and word[1:].islower()
+            and word.rstrip(":,;") not in _PROPER_NAMES
+        ):
+            text = text[0].lower() + text[1:]
+        parts.append(text)
+    return "; ".join(parts)
+
+
+@dataclass(frozen=True)
+class _RoleOp:
+    """A role operation recorded at a position in the chain.
+
+    ``position`` is the number of steps added before the operation, so it runs
+    after that many steps have been fitted and before the next one.
+    """
+
+    position: int
+    kind: Literal["add", "update", "remove"]
+    columns: FeaturesSelector
+    role: str  # the role added, the new role, or the role removed
+    old_role: str | None = None
+    #: The column names, when the selection was given as a plain name or list
+    #: of names (recorded from the caller's argument, not read back from the
+    #: wrapped selector).
+    names: tuple[str, ...] | None = None
+    #: Whether the operation was written as ``set_roles()``, which only matters
+    #: for how it is shown: it acts like ``add_role()`` at position 0.
+    declared: bool = False
+
+    def plain_names(self) -> list[str] | None:
+        """The column names, if the selection is a plain name or list of names."""
+        return None if self.names is None else list(self.names)
+
+    def describe(self) -> str:
+        if self.declared:
+            return f"set_roles({self.role}={self.columns!r})"
+        if self.kind == "add":
+            return f"add_role({self.columns!r}, role={self.role!r})"
+        if self.kind == "remove":
+            return f"remove_role({self.columns!r}, role={self.role!r})"
+        old = "" if self.old_role is None else f", old_role={self.old_role!r}"
+        return f"update_role({self.columns!r}, new_role={self.role!r}{old})"
+
+    def apply(
+        self,
+        frame: Frame,
+        roles: Roles,
+        lineage: Lineage | None,
+        producing_steps: dict[str, Step],
+        implicit: set[str] | None = None,
+    ) -> list[str]:
+        """Resolve the columns against the live data and change ``roles``.
+
+        A selection matching nothing leaves the roles unchanged, like a step.
+        ``implicit`` holds the columns whose feature role came from defaulting
+        rather than from the user (see `_apply_leading_ops`); it is updated in
+        place. Returns the columns the operation resolved to.
+        """
+        try:
+            columns = self.columns.resolve(frame, roles, lineage, producing_steps)
+        except Exception as exc:
+            raise ValueError(f"{self.describe()} failed; {_lower(exc)}") from exc
+        removing = self.old_role if self.kind == "update" else self.role
+        if self.kind in ("update", "remove") and removing is not None:
+            missing = [c for c in columns if removing not in roles.of(c)]
+            if missing:
+                raise ValueError(
+                    f"{self.describe()} needs column(s) {missing} to carry role "
+                    f"{removing!r}"
+                )
+        # Try on copies first so a failure part-way leaves everything untouched.
+        trial = set(implicit) if implicit is not None else None
+        try:
+            self._change(roles.copy(), columns, trial)
+        except ValueError as exc:
+            raise ValueError(f"{self.describe()} failed; {_lower(exc)}") from exc
+        self._change(roles, columns, implicit)
+        return list(columns)
+
+    def _change(
+        self, roles: Roles, columns: list[str], implicit: set[str] | None
+    ) -> None:
+        implicit = set() if implicit is None else implicit
+        for column in columns:
+            if self.kind == "add":
+                self._give(roles, column, implicit)
+            elif self.kind == "remove":
+                roles.remove(column, self.role)
+                if self.role == "feature":
+                    implicit.discard(column)
+            else:
+                previous = (
+                    {self.old_role} if self.old_role is not None else roles.of(column)
+                )
+                for old in previous:
+                    roles.remove(column, old)
+                if "feature" in previous:
+                    implicit.discard(column)
+                self._give(roles, column, implicit)
+
+    def _give(self, roles: Roles, column: str, implicit: set[str]) -> None:
+        """Add ``self.role`` to ``column``, settling it with the default features.
+
+        Only a feature role that defaulting handed out is ever displaced; one
+        the user declared is left to the usual compatibility rules. A
+        ``set_roles(feature=...)`` declaration chooses the features, so no other
+        default survives it; ``add_role()`` and ``update_role()`` do not, because
+        the same call written after a step leaves the other features alone and
+        the position of the call must not change what it does.
+        """
+        if self.role in ("target", "case_weights") and column in implicit:
+            # Defaulting never gives these columns the feature role.
+            roles.remove(column, "feature")
+            implicit.discard(column)
+        elif self.role == "feature":
+            if self.declared:
+                # Naming features is choosing them: the default no longer applies.
+                for other in implicit:
+                    roles.remove(other, "feature")
+                implicit.clear()
+            else:
+                # The user now holds this feature role on purpose, so a later
+                # operation may not quietly displace it as it could a default.
+                implicit.discard(column)
+        roles.add(column, self.role)
+
+
+def _default_features(roles: Roles, columns: list[str]) -> set[str]:
+    """Give every non-target, non-case-weights column the feature role.
+
+    Only applies when no column carries the role yet. Returns the columns that
+    were given the role this way, empty when features were declared, so a role
+    operation can tell a default from a choice.
+    """
+    if roles.columns_with_role("feature"):
+        return set()
+    given: set[str] = set()
+    for col in columns:
+        held = roles.of(col)
+        if "target" not in held and "case_weights" not in held:
+            roles.add(col, "feature")
+            given.add(col)
+    return given
+
+
+def _apply_leading_ops(
+    ops: list[_RoleOp],
+    frame: Frame,
+    roles: Roles,
+    lineage: Lineage,
+    *,
+    show_defaults: bool,
+) -> set[str]:
+    """Run the role operations written before the first step, with defaulting.
+
+    Feature defaulting runs first, so the operations read the same roles they
+    would after a step and a role selector such as ``Selectors.numeric_features()``
+    sees the default features. What keeps them equal to the ``set_roles()``
+    declarations they stand in for is how a default is settled: giving a
+    defaulted column the target or case-weights role takes the default feature
+    role away (defaulting never hands those columns the role). Adding the
+    feature role does not choose the features, as it does not after a step; only
+    a ``set_roles(feature=...)`` declaration does, and no other default survives
+    that. A feature role the user declared is never displaced.
+
+    ``show_defaults`` is true when fitting. The untrained repr and summary pass
+    false and leave out the default features that remain, so they show only
+    what was declared.
+
+    Returns the columns whose feature role is still a default, so operations
+    written after a step settle defaults the same way these do.
+    """
+    leading = [op for op in ops if op.position == 0]
+    if not leading and not show_defaults:
+        return set()
+    implicit = _default_features(roles, _frame.columns(frame))
+    lineage.refresh_roles(roles)
+    for op in leading:
+        op.apply(frame, roles, lineage, {}, implicit)
+        lineage.refresh_roles(roles)
+    if not show_defaults:
+        for column in implicit:
+            roles.remove(column, "feature")
+        return set()
+    return implicit
+
+
 def _format_recipe(
-    *, trained: bool, roles: Roles, steps: list[Step], n_columns: int | None
+    *,
+    trained: bool,
+    roles: Roles,
+    steps: list[Step],
+    n_columns: int | None,
+    role_ops: list[_RoleOp] | None = None,
 ) -> str:
     """Render the shared ``repr`` block for `Recipe` / `FittedRecipe`.
 
@@ -99,15 +323,18 @@ def _format_recipe(
         inputs = f"  Inputs: {role_summary}"
 
     lines = [header, inputs, "  Steps:"]
-    if not steps:
+    ops = role_ops or []
+    if not steps and not ops:
         lines.append("    <none>")
         return "\n".join(lines)
 
     heads = [step._repr_head() for step in steps]  # pyright: ignore[reportPrivateUsage]
-    width = max(len(head) for head in heads)
-    for step, head in zip(steps, heads):
-        marker = "trained" if step.trained else "untrained"
-        lines.append(f"    {head.ljust(width)}  [{marker}]")
+    width = max((len(head) for head in heads), default=0)
+    for i in range(len(steps) + 1):
+        lines.extend(f"    {op.describe()}" for op in ops if op.position == i)
+        if i < len(steps):
+            marker = "trained" if steps[i].trained else "untrained"
+            lines.append(f"    {heads[i].ljust(width)}  [{marker}]")
     return "\n".join(lines)
 
 
@@ -182,9 +409,10 @@ class Recipe:
     recipe
     ```
 
-    Roles are tied to the columns, not to a position in the chain, so
-    `set_roles()` can be applied anywhere in the recipe, including after the
-    steps, with the same result:
+    `set_roles()` declares roles on the input columns, so it can be applied
+    anywhere among the steps, including after them, with the same result (once
+    a role operation is written before the first step, `set_roles()` keeps the
+    order it was written in with it, see `set_roles()`):
 
     ```{python}
     late = (
@@ -195,6 +423,10 @@ class Recipe:
     )
     late
     ```
+
+    To change a role part way through the pipeline instead, use `add_role()`,
+    `update_role()` or `remove_role()`, which take effect from where they are
+    written.
 
     Parameters
     ----------
@@ -227,12 +459,18 @@ class Recipe:
     #: clones share the reference. The lineage DAG is derived from it on
     #: demand rather than stored; see ``summary()``.
     _prototype_frame: Frame | None
-    #: The roles declared on the recipe.
-    roles: Roles
+    #: The roles declared by the constructor and by ``set_roles()``. Once a
+    #: role operation is written before the first step, later ``set_roles()``
+    #: calls are kept in order with it (as operations) and are not added here;
+    #: the public ``roles`` property returns a copy with those operations applied.
+    _declared_roles: Roles
     #: Pending transform-time requirement overrides, applied at ``fit()``.
     #: Each entry is a (target, transform_required) pair where target is a
     #: role name or a selector resolved against the training data frame.
     _role_req_overrides: list[tuple[str | FeaturesSelector, bool]]
+    #: Positional role operations (`add_role`, `update_role`, `remove_role`),
+    #: each tagged with the number of steps that precede it.
+    _role_ops: list[_RoleOp]
 
     def __init__(
         self,
@@ -245,13 +483,31 @@ class Recipe:
     ):
         self.steps = _resolve_step_ids([], tuple(steps)) if steps is not None else []
         self._prototype_frame = _frame.from_native(data) if data is not None else None
-        self.roles = Roles()
+        self._declared_roles = Roles()
         self._role_req_overrides = []
+        self._role_ops = []
         _apply_role_assignments(
-            self.roles,
+            self._declared_roles,
             {"target": target, "feature": features, "case_weights": case_weights},
             check_col=self._check_column_exists,
         )
+
+    @property
+    def roles(self) -> Roles:
+        """The roles the recipe starts from, before any step runs.
+
+        A read-only copy: the recipe is immutable, so calling ``add()`` or
+        ``remove()`` on the returned roles raises (use `set_roles()` or the role
+        operations for that, or ``copy()`` for a mutable copy).
+        Role operations written before the first step, including `set_roles()`
+        calls made after one, are applied to it; default features are not
+        shown, so it holds only what was declared.
+        """
+        try:
+            return self._leading_roles().copy(read_only=True)
+        except ValueError:
+            # A bad role operation surfaces when fitting; reading must not fail.
+            return self._declared_roles.copy(read_only=True)
 
     def __repr__(self) -> str:
         """A human-readable, untrained view of the pipeline.
@@ -267,16 +523,26 @@ class Recipe:
             if self._prototype_frame is not None
             else None
         )
+        try:
+            roles = self._leading_roles()
+        except ValueError:
+            # A bad role operation surfaces when fitting; printing must not fail.
+            roles = self._declared_roles
         return _format_recipe(
-            trained=False, roles=self.roles, steps=self.steps, n_columns=n_columns
+            trained=False,
+            roles=roles,
+            steps=self.steps,
+            n_columns=n_columns,
+            role_ops=self._role_ops,
         )
 
     def _clone(self) -> "Recipe":
         """A shallow copy that preserves steps, prototype, roles, and overrides."""
         new = Recipe(steps=self.steps)
         new._prototype_frame = self._prototype_frame
-        new.roles = self.roles.copy()
+        new._declared_roles = self._declared_roles.copy()
         new._role_req_overrides = list(self._role_req_overrides)
+        new._role_ops = list(self._role_ops)
         return new
 
     def get_params(self, deep: bool = True) -> dict[str, object]:
@@ -478,11 +744,23 @@ class Recipe:
         such as an ID, out of those selections. A custom role marks columns for
         your own selectors, or for `update_role_requirements`.
 
-        Roles apply to the columns of the input data. Columns that steps create
-        get their roles from the step that creates them. ``set_roles()`` only
-        adds roles; there is no method to remove or replace one, so to change an
-        assignment, build the recipe again. A custom role can be selected in a step with
+        Roles apply to the columns of the input data, whatever the call's
+        position among the steps. Columns that steps create get their roles
+        from the step that creates them. ``set_roles()`` only adds roles; to
+        add, change, or remove one part way through the pipeline, use
+        `add_role`, `update_role` or `remove_role`. Next to those written
+        before the first step, which also act on the input columns, it keeps
+        the order it was written in, so
+        ``update_role("x", new_role="id").set_roles(group="x")`` leaves ``x``
+        with both roles, while the same two calls the other way round leave it
+        with ``"id"`` only. A custom role can be selected in a step with
         ``Selectors.has_role()``.
+
+        The ``roles`` property returns a copy of the roles the recipe starts
+        from: what the constructor and ``set_roles()`` declared, with any role
+        operation written before the first step applied (default features are
+        not shown). Changing the copy does not change the recipe; `summary()`
+        shows the same roles per column.
 
         Parameters
         ----------
@@ -531,18 +809,350 @@ class Recipe:
                 "the plural spelling is the Recipe() constructor's"
             )
 
+        assignments: dict[str, str | list[str] | None] = {
+            "target": target,
+            "feature": feature,
+            "case_weights": case_weights,
+            **custom,
+        }
+        for role in assignments:
+            if not role:
+                raise ValueError(f"'role' must be a non-empty string; got {role!r}")
+        if any(op.position == 0 for op in self._role_ops):
+            # A role operation written before the first step already ran on the
+            # declared roles, so these assignments have to come after it, as
+            # written, rather than be folded into the declarations. They are
+            # still checked now, by the same code as in the other branch, against
+            # the roles the recipe starts from once those operations have run
+            # (a bad earlier operation is reported when fitting, not here).
+            # Without prototype data an update or removal can't be replayed, so
+            # the starting roles would be wrong; fit() does the check then.
+            replayable = self._prototype_frame is not None or all(
+                op.position != 0 or (op.kind == "add" and op.names is not None)
+                for op in self._role_ops
+            )
+            if replayable:
+                try:
+                    starting = self._leading_roles()
+                except ValueError:
+                    starting = self._declared_roles.copy()
+                _apply_role_assignments(
+                    starting, assignments, check_col=self._check_column_exists
+                )
+            new = self
+            for role, columns in assignments.items():
+                if columns is None:
+                    continue
+                names = [columns] if isinstance(columns, str) else list(columns)
+                if names:
+                    new = new._with_role_op("add", names, role, declared=True)
+            return new._clone() if new is self else new
+
         new = self._clone()
         _apply_role_assignments(
-            new.roles,
-            {
-                "target": target,
-                "feature": feature,
-                "case_weights": case_weights,
-                **custom,
-            },
-            check_col=new._check_column_exists,
+            new._declared_roles, assignments, check_col=new._check_column_exists
         )
         return new
+
+    def _with_role_op(
+        self,
+        kind: Literal["add", "update", "remove"],
+        columns: Selector,
+        role: str,
+        old_role: str | None = None,
+        *,
+        declared: bool = False,
+    ) -> "Recipe":
+        """Record a role operation after the steps added so far.
+
+        ``declared`` records a ``set_roles()`` assignment instead: it acts on
+        the input columns, so it sits before the first step.
+        """
+        role_label = "new_role" if kind == "update" else "role"
+        for label, value in ((role_label, role), ("old_role", old_role)):
+            if value is None and label == "old_role":
+                continue
+            if not isinstance(value, str) or not value:  # pyright: ignore[reportUnnecessaryIsInstance]
+                raise ValueError(f"'{label}' must be a non-empty string; got {value!r}")
+        raw: object = columns
+        if not isinstance(
+            columns, (str, list, tuple, FeaturesSelector, NwSelector, PlExpr)
+        ):
+            raise TypeError(
+                "'columns' must be a column name, a list of names, or a selector; "
+                f"got {columns!r}"
+            )
+        if isinstance(columns, (list, tuple)) and not all(
+            isinstance(v, str) for v in cast("list[object]", columns)
+        ):
+            raise TypeError(
+                "'columns' must be a column name, a list of names, or a selector; "
+                f"got {columns!r} (a list cannot mix names and selectors)"
+            )
+        plain: tuple[str, ...] | None = None
+        if isinstance(columns, str):
+            plain = (columns,)
+        elif isinstance(columns, (list, tuple)):
+            # Copied: the recipe is immutable, so a list the caller keeps
+            # editing must not change which columns the operation names.
+            copied = [
+                str(v) for v in cast("list[object] | tuple[object, ...]", columns)
+            ]
+            raw = copied
+            plain = tuple(copied)
+        op = _RoleOp(
+            position=0 if declared else len(self.steps),
+            kind=kind,
+            columns=Selectors.wrap(raw),
+            role=role,
+            old_role=old_role,
+            names=plain,
+            declared=declared,
+        )
+        # Before the first step the columns are the input columns, so plain
+        # names can be checked against the prototype data right away.
+        names = op.plain_names()
+        if op.position == 0 and names is not None:
+            for name in names:
+                self._check_column_exists(name)
+        new = self._clone()
+        new._role_ops.append(op)
+        return new
+
+    def _leading_roles(self) -> Roles:
+        """The declared roles with the role operations written before any step.
+
+        Needs the prototype data to resolve selectors; without it only plain
+        column names are applied.
+        """
+        roles = self._declared_roles.copy()
+        frame = self._prototype_frame
+        if frame is not None:
+            lineage = Lineage.from_frame(frame, roles)
+            _apply_leading_ops(
+                self._role_ops, frame, roles, lineage, show_defaults=False
+            )
+            return roles
+        for op in self._role_ops:
+            if op.position != 0:
+                continue
+            names = op.plain_names()
+            if names is None or op.kind != "add":
+                continue
+            for name in names:
+                roles.add(name, op.role)
+        return roles
+
+    def _declared_targets(self) -> list[str]:
+        """Target columns known before fitting: declared roles plus plain-name ops."""
+        if self._prototype_frame is not None:
+            # Resolve the leading operations (selectors included) against the data.
+            try:
+                return self._leading_roles().columns_with_role("target")
+            except ValueError:
+                # A bad operation is reported by fit() with its own context.
+                return self._declared_roles.columns_with_role("target")
+        targets = list(self._declared_roles.columns_with_role("target"))
+        # Only operations before the first step act on the input columns, so
+        # only those can change which input columns are targets; replay them
+        # in order.
+        for op in self._role_ops:
+            names = op.plain_names()
+            if op.position != 0 or not names:
+                continue
+            if op.kind == "add":
+                if op.role == "target":
+                    targets.extend(n for n in names if n not in targets)
+                continue
+            dropped = op.role if op.kind == "remove" else op.old_role
+            if dropped is None or dropped == "target":
+                targets = [t for t in targets if t not in names]
+            if op.kind == "update" and op.role == "target":
+                targets.extend(n for n in names if n not in targets)
+        return targets
+
+    def add_role(self, columns: Selector, *, role: str) -> "Recipe":
+        """Return a new recipe with a role added at this point in the chain.
+
+        Unlike `set_roles()`, which declares roles on the input columns whatever
+        its position, a role operation takes effect where it is written: steps
+        added after it see the new role, steps added before it do not. It can
+        also reach columns that earlier steps created.
+
+        The columns are resolved when the recipe is fitted, against the columns
+        as the steps before it left them. A selection matching nothing changes
+        nothing. Adding a role a column already has is harmless; an
+        incompatible one (``"target"`` on a feature) raises when the recipe is
+        fitted.
+
+        Wherever the call is written, a column that is only a feature by
+        default (see `Recipe`) and is made the ``"target"`` or
+        ``"case_weights"`` is taken out of the features instead of raising or
+        keeping both roles, like `set_roles()`. A feature role you declared
+        yourself is never taken away, so it still conflicts with
+        ``"target"``. Adding the ``"feature"`` role never changes which other
+        columns are features.
+
+        Parameters
+        ----------
+        columns
+            Columns to give the role to. Accepts a single column name, a list of names, a
+            mlfeatures selector such as ``Selectors.numeric_features()`` (see
+            `Selectors` for the full set), or a narwhals or polars selector
+            (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+            Selectors are resolved against the data frame as the steps before
+            this one left it, when the recipe is fitted.
+        role
+            The role to add.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepNormalize
+        from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
+        ```
+
+        Give ``Seniority`` a ``"group"`` role after the normalization, so the
+        step before it is unaffected:
+
+        ```{python}
+        recipe = (
+            Recipe(data=credit, target="Status")
+            .add(StepNormalize(s.numeric_features()))
+            .add_role(s.starts_with("Senior"), role="group")
+        )
+        recipe
+        ```
+
+        Fitting applies the role, which the summary then shows:
+
+        ```{python}
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
+        fitted.summary()
+        ```
+        """
+        return self._with_role_op("add", columns, role)
+
+    def update_role(
+        self, columns: Selector, *, new_role: str, old_role: str | None = None
+    ) -> "Recipe":
+        """Return a new recipe with a role changed at this point in the chain.
+
+        Takes effect where it is written (see `add_role()`). With ``old_role``
+        only that role is swapped for ``new_role`` and the column's other roles
+        stay; without it, all of a column's roles are replaced by ``new_role``.
+
+        Parameters
+        ----------
+        columns
+            Columns to change the role of. Accepts a single column name, a list of names, a
+            mlfeatures selector such as ``Selectors.numeric_features()`` (see
+            `Selectors` for the full set), or a narwhals or polars selector
+            (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+            Selectors are resolved against the data frame as the steps before
+            this one left it, when the recipe is fitted.
+        new_role
+            The role the columns end up with.
+        old_role
+            The role to replace. Every selected column must carry it, or
+            fitting raises ``ValueError``. Default ``None`` (replace all roles).
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepNormalize
+        from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
+        ```
+
+        Normalize every numeric feature, then swap the ``"feature"`` role of
+        ``Seniority`` for ``"id"``, so steps added after this call no longer
+        select it:
+
+        ```{python}
+        recipe = (
+            Recipe(data=credit, target="Status")
+            .add(StepNormalize(s.numeric_features()))
+            .update_role(s.starts_with("Senior"), new_role="id", old_role="feature")
+        )
+        recipe
+        ```
+
+        Fitting applies the change, which the summary then shows:
+
+        ```{python}
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
+        fitted.summary()
+        ```
+        """
+        return self._with_role_op("update", columns, new_role, old_role)
+
+    def remove_role(self, columns: Selector, *, role: str) -> "Recipe":
+        """Return a new recipe with a role removed at this point in the chain.
+
+        Takes effect where it is written (see `add_role()`). Every selected
+        column must carry the role, or fitting raises ``ValueError``. A column
+        left with no role is kept, but role selectors no longer match it.
+
+        Parameters
+        ----------
+        columns
+            Columns to remove the role from. Accepts a single column name, a list of names, a
+            mlfeatures selector such as ``Selectors.numeric_features()`` (see
+            `Selectors` for the full set), or a narwhals or polars selector
+            (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
+            Selectors are resolved against the data frame as the steps before
+            this one left it, when the recipe is fitted.
+        role
+            The role to remove.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepNormalize
+        from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
+        ```
+
+        ```{python}
+        recipe = (
+            Recipe(data=credit, target="Status")
+            .add(StepNormalize(s.numeric_features()))
+            .remove_role(s.starts_with("Senior"), role="feature")
+        )
+        recipe
+        ```
+
+        Fitting applies the change, which the summary then shows:
+
+        ```{python}
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
+        fitted.summary()
+        ```
+        """
+        return self._with_role_op("remove", columns, role)
 
     def update_role_requirements(
         self,
@@ -681,7 +1291,12 @@ class Recipe:
             data during the fit; the error names the step and the columns it
             was working on.
         ValueError
-            If a step would produce a column name that already exists.
+            If a step would produce a column name that already exists, or a
+            role operation (`add_role()`, `update_role()`, `remove_role()`, or
+            `set_roles()` written after one) fails: its columns cannot be
+            selected, a column lacks the role it is asked to give up, the
+            result would hold incompatible roles, or it is positioned after a
+            step the recipe does not have.
         ImportError
             If a step needs an optional dependency that is not installed.
 
@@ -725,29 +1340,62 @@ class Recipe:
         # state in place is isolated too: the guarantee must not depend on how
         # a step author wrote ``fit()``.
         steps = [copy.deepcopy(step) for step in self.steps]
-        live_roles = self.roles.copy()
-        if not live_roles.columns_with_role("feature"):
-            reserved = {
-                col
-                for col in _frame.columns(current)
-                if "target" in live_roles.of(col)
-                or "case_weights" in live_roles.of(col)
-            }
-            for col in _frame.columns(current):
-                if col not in reserved:
-                    live_roles.add(col, "feature")
-        # Snapshot the training data into a schema and validate the incoming
-        # data frame against it (all columns required at fit). The snapshot rides on
-        # the FittedRecipe so transform() can re-check new data at the boundary.
-        overrides = self._resolve_role_req_overrides(current, live_roles)
-        schema = Schema.from_frame(current, live_roles, overrides)
-        schema.check(current, context="fit")
+        live_roles = self._declared_roles.copy()
         # The column-lineage DAG, seeded from the training data frame and updated
         # after each column-changing step. RowOp and
         # empty-selection steps make no schema change and are skipped below.
+        # It exists before the first step so that role operations written there
+        # can use provenance selectors; its roles are refreshed once those and
+        # feature defaulting have run.
         lineage = Lineage.from_frame(current, live_roles)
         fitted_steps: list[Step] = []
-        for step in steps:
+        # Input columns a role operation written after the first step resolved
+        # to: only their transform-time requirement can differ from the one
+        # derived from the input roles below.
+        touched: set[str] = set()
+        # Input columns a step reads at transform, as that step saw their roles.
+        needed: set[str] = set()
+        track_requirements = any(op.position > 0 for op in self._role_ops)
+
+        def run_role_ops(position: int) -> None:
+            ops = [op for op in self._role_ops if op.position == position]
+            for op in ops:
+                touched.update(
+                    op.apply(
+                        current,
+                        live_roles,
+                        lineage,
+                        {s.id: s for s in fitted_steps},
+                        implicit,
+                    )
+                )
+                lineage.refresh_roles(live_roles)
+
+        # Role operations written before the first step act on the input
+        # columns, so they run before the schema snapshot and behave like
+        # ``set_roles()`` there; see ``_apply_leading_ops`` for how they
+        # interact with feature defaulting.
+        implicit = _apply_leading_ops(
+            self._role_ops, current, live_roles, lineage, show_defaults=True
+        )
+        # Snapshot the training data into a schema and validate the incoming
+        # data frame against it (all columns required at fit). The snapshot rides on
+        # the FittedRecipe so transform() can re-check new data at the boundary.
+        input_frame = current
+        overrides = self._resolve_role_req_overrides(current, live_roles)
+        schema = Schema.from_frame(current, live_roles, overrides)
+        schema.check(current, context="fit")
+        input_names = set(schema.transform_required)
+        lineage.refresh_roles(live_roles)
+        dangling = [op for op in self._role_ops if op.position > len(steps)]
+        if dangling:
+            raise ValueError(
+                f"{dangling[0].describe()} is positioned after step "
+                f"{dangling[0].position} but the recipe has {len(steps)} step(s)"
+            )
+        for position, step in enumerate(steps):
+            if position > 0:
+                run_role_ops(position)
             info = SchemaInfo.from_frame(current)
             info.roles = live_roles
             # Hand the live lineage DAG and the id→step map to selector
@@ -790,6 +1438,17 @@ class Recipe:
             except Exception as exc:
                 raise StepError.wrap(step, selected, "fit") from exc
             fitted.trained = True  # set by the recipe, not the step (per contract)
+            if track_requirements and not isinstance(step, RowOp):
+                # What the step reads is only known once it has been fitted (a
+                # step without a selector reports it then). A row operation is
+                # skipped at transform, so it reads nothing there.
+                read = selected if has_selector else fitted.schema_in().columns
+                needed.update(
+                    column
+                    for column in read
+                    if column in input_names
+                    and column_transform_required(column, live_roles, overrides)
+                )
             if not isinstance(step, RowOp):
                 # Centralized name-collision guard: reject produced columns that
                 # clash with the live schema or with each other, before the step
@@ -808,12 +1467,32 @@ class Recipe:
             if not isinstance(step, RowOp):
                 lineage.update(fitted, current, live_roles)
             fitted_steps.append(fitted)
+        if steps:
+            run_role_ops(len(steps))
+        # A role operation written after a step can change the roles of an input
+        # column, and with them whether transform() needs it: a column that
+        # becomes case weights no longer does, one that becomes a feature now
+        # does. So the requirement of every column such an operation touched is
+        # derived again from its final roles, with the overrides resolved
+        # against them (a column that gained a role takes that role's override).
+        # A step that read the column while it was required keeps it required,
+        # or a missing column would pass the schema check and then fail inside
+        # the step.
+        changed = touched & input_names
+        if changed:
+            final_overrides = self._resolve_role_req_overrides(input_frame, live_roles)
+            required = dict(schema.transform_required)
+            for column in changed:
+                required[column] = column in needed or column_transform_required(
+                    column, live_roles, final_overrides
+                )
+            schema = replace(schema, transform_required=required)
         return FittedRecipe(
             steps=fitted_steps, roles=live_roles, lineage=lineage, schema=schema
         )
 
     def summary(self) -> DataFrame:
-        """The input columns, before any step runs, as a tidy frame.
+        """The input columns, before any step runs, as a tidy data frame.
 
         One row per column, with its ``name``, ``dtype``, ``roles`` (a column
         with several roles lists them all in one cell), ``source`` (always
@@ -823,6 +1502,8 @@ class Recipe:
 
         Use it to check that the roles you assigned landed on the columns you
         meant before fitting; it cannot show what the steps will add or remove.
+        Role operations written before the first step are reflected; later ones
+        take effect at fit time and appear in `FittedRecipe.summary()`.
 
         Raises
         ------
@@ -860,7 +1541,9 @@ class Recipe:
                 "summary() needs prototype data; construct the recipe with "
                 "Recipe(data=...), or fit it and call FittedRecipe.summary()"
             )
-        return Lineage.from_frame(self._prototype_frame, self.roles).summary()
+        return Lineage.from_frame(
+            self._prototype_frame, self._leading_roles()
+        ).summary()
 
 
 class FittedRecipe:
@@ -1203,7 +1886,7 @@ class FittedRecipe:
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
-        """The columns the recipe produces, as a tidy frame.
+        """The columns the recipe produces, as a tidy data frame.
 
         One row per output column, with its dtype, role, and the step that
         created it (``"original"`` for columns passed through from the input).

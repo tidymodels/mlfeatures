@@ -63,16 +63,14 @@ class TestDtypeMatching:
 class TestRoleRequirements:
     def test_custom_role_required_by_default(self) -> None:
         df = pd.DataFrame(_train())
-        rec = Recipe(features="x")
-        rec.roles.add("y", "id")
+        rec = Recipe(features="x").set_roles(id="y")
         fitted = rec.add(StepNormalize(["x"])).fit(df)
         assert fitted.schema is not None
         assert fitted.schema.transform_required["y"] is True
 
     def test_update_role_requirements_by_role_name(self) -> None:
         df = pd.DataFrame(_train())
-        rec = Recipe(features="x")
-        rec.roles.add("y", "id")
+        rec = Recipe(features="x").set_roles(id="y")
         fitted = (
             rec.update_role_requirements("id", transform_required=False)
             .add(StepNormalize(["x"]))
@@ -86,8 +84,7 @@ class TestRoleRequirements:
 
     def test_update_role_requirements_by_selector(self) -> None:
         df = pd.DataFrame(_train())
-        rec = Recipe(features="x")
-        rec.roles.add("y", "id")
+        rec = Recipe(features="x").set_roles(id="y")
         fitted = (
             rec.update_role_requirements(Selectors.col("y"), transform_required=False)
             .add(StepNormalize(["x"]))
@@ -115,8 +112,7 @@ class TestRoleRequirements:
         assert str(excinfo.value) == snapshot
 
     def test_update_role_requirements_is_pure(self) -> None:
-        rec = Recipe(features="x")
-        rec.roles.add("y", "id")
+        rec = Recipe(features="x").set_roles(id="y")
         new = rec.update_role_requirements("id", transform_required=False)
         assert new is not rec
         assert rec._role_req_overrides == []

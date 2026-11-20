@@ -216,9 +216,12 @@ class _RoleTypeSelector(FeaturesSelector):
         from mlfeatures import _frame
 
         if self._role is not None:
-            candidates = [
-                c for c in roles.columns_with_role(self._role) if c in frame.columns
-            ]
+            # In data frame column order, like every other selector: the order
+            # ``Roles`` happens to hold a column in depends on the history of
+            # role changes (a column whose last role is removed and that is
+            # then given one again moves to the end), and a selection must not.
+            held = set(roles.columns_with_role(self._role))
+            candidates = [c for c in _frame.columns(frame) if c in held]
         else:
             candidates = _frame.columns(frame)
 

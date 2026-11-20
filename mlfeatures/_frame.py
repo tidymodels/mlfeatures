@@ -173,7 +173,41 @@ def with_column(frame: Frame, name: str, values: Any) -> Frame:
     narwhals `Series` on the data frame's backend so the result stays native (pandas in →
     pandas out).
     """
-    series = nw.new_series(name=name, values=values, backend=frame.implementation)
+    try:
+        given = nw.from_native(values, series_only=True)
+    except TypeError:
+        series = nw.new_series(name=name, values=values, backend=frame.implementation)
+    else:
+        # The dtype is kept (a categorical, string or nullable integer ``y`` must
+        # not be coerced) and the values attach by position, whatever index the
+        # series carries.
+        if given.implementation == frame.implementation:
+            if frame.implementation.is_pandas_like():
+                series = nw.from_native(
+                    given.to_native().set_axis(frame.to_native().index),
+                    series_only=True,
+                )
+            else:
+                series = given
+        else:
+            # Go through Arrow so nulls and dtype survive the backend hop
+            # (``to_list()`` turns pandas nulls into NaN).
+            arrow = given.to_arrow()
+            if frame.implementation.is_pandas_like():
+                ns = frame.implementation.to_native_namespace()
+                series = nw.from_native(
+                    arrow.to_pandas(types_mapper=ns.ArrowDtype).set_axis(
+                        frame.to_native().index
+                    ),
+                    series_only=True,
+                )
+            else:
+                series = nw.new_series(
+                    name=name,
+                    values=arrow,
+                    dtype=given.dtype,
+                    backend=frame.implementation,
+                )
     return frame.with_columns(series.alias(name))
 
 

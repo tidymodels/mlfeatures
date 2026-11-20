@@ -1,0 +1,31 @@
+# serializer version: 1
+# name: TestConformReportsMissingColumns.test_missing_column_raises_a_clear_error
+  "transform output is missing column(s) ['x1'] that fit() produced"
+# ---
+# name: TestSelectorTargetsAreChecked.test_selector_target_read_by_a_step_is_rejected
+  "step 'normalize' (step_normalize) operates on target column(s) ['y']; RecipeTransformer cannot apply it because sklearn's transform() never receives y; transform the target outside the pipeline (e.g. with sklearn's TransformedTargetRegressor)"
+# ---
+# name: TestTargetDeclaredByRoleOps.test_late_target_op_gets_a_specific_hint
+  "y was provided but the recipe declares no 'target' role; assign one with set_roles(target=...) or pass y=None; a role operation written after the first step cannot define the target, so declare it with set_roles(target=...) or write it before the first step"
+# ---
+# name: TestTargetDeclaredByRoleOps.test_leading_remove_role_removes_the_target
+  "y was provided but the recipe declares no 'target' role; assign one with set_roles(target=...) or pass y=None"
+# ---
+# name: TestTargetDeclaredByRoleOps.test_selector_that_cannot_define_the_target_is_not_blamed
+  "y was provided but the recipe declares no 'target' role; assign one with set_roles(target=...) or pass y=None"
+# ---
+# name: TestTargetDeclaredByRoleOps.test_selector_that_could_define_the_target_needs_data
+  "y was provided but the recipe's target cannot be determined: a role operation uses a selector, which needs Recipe(data=...) to resolve; pass column names or give the recipe prototype data"
+# ---
+# name: TestTargetValues.test_length_mismatch_raises
+  'X and y have inconsistent numbers of samples: 6 and 3'
+# ---
+# name: TestTargetValues.test_multi_target_raises
+  "multi-target recipes are not yet supported (got ['y', 'x1']); declare a single target column"
+# ---
+# name: TestTargetValues.test_scalar_y_raises
+  'y must be 1-dimensional or a single column; got a scalar'
+# ---
+# name: TestTargetValues.test_wide_y_raises
+  'y must be 1-dimensional or a single column; got shape (6, 2)'
+# ---
