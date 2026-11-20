@@ -13,11 +13,11 @@ The goal is for selectors to work **everywhere a column name or list of column n
 
 - Every step argument that names columns (not just the leading variadic)
 - `update_role_requirements(role, ...)`, which takes a role name or a selector
+- `add_role()`, `update_role()`, `remove_role()`, applied at their position in the chain (see [roles.md](roles.md))
 
 Still names-only, and planned to accept selectors:
 
 - `set_roles(target=..., feature=...)`
-- `add_role()`, `update_role()`, `remove_role()` (themselves not implemented yet; see [roles.md](roles.md))
 - A column-subsetting argument of `transform()` (not implemented yet)
 
 R `recipes` only supported selectors in the leading `...` of steps, making secondary-column args and role management impossible to express with the DSL [#1197, #1225, #1299, #1417]. We treat selectors as a first-class primitive that the entire API is built on top of.

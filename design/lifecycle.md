@@ -51,6 +51,8 @@ At `fit()` time a snapshot of the training columns is captured from the training
 
 The snapshot is taken at `fit()` rather than construction so that role-defaulting has already run and the per-role requirements are resolved against the actual training columns. No data values are retained — only the structural description (the name→dtype half reuses narwhals' `Schema`). The snapshot is lightweight and survives serialization, so a pickled `FittedRecipe` keeps validating new data at the boundary.
 
+Role operations written before the first step have run by the time the snapshot is taken, so their effect is in it. One written after a step can still change the roles of an input column, and with them whether `transform()` needs it, so at the end of `fit()` the transform-time requirement of every input column such an operation touched is derived again from its final roles. The snapshot's names, dtypes, and input roles stay as captured; only `transform_required` can differ. See [roles.md](roles.md).
+
 ### Per-role requirements
 
 Whether a column must be present at `fit()` and `transform()` time is determined per-role. Some roles have hardcoded, unchangeable requirements; others have defaults the user can override:

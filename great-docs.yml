@@ -93,6 +93,9 @@ reference:
       - Recipe.add
       - Recipe.fit
       - Recipe.set_roles
+      - Recipe.add_role
+      - Recipe.update_role
+      - Recipe.remove_role
       - Recipe.update_role_requirements
       - Recipe.summary
 

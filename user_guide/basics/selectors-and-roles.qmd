@@ -135,3 +135,29 @@ recipe = (
 fitted = recipe.fit(ames_mini)
 fitted.summary().filter(pl.col("roles").str.contains("geo"))
 ```
+
+## Changing roles part way through
+
+`set_roles()` labels the columns that arrive with the data, and it does so
+whatever its position in the recipe. To change a role at a point in the
+pipeline, use `add_role()`, `update_role()` or `remove_role()`. Each takes
+effect where it is written: the steps after it see the new role, the steps
+before it do not, and it can reach columns that earlier steps created.
+Here the dummy indicators get an `indicator` role, which the normalization
+that follows leaves out by selecting features without it:
+
+```{python}
+recipe = (
+    Recipe(data=ames_mini, target="Sale_Price")
+    .add(StepDummy(s.nominal_features()))
+    .add_role(s.has_source("dummy"), role="indicator")
+    .add(StepNormalize(s.numeric_features() - s.has_role("indicator")))
+)
+fitted = recipe.fit(ames_mini)
+fitted.summary().filter(pl.col("roles").str.contains("indicator"))
+```
+
+`update_role(columns, new_role=..., old_role=...)` swaps one role for another,
+or replaces all of a column's roles when `old_role` is left out, and
+`remove_role(columns, role=...)` takes a role away. Like a step's `columns`,
+the first argument can be a name, a list of names, or a selector.
