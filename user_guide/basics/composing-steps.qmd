@@ -2,7 +2,7 @@
 title: "Composing steps"
 ---
 
-Steps run in order, and each one selects from the frame as the previous step
+Steps run in order, and each one selects from the data frame as the previous step
 left it. That is what lets a later step pick up columns an earlier step
 created, and mlfeatures tracks which step produced each column so a selector can
 ask for exactly those.
@@ -25,7 +25,7 @@ from mlfeatures.data import credit
 
 ## Each step sees the previous step's output
 
-A selector is resolved against the frame as it exists when its step runs, so
+A selector is resolved against the data frame as it exists when its step runs, so
 a step placed after `StepDummy` can select the indicator columns it created.
 Here the normalize step's `s.numeric_features()` matches the original
 numerics and every new indicator column:

@@ -25,9 +25,9 @@ Decisions that must be made **before v0.1 ships**.
 
 1. **Package name.** `mlfeatures` is the current working name — confirm it is available on PyPI and reserve it early.
 
-2. **Pandas vs. polars as primary boundary.** ~~Pick one as the canonical external-facing type; the other becomes an adapter.~~ **Resolved: narwhals is the internal representation** (see [ecosystem.md](ecosystem.md#dataframe-support)). Steps are written once against the narwhals API and run natively on whichever backend the user passes; no single internal frame type is committed to. Pandas/numpy remains the canonical type at the sklearn boundary.
+2. **Pandas vs. polars as primary boundary.** ~~Pick one as the canonical external-facing type; the other becomes an adapter.~~ **Resolved: narwhals is the internal representation** (see [ecosystem.md](ecosystem.md#dataframe-support)). Steps are written once against the narwhals API and run natively on whichever backend the user passes; no single internal data frame type is committed to. Pandas/numpy remains the canonical type at the sklearn boundary.
 
-4. **Lazy vs. eager transform.** Should `transform()` return a lazy polars frame to enable query optimization? Recommendation: **eager by default**; add `transform_lazy()` later. This must be decided explicitly — R `recipes` never did [#878].
+4. **Lazy vs. eager transform.** Should `transform()` return a lazy polars data frame to enable query optimization? Recommendation: **eager by default**; add `transform_lazy()` later. This must be decided explicitly — R `recipes` never did [#878].
 
 5. **Step naming convention.** Keep R's `step_dummy` function-based API (recommended for parity) or switch to class-based (`Dummy`, `Normalize`)? Recommendation: **functions named `step_dummy(...)` returning `Step` instances**.
 

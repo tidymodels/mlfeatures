@@ -51,7 +51,7 @@ This is shown below.
 from mlfeatures import Recipe, StepNormalize, StepPca
 
 # a recipe fits the same steps on training data and applies them unchanged
-# to any other frame; `RecipeTransformer` drops one into a scikit-learn
+# to any other data frame; `RecipeTransformer` drops one into a scikit-learn
 # `Pipeline`
 recipe = (
     Recipe()
@@ -98,8 +98,8 @@ def plot_pairs(frame):
 ## Example: polars beans PCA
 
 Importing `mlfeatures.polars` registers a `mlf` namespace on polars DataFrames. Each
-`df.mlf.step_*()` call fits that step on the frame, applies it, and returns a
-new frame.
+`df.mlf.step_*()` call fits that step on the data frame, applies it, and returns a
+new data frame.
 
 For example, the code below drops constant columns, rank-normalizes and then normalizes each measurement, then projects onto 4 principal components.
 
@@ -130,7 +130,7 @@ To handle this workflow, mlfeatures provides a `Recipe` class for specifying ste
 ## Example: sklearn Recipe PCA
 
 While the previous example used a single DataFrame, this example splits it into training and test frames.
-It uses the `Recipe` class to specify the pre-processing, fit to the training frame, and then transform the test frame.
+It uses the `Recipe` class to specify the pre-processing, fit to the training data frame, and then transform the test frame.
 Then, it shows how the `Recipe` can be used in a scikit-learn pipeline.
 
 ### Split data and specify Recipe

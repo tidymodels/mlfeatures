@@ -7,7 +7,7 @@
 Findings from building `mlfeatures/_frame.py` (the narwhals boundary) and prototyping
 `step_normalize`'s data ops over pandas and polars (issue #15). This is the
 "document any coverage gaps" deliverable — the early-warning signal for the
-fallback to a concrete internal frame type.
+fallback to a concrete internal data frame type.
 
 ## Verdict
 
@@ -48,8 +48,8 @@ These are not blockers, but step authors and #18 should know them.
   eventual `step_normalize` should still make `ddof` explicit rather than relying
   on the default.
 
-- **`from_native(..., eager_only=True)`** is used throughout — the frame API is
-  eager-only for now. Lazy / streaming frames are out of scope until a step needs
+- **`from_native(..., eager_only=True)`** is used throughout — the data frame API is
+  eager-only for now. Lazy / streaming data frames are out of scope until a step needs
   them; that will reopen the boundary signature.
 
 ## Tooling note (not a narwhals gap)

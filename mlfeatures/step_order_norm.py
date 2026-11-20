@@ -93,7 +93,7 @@ def fit_order_norm(selected: Frame) -> dict[str, OrderNormFit]:
         A narwhals DataFrame whose columns are all numeric. Passed in by the
         step's ``fit()`` method after selector resolution.
 
-    Callers are expected to pass an all-numeric frame; dtype screening is the
+    Callers are expected to pass an all-numeric data frame; dtype screening is the
     selector / ``accepts_dtypes`` layer's job, so this function does not
     re-validate it.
 
@@ -187,7 +187,7 @@ def apply_order_norm(selected: Frame, fits: dict[str, OrderNormFit]) -> Frame:
 
     Returns
     -------
-    narwhals.DataFrame: the input frame with each column in ``fits`` replaced
+    narwhals.DataFrame: the input data frame with each column in ``fits`` replaced
     in place by its normal-quantile score. Missing input values pass through
     as missing. Column names, order, and structure are unchanged.
     """
@@ -242,7 +242,7 @@ class StepOrderNorm(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     id

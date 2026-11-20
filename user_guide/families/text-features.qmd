@@ -10,7 +10,7 @@ No mlfeatures steps fill this family, and none are planned soon. Today the task
 lives at the recipe's boundary instead:
 
 - **Pre-compute simple text features** with polars or pandas string
-  expressions before the frame enters the recipe (length, word count, contains
+  expressions before the data frame enters the recipe (length, word count, contains
   a pattern), or reach for the `StepMutate` escape hatch inside it.
 - **Vectorize with scikit-learn**: run ``TfidfVectorizer`` or
   ``CountVectorizer`` in a ``ColumnTransformer`` branch alongside

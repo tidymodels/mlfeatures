@@ -77,7 +77,7 @@ rows with a null income all come back.
 
 ## Transform training, validation, and production data
 
-`fitted.transform(frame)` applies the stored estimates to any frame with the
+`fitted.transform(frame)` applies the stored estimates to any data frame with the
 same columns. Training data, a validation split, and rows arriving in
 production all get the training medians and means, which is what makes
 their transformed values comparable.

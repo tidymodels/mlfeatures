@@ -1,7 +1,7 @@
 """Opt-in polars accessor: ``df.mlf.<step>(...)`` sugar over the mlfeatures lifecycle.
 
 Importing this module registers a ``mlf`` namespace on polars DataFrames, so a
-single step can be fitted and applied to a frame in one expression:
+single step can be fitted and applied to a data frame in one expression:
 
 ```python
 import mlfeatures.polars  # registers the `mlf` namespace (side effect)
@@ -88,14 +88,21 @@ class MlfNamespace:
     """The ``mlf`` polars DataFrame namespace.
 
     Registered on import; reach it as ``df.mlf``. Each method builds the
-    corresponding step, fits it on the frame, and returns the transformed frame.
+    corresponding step, fits it on the data frame, and returns the transformed data frame.
+
+    Use it to try a step on a data frame, or to apply a one-off transform. Every
+    call fits and applies in one go and keeps nothing, so the statistics it
+    estimates cannot be reused on new data. Calling it again on a test set would
+    re-estimate them from that set, which is train/serve skew. Build a `Recipe`
+    and fit it once whenever the same transform has to be applied to data you
+    have not seen yet.
     """
 
     def __init__(self, df: pl.DataFrame) -> None:
         self._df = df
 
     def apply(self, *steps: Step) -> pl.DataFrame:
-        """Fit ``steps`` on the frame in order and return the transformed frame.
+        """Fit ``steps`` on the data frame in order and return the transformed data frame.
 
         The generic escape hatch behind every ``step_*`` method: it accepts any
         `Step` instance(s), so steps without a dedicated

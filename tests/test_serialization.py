@@ -575,6 +575,50 @@ class TestPayloadCannotRunCode:
             FittedRecipe.from_dict(payload, trusted=[_HeavyStep])
 
 
+class TestMalformedTopLevelPayloads:
+    """A payload with the wrong overall shape raises ``ValueError``, never ``KeyError``."""
+
+    def test_wrong_shape_raises_value_error(self, snapshot: SnapshotAssertion) -> None:
+        rec, _ = _multi_step()
+        good = rec.to_dict()
+        payloads: dict[str, Any] = {
+            "not a mapping": [1, 2],
+            "empty": {},
+            "steps missing": {k: v for k, v in good.items() if k != "steps"},
+            "steps not a list": {**good, "steps": 1},
+            "roles not a mapping": {**good, "roles": None},
+        }
+        messages: dict[str, str] = {}
+        for label, payload in payloads.items():
+            with pytest.raises(ValueError) as excinfo:
+                FittedRecipe.from_dict(payload)
+            messages[label] = str(excinfo.value)
+        assert messages == snapshot
+
+    def test_missing_format_version_reads_as_current(self) -> None:
+        rec, df = _multi_step()
+        payload = {k: v for k, v in rec.to_dict().items() if k != "format_version"}
+        pt.assert_frame_equal(
+            FittedRecipe.from_dict(payload).transform(df), rec.transform(df)
+        )
+
+
+class TestWarningPointsAtCaller:
+    """The save-time warning is attributed to the caller's line, whichever entry point."""
+
+    @pytest.mark.parametrize("method", ["to_dict", "to_json"])
+    def test_warning_filename_is_this_file(self, method: str) -> None:
+        df = pd.DataFrame({"a": [1.0, 2.0, 3.0]})
+        rec = Recipe().add(_HeavyStep()).fit(df)
+        for call in (
+            lambda: getattr(rec, method)(),
+            lambda: getattr(serialization, method)(rec),
+        ):
+            with pytest.warns(UserWarning, match="recipe names class") as record:
+                call()
+            assert record[0].filename == __file__
+
+
 class TestMalformedPayloads:
     """A payload that is malformed raises ``ValueError``, as one that names a bad class does."""
 

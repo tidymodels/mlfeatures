@@ -245,7 +245,7 @@ def apply_spline_monotone(
     Returns
     -------
     Frame
-        New frame with the selected columns replaced by their monotone-spline
+        New data frame with the selected columns replaced by their monotone-spline
         expansions. Backend (pandas/polars) is preserved end-to-end.
 
     Warns
@@ -372,7 +372,7 @@ class StepSplineMonotone(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     deg_free

@@ -2,4 +2,101 @@
 title: "Serializing recipes"
 ---
 
-*Stub: content to come.*
+A `FittedRecipe` can be saved as JSON or YAML and loaded again, in another process or on another machine, without the training data. The file holds every step's hyperparameters and learned statistics plus the recipe's roles, training schema, and lineage. It is plain text, so it can be reviewed in a pull request and kept next to a model.
+
+::: {.callout-note collapse="true" title="Key points"}
+* `to_json()` and `to_yaml()` write a fitted recipe; `from_json()` and `from_yaml()` read it back
+* YAML needs the optional `pyyaml` package (`pip install mlfeatures[yaml]`)
+* loading only accepts classes from mlfeatures, registered step packages, and classes you pass as `trusted`
+* a file written by a different `format_version` is refused; fit the recipe again
+* `minimize()` drops what `transform()` does not need, for steps that have something to drop
+:::
+
+## Setup
+
+```{python}
+from mlfeatures import (
+    Recipe,
+    StepNormalize,
+    from_json,
+    from_yaml,
+    minimize,
+    to_dict,
+    to_json,
+    to_yaml,
+)
+from mlfeatures import Selectors as s
+from mlfeatures.data import credit
+
+credit = credit.drop_nulls()
+recipe = Recipe().add(StepNormalize(s.numeric_features()))
+fitted = recipe.fit(credit)
+```
+
+## Save and load
+
+`to_json()` returns the text and leaves writing it to a file to you. The same functions are available as methods, such as `fitted.to_json()` and `FittedRecipe.from_json(text)`.
+
+```{python}
+text = to_json(fitted)
+text[:300]
+```
+
+The loaded recipe transforms new data the same way as the original.
+
+```{python}
+restored = from_json(text)
+restored.transform(credit).head()
+```
+
+`to_yaml()` and `from_yaml()` write and read the same content as YAML.
+
+```{python}
+from_yaml(to_yaml(fitted)).transform(credit).head()
+```
+
+## What is in the file
+
+`to_dict()` returns the payload that both formats encode. It has six keys, in this order: `mlfeatures_version` (what wrote it), `format_version` (the layout), `roles`, `schema`, `lineage`, and `steps`. Each entry in `steps` has the step's class name as `type` and its hyperparameters and learned statistics as `state`.
+
+```{python}
+payload = to_dict(fitted)
+list(payload)
+```
+
+The payload holds statistics and schemas, never the training data, and nothing in it is a closure or an environment.
+
+## What cannot be saved
+
+Saving raises a `TypeError` rather than silently dropping something:
+
+* a raw polars or narwhals selector (a `Selectors` selector or a list of names is saved)
+* a `dateutil` rule, as held by `StepHoliday`
+* a function, as held by `StepMutate`; pickle recipes that contain it
+
+One more limitation does not raise: the categories of an `Enum` column are not kept, so after loading, the column's dtype in the schema and lineage is an `Enum` with no categories. Checks that compare dtypes by type are unaffected.
+
+## Format versions
+
+`format_version` changes only when the layout changes incompatibly. A file with another version raises a `ValueError` that asks you to fit the recipe again and save it again. A file with no `format_version` is read as the current one.
+
+## Loading files you did not write
+
+A saved recipe is data, and loading it never runs code the file picks. The loaders accept class names from mlfeatures, from packages that register a step under the `mlfeatures.steps` entry-point group, and from the packages of the classes you pass as `trusted`. Any other name raises a `ValueError`, as does a payload that is not shaped like a recipe. The values inside a payload are not validated, so only load files from sources you trust to give you sensible numbers.
+
+A step of your own that is not registered, such as one defined in a notebook, loads when you name it:
+
+```python
+fitted = from_json(text, trusted=[MyStep])
+```
+
+Saving warns when the recipe contains a class the loaders would refuse by default, so the problem shows up when the file is written rather than when it is first loaded. Pickle is not covered by these checks: unpickling runs arbitrary code, so only unpickle recipes you trust.
+
+## Minimizing
+
+`minimize()` returns a recipe that keeps only what `transform()` needs. Each step decides what it can drop, such as something kept only for inspection after fitting. None of the steps shipped with mlfeatures has anything to drop yet, so for them the result is the same recipe and the same file. It is safe to call before saving, and it will shrink files once a step that keeps fit-only artifacts exists.
+
+```{python}
+small = minimize(fitted)
+small.transform(credit).head()
+```

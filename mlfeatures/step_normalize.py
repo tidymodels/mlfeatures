@@ -49,7 +49,7 @@ def fit_normalize(
         A narwhals DataFrame whose columns are all numeric. Passed in by the
         step's ``fit()`` method after selector resolution.
 
-    Callers are expected to pass an all-numeric frame; dtype screening is the
+    Callers are expected to pass an all-numeric data frame; dtype screening is the
     selector / ``accepts_dtypes`` layer's job, so this function does not
     re-validate it.
 
@@ -110,7 +110,7 @@ def apply_normalize(
 
     Returns
     -------
-    narwhals.DataFrame: the input frame with each column in ``stats`` replaced
+    narwhals.DataFrame: the input data frame with each column in ``stats`` replaced
     in place by its standardized value. Column names, order, and structure are
     unchanged.
     """
@@ -146,7 +146,7 @@ class StepNormalize(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     id

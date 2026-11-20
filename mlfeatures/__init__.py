@@ -6,7 +6,7 @@ from mlfeatures.compat import RecipeTransformer
 from mlfeatures.lineage import ColumnNode, Lineage
 from mlfeatures.recipe import FittedRecipe, Recipe
 from mlfeatures.schema import Schema
-from mlfeatures.selectors import Selectors
+from mlfeatures.selectors import FeaturesSelector, Selectors
 from mlfeatures.serialization import (
     from_dict,
     from_json,
@@ -119,6 +119,7 @@ __all__ = [
     "DataFrame",
     "Frame",
     "Selectors",
+    "FeaturesSelector",
     "to_dict",
     "from_dict",
     "to_json",

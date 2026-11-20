@@ -42,7 +42,7 @@ def add_intercept(
     Parameters
     ----------
     selected
-        Internal `Frame` (narwhals). Native frames are
+        Internal `Frame` (narwhals). Native data frames are
         wrapped via `mlfeatures._frame.from_native()` at the recipe boundary.
     value
         The constant to fill the new column with. Default ``1.0``: a column of
@@ -55,7 +55,7 @@ def add_intercept(
     -------
     Frame
         ``selected`` with one extra column appended. The literal broadcasts
-        across every row, so 0-row and 1-row frames still produce a
+        across every row, so 0-row and 1-row data frames still produce a
         schema-correct constant column. An existing column of the same name is
         overwritten in place; note that reaching this function through
         `StepIntercept` in a `Recipe` cannot happen, since the recipe rejects a
@@ -80,7 +80,7 @@ class StepIntercept(Step):
         dtype follows the literal, so an ``int`` gives an integer column.
     name
         Name of the new column. Default ``"intercept"``. A `Recipe` rejects the
-        step if the frame already has a column of this name.
+        step if the data frame already has a column of this name.
     role
         Role assigned to the new column (see `Roles`). Default ``"feature"``.
     id
@@ -150,7 +150,7 @@ class StepIntercept(Step):
 
     def fit(self, training_data: Frame, info: SchemaInfo) -> "Self":
         """Record the produced column's schema. Estimates nothing."""
-        # Build the column on the training frame to read its concrete dtype.
+        # Build the column on the training data frame to read its concrete dtype.
         # ``add_intercept`` is idempotent, so the recipe re-applying it in
         # ``transform`` is harmless.
         produced = add_intercept(training_data, self.value, self.name)

@@ -36,7 +36,7 @@ mismatch shows up when the file is written, not when it is first loaded.
 The public surface is a small module API -- `to_dict`, `from_dict`, `to_json`,
 `from_json`, `to_yaml`, `from_yaml`, and `minimize` -- mirrored by thin
 delegating methods on `FittedRecipe` (``fitted.to_json()``,
-`FittedRecipe.from_json(text)``, ...).
+``FittedRecipe.from_json(text)``, ...).
 
 JSON and YAML are two thin encodings over the same JSON-safe ``dict`` format, so
 both round-trip identically. YAML support needs the optional ``pyyaml`` package;
@@ -53,7 +53,7 @@ Known limitations
 - ``Datetime`` (time-unit, time zone) and ``Duration`` (time-unit) *do*
   round-trip their parameters (see `_encode_dtype_instance` /
   `_decode_dtype_instance`) -- `StepDatetimeFeatures`'s conformance suite
-  depends on it: a pandas frame's nanosecond-precision ``Datetime`` must still
+  depends on it: a pandas data frame's nanosecond-precision ``Datetime`` must still
   match the schema snapshot after a JSON round-trip.
 - Raw polars / narwhals selectors are not serializable. Only mlfeatures `Selectors`
   and plain name lists are; a native selector raises a clear ``TypeError``.
@@ -81,6 +81,8 @@ import dataclasses
 import importlib
 import json
 import math
+import os
+import sys
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -803,6 +805,22 @@ def _class_names(obj: Any) -> Iterator[str]:
             yield from _class_names(value)
 
 
+def _external_stacklevel() -> int:
+    """The ``warnings.warn`` stack level of the first frame outside mlfeatures.
+
+    The save functions reach the warning through several layers (the
+    ``FittedRecipe`` method, ``to_json``, ``to_dict``), so a fixed level would
+    point at library code for some of the entry points.
+    """
+    package = os.path.dirname(__file__) + os.sep
+    frame = sys._getframe(1)
+    level = 1
+    while frame.f_back is not None and frame.f_code.co_filename.startswith(package):
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 def _warn_if_unloadable(steps: list[dict[str, Any]]) -> None:
     """Warn when the encoded ``steps`` name classes `from_dict` refuses by default.
 
@@ -819,21 +837,78 @@ def _warn_if_unloadable(steps: list[dict[str, Any]]) -> None:
             "'mlfeatures.steps' entry-point group, or pass a class from them as "
             "'trusted' when loading",
             UserWarning,
-            stacklevel=3,
+            stacklevel=_external_stacklevel(),
         )
 
 
 def to_dict(recipe: FittedRecipe) -> dict[str, Any]:
     """Serialize a `FittedRecipe` to a diffable, JSON-safe ``dict``.
 
-    Captures every step's hyperparameters and learned statistics plus the
-    recipe-level roles, training schema, and lineage. The result contains
-    only plain data, so it round-trips through `from_dict` and is stable enough
-    to diff in code review.
+    A fitted recipe has to outlive the process that fit it: it is saved next to
+    a model, loaded elsewhere to transform new data, and reviewed in a pull
+    request when it changes. So the ``dict`` captures what `transform()` needs
+    (every step's hyperparameters and learned statistics, plus the roles,
+    training schema, and lineage) and nothing that ties it to the training
+    process: no training data, closures, or environments.
 
-    Warns when a step, or a dataclass in its fit state, comes from a package that
-    `from_dict` refuses by default (see `from_dict`): the payload is still
-    produced, but loading it needs the step registered or passed as ``trusted``.
+    The ``dict`` holds plain data only (strings, numbers, booleans, lists, and
+    mappings), so it round-trips through `from_dict` and is stable enough to
+    diff in code review. Unlike a pickle, it can be read and checked without
+    running anything, and loading it only builds classes from trusted packages
+    (see `from_dict`). Use `to_json` or `to_yaml` to write it to a file, and the
+    ``dict`` itself when embedding the recipe in a larger payload. It has these
+    keys, in this order:
+
+    - ``mlfeatures_version``: the version of mlfeatures that wrote it.
+    - ``format_version``: the layout version, which `from_dict` checks.
+    - ``roles``: the role of each column.
+    - ``schema``: the training data's column names and dtypes, or ``None``.
+    - ``lineage``: the column lineage, or ``None``.
+    - ``steps``: for each step, its class name and its state (the
+      hyperparameters and the statistics learned at fit time).
+
+    Parameters
+    ----------
+    recipe
+        The fitted recipe to serialize.
+
+    Returns
+    -------
+    dict
+        The payload described above.
+
+    Raises
+    ------
+    TypeError
+        If a step holds something that cannot be serialized: a raw polars or
+        narwhals selector, a ``dateutil`` rule, or a function (``StepMutate``).
+
+    Warns
+    -----
+    UserWarning
+        If a step, or a dataclass in its fit state, comes from a package that
+        `from_dict` refuses by default (see `from_dict`). The payload is still
+        produced, but loading it needs the step registered or passed as
+        ``trusted``.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, to_dict
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    payload = to_dict(fitted)
+    payload["steps"][0]["type"]
+    ```
     """
     from mlfeatures import __version__
 
@@ -861,6 +936,10 @@ def from_dict(data: dict[str, Any], *, trusted: Iterable[type] = ()) -> FittedRe
     anything else the payload names, and a name is checked before its module is
     imported. The values inside the payload are not validated.
 
+    A payload without a ``format_version`` is read as the current version. One
+    with a different version is refused, because the layout changed
+    incompatibly; fit the recipe again and save it again.
+
     Parameters
     ----------
     data
@@ -872,14 +951,44 @@ def from_dict(data: dict[str, Any], *, trusted: Iterable[type] = ()) -> FittedRe
         trust: a package listed here is imported as the payload asks. Defaults
         to none.
 
+    Returns
+    -------
+    FittedRecipe
+        The recipe, ready to `FittedRecipe.transform` new data.
+
     Raises
     ------
     ValueError
-        If the payload names a class outside the trusted packages, names something
-        that is not a step or dataclass, or is malformed.
+        If the payload is not a mapping with ``roles`` and ``steps``, has a
+        ``format_version`` this mlfeatures does not read, names a class outside
+        the trusted packages, or names something that is not a step or
+        dataclass.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, from_dict, to_dict
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    restored = from_dict(to_dict(fitted))
+    restored
+    ```
     """
     from mlfeatures.recipe import FittedRecipe
 
+    if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ValueError(
+            f"expected the payload to be a mapping, got {type(data).__name__!r}"
+        )
     found = data.get("format_version", FORMAT_VERSION)
     if found != FORMAT_VERSION:
         raise ValueError(
@@ -887,6 +996,13 @@ def from_dict(data: dict[str, Any], *, trusted: Iterable[type] = ()) -> FittedRe
             f"this mlfeatures writes and reads format_version {FORMAT_VERSION}, and "
             "the layout changed incompatibly; re-fit the recipe to re-serialize"
         )
+    missing = [key for key in ("roles", "steps") if key not in data]
+    if missing:
+        raise ValueError(f"payload is missing required key(s) {missing!r}")
+    if not isinstance(data["steps"], list):
+        raise ValueError("expected 'steps' to be a list of step payloads")
+    if not isinstance(data["roles"], dict):
+        raise ValueError("expected 'roles' to be a mapping of column to roles")
     with _decoding(trusted):
         steps = [_decode_step(p) for p in data["steps"]]
         roles = _decode_roles(data["roles"])
@@ -900,11 +1016,58 @@ def from_dict(data: dict[str, Any], *, trusted: Iterable[type] = ()) -> FittedRe
 def to_json(recipe: FittedRecipe, *, indent: int = 2) -> str:
     """Serialize a `FittedRecipe` to a diffable JSON string.
 
-    ``allow_nan=False`` keeps the output strictly valid JSON: non-finite floats
-    are already encoded explicitly by the value codec, so a stray ``NaN`` here
-    signals a bug rather than emitting an invalid ``NaN`` token. Warns like
+    The string is the `to_dict` payload as strictly valid JSON (non-finite
+    floats are encoded explicitly, never as a bare ``NaN``). It needs no
+    optional dependency, so it is the default choice for storing a recipe next
+    to a model. Warns like
     `to_dict` when the recipe names a class that `from_json` refuses by default.
+
+    Parameters
+    ----------
+    recipe
+        The fitted recipe to serialize.
+    indent
+        Spaces of indentation per level. Defaults to 2.
+
+    Returns
+    -------
+    str
+        The JSON text.
+
+    Raises
+    ------
+    TypeError
+        As for `to_dict`.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, to_json
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    text = to_json(fitted)
+    text[:200]
+    ```
+
+    A smaller `indent` gives a more compact file.
+
+    ```{python}
+    compact = to_json(fitted, indent=0)
+    compact[:200]
+    ```
     """
+    # allow_nan=False keeps the output strictly valid JSON. Non-finite floats are
+    # already encoded explicitly by the value codec, so a stray NaN reaching here
+    # is a bug to surface, not an invalid ``NaN`` token to emit.
     return json.dumps(to_dict(recipe), indent=indent, allow_nan=False)
 
 
@@ -912,7 +1075,40 @@ def from_json(text: str, *, trusted: Iterable[type] = ()) -> FittedRecipe:
     """Reconstruct a `FittedRecipe` from the JSON produced by `to_json`.
 
     Takes the same ``trusted`` argument as `from_dict` and raises the same
-    ``ValueError`` for a class outside the trusted packages.
+    ``ValueError`` for a class outside the trusted packages. Text that is not
+    valid JSON raises ``json.JSONDecodeError`` (a ``ValueError`` subclass).
+
+    Parameters
+    ----------
+    text
+        The JSON text produced by `to_json`.
+    trusted
+        Classes whose top-level packages the payload may also name classes from;
+        see `from_dict`. Defaults to none.
+
+    Returns
+    -------
+    FittedRecipe
+        The recipe, ready to `FittedRecipe.transform` new data.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, from_json, to_json
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    restored = from_json(to_json(fitted))
+    restored.transform(credit).head()
+    ```
     """
     return from_dict(json.loads(text), trusted=trusted)
 
@@ -932,13 +1128,53 @@ def _require_yaml() -> Any:
 def to_yaml(recipe: FittedRecipe) -> str:
     """Serialize a `FittedRecipe` to a diffable YAML string.
 
-    A thin encoding over the same JSON-safe ``dict`` as `to_json`, so the two
-    formats round-trip identically. ``sort_keys=False`` preserves the payload's
-    stable key order and ``default_flow_style=False`` keeps the block layout that
-    diffs cleanly in review. Needs the optional ``pyyaml`` package. Warns like
-    `to_dict` when the recipe names a class that `from_yaml` refuses by default.
+    The same `to_dict` payload as `to_json`, written as YAML with the keys in
+    their stable order and a block layout that diffs cleanly in review, so the
+    two formats round-trip identically. Choose it over `to_json` when people
+    will read or review the file; it needs the optional ``pyyaml`` package.
+    Warns like `to_dict` when the recipe names a class that `from_yaml` refuses
+    by default.
+
+    Parameters
+    ----------
+    recipe
+        The fitted recipe to serialize.
+
+    Returns
+    -------
+    str
+        The YAML text.
+
+    Raises
+    ------
+    ImportError
+        If the optional ``pyyaml`` package is not installed
+        (``pip install mlfeatures[yaml]``).
+    TypeError
+        As for `to_dict`.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, to_yaml
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    text = to_yaml(fitted)
+    text[:200]
+    ```
     """
     yaml = _require_yaml()
+    # sort_keys=False keeps the payload's stable key order, and the block style
+    # (default_flow_style=False) is the layout that diffs cleanly in review.
     return str(
         yaml.safe_dump(to_dict(recipe), sort_keys=False, default_flow_style=False)
     )
@@ -948,22 +1184,96 @@ def from_yaml(text: str, *, trusted: Iterable[type] = ()) -> FittedRecipe:
     """Reconstruct a `FittedRecipe` from the YAML produced by `to_yaml`.
 
     Takes the same ``trusted`` argument as `from_dict` and raises the same
-    ``ValueError`` for a class outside the trusted packages. ``safe_load`` only
-    keeps the YAML parser from building arbitrary objects; the class names inside
-    the payload are restricted by `from_dict`, as they are for JSON.
+    ``ValueError`` for a class outside the trusted packages. The YAML is parsed
+    without building arbitrary objects, and the class names inside it are
+    restricted by `from_dict`, as they are for JSON.
+
+    Parameters
+    ----------
+    text
+        The YAML text produced by `to_yaml`.
+    trusted
+        Classes whose top-level packages the payload may also name classes from;
+        see `from_dict`. Defaults to none.
+
+    Returns
+    -------
+    FittedRecipe
+        The recipe, ready to `FittedRecipe.transform` new data.
+
+    Raises
+    ------
+    ImportError
+        If the optional ``pyyaml`` package is not installed
+        (``pip install mlfeatures[yaml]``).
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, from_yaml, to_yaml
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    restored = from_yaml(to_yaml(fitted))
+    restored.transform(credit).head()
+    ```
     """
     yaml = _require_yaml()
     return from_dict(yaml.safe_load(text), trusted=trusted)
 
 
 def minimize(recipe: FittedRecipe) -> FittedRecipe:
-    """Return a copy of ``recipe`` with each step's transform-unneeded artifacts stripped.
+    """Return a `FittedRecipe` that keeps only what ``transform()`` needs.
 
-    Delegates to each step's `Step.minimize`, which by default returns the step
-    unchanged. Steps that retain training artifacts only needed at fit time
-    (e.g. a future KNN imputer's neighbor matrix) override ``minimize`` to drop
-    them. The roles, schema, and lineage are preserved so the minimized
-    recipe still validates new data at the boundary and reports its lineage.
+    Each step decides what it can drop: a step that keeps something only for
+    inspection after fitting, or only because fitting needed it, returns a
+    lighter version of itself that transforms identically. A step that has
+    nothing to drop is kept as is, shared with ``recipe`` rather than copied,
+    and ``recipe`` itself is never modified. The roles, schema, and lineage are kept, so the minimized recipe
+    still validates new data at the boundary and reports its lineage.
+
+    Call it before `to_dict`, `to_json`, or `to_yaml` when the recipe is going
+    to be shipped with a model, so the saved file carries only what scoring
+    needs; the writers save the recipe as it is and do not minimize it. No
+    shipped step currently holds anything to drop, so today the result is an
+    equivalent recipe.
+
+    Parameters
+    ----------
+    recipe
+        The fitted recipe to minimize.
+
+    Returns
+    -------
+    FittedRecipe
+        A new recipe with each step minimized.
+
+    Examples
+    --------
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, minimize
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = Recipe().add(StepNormalize(s.numeric_features()))
+    fitted = recipe.fit(credit)
+    small = minimize(fitted)
+    small.transform(credit).head()
+    ```
     """
     from mlfeatures.recipe import FittedRecipe
 

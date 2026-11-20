@@ -1,10 +1,10 @@
 """Arbitrary column mutation: the ``UNCONSTRAINED`` escape hatch.
 
 `step_mutate` is the ``UNCONSTRAINED`` prototype,
-modelled on ``step_mutate`` from the R ``recipes`` package. It applies caller-supplied expressions to the frame, so its
+modelled on ``step_mutate`` from the R ``recipes`` package. It applies caller-supplied expressions to the data frame, so its
 input/output relationship cannot be declared in advance: a mutation may add new
 columns, overwrite existing ones in place, or change a column's dtype. Because
-of that, `StepMutate` reads the concrete effect off the training frame at
+of that, `StepMutate` reads the concrete effect off the training data frame at
 ``fit()`` time rather than declaring a fixed shape up front.
 
 The *apply* half lives in `apply_mutate()` as a plain function so the mutation
@@ -46,7 +46,7 @@ def apply_mutate(selected: Frame, mutations: Mapping[str, Mutation]) -> Frame:
     Parameters
     ----------
     selected
-        Internal `Frame` (narwhals). Native frames are wrapped via
+        Internal `Frame` (narwhals). Native data frames are wrapped via
         `mlfeatures._frame.from_native()` at the recipe boundary.
     mutations
         Mapping from output column name to a callable taking ``selected`` and
@@ -72,7 +72,7 @@ class StepMutate(Step):
 
     Each supplied mutation either adds a new column or overwrites an existing
     one, so the exact column change is only known after the mutations run on
-    the training frame. `fit()` applies them once to read off which columns
+    the training data frame. `fit()` applies them once to read off which columns
     were *added* (and their dtypes) versus modified in place, then re-applies
     the same expressions at transform time. To remove rows instead, see
     `StepFilter`.
@@ -88,7 +88,7 @@ class StepMutate(Step):
     Parameters
     ----------
     mutations
-        Mapping from output column name to a callable taking the frame and
+        Mapping from output column name to a callable taking the data frame and
         returning that column's value (a narwhals expression or series). Must be
         a non-empty ``dict`` of ``str`` names to callables.
     role
@@ -126,7 +126,7 @@ class StepMutate(Step):
     recipe
     ```
 
-    `fit()` runs the mutations once on the training frame to read off which
+    `fit()` runs the mutations once on the training data frame to read off which
     columns they add and with what dtypes:
 
     ```{python}
@@ -135,7 +135,7 @@ class StepMutate(Step):
     ```
 
     `transform()` applies them together, so every mutation sees the original
-    frame; ``x_sq`` squares the incoming ``x``, not the overwritten one:
+    data frame; ``x_sq`` squares the incoming ``x``, not the overwritten one:
 
     ```{python}
     fitted.transform(df)
@@ -205,13 +205,13 @@ class StepMutate(Step):
         return apply_mutate(new_data, self.mutations)
 
     def schema_in(self) -> ColSchema:
-        """Schema of the frame this step consumed. Known after ``fit()``."""
+        """Schema of the data frame this step consumed. Known after ``fit()``."""
         if self._schema_in is None:
             raise RuntimeError("StepMutate.schema_in() called before fit()")
         return self._schema_in
 
     def schema_out(self) -> ColSchema:
-        """Schema of the frame this step produced. Known after ``fit()``."""
+        """Schema of the data frame this step produced. Known after ``fit()``."""
         if self._schema_out is None:
             raise RuntimeError("StepMutate.schema_out() called before fit()")
         return self._schema_out

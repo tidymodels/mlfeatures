@@ -35,10 +35,10 @@ class Step(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def fit(self, training_data: DataFrame, info: SchemaInfo) -> "Step": ...
+    def fit(self, training_data: Frame, info: SchemaInfo) -> "Step": ...
 
     @abstractmethod
-    def transform(self, new_data: DataFrame) -> DataFrame: ...
+    def transform(self, new_data: Frame) -> Frame: ...
 
     @abstractmethod
     def schema_in(self) -> ColSchema: ...
@@ -125,23 +125,25 @@ Each step declares the set of column dtypes it is valid to apply to. `Recipe.fit
 
 This check does not run at `transform()` time. By then, the schema snapshot already guarantees that incoming column dtypes match what was seen during `fit()` — a second dtype check would be redundant. See [lifecycle.md](lifecycle.md).
 
-The return type is `AcceptedDtypes`, an alias for `set[type[nw.dtypes.DType]] | _AnyDtype` — either an explicit set of narwhals dtype classes, or the `ANY_DTYPE` sentinel. (A plain `set` annotation would be inconsistent, since `ANY_DTYPE` is not a set.) `NUMERIC_DTYPES` is the ready-made set for numeric-only steps.
+The return type is `AcceptedDtypes`, an alias for `set[type[nw.dtypes.DType]] | _AnyDtype` — either an explicit set of narwhals dtype classes, or the `ANY_DTYPE` sentinel. (A plain `set` annotation would be inconsistent, since `ANY_DTYPE` is not a set.) `NUMERIC_DTYPES` is the ready-made set for numeric-only steps (integers, floats, and `Decimal`; copy it before adding to it).
+
+A column is accepted when the **exact class** of its dtype is in the set, not a subclass or a family. List concrete classes such as `nw.Int64`; an abstract base like `nw.dtypes.NumericType` or `nw.dtypes.IntegerType` never matches a real column, so it would reject everything.
 
 ```python
-# e.g. step_normalize only makes sense on numeric columns
+# e.g. StepNormalize only makes sense on numeric columns
 def accepts_dtypes(self) -> AcceptedDtypes:
     return set(NUMERIC_DTYPES)
 
-# e.g. step_dummy only makes sense on categorical columns
+# e.g. StepDummy only makes sense on categorical columns
 def accepts_dtypes(self) -> AcceptedDtypes:
     return {nw.Categorical, nw.Enum, nw.String}
 
-# e.g. step_zv works on anything — use the ANY sentinel
+# e.g. StepDropZeroVariance works on anything — use the ANY sentinel
 def accepts_dtypes(self) -> AcceptedDtypes:
     return ANY_DTYPE
 ```
 
-`ANY_DTYPE` is a sentinel constant that skips dtype validation entirely for that step. It is the correct choice for steps like `step_zv` or `step_rm` where the operation is meaningful regardless of column type.
+`ANY_DTYPE` is a sentinel constant that skips dtype validation entirely for that step. It is the correct choice for steps like `StepDropZeroVariance` or `StepDrop` where the operation is meaningful regardless of column type.
 
 This replaces the R pattern of silently coercing or producing nonsense output when a step receives the wrong type. The check happens at the schema boundary — see [lineage.md](lineage.md) for the full type taxonomy — so the error message names the offending column and its actual dtype, not a cryptic failure from inside numpy or polars.
 
@@ -159,13 +161,13 @@ The mode labels below are a shorthand for the *shape* of the input/output relati
 
 | Mode | Input/output relationship | Examples |
 | -------------- | ------------------------------------------------------------ | --------------------------------------- |
-| `ONE_TO_ONE` | Each input column produces exactly one output column | `step_normalize`, `step_impute_mean` |
-| `ONE_TO_MANY` | Each input column produces one or more output columns | `step_dummy`, `step_poly` |
-| `MANY_TO_MANY` | A set of input columns produces a new set of output columns | `step_pca`, `step_ica` |
-| `REMOVING` | Input columns are dropped; no new columns created | `step_zv`, `step_drop_corr` |
-| `ADDING` | New columns added with no corresponding input | `step_intercept` |
-| `ROW_OP` | No column schema change | `step_filter`, `step_shuffle` |
-| `UNCONSTRAINED` | Relationship cannot be declared in advance | `step_mutate` |
+| `ONE_TO_ONE` | Each input column produces exactly one output column | `StepNormalize`, `StepImputeMean` |
+| `ONE_TO_MANY` | Each input column produces one or more output columns | `StepDummy`, `StepPolynomial` |
+| `MANY_TO_MANY` | A set of input columns produces a new set of output columns | `StepPca`, `StepPls` |
+| `REMOVING` | Input columns are dropped; no new columns created | `StepDropZeroVariance`, `StepDropCorr` |
+| `ADDING` | New columns added with no corresponding input | `StepIntercept` |
+| `ROW_OP` | No column schema change | `StepFilter` |
+| `UNCONSTRAINED` | Relationship cannot be declared in advance | `StepMutate` |
 
 ### Declaring per-output provenance: `output_parents()`
 
@@ -176,7 +178,7 @@ def output_parents(self) -> dict[str, list[str]]:
     """Map each produced column to the input column(s) it descends from."""
 ```
 
-Known after `fit()`. The keys are exactly the columns the step adds to the frame; the recipe validates them against the post-step frame and rejects a mismatch. The base-class default returns `{}` — correct for steps that create no new columns (in-place `ONE_TO_ONE`, `REMOVING`, `ROW_OP`). A degree-0 `step_poly` column is a pass-through, not a newly produced column, so it is excluded from the map.
+Known after `fit()`. The keys are exactly the columns the step adds to the data frame; the recipe validates them against the post-step data frame and rejects a mismatch. The base-class default returns `{}` — correct for steps that create no new columns (in-place `ONE_TO_ONE`, `REMOVING`, `ROW_OP`). A degree-0 `step_poly` column is a pass-through, not a newly produced column, so it is excluded from the map.
 
 ### Declaring added columns for collision checking: `produced_columns()`
 
@@ -222,11 +224,11 @@ After `fit()`, the lineage DAG contains the full input/output mapping for every 
 
 ## Empty selection ⇒ identity (structural)
 
-An **empty column selection is a no-op**: a step whose primary selector resolves to zero columns passes the frame through unchanged. Like the `RowOp` transform-time skip above, this is enforced **structurally by the framework, not by a per-step convention** — a step author cannot get it wrong because the step is never fitted on an empty selection.
+An **empty column selection is a no-op**: a step whose primary selector resolves to zero columns passes the data frame through unchanged. Like the `RowOp` transform-time skip above, this is enforced **structurally by the framework, not by a per-step convention** — a step author cannot get it wrong because the step is never fitted on an empty selection.
 
 The mechanism, all at the recipe boundary:
 
-- `Step.resolve_selection(data, info) -> list[str]` resolves the step's *primary input selector* to concrete column names. The base default resolves `self.columns`, which is correct for every selector-taking step — including multi-selector steps like `step_class_distance`, whose primary (feature) selector is `columns` (the `target` selector does not gate the no-op). It takes `data` (not just `info`) because narwhals / polars selectors resolve against the frame's schema.
+- `Step.resolve_selection(data, info) -> list[str]` resolves the step's *primary input selector* to concrete column names. The base default resolves `self.columns`, which is correct for every selector-taking step — including multi-selector steps like `step_class_distance`, whose primary (feature) selector is `columns` (the `target` selector does not gate the no-op). It takes `data` (not just `info`) because narwhals / polars selectors resolve against the data frame's schema.
 - `recipe.fit()` calls `resolve_selection` *before* `fit()`. If the result is `[]`, it sets `Step._empty_selection = True`, sets `trained`, keeps the step in the fitted pipeline (so it stays inspectable), and **skips** `fit()` / `transform()` / `update_roles()`. The marker is reset each fit, so re-fitting with a selection that now matches columns is not stuck in identity mode.
 - `FittedRecipe.transform()` skips any step with `_empty_selection` set, alongside `RowOp` steps.
 
@@ -259,13 +261,13 @@ Every step must pass it before merging:
 - Empty selection returns empty output without error (handled structurally by the recipe — see [Empty selection ⇒ identity](#empty-selection--identity-structural); the step's own `fit()` is never called on an empty selection).
 - 0-row and 1-row `transform()` produce schema-correct output.
 - `fit()` is idempotent given the same training data.
-- `transform()` never re-estimates: transforming a subset of the training frame equals transforming the whole frame and then taking the subset. Every other check runs against the training frame itself, where a step that recomputes its statistics is invisible because the recomputed values agree; this is the check that sees it.
+- `transform()` never re-estimates: transforming a subset of the training data frame equals transforming the whole data frame and then taking the subset. Every other check runs against the training data frame itself, where a step that recomputes its statistics is invisible because the recomputed values agree; this is the check that sees it.
 - Sparse-in → sparse-out (or explicit densification warning) where declared.
 - Pickle round-trip preserves `transform()` output.
 - JSON round-trip preserves `transform()` output, or — for a step carrying user callables it needs at transform time, like `step_mutate` — is refused loudly. Set `supports_json = False` to assert the refusal.
 - `id` is stable across sessions for the same hyperparameters.
-- `output_parents()` declares exactly the columns the step adds, each with parents drawn from the input frame.
-- Backend parity: fitting and transforming the same data on a pandas frame and a polars frame produces identical narwhals output — same column names, same dtypes, and the same values (missing-aware, floats compared approximately). This guards against backend-divergence bugs like the `lit(None)` → `Object` footgun PR #74 fixed for `StepDummy`, where pandas emitted object-dtype indicators while polars stayed numeric, and against a step computing different numbers depending on the backend it fitted on.
+- `output_parents()` declares exactly the columns the step adds, each with parents drawn from the input data frame.
+- Backend parity: fitting and transforming the same data on a pandas data frame and a polars data frame produces identical narwhals output — same column names, same dtypes, and the same values (missing-aware, floats compared approximately). This guards against backend-divergence bugs like the `lit(None)` → `Object` footgun PR #74 fixed for `StepDummy`, where pandas emitted object-dtype indicators while polars stayed numeric, and against a step computing different numbers depending on the backend it fitted on.
 
 A check that genuinely does not apply is opted out of through a hook, never by omission, so "considered and not applicable" stays distinguishable from "forgotten": `make_empty_step()` returning `None` for a step with no column selector, and `estimates_attr = None` for a step that estimates nothing. Both then skip with an explicit reason.
 

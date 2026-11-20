@@ -130,7 +130,7 @@ def assert_backend_parity(
     """Assert a step produces identical output on pandas and polars.
 
     Fits and transforms ``make_recipe()`` on the *same* ``data`` materialized as
-    both a pandas and a polars frame, then asserts the two narwhals results are
+    both a pandas and a polars data frame, then asserts the two narwhals results are
     identical: same column names in the same order, same dtypes, *and* the same
     values (missing-aware, with float columns compared approximately). This
     catches both output-dtype divergence between backends -- the class of bug
@@ -177,7 +177,7 @@ def fit_isolated(step: Step, data: DataFrame) -> Step:
 def fit_transform_isolated(step: Step, data: DataFrame) -> DataFrame:
     """Fit and transform a single step against a stubbed ``SchemaInfo``.
 
-    Returns the native output frame so callers can compare its columns against
+    Returns the native output data frame so callers can compare its columns against
     the recipe-driven path. See `fit_isolated` for the no-``Recipe`` rationale.
     """
     frame = _frame.from_native(data)
@@ -336,7 +336,7 @@ class StepConformanceTest:
             step.keep_original_cols = True  # type: ignore[misc]
 
     def test_empty_selection_is_noop(self) -> None:
-        """An empty column selection is a no-op: the frame passes through unchanged."""
+        """An empty column selection is a no-op: the data frame passes through unchanged."""
         step = self.make_empty_step()
         if step is None:
             pytest.skip("step takes no input selector; empty selection cannot occur")
@@ -346,7 +346,7 @@ class StepConformanceTest:
         pd.testing.assert_frame_equal(out, df)
 
     def test_zero_row_transform(self) -> None:
-        """transform() on a 0-row frame yields schema-correct, empty output."""
+        """transform() on a 0-row data frame yields schema-correct, empty output."""
         fitted, train = self._fitted()
         expected = list(fitted.transform(train).columns)
         out = fitted.transform(train.head(0))
@@ -354,7 +354,7 @@ class StepConformanceTest:
         assert out.shape[0] == 0
 
     def test_one_row_transform(self) -> None:
-        """transform() on a 1-row frame yields schema-correct output."""
+        """transform() on a 1-row data frame yields schema-correct output."""
         fitted, train = self._fitted()
         expected = list(fitted.transform(train).columns)
         out = fitted.transform(train.head(1))
@@ -514,12 +514,12 @@ class StepConformanceTest:
 
         The headline invariant on `Step`: whatever a step learns is computed once
         at fit time, so ``transform()`` must be row-wise with respect to that
-        stored state. Transforming a *subset* of the training frame is therefore
-        the same as transforming the whole frame and then taking the subset. A
+        stored state. Transforming a *subset* of the training data frame is therefore
+        the same as transforming the whole data frame and then taking the subset. A
         step that recomputes its statistics from whatever it is handed diverges
         here, because the subset has different statistics.
 
-        Every other check in this suite transforms the training frame itself,
+        Every other check in this suite transforms the training data frame itself,
         where re-estimation is invisible: the recomputed statistics come out the
         same. This is the one that sees it.
         """
@@ -533,7 +533,7 @@ class StepConformanceTest:
         )
 
     def test_transform_is_repeatable(self) -> None:
-        """transform() is pure: re-transforming the same frame yields identical output."""
+        """transform() is pure: re-transforming the same data frame yields identical output."""
         fitted, train = self._fitted()
         pd.testing.assert_frame_equal(fitted.transform(train), fitted.transform(train))
 

@@ -18,7 +18,7 @@ A trained recipe must serialize so it can be:
 
 ## No closures, no environments
 
-Steps store **schemas and fitted statistics**, never raw training data. No closures captured into pickled state.
+Steps store **schemas and fitted statistics**, never raw training data. No closures or environments in step state, so the JSON and YAML payload is plain data.
 
 R `recipes` captured entire `globalenv()` references via formula quosures, inflating saved recipes and requiring the `butcher` package to clean them up afterward [#302, #400, #503, #760, #859]. We avoid this by design:
 
@@ -28,27 +28,40 @@ R `recipes` captured entire `globalenv()` references via formula quosures, infla
 
 ---
 
-## Pickle strategy
+## Payload format
 
-Step state is a **frozen dataclass of plain fields** — no methods serialized. The class definition is looked up by qualified name at load time. Missing fields (from an older step version) take class defaults on load.
+`to_dict` produces a JSON-safe `dict` that `to_json` and `to_yaml` encode, so the two formats round-trip identically. It has six keys, in this order:
 
-```python
-@dataclass(frozen=True)
-class NormalizeStep(Step):
-    means: dict[str, float]
-    stds: dict[str, float]
-    # ... selector and hyperparams
-```
+| Key                  | Holds                                                             |
+| -------------------- | ----------------------------------------------------------------- |
+| `mlfeatures_version` | the version that wrote the payload                                |
+| `format_version`     | the layout version, an integer (currently 1)                      |
+| `roles`              | the role of each column                                           |
+| `schema`             | the training schema, or `None`                                    |
+| `lineage`            | the column lineage, or `None`                                     |
+| `steps`              | per step, `type` (qualified class name) and `state` (its fields)  |
 
-This gives us the best of both worlds:
-- New arguments added in code default cleanly on load (no `if is None` shims).
-- Major versions are still allowed to break and require re-fit — and this is documented loudly.
+A step's `state` is its instance `__dict__` run through a shared value codec (`Step.to_state`). Loading rebuilds the class by qualified name, skips `__init__`, and sets the decoded fields (`Step.from_state`). Fields missing from an older payload keep whatever a bare instance carries. A key that would replace a method, property, or dunder attribute is refused.
+
+`from_dict` checks the payload's overall shape (a mapping with `roles` and `steps` of the right kinds) and raises `ValueError` otherwise. A missing `format_version` is read as the current one.
+
+Known limitations of the encoding (`Enum` categories, raw polars or narwhals selectors, `dateutil` rrules) are listed in the `mlfeatures.serialization` module docstring.
+
+YAML needs the optional `pyyaml` package; `to_yaml` and `from_yaml` raise `ImportError` without it.
+
+---
+
+## Pickle
+
+Pickle is supported as a fallback for files you trust: a `FittedRecipe` keeps its schema and lineage across a pickle round-trip. Unlike the JSON and YAML path it has no allow-list, and it carries the risk described below. Prefer JSON or YAML for anything that crosses a trust boundary.
 
 ---
 
 ## `recipe.minimize()`
 
-Strips training artifacts that are not needed for `transform()` — for example, the KNN imputer's retained neighbor matrix. Available from day one. Steps that need training data at predict time (e.g. `step_impute_knn`) explicitly retain only the columns they need, not the whole frame.
+Strips training artifacts that are not needed for `transform()`. Available from day one, as the mechanism: `Step.minimize` returns the step unchanged by default, and a step that retains fit-time artifacts overrides it to return a lighter copy that transforms identically. The recipe-level `minimize` applies it to each step and keeps the roles, schema, and lineage.
+
+No step shipped today overrides it, so `minimize()` currently returns a recipe equal to the original, sharing its step objects. The first override is expected from a step that must retain training data at predict time (such as the planned `step_impute_knn`), which should retain only the columns it needs, not the whole data frame.
 
 ---
 
@@ -56,7 +69,7 @@ Strips training artifacts that are not needed for `transform()` — for example,
 
 Decided explicitly before v0.1 (R `recipes` never did this and paid for it [#956, #1093, #1167, #1349]):
 
-- **Within a major version:** missing fields on load take class defaults. No shims required.
+- **Within a major version:** missing step fields on load take class defaults. No shims required. The payload layout itself is versioned by `format_version`, and a mismatch is refused rather than guessed at.
 - **Across major versions:** re-fit is required. Documented loudly in release notes.
 - **No cross-major pickle compatibility guarantee.**
 

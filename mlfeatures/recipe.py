@@ -4,7 +4,7 @@ A minimal, vertical-slice implementation of the ``specify → fit → transform`
 lifecycle. It exercises the step contract
 end to end and maintains the column-lineage DAG across
 ``fit()``. At ``fit()`` it snapshots the training data into a ``Schema`` and
-validates the incoming frame against it; the snapshot rides along on the
+validates the incoming data frame against it; the snapshot rides along on the
 ``FittedRecipe`` so ``transform()`` can re-check new data at the boundary before
 any step runs.
 
@@ -148,36 +148,81 @@ def _resolve_step_ids(existing: list[Step], incoming: tuple[Step, ...]) -> list[
 
 
 class Recipe:
-    """A declarative, unfitted pipeline of feature-engineering steps.
+    """A declarative, untrained pipeline of feature-engineering steps.
 
-    Steps are first-class `Step` objects. Assemble a recipe with the immutable
-    `add()` builder, which returns a new recipe each call (specifying a recipe
-    never touches data):
+    A recipe is specified in two parts: the columns' roles are declared first
+    (the ``target``, ``features`` and ``case_weights`` arguments, plus
+    `set_roles()`), then steps are added with `add()`. Specifying a recipe
+    never touches data; nothing is estimated until `fit()`, which
+    returns a `FittedRecipe`, and `FittedRecipe.transform()` applies it to new
+    data.
 
-    ```python
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepDropCorr, StepNormalize
     from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+    ```
 
+    Each `add()` returns a new recipe, so steps chain into a pipeline:
+
+    ```{python}
     recipe = (
-        Recipe()
+        Recipe(data=credit, target="Status")
         .add(StepDropCorr(s.numeric_features(), threshold=0.9))
         .add(StepNormalize(s.numeric_features()))
     )
     ```
 
-    Steps may also be passed at construction, which is equivalent:
+    The untrained recipe shows the roles it carries and its steps with their
+    selectors unresolved:
 
-    ```python
-    Recipe(steps=[StepDropCorr(s.numeric_features(), threshold=0.9)])
+    ```{python}
+    recipe
     ```
 
-    A prototype ``data`` frame may be supplied to capture the column names used
-    when assigning roles. Roles are declared via ``target``, ``features``,
-    and ``case_weights`` keyword arguments.
+    Roles are tied to the columns, not to a position in the chain, so
+    `set_roles()` can be applied anywhere in the recipe, including after the
+    steps, with the same result:
+
+    ```{python}
+    late = (
+        Recipe(data=credit)
+        .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+        .add(StepNormalize(s.numeric_features()))
+        .set_roles(target="Status")
+    )
+    late
+    ```
+
+    Parameters
+    ----------
+    steps
+        Steps to start from, equivalent to chaining `add()` once per step.
+        Default ``None`` (no steps).
+    data
+        A data frame whose column names are used to check role assignments as soon
+        as they are made, and which backs `summary()` before fitting. Nothing
+        is estimated from it and it is never modified, so a small sample with
+        the right columns is enough. Default ``None``.
+    target
+        Column name or list of names to give the ``"target"`` role. Default
+        ``None``.
+    features
+        Column name or list of names to give the ``"feature"`` role. With the
+        default, ``None``, every column that is not a target or a case weight
+        becomes a feature when the recipe is fitted, including columns given a
+        custom role with `set_roles()`. Pass names to choose the features
+        yourself and keep such columns out.
+    case_weights
+        Column name or list of names to give the ``"case_weights"`` role.
+        Default ``None``.
     """
 
     #: The steps, in the order they run.
     steps: list[Step]
-    #: The optional prototype frame backs column-existence checks during role
+    #: The optional prototype data frame backs column-existence checks during role
     #: assignment and the pre-fit ``summary()``. It is never mutated, so
     #: clones share the reference. The lineage DAG is derived from it on
     #: demand rather than stored; see ``summary()``.
@@ -186,7 +231,7 @@ class Recipe:
     roles: Roles
     #: Pending transform-time requirement overrides, applied at ``fit()``.
     #: Each entry is a (target, transform_required) pair where target is a
-    #: role name or a selector resolved against the training frame.
+    #: role name or a selector resolved against the training data frame.
     _role_req_overrides: list[tuple[str | FeaturesSelector, bool]]
 
     def __init__(
@@ -213,7 +258,7 @@ class Recipe:
 
         Shows the declared role assignments and the steps with their unresolved
         selectors, each tagged ``[untrained]``. Column counts come from the
-        prototype frame when one was supplied; otherwise only the explicitly
+        prototype data frame when one was supplied; otherwise only the explicitly
         assigned roles are summarised. ``FittedRecipe`` has its own ``repr`` that
         shows resolved columns and the ``trained`` state instead.
         """
@@ -241,8 +286,35 @@ class Recipe:
         `RecipeTransformer` exposes them as ``recipe__<step id>__<parameter>``
         to `GridSearchCV` and friends. Steps are addressed by ``id``, never by
         position. A step's ``id`` and ``columns`` are not tunable and are left
-        out. ``deep`` is accepted for sklearn compatibility: every parameter
-        lives inside a step, so ``deep=False`` returns an empty ``dict``.
+        out, as are steps with no tunable parameters.
+
+        Parameters
+        ----------
+        deep
+            Accepted for sklearn compatibility: every parameter lives inside
+            a step, so ``deep=False`` returns an empty ``dict``. Default
+            ``True``.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepDropCorr, StepNormalize
+        from mlfeatures import Selectors as s
+        ```
+
+        A step's ``id`` is its default name (``"corr"`` for `StepDropCorr`),
+        which the keys are built from:
+
+        ```{python}
+        recipe = (
+            Recipe()
+            .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+            .add(StepNormalize(s.numeric_features()))
+        )
+        recipe.get_params()
+        ```
         """
         if not deep:
             return {}
@@ -259,6 +331,44 @@ class Recipe:
         affected steps are rebuilt (so their argument validation runs again) and
         the recipe's roles and prototype data carry over; ``self`` is left
         untouched.
+
+        Use it to change a hyperparameter of a step already in the recipe, such
+        as a threshold you are tuning, without respecifying the pipeline. To
+        change which steps run, use `add` instead.
+
+        Parameters
+        ----------
+        **params
+            New values keyed ``<step id>__<parameter>``.
+
+        Raises
+        ------
+        ValueError
+            If a key is not of the form ``<step id>__<parameter>``, or names a
+            step id the recipe does not have.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepDropCorr, StepNormalize
+        from mlfeatures import Selectors as s
+        ```
+
+        ```{python}
+        recipe = (
+            Recipe()
+            .add(StepDropCorr(s.numeric_features(), threshold=0.9))
+            .add(StepNormalize(s.numeric_features()))
+        )
+        ```
+
+        The original keeps its value; the returned recipe has the new one:
+
+        ```{python}
+        recipe.set_params(corr__threshold=0.5).get_params()
+        ```
         """
         by_step: dict[str, dict[str, object]] = {}
         for key, value in params.items():
@@ -292,13 +402,22 @@ class Recipe:
         return self._clone()
 
     def add(self, *steps: Step) -> "Recipe":
-        """Return a new recipe with ``steps`` appended (steps are pure).
+        """Return a new recipe with ``steps`` added after the existing ones.
+
+        The recipe itself is never changed, so a recipe can be extended in
+        several directions from a common starting point. Steps run in the
+        order they were added.
 
         Step ids are kept unique within the recipe. A step that did not get an
         explicit ``id`` and whose default collides with an earlier step's is
-        appended under a suffixed id instead (``"dummy"``, then ``"dummy_2"``),
+        added under a suffixed id instead (``"dummy"``, then ``"dummy_2"``),
         so the two are addressable separately. Passing an ``id`` that a step
         already in the recipe uses raises ``ValueError``.
+
+        Parameters
+        ----------
+        *steps
+            The steps to add, in order.
 
         Examples
         --------
@@ -308,17 +427,24 @@ class Recipe:
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
         ```
 
         ```{python}
-        (
+        recipe = (
             Recipe()
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
         )
+        recipe
+        ```
+
+        Adding the same kind of step twice keeps the ids distinct:
+
+        ```{python}
+        twice = recipe.add(StepNormalize(s.integer_features()))
+        [step.id for step in twice.steps]
         ```
         """
         new = self._clone()
@@ -345,6 +471,19 @@ class Recipe:
         against, so any name is accepted and typos surface later, when the
         recipe is fitted.
 
+        Roles are what let a step say "all numeric features" without also
+        picking up the target or case weights: selectors such as
+        ``Selectors.numeric_features()`` only match columns carrying the
+        ``feature`` role. Declare ``feature`` explicitly to keep other columns,
+        such as an ID, out of those selections. A custom role marks columns for
+        your own selectors, or for `update_role_requirements`.
+
+        Roles apply to the columns of the input data. Columns that steps create
+        get their roles from the step that creates them. ``set_roles()`` only
+        adds roles; there is no method to remove or replace one, so to change an
+        assignment, build the recipe again. A custom role can be selected in a step with
+        ``Selectors.has_role()``.
+
         Parameters
         ----------
         target
@@ -364,27 +503,16 @@ class Recipe:
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe
-        ```
-
-        Start from a frame whose columns need roles:
-
-        ```{python}
-        df = pd.DataFrame(
-            {
-                "price": [1.0, 2.0, 3.0],
-                "sqft": [4.0, 5.0, 6.0],
-                "city": ["a", "b", "a"],
-            }
-        )
-        df
+        from mlfeatures.data import credit
         ```
 
         Assigning roles returns a new recipe, leaving the original untouched:
 
         ```{python}
-        recipe = Recipe(data=df).set_roles(target="price", feature=["sqft", "city"])
+        recipe = Recipe(data=credit).set_roles(
+            target="Status", feature=["Age", "Income", "Home"]
+        )
         recipe
         ```
 
@@ -392,7 +520,7 @@ class Recipe:
         already has:
 
         ```{python}
-        recipe.set_roles(group="city").roles.of("city")
+        recipe.set_roles(group="Home").roles.of("Home")
         ```
         """
         # ``**custom`` swallows any keyword, so the constructor's plural
@@ -424,13 +552,66 @@ class Recipe:
     ) -> "Recipe":
         """Return a new recipe overriding whether columns are required at transform.
 
-        ``role`` is either a **role name** (a ``str``, e.g. ``"id"``) or a
-        selector (e.g. ``starts_with("id_")``) resolved against the training
-        frame at ``fit()``. The ``feature`` and ``target`` roles are hardcoded
-        and cannot be configured (features are always required at transform,
-        targets never are); passing either as a string ``role`` raises. A
-        selector that happens to catch a feature or target column is silently
-        a no-op for that column (the hardcoded role wins), so it does not raise.
+        By default every column the recipe was fitted on must be present in the
+        data given to `FittedRecipe.transform()`, except the target and case
+        weights. That includes columns that no step uses, such as an ID column
+        with a custom role, which is rarely what you want: transforming
+        without it raises. Mark it as not required, or drop it from the data
+        before fitting. The requirement of every column is recorded in the
+        ``transform_required`` mapping of `FittedRecipe.schema`.
+
+        The ``feature`` and ``target`` roles are fixed: features are always
+        required at transform and targets never are. A column that holds a
+        custom role *and* the ``feature`` role stays required, so declare
+        ``features`` explicitly when a column carries a custom role (see
+        `Recipe`).
+
+        Parameters
+        ----------
+        role
+            A role name (e.g. ``"id"``), or a selector such as
+            ``Selectors.starts_with("id_")`` resolved against the training
+            data frame when the recipe is fitted. Passing ``"feature"`` or
+            ``"target"`` raises ``ValueError``. A selector that happens to
+            match a feature or target column leaves that column unchanged.
+        transform_required
+            ``True`` to require the columns at transform, ``False`` to allow
+            them to be absent. When several overrides match a column, the last
+            one wins.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepNormalize
+        from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
+        ```
+
+        Give ``Seniority`` an ``"id"`` role, relax its requirement, and fit:
+
+        ```{python}
+        recipe = (
+            Recipe(
+                data=credit,
+                target="Status",
+                features=["Age", "Income", "Home"],
+            )
+            .set_roles(id="Seniority")
+            .update_role_requirements("id", transform_required=False)
+            .add(StepNormalize(s.numeric_features()))
+        )
+        fitted = recipe.fit(credit)
+        ```
+
+        New data without the ID column now transforms:
+
+        ```{python}
+        fitted.transform(credit.drop("Seniority").head(5))
+        ```
         """
         if isinstance(role, str) and role in _NON_CONFIGURABLE_ROLES:
             raise ValueError(f"requirement for role {role!r} is not configurable")
@@ -465,15 +646,44 @@ class Recipe:
     def fit(self, data: DataFrame) -> "FittedRecipe":
         """Fit each step in order on the training data.
 
-        The transformed output of step *i* is the input to step *i+1*'s
-        ``fit()``, so later steps see the lineage as modified by earlier ones.
-        ``RowOp`` steps *are* applied here (a row operation reshapes the
-        training frame every later step then fits on) but never run during
-        ``transform()`` on new data, which the framework enforces structurally.
+        Each step is fitted on the output of the step before it, so a later
+        step sees the columns as the earlier ones left them, and its selector
+        is resolved against those columns. Steps that only act on training
+        samples, such as row filters, are applied here, so later steps are
+        fitted on the filtered rows, but they are skipped by
+        `FittedRecipe.transform()`.
 
-        Each fit works on *copies* of the steps, so the recipe is left unchanged
-        and refittable, and a `FittedRecipe` never shares fitted state with the
-        recipe or with another fit of it.
+        Every call estimates everything from scratch: the recipe is not
+        changed, it can be fitted again on other data, and each `FittedRecipe`
+        is independent of the recipe and of every other fit. Returning a
+        separate trained object keeps the untrained specification reusable
+        (for example inside cross-validation, where it is fitted once per
+        fold) and makes the object that holds the statistics the one you save
+        and apply to new data. Missing values are handled by the individual
+        steps, not by the recipe. The training data is not kept, so to get the
+        transformed training data call `FittedRecipe.transform()` on it; there
+        is no ``fit_transform()``. Note that ``transform()`` skips row filters,
+        so it can return more rows than the steps were fitted on. To see which
+        columns each step added or removed, use `FittedRecipe.summary()`.
+
+        When no ``features`` were declared, every column that is not a target
+        or a case weight is given the ``"feature"`` role (see `Recipe`).
+
+        Parameters
+        ----------
+        data
+            The training data frame.
+
+        Raises
+        ------
+        StepError
+            If a step fails while fitting or while transforming the training
+            data during the fit; the error names the step and the columns it
+            was working on.
+        ValueError
+            If a step would produce a column name that already exists.
+        ImportError
+            If a step needs an optional dependency that is not installed.
 
         Examples
         --------
@@ -484,21 +694,21 @@ class Recipe:
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
         ```
 
         ```{python}
-        df = pd.DataFrame(
-            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
-        )
-        (
-            Recipe()
+        recipe = (
+            Recipe(data=credit, target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
         )
+        fitted = recipe.fit(credit)
+        fitted
         ```
         """
         # Optional dependencies are only needed to run a step, so they are
@@ -527,12 +737,12 @@ class Recipe:
                 if col not in reserved:
                     live_roles.add(col, "feature")
         # Snapshot the training data into a schema and validate the incoming
-        # frame against it (all columns required at fit). The snapshot rides on
+        # data frame against it (all columns required at fit). The snapshot rides on
         # the FittedRecipe so transform() can re-check new data at the boundary.
         overrides = self._resolve_role_req_overrides(current, live_roles)
         schema = Schema.from_frame(current, live_roles, overrides)
         schema.check(current, context="fit")
-        # The column-lineage DAG, seeded from the training frame and updated
+        # The column-lineage DAG, seeded from the training data frame and updated
         # after each column-changing step. RowOp and
         # empty-selection steps make no schema change and are skipped below.
         lineage = Lineage.from_frame(current, live_roles)
@@ -603,36 +813,46 @@ class Recipe:
         )
 
     def summary(self) -> DataFrame:
-        """The initial (pre-fit) lineage as a tidy frame.
+        """The input columns, before any step runs, as a tidy frame.
 
-        Shows the prototype columns before any step runs. Requires a prototype:
-        construct the recipe with ``Recipe(data=...)``, or call ``fit()`` and use
-        ``FittedRecipe.summary()`` for the post-fit schema.
+        One row per column, with its ``name``, ``dtype``, ``roles`` (a column
+        with several roles lists them all in one cell), ``source`` (always
+        ``"original"`` before fitting) and whether it is ``sparse``. Requires
+        data: construct the recipe with ``Recipe(data=...)``, or fit it and
+        use `FittedRecipe.summary()` for the columns the recipe produces.
+
+        Use it to check that the roles you assigned landed on the columns you
+        meant before fitting; it cannot show what the steps will add or remove.
+
+        Raises
+        ------
+        ValueError
+            If the recipe was constructed without ``data``.
 
         Examples
         --------
-        The pre-fit summary describes the prototype columns and their roles
-        before any step has run, so ``city`` is still a single ``str`` column
-        with source ``"original"``:
+        The pre-fit summary describes the input columns and their roles before
+        any step has run, so ``Home`` is still a single ``str`` column with
+        source ``"original"``:
 
         ```{python}
-        import pandas as pd
+        #| echo: false
+        #| output: false
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+        ```
 
-        df = pd.DataFrame(
-            {
-                "price": [10.0, 22.5, 7.0, 30.0],
-                "age": [25, 41, 33, 52],
-                "city": ["NYC", "LA", "NYC", "SF"],
-            }
-        )
-        rec = (
-            Recipe(data=df, target="price", features=["age", "city"])
+        ```{python}
+        recipe = (
+            Recipe(data=credit, target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
         )
-        rec.summary()
+        ```
+
+        ```{python}
+        recipe.summary()
         ```
         """
         if self._prototype_frame is None:
@@ -644,7 +864,54 @@ class Recipe:
 
 
 class FittedRecipe:
-    """A fitted pipeline: applies stored statistics to new data."""
+    """A trained pipeline: applies statistics learned at fit time to new data.
+
+    A `FittedRecipe` is what `Recipe.fit()` returns. It contains all the information
+    it needs to be able to apply the transformations to new data:
+
+    ```{python}
+    #| echo: false
+    #| output: false
+    from mlfeatures import Recipe, StepNormalize, StepDummy
+    from mlfeatures import Selectors as s
+    from mlfeatures.data import credit
+
+    credit = credit.drop_nulls()
+    ```
+
+    ```{python}
+    recipe = (
+        Recipe(data=credit, target="Status")
+        .add(StepNormalize(s.numeric_features()))
+        .add(StepDummy(s.nominal_features()))
+    )
+    fitted = recipe.fit(credit)
+    ```
+
+    The `repr` shows the columns each step resolved to:
+
+    ```{python}
+    fitted
+    ```
+
+    Use `transform()` to apply the recipe to new data and `summary()` to
+    inspect the resulting columns. A trained recipe can be saved and restored
+    with `to_json()` and `from_json()` (or the `dict` and YAML equivalents).
+
+    Attributes
+    ----------
+    steps
+        The trained steps, in the order they run.
+    roles
+        The role assignments after fitting, including any columns the steps
+        added.
+    lineage
+        How each output column was derived from the input columns, as a
+        `Lineage`, or ``None`` if the recipe was built without one.
+    schema
+        The `Schema` of the training data, which `transform()` checks new
+        data against, or ``None`` if the recipe was built without one.
+    """
 
     def __init__(
         self,
@@ -655,11 +922,11 @@ class FittedRecipe:
     ):
         self.steps = steps
         self.roles = roles if roles is not None else Roles()
-        #: The post-all-steps column-lineage DAG, or
-        #: ``None`` if the recipe was constructed without one.
+        #: The column lineage after all steps have run, or ``None`` if the
+        #: recipe was constructed without one.
         self.lineage = lineage
-        #: The training-data schema snapshot used to
-        #: validate new data in ``transform()``, or ``None`` if absent.
+        #: A snapshot of the training-data schema, used to validate new data
+        #: in ``transform()``, or ``None`` if absent.
         self.schema = schema
 
     def __repr__(self) -> str:
@@ -675,19 +942,88 @@ class FittedRecipe:
         )
 
     def to_dict(self) -> dict[str, object]:
-        """Serialize to a diffable, JSON-safe ``dict``. See `mlfeatures.serialization`."""
+        """Serialize to a diffable, JSON-safe ``dict``. See `mlfeatures.to_dict` for the layout.
+
+        Use the ``dict`` when you are embedding the recipe in a larger payload
+        or handing it to your own writer; for a file, prefer `to_json` or
+        `to_yaml`.
+
+        Returns
+        -------
+        dict
+            Plain data holding the roles, schema, lineage, and every step's
+            hyperparameters and learned statistics.
+
+        Raises
+        ------
+        TypeError
+            If a step holds something that cannot be serialized, such as a raw
+            polars or narwhals selector, a ``dateutil`` rule, or a function.
+
+        Warns
+        -----
+        UserWarning
+            If a step comes from a package that `mlfeatures.from_dict` refuses
+            by default.
+        """
         from mlfeatures import serialization
 
         return serialization.to_dict(self)
 
     def to_json(self, *, indent: int = 2) -> str:
-        """Serialize to a diffable JSON string. See `mlfeatures.serialization`."""
+        """Serialize to a diffable JSON string. See `mlfeatures.to_json`.
+
+        JSON needs no optional dependency and is readable by any tool, so it is
+        the default choice for storing a recipe next to a model.
+
+        Parameters
+        ----------
+        indent
+            Spaces of indentation per level. Defaults to 2.
+
+        Returns
+        -------
+        str
+            The JSON text. Load it again with `FittedRecipe.from_json`.
+
+        Raises
+        ------
+        TypeError
+            As for `FittedRecipe.to_dict`.
+
+        Warns
+        -----
+        UserWarning
+            As for `FittedRecipe.to_dict`.
+        """
         from mlfeatures import serialization
 
         return serialization.to_json(self, indent=indent)
 
     def to_yaml(self) -> str:
-        """Serialize to a diffable YAML string. See `mlfeatures.serialization`."""
+        """Serialize to a diffable YAML string. See `mlfeatures.to_yaml`.
+
+        Choose YAML over JSON when people will read or review the file, since
+        the block layout diffs more cleanly. It needs the optional ``pyyaml``
+        package.
+
+        Returns
+        -------
+        str
+            The YAML text. Load it again with `FittedRecipe.from_yaml`.
+
+        Raises
+        ------
+        ImportError
+            If the optional ``pyyaml`` package is not installed.
+        TypeError
+            As for `FittedRecipe.to_dict`.
+
+        Warns
+        -----
+        UserWarning
+            As for `FittedRecipe.to_dict`.
+        """
         from mlfeatures import serialization
 
         return serialization.to_yaml(self)
@@ -696,10 +1032,23 @@ class FittedRecipe:
     def from_dict(
         cls, data: dict[str, object], *, trusted: Iterable[type] = ()
     ) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_dict` output. See `mlfeatures.serialization`.
+        """Reconstruct a fitted recipe from `FittedRecipe.to_dict` output. See `mlfeatures.from_dict`.
 
-        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
-        the registered step plugins, and the packages of the ``trusted`` classes.
+        Parameters
+        ----------
+        data
+            The ``dict`` produced by `FittedRecipe.to_dict`.
+        trusted
+            Classes whose top-level packages the payload may also name classes
+            from, for a step that is not registered. Defaults to none.
+
+        Raises
+        ------
+        ValueError
+            If the payload is malformed, has a ``format_version`` this
+            mlfeatures does not read, or names a class outside ``mlfeatures``,
+            the registered step plugins, and the packages of the ``trusted``
+            classes.
         """
         from mlfeatures import serialization
 
@@ -707,10 +1056,21 @@ class FittedRecipe:
 
     @classmethod
     def from_json(cls, text: str, *, trusted: Iterable[type] = ()) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_json` output. See `mlfeatures.serialization`.
+        """Reconstruct a fitted recipe from `FittedRecipe.to_json` output. See `mlfeatures.from_json`.
 
-        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
-        the registered step plugins, and the packages of the ``trusted`` classes.
+        Parameters
+        ----------
+        text
+            The JSON text produced by `FittedRecipe.to_json`.
+        trusted
+            Classes whose top-level packages the payload may also name classes
+            from, for a step that is not registered. Defaults to none.
+
+        Raises
+        ------
+        ValueError
+            As for `FittedRecipe.from_dict`; text that is not valid JSON raises
+            ``json.JSONDecodeError``, a ``ValueError`` subclass.
         """
         from mlfeatures import serialization
 
@@ -718,17 +1078,41 @@ class FittedRecipe:
 
     @classmethod
     def from_yaml(cls, text: str, *, trusted: Iterable[type] = ()) -> "FittedRecipe":
-        """Reconstruct a fitted recipe from `to_yaml` output. See `mlfeatures.serialization`.
+        """Reconstruct a fitted recipe from `FittedRecipe.to_yaml` output. See `mlfeatures.from_yaml`.
 
-        Raises ``ValueError`` for a class the payload names outside ``mlfeatures``,
-        the registered step plugins, and the packages of the ``trusted`` classes.
+        Parameters
+        ----------
+        text
+            The YAML text produced by `FittedRecipe.to_yaml`.
+        trusted
+            Classes whose top-level packages the payload may also name classes
+            from, for a step that is not registered. Defaults to none.
+
+        Raises
+        ------
+        ValueError
+            As for `FittedRecipe.from_dict`.
+        ImportError
+            If the optional ``pyyaml`` package is not installed.
         """
         from mlfeatures import serialization
 
         return serialization.from_yaml(text, trusted=trusted)
 
     def minimize(self) -> "FittedRecipe":
-        """Return a copy with fit-only artifacts stripped. See `mlfeatures.serialization`."""
+        """Return a recipe that keeps only what `transform()` needs. See `mlfeatures.minimize`.
+
+        Each step drops what it can: anything kept only for inspection after
+        fitting, or only because fitting needed it. The result transforms new
+        data identically and ``self`` is left unchanged. A step with nothing
+        to drop is shared with ``self`` rather than copied.
+
+        Call it before saving or shipping a recipe, so the artifact carries
+        only what scoring needs. `FittedRecipe.to_dict` and the JSON and YAML
+        writers save the recipe as it is and do not minimize it. No shipped
+        step currently holds anything to drop, so today this returns an
+        equivalent recipe.
+        """
         from mlfeatures import serialization
 
         return serialization.minimize(self)
@@ -751,39 +1135,52 @@ class FittedRecipe:
         return self
 
     def transform(self, data: DataFrame) -> DataFrame:
-        """Apply each fitted step in order, skipping ``RowOp`` and identity steps.
+        """Apply each trained step, in order, to new data.
 
-        ``RowOp`` steps never run on new data; steps whose primary selection
-        resolved to zero columns at fit time (``_empty_selection``) are the
-        identity transform and pass the frame through unchanged. Both are
-        skipped here, structurally, by inspecting the step rather than by any
-        per-step convention. Never re-estimates. Returns a native frame at the
-        sklearn boundary.
+        Every step applies the statistics stored at fit time. Steps that only
+        act on training samples (such as row filters) are skipped, as are steps
+        whose selection matched no columns. The result is a data frame of the same
+        type as ``data``.
+
+        Parameters
+        ----------
+        data
+            The data frame to transform. Its columns and dtypes must match the
+            training data; a mismatch raises an error naming the difference.
+
+        Raises
+        ------
+        StepError
+            If a step fails while transforming; the error names the step and
+            the columns it was working on.
 
         Examples
         --------
-        ``transform()`` applies the fitted statistics to new data, returning a
-        native frame with the same schema the recipe learned at fit time:
+        ``transform()`` applies the trained recipe to new data, returning a
+        data frame with the columns the recipe learned at fit time:
 
         ```{python}
         #| echo: false
         #| output: false
-        import pandas as pd
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+
+        credit = credit.drop_nulls()
         ```
 
         ```{python}
-        df = pd.DataFrame(
-            {"age": [25, 41, 33, 52], "city": ["NYC", "LA", "NYC", "SF"]}
-        )
-        fitted = (
-            Recipe()
+        recipe = (
+            Recipe(data=credit, target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
         )
-        fitted.transform(df)
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
+        result = fitted.transform(credit.head(5))
+        result
         ```
         """
         # A deserialized recipe may be transformed in an environment that lacks
@@ -806,32 +1203,47 @@ class FittedRecipe:
         return _frame.to_native(current)
 
     def summary(self) -> DataFrame:
-        """The fitted (post-all-steps) lineage as a tidy frame.
+        """The columns the recipe produces, as a tidy frame.
+
+        One row per output column, with its dtype, role, and the step that
+        created it (``"original"`` for columns passed through from the input).
+
+        Use it to see which columns the trained recipe will hand to a model and
+        which step each came from. For where a single column came from, or what
+        it descends from, use the `Lineage` in the ``lineage`` attribute.
+
+        Raises
+        ------
+        RuntimeError
+            If the recipe was constructed without a lineage.
 
         Examples
         --------
-        After fitting, the summary reflects the transformed schema: ``city`` has
-        been expanded into dummy indicators (source ``"dummy"``) while the
-        normalized ``age`` keeps its feature role:
+        After fitting, the summary reflects the transformed columns: the
+        nominal columns have been expanded into dummy indicators (source
+        ``"dummy"``) while the normalized numeric columns keep their feature
+        role:
 
         ```{python}
-        import pandas as pd
+        #| echo: false
+        #| output: false
         from mlfeatures import Recipe, StepNormalize, StepDummy
         from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
 
-        df = pd.DataFrame(
-            {
-                "price": [10.0, 22.5, 7.0, 30.0],
-                "age": [25, 41, 33, 52],
-                "city": ["NYC", "LA", "NYC", "SF"],
-            }
-        )
-        fitted = (
-            Recipe(data=df, target="price", features=["age", "city"])
+        credit = credit.drop_nulls()
+        ```
+
+        ```{python}
+        recipe = (
+            Recipe(data=credit, target="Status")
             .add(StepNormalize(s.numeric_features()))
             .add(StepDummy(s.nominal_features()))
-            .fit(df)
         )
+        fitted = recipe.fit(credit)
+        ```
+
+        ```{python}
         fitted.summary()
         ```
         """

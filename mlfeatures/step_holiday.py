@@ -162,7 +162,7 @@ def fit_holiday(
     ----------
     selected
         Internal `Frame` (narwhals) holding the Date/Datetime columns to flag
-        holidays on. Native frames are wrapped via `mlfeatures._frame.from_native()`
+        holidays on. Native data frames are wrapped via `mlfeatures._frame.from_native()`
         at the recipe boundary.
     holidays
         Holiday names to flag; each must be a name the `holidays` package
@@ -367,7 +367,7 @@ class StepHoliday(Step):
         mlfeatures selector such as ``Selectors.date_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.by_dtype(narwhals.Date)``). Selectors are
-        resolved against the frame's schema when the recipe is fitted, so the
+        resolved against the data frame's schema when the recipe is fitted, so the
         same selector works on any backend. Only Date and Datetime columns
         are meaningful here.
     holidays

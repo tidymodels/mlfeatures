@@ -45,7 +45,7 @@ class ColumnDropStep(Step):
         self, columns: Selector, *, id: str | None = None, default_id: str
     ) -> None:
         # Held verbatim. Interpreting a column spec (name, list, or selector) is
-        # selection logic that belongs to the frame boundary, not the step:
+        # selection logic that belongs to the data frame boundary, not the step:
         # ``fit()`` hands it to ``_frame.select``, which resolves it at fit time.
         self.columns = columns
         super().__init__(id, default_id)

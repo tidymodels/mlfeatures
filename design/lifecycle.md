@@ -68,20 +68,22 @@ All columns are required at `fit()` time regardless of role. Only `transform()`-
 User-configurable requirements are set via:
 
 ```python
+from mlfeatures import Selectors as s
+
 # "id" is a user-defined custom role, not a built-in
 recipe.update_role_requirements("id", transform_required=False)
 # selectors work here too:
-recipe.update_role_requirements(starts_with("id_"), transform_required=False)
+recipe.update_role_requirements(s.starts_with("id_"), transform_required=False)
 ```
 
-Selector expressions are accepted wherever a column name is — see [selectors.md](selectors.md).
+The first argument is a role name or a selector; a selector can also reach columns that carry no role, which a role name cannot.
 
-Unlike R's `update_role_requirements()`, this applies to **any** column in the lineage — including columns produced by earlier steps — since requirements are tracked in the column-lineage DAG. See [lineage.md](lineage.md).
+Unlike R's `update_role_requirements()`, a selector here is resolved against the **training data frame at fit time**, so it can name any input column, not just those with a given role. It does not see columns produced by earlier steps: requirements are recorded for the input columns in the schema snapshot. (Tracking requirements for produced columns in the lineage DAG is not implemented.) The last matching override wins, and a selector that matches a feature or target column leaves it unchanged.
 
 ### What is checked
 
 - All required columns are present (hard error if missing).
-- Column dtypes match the schema snapshot (hard error on mismatch).
+- Column dtypes match the schema snapshot (hard error on mismatch). The comparison is exact, parameters included: `Datetime` in microseconds does not match `Datetime` in nanoseconds, and `Int64` does not match `Float64`. New data has to be cast to the training dtypes first.
 - Extra columns beyond those in the schema are silently ignored.
 
 This catches the most common failure modes — passing the wrong dataframe, a column silently changing type between training and serving — at the boundary before any step runs.
@@ -130,7 +132,7 @@ A rough sketch of what `fit()` and `transform()` do internally. This is not fina
 ```python
 def fit(self, data):
     # 1. snapshot the training data into a schema, then validate the training
-    #    frame against it — all columns required at fit time. The snapshot is
+    #    data frame against it — all columns required at fit time. The snapshot is
     #    captured here (not at construction), so role-defaulting has run and the
     #    per-role transform requirements are known.
     schema = Schema.from_frame(data, roles, overrides)
@@ -169,6 +171,8 @@ Key points:
 
 ### `recipe.transform(data)`
 
+> The optional `selector` argument below (subsetting the output columns) is part of the sketch only; `FittedRecipe.transform(data)` does not take it yet.
+
 ```python
 def transform(self, data, selector=None):
     # 1. validate input against the schema captured at fit() — only columns
@@ -201,4 +205,4 @@ Key points:
 
 ## Lazy vs. eager evaluation
 
-Open question — see [goals.md § open questions](goals.md). Decision must be made explicitly before v0.1; R `recipes` never decided and paid for it. Recommendation: `transform()` returns an eager polars frame by default; a `transform_lazy()` variant can be added later.
+Open question — see [goals.md § open questions](goals.md). Decision must be made explicitly before v0.1; R `recipes` never decided and paid for it. Recommendation: `transform()` returns an eager polars data frame by default; a `transform_lazy()` variant can be added later.

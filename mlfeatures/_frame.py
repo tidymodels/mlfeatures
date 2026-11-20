@@ -7,7 +7,7 @@ no per-backend code paths.
 
 This module wraps `narwhals.stable.v2` rather than re-exporting it, so the
 escape-hatch discipline lives in one place: any operation that forces a drop to
-the native frame via `to_native()` outside the fixed sklearn boundary is a
+the native data frame via `to_native()` outside the fixed sklearn boundary is a
 defect to upstream into narwhals, not a license to branch on backend.
 
 ``Frame`` is the internal type that flows between steps; ``to_native`` is called
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 def from_native(df: DataFrame) -> Frame:
     """Wrap a native (pandas/polars/...) dataframe as an internal `Frame`.
 
-    Rejects frames with duplicate column names up front. pandas allows repeated
+    Rejects data frames with duplicate column names up front. pandas allows repeated
     labels (polars does not), but every downstream operation here selects and
     aligns columns *by name*, so a duplicate makes the schema ambiguous. Failing
     at the boundary gives a clear, framework-owned error instead of a confusing
@@ -59,7 +59,7 @@ def from_native(df: DataFrame) -> Frame:
 def _duplicate_names(df: DataFrame) -> list[str]:
     """Names appearing more than once in ``df.columns``, in first-seen order.
 
-    Reads ``columns`` off the native frame (both pandas and polars expose it);
+    Reads ``columns`` off the native data frame (both pandas and polars expose it);
     used only to enrich the duplicate-column error, so an unexpected shape just
     yields an empty list rather than masking the original failure.
     """
@@ -98,14 +98,14 @@ def select(
     lineage: "Lineage | None" = None,
     steps: "dict[str, Step] | None" = None,
 ) -> Frame:
-    """Return a frame with only the selected columns.
+    """Return a data frame with only the selected columns.
 
     ``names`` may be a single column name, a sequence of names (kept in the
     given order), a narwhals selector (e.g. ``narwhals.selectors.numeric()``),
     a polars selector (``polars.selectors``) or column-selection expression
     (``polars.col("a")``), or a `FeaturesSelector`. A polars selector or
-    expression is resolved against the frame's schema, so it works
-    regardless of the frame's backend. A ``FeaturesSelector`` additionally uses
+    expression is resolved against the data frame's schema, so it works
+    regardless of the data frame's backend. A ``FeaturesSelector`` additionally uses
     ``roles`` to filter by role, and (for provenance selectors) the live
     lineage DAG ``lineage`` and id→step map ``steps`` when the recipe supplies
     them at fit time.
@@ -131,7 +131,7 @@ def _expand_polars_expr(frame: Frame, expr: PlExpr) -> list[str]:
     """Resolve a polars selector or column selection to names against ``frame``.
 
     Polars expressions are not understood by narwhals, so the expression is
-    expanded by ``polars.selectors.expand_selector`` against the frame's schema
+    expanded by ``polars.selectors.expand_selector`` against the data frame's schema
     (via `narwhals.Schema.to_polars()`). This is pure name resolution that
     touches no data and works for any backend (the schema is normalized by
     narwhals).
@@ -160,17 +160,17 @@ def _expand_polars_expr(frame: Frame, expr: PlExpr) -> list[str]:
 
 
 def drop(frame: Frame, names: str | Sequence[str]) -> Frame:
-    """Return a frame with ``names`` removed."""
+    """Return a data frame with ``names`` removed."""
     cols = [names] if isinstance(names, str) else list(names)
     return frame.drop(cols)
 
 
 def with_column(frame: Frame, name: str, values: Any) -> Frame:
-    """Return a frame with ``values`` attached as a column named ``name``.
+    """Return a data frame with ``values`` attached as a column named ``name``.
 
     Used at the sklearn boundary to re-join a target ``y`` (a numpy array, list, or
-    Series) onto the feature frame under its target-role name. ``values`` is wrapped as a
-    narwhals `Series` on the frame's backend so the result stays native (pandas in →
+    Series) onto the feature data frame under its target-role name. ``values`` is wrapped as a
+    narwhals `Series` on the data frame's backend so the result stays native (pandas in →
     pandas out).
     """
     series = nw.new_series(name=name, values=values, backend=frame.implementation)
@@ -183,7 +183,7 @@ def apply_drop(frame: Frame, drop_cols: list[str]) -> Frame:
     The column-dropping half of every REMOVING-mode step (``step_drop_zv``,
     ``step_drop_corr``, ...). Each fitter inspects training data and returns
     *which* columns to remove; this helper performs the removal. Splitting the
-    work means the same names can be applied to both the training frame and
+    work means the same names can be applied to both the training data frame and
     any held-out frame, guaranteeing train/serve parity (the same columns
     disappear at fit and at transform time).
 

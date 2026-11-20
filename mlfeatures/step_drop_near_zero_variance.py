@@ -32,7 +32,7 @@ def fit_drop_near_zero_variance(
     ----------
     selected
         Internal `Frame` (narwhals) holding the candidate
-        feature columns. Native frames are wrapped via
+        feature columns. Native data frames are wrapped via
         `mlfeatures._frame.from_native()` at the recipe boundary.
     freq_cut
         Threshold for the frequency ratio; a column is only flagged as
@@ -47,7 +47,7 @@ def fit_drop_near_zero_variance(
     list[str]
         Column names to drop, in their input order. Pair with
         `mlfeatures._frame.apply_drop()` to remove the offending columns
-        from any frame with the same schema.
+        from any data frame with the same schema.
     """
     zero_variance = set(fit_drop_zero_variance(selected))
     flagged: list[str] = []
@@ -95,7 +95,7 @@ class StepDropNearZeroVariance(ColumnDropStep):
         of names, a mlfeatures selector such as ``Selectors.features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Any dtype is
         accepted.
     freq_cut

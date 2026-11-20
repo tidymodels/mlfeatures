@@ -3,7 +3,7 @@
 A **schema** is a zero-row structural snapshot of the training data:
 column names, dtypes, and role assignments. It is captured at ``Recipe.fit()``
 and stored on the resulting ``FittedRecipe``; both ``fit()`` and
-``transform()`` validate the incoming frame against it before any step runs.
+``transform()`` validate the incoming data frame against it before any step runs.
 This catches the two most common boundary failures: the wrong dataframe passed
 in, or a column silently changing dtype between training and serving.
 
@@ -64,12 +64,20 @@ class Schema:
     Captured at ``Recipe.fit()`` and exposed as ``FittedRecipe.schema``. Holds the
     training :class:`narwhals.Schema` (column names and dtypes), the role
     assignments, and a precomputed per-column flag for whether each column is
-    required at ``transform()`` time.
+    required at ``transform()`` time. Not to be confused with `ColSchema` (what
+    a step reports about the columns it consumed and produced) or `SchemaInfo`
+    (what a step is handed at fit time).
+
+    Dtypes are compared exactly: a column that was ``Float64`` at fit must be
+    ``Float64`` in new data, and parametrized dtypes must agree on their
+    parameters (a ``Datetime`` in microseconds does not match one in
+    nanoseconds, nor does an ``Enum`` with different categories). Cast new data
+    to the training dtypes before transforming.
 
     Attributes
     ----------
     dtypes
-        The training frame's column dtypes, as a narwhals schema: an ordered
+        The training data frame's column dtypes, as a narwhals schema: an ordered
         name→dtype mapping.
     roles
         Role assignments captured at fit.
@@ -111,6 +119,17 @@ class Schema:
 
         The per-column transform-time requirement is precomputed here from the
         role defaults and any ``update_role_requirements`` ``overrides``.
+
+        Parameters
+        ----------
+        frame
+            The training data frame to snapshot.
+        roles
+            Role assignments for its columns. Copied, so later changes to the
+            argument do not reach the snapshot.
+        overrides
+            Column to requirement mapping from ``update_role_requirements``,
+            already resolved to column names.
         """
         dtypes = nw.Schema(frame_dtypes(frame))
         return cls(
@@ -129,7 +148,17 @@ class Schema:
         column is required; at ``"transform"`` only columns flagged in
         ``transform_required`` are. In both contexts, columns that *are* present
         must match the snapshot dtype. Extra columns beyond the snapshot are
-        ignored.
+        ignored. Dtypes are compared exactly (see the class docstring).
+
+        Parameters
+        ----------
+        frame
+            The data frame to validate.
+        context
+            ``"fit"`` or ``"transform"``. Any value other than ``"fit"`` is
+            treated as ``"transform"``. ``Recipe.fit()`` checks the frame it
+            just took the snapshot from, so at ``"fit"`` the check cannot fail
+            in practice; it exists so both phases go through one code path.
 
         Raises
         ------

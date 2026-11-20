@@ -101,7 +101,7 @@ def fit_polynomial(selected: Frame, degree: int) -> dict[str, PolynomialFit]:
     ----------
     selected
         Internal `Frame` (narwhals) holding the columns to
-        be expanded. Native frames are wrapped via `mlfeatures._frame.from_native()`
+        be expanded. Native data frames are wrapped via `mlfeatures._frame.from_native()`
         at the recipe boundary.
     degree
         Maximum polynomial degree. Must be an ``int`` strictly greater than
@@ -227,7 +227,7 @@ def apply_polynomial(
     Returns
     -------
     Frame
-        New frame with the selected columns replaced by their polynomial
+        New data frame with the selected columns replaced by their polynomial
         expansions. Backend (pandas/polars) is preserved end-to-end.
 
     Warns
@@ -237,9 +237,9 @@ def apply_polynomial(
         possible) the column is left untouched and a warning is emitted.
     """
     # Plan the final column ordering and which columns to expand. We add new
-    # polynomial columns via `with_columns` (which preserves the frame's row
+    # polynomial columns via `with_columns` (which preserves the data frame's row
     # alignment: `nw.concat(how="horizontal")` on pandas is index-based and
-    # silently produces NaN when the frame has a non-default index, e.g. after
+    # silently produces NaN when the data frame has a non-default index, e.g. after
     # a train/test split), then drop the expanded source columns, and finally
     # `.select(final_order)` to slot the expansions into their original spot.
     final_order: list[str] = []
@@ -365,7 +365,7 @@ class StepPolynomial(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     degree

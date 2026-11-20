@@ -9,7 +9,7 @@ target at fit time without treating it as a selected input feature.
 The *fit* half (`fit_pls()`) delegates the actual NIPALS computation to
 ``sklearn.cross_decomposition.PLSRegression`` and copies only the plain NumPy
 arrays it needs out of the fitted estimator into a frozen `PlsFit`; the
-*apply* half (`apply_pls()`) reuses those arrays to project any frame onto the
+*apply* half (`apply_pls()`) reuses those arrays to project any data frame onto the
 learned components, exactly as `mlfeatures.step_pca` does for its loadings: the
 basis is never recomputed from new data, giving train/serve parity.
 `StepPls` wraps both into the `Step` lifecycle so a `Recipe` can fit and apply
@@ -98,7 +98,7 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the numeric columns to project.
-        Native frames are wrapped via `mlfeatures._frame.from_native()` at the
+        Native data frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
     target
         Narwhals ``Series`` of a numeric or categorical target, aligned
@@ -111,7 +111,7 @@ def fit_pls(selected: Frame, target: "nw.Series[Any]", num_comp: int) -> PlsFit:
     Returns
     -------
     PlsFit
-        The fitted basis. Pair with `apply_pls()` to project a frame.
+        The fitted basis. Pair with `apply_pls()` to project a data frame.
 
     Raises
     ------
@@ -265,11 +265,11 @@ class StepPls(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric
         columns are meaningful here.
     target
-        Name of the column in the training frame that holds the numeric or
+        Name of the column in the training data frame that holds the numeric or
         categorical target. Read at fit time only; the column is *not*
         declared as an input feature in `schema_in()`.
     num_comp

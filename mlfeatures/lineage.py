@@ -9,7 +9,7 @@ column, which original columns does it descend from) and report the live
 lineage through ``summary()``.
 
 This module defines the structure (`ColumnNode`, `Lineage`), its construction
-from a frame, the update applied after each step, and the provenance queries
+from a data frame, the update applied after each step, and the provenance queries
 (``summary``, ``columns_from_source``, ``parents``, ``ancestors``).
 
 The DAG is **recipe-side state**: it is not handed to steps (steps receive a
@@ -67,7 +67,7 @@ class ColumnNode:
         Whether this column is currently sparse.
     removed_by
         ``None`` while the column is live; set to the dropping step's ``id``
-        once it has been removed from the frame and archived.
+        once it has been removed from the data frame and archived.
 
     Examples
     --------
@@ -76,10 +76,14 @@ class ColumnNode:
     categorical column:
 
     ```{python}
+    #| echo: false
+    #| output: false
     from mlfeatures import Recipe, StepNormalize, StepDummy
     from mlfeatures import Selectors as s
     from mlfeatures.data import credit
+    ```
 
+    ```{python}
     recipe = (
         Recipe(target="Status")
         .add(StepNormalize(s.numeric_features()))
@@ -117,33 +121,57 @@ class ColumnNode:
 
 
 class Lineage:
-    """The column-lineage DAG: live columns plus archived removed columns.
+    """The record of where every column came from, and what happened to it.
 
-    The *live* columns are the ones currently in the frame, in frame order.
-    Columns a step has removed are *archived* rather than discarded, so
-    provenance can be traced *through* a dropped intermediate (e.g. a dummy
-    column back to the categorical it replaced).
+    A recipe can change a data frame a lot: it adds columns (dummy indicators,
+    polynomial terms), removes others (the categorical a dummy step consumed),
+    and changes dtypes in place (an integer column becomes float after
+    normalizing). After a few steps the output no longer looks much like the
+    input, and column names alone do not say why a column exists. A ``Lineage``
+    keeps that history so a fitted recipe can answer questions such as "which
+    step produced ``Home_rent``?", "which original columns does it depend on?"
+    and "what dtype did ``Age`` have before it was normalized?". The same
+    record backs ``summary()`` on a fitted recipe and the ``has_source`` and
+    ``has_ancestor`` selectors, which pick columns by where they came from
+    rather than by name.
 
-    ``lineage["name"]`` returns a live `ColumnNode`, ``"name" in lineage`` and
-    ``len(lineage)`` look only at live columns, and ``columns`` and ``dtypes``
-    expose the live names and dtypes. ``removed`` lists the archived nodes.
-    ``parents`` and ``ancestors`` also resolve archived columns; asking for a
-    column that never existed raises ``KeyError``.
+    It is stored as a graph with one node per column (a `ColumnNode`). Each
+    produced column points at its **parents**, the columns it was built from, so
+    following those links back through the steps gives its **ancestors**: every
+    column it ultimately descends from. A column that was in the input data has
+    no parents and a ``source`` of ``"original"``; a column added by a step has
+    the step's ``id`` as its ``source``.
 
-    Build the initial DAG with `from_frame`; the recipe then calls ``update()``
-    after each step to keep it in sync with the transformed frame.
+    Columns come in two kinds:
+
+    - **Live** columns are the ones currently in the data frame, in column
+      order. These are what ``lineage["name"]``, ``"name" in lineage``,
+      ``len(lineage)``, ``columns`` and ``dtypes`` describe.
+    - **Removed** columns were dropped by a step. They are kept (see
+      ``removed``) instead of being forgotten, because a live column's history
+      often runs *through* one. A dummy indicator's parent is the categorical it
+      was encoded from; if that categorical were forgotten when the dummy step
+      dropped it, the indicator could no longer be traced to the original data.
+      ``parents`` and ``ancestors`` therefore resolve removed columns too, and
+      asking about a column that never existed raises ``KeyError``.
+
+    The recipe builds the lineage and updates it after each step, so it is read
+    rather than constructed: get it from ``FittedRecipe.lineage``.
 
     Examples
     --------
-    The DAG is built by the recipe; read it back from ``FittedRecipe.lineage``.
     Here a small pipeline imputes missing values, rescales the numerics, and
     dummy-encodes the categoricals, composed step by step with ``.add()``:
 
     ```{python}
+    #| echo: false
+    #| output: false
     from mlfeatures import Recipe, StepImputeMean, StepNormalize, StepDummy
     from mlfeatures import Selectors as s
     from mlfeatures.data import credit
+    ```
 
+    ```{python}
     recipe = (
         Recipe(target="Status")
         .add(StepImputeMean(s.numeric_features()))
@@ -178,7 +206,8 @@ class Lineage:
     ```
     """
 
-    # Node for each column currently in the frame, keyed by name, in frame order.
+    # Node for each column currently in the data frame, keyed by name, in column
+    # order.
     _live: dict[str, ColumnNode]
     # Nodes of removed columns, in removal order.
     _history: list[ColumnNode]
@@ -191,7 +220,7 @@ class Lineage:
     def from_frame(cls, frame: Frame, roles: Roles | None = None) -> "Lineage":
         """Build the initial DAG: one live node per column, all ``"original"``.
 
-        Each node takes its dtype from the frame, its roles from ``roles`` (an
+        Each node takes its dtype from the data frame, its roles from ``roles`` (an
         empty `Roles` if none given), an empty ``parent_cols``, a
         single-element ``dtype_history``, and ``sparse=False``.
 
@@ -240,8 +269,8 @@ class Lineage:
         backend; left to transform time, polars raises a backend-specific error
         and pandas silently keeps only one of the colliding columns.
 
-        ``update()`` re-checks collisions against the *post-transform* frame as a
-        backstop, but cannot see a within-step duplicate (the frame has already
+        ``update()`` re-checks collisions against the *post-transform* data frame as a
+        backstop, but cannot see a within-step duplicate (the data frame has already
         collapsed the two columns into one), which is why this guard runs here.
         """
         live = set(self._live)
@@ -269,11 +298,11 @@ class Lineage:
         """Fold one fitted, transformed step into the DAG.
 
         Called by the recipe after ``step.fit()`` and (for non-``RowOp`` steps)
-        ``step.transform()``. The algorithm is **frame-driven**: the transformed
-        frame is the source of truth for which columns now exist, their order,
+        ``step.transform()``. The algorithm is **driven by the data frame**: the
+        transformed data frame is the source of truth for which columns now exist, their order,
         and their dtypes, while ``step.output_parents()`` is the source of truth
         for the provenance of any *new* columns. ``step.mode`` is not consulted;
-        the shape is read off the frame.
+        the shape is read off the data frame.
 
         Concretely, comparing the live columns against ``frame_after``:
 
@@ -315,7 +344,7 @@ class Lineage:
         if set(parents) != set(added):
             raise ValueError(
                 f"step {step.id!r}: declared produced columns {sorted(parents)} "
-                f"do not match the columns it added to the frame {sorted(added)}"
+                f"do not match the columns it added to the data frame {sorted(added)}"
             )
         unknown_parents = {
             parent
@@ -356,12 +385,12 @@ class Lineage:
                 sparse=step.produces_sparse,
             )
 
-        # 4. reorder the live view to match the frame
+        # 4. reorder the live view to match the data frame
         self._live = {name: self._live[name] for name in after}
 
     @property
     def columns(self) -> list[str]:
-        """Live column names, in frame order."""
+        """Live column names, in data frame order."""
         return list(self._live)
 
     @property
@@ -377,19 +406,46 @@ class Lineage:
         that dropped it. These are the intermediates that `parents` and
         `ancestors` trace through; a column dropped and later re-created under
         the same name appears here once per removal.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: false
+        #| output: false
+        from mlfeatures import Recipe, StepDummy
+        from mlfeatures import Selectors as s
+        from mlfeatures.data import credit
+        ```
+
+        ```{python}
+        recipe = Recipe(target="Status").add(StepDummy(s.nominal_features()))
+        fitted = recipe.fit(credit)
+        lineage = fitted.lineage
+        ```
+
+        Each removed node records which step dropped it:
+
+        ```{python}
+        [(node.name, node.removed_by) for node in lineage.removed]
+        ```
         """
         return list(self._history)
 
     def summary(self, include_removed: bool = False) -> DataFrame:
-        """The lineage as a tidy frame.
+        """The lineage as a tidy data frame.
 
         Columns ``name``, ``dtype``, ``roles``, ``source``, ``sparse``: one row
-        per live column, in frame order. ``dtype`` is the dtype category
+        per live column, in data frame order. ``dtype`` is the dtype category
         (``"float"``, ``"int"``, ``"str"``, ``"categorical_unordered"``, ...) and
         ``roles`` is the sorted role set joined with ``", "``.
 
         The result is always a polars ``DataFrame``, whatever backend the
         recipe was fitted on.
+
+        This is the same table `FittedRecipe.summary` returns for the live
+        columns. Reach for it when you also want the removed columns
+        (``include_removed=True``) and which step dropped each; use `parents`
+        and `ancestors` to trace a single column.
 
         Parameters
         ----------
@@ -464,7 +520,7 @@ class Lineage:
         Returns
         -------
         list of str
-            Matching column names in frame order; empty if the step produced no
+            Matching column names in data frame order; empty if the step produced no
             live column or no step has that id.
 
         Examples
@@ -575,11 +631,15 @@ class Lineage:
         and expands it into polynomial terms:
 
         ```{python}
+        #| echo: false
+        #| output: false
         from mlfeatures import Recipe, StepImputeMean, StepClassDistance
         from mlfeatures import StepPolynomial
         from mlfeatures import Selectors as s
         from mlfeatures.data import credit
+        ```
 
+        ```{python}
         recipe = (
             Recipe(target="Status")
             .add(StepImputeMean(s.numeric_features()))

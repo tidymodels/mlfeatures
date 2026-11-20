@@ -102,7 +102,7 @@ def fit_geo_distance(
 
     There is nothing to estimate from ``selected``: the reference point is a
     fixed constructor argument, not a learned statistic. This function exists
-    so the fit/apply split matches every other step, and so the frame is
+    so the fit/apply split matches every other step, and so the data frame is
     available if a future version wants to validate observed lat/lon ranges
     against the training data.
 
@@ -298,7 +298,7 @@ class StepGeoDistance(Step):
         Default ``False``.
     name
         Name of the output distance column. Default ``"geo_dist"``. A
-        `Recipe` rejects the step if the frame already has a column of this
+        `Recipe` rejects the step if the data frame already has a column of this
         name.
     keep_original_cols
         If ``True``, the ``lat``/``lon`` columns are kept alongside the

@@ -123,18 +123,18 @@ class Step(ABC):
 
     **Everything a step needs is computed at fit time.** Whatever a step has to
     learn from data (statistics, level sets, a basis, the list of columns to
-    drop) is estimated once from the training frame and stored on the step.
+    drop) is estimated once from the training data frame and stored on the step.
     ``transform()`` only applies that stored state; it never re-estimates
     anything, however different the new data looks. This is what makes a fitted
     recipe reproducible and free of train-to-serve skew, and it holds for every
     step, so individual steps do not restate it.
 
     A step's ``columns`` selector is resolved once, against the training
-    frame's schema, when the recipe is fitted. A selector that matches nothing
+    data frame's schema, when the recipe is fitted. A selector that matches nothing
     is not an error: the step is kept in the fitted recipe for inspection but
     never fitted and never run, making it the identity transform.
 
-    What a step promises about the frame it returns is *which* columns are
+    What a step promises about the data frame it returns is *which* columns are
     present and what they are named, not where they sit. Column position is an
     implementation detail that may differ between steps and backends, so
     downstream code should select columns by name rather than by position.
@@ -368,9 +368,9 @@ class Step(ABC):
         """Map each column this step *produces* to its parent input column(s).
 
         Known after ``fit()``. The keys are exactly the columns this step adds to
-        the frame; each value lists the input columns that column descends from.
+        the data frame; each value lists the input columns that column descends from.
         The recipe consults this to populate the column-lineage DAG
-        and validates the keys against the post-step frame.
+        and validates the keys against the post-step data frame.
 
         The default returns ``{}``: correct for steps that create no new columns
         (in-place ``ONE_TO_ONE`` such as ``step_normalize``; ``REMOVING``;
@@ -383,7 +383,7 @@ class Step(ABC):
         return {}
 
     def produced_columns(self) -> list[str]:
-        """Ordered names of the columns this step *adds* to the frame.
+        """Ordered names of the columns this step *adds* to the data frame.
 
         Known after ``fit()``. Unlike ``output_parents()`` (a name→parents map,
         so its keys are necessarily unique), this is an ordered list that
@@ -431,7 +431,7 @@ class Step(ABC):
         """Resolve this step's ``columns`` selector to concrete column names.
 
         This is the supported way for a step to find out which columns it was
-        pointed at. Call it at the top of ``fit()`` and select from the frame
+        pointed at. Call it at the top of ``fit()`` and select from the data frame
         with the names it returns; narwhals' own ``frame.schema`` then gives the
         dtypes:
 
@@ -449,7 +449,7 @@ class Step(ABC):
         Override only if a step's primary input is named something else.
 
         Takes ``data`` as well as ``info`` because narwhals and polars selectors
-        resolve against the frame's schema rather than against the schema
+        resolve against the data frame's schema rather than against the schema
         snapshot alone.
 
         The recipe also calls this before ``fit()`` so that a selection matching
@@ -549,7 +549,7 @@ class Step(ABC):
         The default is a no-op: it returns ``self`` unchanged. Steps that retain
         training artifacts only needed at fit time (e.g. a future KNN imputer's
         neighbor matrix) override this to return a lighter copy that still
-        transforms identically. See ``recipe.minimize``.
+        transforms identically. See `minimize`.
         """
         return self
 

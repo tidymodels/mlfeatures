@@ -6,7 +6,7 @@
   "column 'x' has fewer than 2 unique non-null levels (1 found); dummy encoding requires at least 2 levels"
 # ---
 # name: TestFitDummy.test_zero_row_raises
-  'cannot fit dummy encoding on a zero-row frame; no levels can be learned'
+  'cannot fit dummy encoding on a zero-row data frame; no levels can be learned'
 # ---
 # name: TestStepDummyGuards.test_schema_in_before_fit_raises
   'StepDummy.schema_in() called before fit()'

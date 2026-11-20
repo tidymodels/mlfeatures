@@ -2,7 +2,7 @@
 title: "Missing data"
 ---
 
-Steps that handle missing values before anything else touches the frame (the
+Steps that handle missing values before anything else touches the data frame (the
 grouping follows [Feature Engineering A–Z](https://feaz-book.com/)). In the
 [eight-position ordering](../basics/four-stages-eight-steps.qmd) these fill
 [Missing: impute](../four-stages/missing-impute.qmd) and

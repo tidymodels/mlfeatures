@@ -89,7 +89,7 @@ def apply_impute_median(
 
     Returns
     -------
-    narwhals.DataFrame: the input frame with nulls in each mapped column filled
+    narwhals.DataFrame: the input data frame with nulls in each mapped column filled
     by its median (columns with a ``NaN`` median are left as-is). Column names,
     order, and structure are unchanged.
     """
@@ -121,7 +121,7 @@ class StepImputeMedian(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     id

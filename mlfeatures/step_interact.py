@@ -73,14 +73,14 @@ def fit_interact(selected: Frame, *, sep: str = "_x_") -> InteractFit:
     There is no per-column statistic to estimate: interacting two columns
     only needs their names, so this just records the column order and the
     pairs `apply_interact()` will compute. Fewer than 2 columns yields an
-    ``InteractFit`` with no pairs; `apply_interact()` passes the frame
+    ``InteractFit`` with no pairs; `apply_interact()` passes the data frame
     through unchanged and warns.
 
     Parameters
     ----------
     selected
         Internal `Frame` (narwhals) holding the columns to interact. Native
-        frames are wrapped via `mlfeatures._frame.from_native()` at the recipe
+        data frames are wrapped via `mlfeatures._frame.from_native()` at the recipe
         boundary.
     sep
         Separator joining each pair's two column names into the output
@@ -131,7 +131,7 @@ def apply_interact(
     -----
     UserWarning
         When ``fit_result.pairs`` is empty (fewer than 2 columns were
-        selected), no interaction columns can be produced and the frame is
+        selected), no interaction columns can be produced and the data frame is
         returned unchanged.
     """
     if not fit_result.pairs:
@@ -176,7 +176,7 @@ class StepInteract(Step):
         mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     sep

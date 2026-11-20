@@ -36,7 +36,7 @@ ames_train, ames_validation = train_test_split(ames_mini, train_size=0.8, random
 
 ## Training data fits, new data is transformed
 
-Everything a recipe estimates comes from the frame passed to `fit()`, and
+Everything a recipe estimates comes from the data frame passed to `fit()`, and
 `transform()` reuses those estimates on every other frame. That is the
 guard against data leakage: the validation set never influences the
 statistics that transform it. After normalizing with the training means, the

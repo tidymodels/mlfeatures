@@ -9,19 +9,22 @@
 
 Selectors are a small expression DSL that resolves to a list of column names **at fit time**, using the schema after all preceding steps. They are predicate-based and composable with standard set operations.
 
-Selectors work **everywhere a column name or list of column names is accepted** — not just in step arguments. This includes:
+The goal is for selectors to work **everywhere a column name or list of column names is accepted** — not just in step arguments. Today that covers:
 
 - Every step argument that names columns (not just the leading variadic)
+- `update_role_requirements(role, ...)`, which takes a role name or a selector
+
+Still names-only, and planned to accept selectors:
+
 - `set_roles(target=..., feature=...)`
-- `update_role_requirements(role=..., ...)`
-- `add_role()`, `update_role()`, `remove_role()`
-- The column-subsetting argument of `transform()`
+- `add_role()`, `update_role()`, `remove_role()` (themselves not implemented yet; see [roles.md](roles.md))
+- A column-subsetting argument of `transform()` (not implemented yet)
 
 R `recipes` only supported selectors in the leading `...` of steps, making secondary-column args and role management impossible to express with the DSL [#1197, #1225, #1299, #1417]. We treat selectors as a first-class primitive that the entire API is built on top of.
 
 ---
 
-The native DSL is exposed as factory methods on the `Selectors` namespace, conventionally imported as `from mlfeatures import Selectors as s`. Every factory returns a `FeaturesSelector` that composes with `&` / `|` / `~` / `-` and resolves to column names at fit time. The examples below use that `s.` prefix, which is the house style for all mlfeatures examples; `s` also stays out of the way of `cs`, the conventional alias for `polars.selectors`.
+The native DSL is exposed as factory methods on the `Selectors` namespace, conventionally imported as `from mlfeatures import Selectors as s`. Every factory returns a `FeaturesSelector` (exported from `mlfeatures`, for annotating) that composes with `&` / `|` / `~` / `-` and resolves to column names at fit time. The examples below use that `s.` prefix, which is the house style for all mlfeatures examples; `s` also stays out of the way of `cs`, the conventional alias for `polars.selectors`.
 
 ## By name
 
@@ -35,7 +38,9 @@ s.num_range("x", range(1, 6))  # x1, x2, x3, x4, x5
 s.everything()
 ```
 
-`s.col` is **tolerant**: names not present in the frame are silently skipped (like R's `any_of`). Passing a plain `list` of names as an operand is **strict** and raises on a missing column (like `all_of`) — so `s.col("a", "missing")` is a no-op on the absent name, while `... & ["a", "missing"]` raises. Reach for `col` when absence should be a no-op, and a bare list when a missing name is a mistake worth surfacing.
+`s.col` is **tolerant**: names not present in the data frame are silently skipped (like R's `any_of`). Passing a plain `list` of names as an operand is **strict** and raises on a missing column (like `all_of`) — so `s.col("a", "missing")` is a no-op on the absent name, while `... & ["a", "missing"]` raises. Reach for `col` when absence should be a no-op, and a bare list when a missing name is a mistake worth surfacing.
+
+Name matching is **case-sensitive** and `starts_with` / `ends_with` / `contains` take a single string. tidyselect ignores case by default and accepts several prefixes; here, combine selectors with `|` for several prefixes and use `matches(r"(?i)...")` to ignore case. `num_range` has no zero-padding option (R's `width`); spell padded names out with `col`.
 
 There is deliberately **no positional range selector** (recipes' `beds:sqft`, selecting every column between two positions). Position is a brittle thing to depend on: it changes as upstream steps add and drop columns, so a range that is correct when the recipe is written can silently capture the wrong columns at fit time. Select by name pattern (`starts_with`, `matches`, `num_range`), by role, or by type instead.
 
@@ -79,7 +84,7 @@ The lineage DAG distinguishes between a column whose **immediate** parent is a g
 - **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Lineage.columns_from_source`.
 - **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Lineage.ancestors`.
 
-Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
+Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a data frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
 
 ---
 
@@ -101,6 +106,8 @@ s.datetime()
 
 Names follow Python and polars conventions, not R. The dtype check is an internal primitive (see `mlfeatures._frame`) and is not part of the public surface. See [lineage.md](lineage.md) for the full type taxonomy.
 
+`numeric()` includes `Decimal` columns, which only exist as such on polars (pandas stores decimals as `object`). `ordered()` selects narwhals `Enum` and `unordered()` selects `Categorical`, which is how narwhals reports both the polars and the pandas flavours. There are no selectors yet for the taxonomy's `duration` and `list` types.
+
 ---
 
 ## Compound selectors
@@ -112,6 +119,9 @@ s.integer_features()       # integer() & features()
 s.categorical_features()   # categorical() & features()
 s.string_features()        # string() & features()
 s.nominal_features()       # nominal() & features()
+s.boolean_features()       # boolean() & features()
+s.date_features()          # date() & features()
+s.datetime_features()      # datetime() & features()
 ```
 
 These compound selectors are the **preferred API** for step arguments. They are clearer in intent and less error-prone than manually composing type and role selectors with `&`. The bare type selectors (`s.numeric()`, `s.float()`, etc.) exist for advanced use — for example inside role management calls — but in step arguments `s.numeric_features()` should nearly always be the right choice over `s.numeric()`.
@@ -132,7 +142,7 @@ s.has_source(step_type=StepDummy) | s.categorical()  # dummies or categoricals
 ~s.has_source(step_type=StepPCA)                           # everything except PCA outputs
 ```
 
-Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set operations preserve the frame's column order regardless of operand order. Multiple positional arguments to a step are treated as a union.
+Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set operations preserve the data frame's column order regardless of operand order. Multiple positional arguments to a step are treated as a union.
 
 ---
 
@@ -140,7 +150,7 @@ Negation uses `~`; `-` is sugar for difference (`a - b` ≡ `a & ~b`). Set opera
 
 Selectors are resolved against the **post-step-N-1** schema at fit time, so a step that adds or removes columns affects what later selectors see. The recipe maintains a column-lineage DAG (see [lineage.md](lineage.md)) that selectors resolve against.
 
-At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolved). After fit, it shows the **resolved column names**. See [inspection.md](inspection.md).
+At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolved); a composite is parenthesized wherever the operators mix, so `(a | b) & c` and `~(a & b)` read back as written. After fit, it shows the **resolved column names**. See [inspection.md](inspection.md).
 
 ---
 
@@ -148,12 +158,12 @@ At pre-fit time, `repr(recipe)` shows the **raw selector expressions** (unresolv
 
 The native `Selectors` DSL is the recommended surface: it covers name, type, role, and provenance in **one family** that always composes with `&` / `|` / `~` / `-`, and resolves against the lineage DAG.
 
-`mlfeatures` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
+`mlfeatures` also still **accepts** a raw [polars selector](https://docs.pola.rs/api/python/stable/reference/selectors.html) (`polars.selectors` / `cs`) or narwhals selector (`narwhals.selectors`) anywhere a selector is expected — they are resolved against the data frame schema at fit time, for any backend. This is a kept **escape hatch** for users who already think in polars, not the primary API:
 
 ```python
 import polars.selectors as cs
 
-StepNormalize(cs.numeric())   # accepted; resolves fine on pandas- or polars-backed frames
+StepNormalize(cs.numeric())   # accepted; resolves fine on pandas- or polars-backed data frames
 ```
 
 A polars **column-selection expression** is accepted the same way, since `pl.col()` is what a polars user reaches for first:

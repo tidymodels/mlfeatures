@@ -105,13 +105,13 @@ def fit_log(selected: Frame, *, offset: float = 0.0, signed: bool = False) -> li
         When true, the signed formula is used instead, which is defined for
         every real value; the domain screen is then skipped.
 
-    Callers are expected to pass an all-numeric frame; dtype screening is the
+    Callers are expected to pass an all-numeric data frame; dtype screening is the
     selector / ``accepts_dtypes`` layer's job, so this function does not
     re-validate it.
 
     Returns
     -------
-    ``list`` of the column names to transform, in frame order. Empty when
+    ``list`` of the column names to transform, in column order. Empty when
     ``selected`` has no columns.
 
     Nothing is estimated from the data: the logarithm is elementwise, so the
@@ -153,7 +153,7 @@ def apply_log(
 
     Returns
     -------
-    narwhals.DataFrame: the input frame with each column in ``columns``
+    narwhals.DataFrame: the input data frame with each column in ``columns``
     replaced in place by its logarithm. Column names, order, and structure are
     unchanged.
 
@@ -209,7 +209,7 @@ class StepLog(Step):
         a mlfeatures selector such as ``Selectors.numeric_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only numeric columns
         are meaningful here.
     base
@@ -302,7 +302,7 @@ class StepLog(Step):
 
     mode = Mode.ONE_TO_ONE
 
-    #: Populated by ``fit()``: the resolved column names, in frame order.
+    #: Populated by ``fit()``: the resolved column names, in column order.
     _estimates: list[str] | None
 
     def __init__(

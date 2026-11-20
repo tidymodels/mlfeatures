@@ -1,10 +1,10 @@
-"""Shared type aliases and sentinels for the step contract.
+"""Shared type aliases, sentinels, and small value types for the step contract.
 
-Several of these are placeholders for types owned by other foundation issues
-(notably the lineage subsystem). They exist so that
-the `mlfeatures.step` contract is importable and type-checkable today. The
-concrete implementations will replace the placeholder bodies here without
-changing the names the rest of the team codes against.
+These are the names a step is written and annotated against: the `Frame` and
+`Selector` aliases, the step-facing `ColSchema` and `SchemaInfo`, `Roles`, the
+`Mode` and `KeepOriginals` enums, and the dtype sets returned by
+``Step.accepts_dtypes()``. The recipe-side column-lineage DAG lives in
+`mlfeatures.lineage` and the training-data snapshot in `mlfeatures.schema`.
 """
 
 from __future__ import annotations
@@ -28,9 +28,13 @@ if TYPE_CHECKING:
     from mlfeatures.selectors import FeaturesSelector
     from mlfeatures.step import Step
 
-    #: A native tabular structure at the package boundary: concretely a pandas or
-    #: polars ``DataFrame``. Steps do **not** see this type; it is converted to a
-    #: `Frame` on entry to the recipe and back at the sklearn boundary.
+    #: A native data frame at the package boundary, as accepted by
+    #: ``Recipe.fit()`` and returned by ``FittedRecipe.transform()``. The
+    #: annotation names pandas and polars, the two backends tested; any other
+    #: backend narwhals supports is not covered by that guarantee. Steps do
+    #: **not** see this type: a data frame is converted to a `Frame` on entry
+    #: to the recipe, and ``transform()`` converts back to the type that went
+    #: in (and the sklearn adapter to an array or pandas data frame).
     DataFrame = Union["pd.DataFrame", "pl.DataFrame"]
 else:
     DataFrame = Any
@@ -52,8 +56,8 @@ else:
         _backends = [("polars", "Expr")]
 
 
-#: The internal frame type that flows between steps. A backend-agnostic narwhals
-#: ``DataFrame`` wrapping the user's native frame; steps write their data ops
+#: The internal data frame type that flows between steps. A backend-agnostic narwhals
+#: ``DataFrame`` wrapping the user's native data frame; steps write their data ops
 #: against this via `mlfeatures._frame`.
 Frame: TypeAlias = nw.DataFrame[Any]
 
@@ -63,7 +67,7 @@ Frame: TypeAlias = nw.DataFrame[Any]
 #: narwhals or polars selector (``narwhals.selectors.numeric()``,
 #: ``polars.selectors.numeric()``). A polars column selection such as
 #: ``polars.col("a")`` is accepted too. Any selector is resolved against the
-#: frame's schema at fit time, so the same selector works on any backend.
+#: data frame's schema at fit time, so the same selector works on any backend.
 Selector: TypeAlias = Union[
     str, Sequence[str], NwSelector, "PlSelector", "PlExpr", "FeaturesSelector"
 ]
@@ -95,7 +99,9 @@ class ColSchema:
     describe what it consumed (``schema_in``) and produced (``schema_out``).
     This is the lightweight step-facing report; the recipe-side column-lineage
     DAG that tracks roles, source, sparsity, and provenance is
-    `mlfeatures.lineage.Lineage`.
+    `Lineage`. Not to be confused with `SchemaInfo` (what a step is handed at
+    fit time) or `Schema` (the snapshot of the training data that
+    ``transform()`` validates new data against).
 
     Examples
     --------
@@ -138,10 +144,12 @@ class SchemaInfo:
     own logic; ``lineage`` and ``producing_steps`` are populated by the recipe
     purely so provenance selectors (``has_source`` / ``has_ancestor``) can
     resolve against the DAG at fit time. Both are ``None`` outside a recipe fit.
+    Not to be confused with `ColSchema` (what a step reports back) or `Schema`
+    (the snapshot of the training data used for boundary checks).
 
     Examples
     --------
-    Build a snapshot from a frame with `from_frame`; steps read ``columns``,
+    Build a snapshot from a data frame with `from_frame`; steps read ``columns``,
     ``dtypes``, and ``roles`` off it during ``fit()``:
 
     ```{python}
@@ -186,7 +194,12 @@ class SchemaInfo:
 
     @classmethod
     def from_frame(cls, frame: "Frame") -> "SchemaInfo":
-        """Build a `SchemaInfo` snapshot from an internal `Frame`."""
+        """Build a `SchemaInfo` snapshot from an internal `Frame`.
+
+        Only ``columns`` and ``dtypes`` are filled in. ``roles`` is empty and
+        ``lineage`` and ``producing_steps`` are ``None``; the recipe sets all
+        three itself during a fit.
+        """
         from mlfeatures import _frame
 
         dtypes = {name: str(dtype) for name, dtype in _frame.dtypes(frame).items()}
@@ -202,7 +215,14 @@ class Roles:
     Every column carries **zero or more** roles stored as a ``set[str]``. The
     standard roles are ``"target"``, ``"feature"``, and ``"case_weights"``;
     users may register arbitrary custom roles. A column may hold several roles
-    at once, but nonsensical combinations are rejected at assignment time.
+    at once, but nonsensical combinations are rejected at assignment time:
+    ``"target"`` and ``"feature"`` cannot share a column.
+
+    A column that carries no role is not selected by role selectors. Note that
+    when a recipe declares no ``"feature"`` columns at all, fitting assigns the
+    role to every column that is not a target or a case-weights column, custom
+    roles included; declare features explicitly to keep, say, an ID column
+    out of them.
 
     Examples
     --------
@@ -322,17 +342,26 @@ class _AnyDtype:
 
 
 #: Sentinel returned by ``accepts_dtypes()`` to skip dtype validation entirely.
-#: The correct choice for type-agnostic steps such as ``step_zv`` or ``step_rm``.
+#: The correct choice for type-agnostic steps such as `StepDropZeroVariance` or
+#: `StepDrop`.
 ANY_DTYPE = _AnyDtype()
 
 #: Return type of ``Step.accepts_dtypes()``: an explicit set of narwhals dtype
 #: classes, or the `ANY_DTYPE` sentinel. Using narwhals' own dtype types
 #: rather than a custom string taxonomy keeps the framework aligned with the one
-#: backend-agnostic type system it already depends on.
+#: backend-agnostic type system it already depends on. A column is accepted
+#: when its dtype's *exact* class is in the set, so list concrete classes such
+#: as ``nw.Int64``; an abstract base like ``nw.dtypes.NumericType`` or
+#: ``nw.dtypes.IntegerType`` matches nothing. Use `NUMERIC_DTYPES` for the
+#: numeric family.
 AcceptedDtypes = Union[set[type[nw.dtypes.DType]], _AnyDtype]
 
-#: The narwhals numeric dtypes: a convenience set for steps that only accept
-#: numeric columns (e.g. `StepDropCorr`, ``step_normalize``).
+#: The concrete narwhals numeric dtypes (integers, floats, and ``Decimal``): a
+#: convenience set for steps that only accept numeric columns (e.g.
+#: `StepDropCorr`, `StepNormalize`). It is a plain module-level set, so copy it
+#: (``set(NUMERIC_DTYPES)``) before adding to it. ``Decimal`` only occurs on
+#: backends that have the type, such as polars; pandas stores decimals as
+#: ``object``.
 NUMERIC_DTYPES: set[type[nw.dtypes.DType]] = {
     nw.Int8,
     nw.Int16,
@@ -359,7 +388,28 @@ _CATEGORICAL_DTYPES: set[type[nw.dtypes.DType]] = {nw.Categorical, nw.Enum, nw.S
 class Mode(Enum):
     """Shape of a step's input/output relationship.
 
-    Informs how the framework records lineage.
+    Every concrete step class declares one ``mode``. The framework reads it for
+    two things: how the step's columns are recorded in the column lineage, and
+    whether ``keep_original_cols`` is fixed or configurable (see
+    `KeepOriginals`).
+
+    The members, with the value ``keep_original_cols`` takes for each:
+
+    - ``ONE_TO_ONE``: each input column produces exactly one output column,
+      e.g. `StepNormalize`. Fixed at ``False``.
+    - ``ONE_TO_MANY``: each input column produces one or more output columns,
+      e.g. `StepDummy`. Configurable, default ``False``.
+    - ``MANY_TO_MANY``: a set of input columns produces a new set of output
+      columns, e.g. `StepPca`. Configurable, default ``False``.
+    - ``REMOVING``: input columns are dropped and none are created, e.g.
+      `StepDropZeroVariance`. Fixed at ``False``.
+    - ``ADDING``: new columns appear with no corresponding input, e.g.
+      `StepIntercept`. Fixed at ``True``.
+    - ``ROW_OP``: no change to the columns, e.g. `StepFilter`. Fixed at
+      ``True``. Row steps only act while the recipe is fitted and are skipped
+      by ``transform()`` on new data.
+    - ``UNCONSTRAINED``: the relationship cannot be declared in advance, e.g.
+      `StepMutate`. Fixed at ``True``.
 
     Examples
     --------
@@ -394,7 +444,9 @@ class KeepOriginals(Enum):
     ones (``ONE_TO_MANY``, ``MANY_TO_MANY``) is ``CONFIGURABLE``, because keeping
     the sources beside the derived columns is a legitimate thing to want; every
     other mode has only one sensible answer, so ``Step.__init__`` fixes the value
-    and ``keep_original_cols`` is read-only.
+    and ``keep_original_cols`` cannot be set to anything else. The attribute is a read-only
+    property on every step, configurable or not: its value is settled when the
+    step is constructed.
 
     Examples
     --------
@@ -409,9 +461,11 @@ class KeepOriginals(Enum):
     ```
     """
 
-    #: The step always retains its input columns.
+    #: The step always retains the columns it already had (``keep_original_cols``
+    #: is ``True``).
     KEEP = "keep"
-    #: The step always drops or consumes its input columns.
+    #: The step always replaces or drops its input columns
+    #: (``keep_original_cols`` is ``False``).
     DISCARD = "discard"
     #: The caller chooses, through a ``keep_original_cols`` constructor argument.
     CONFIGURABLE = "configurable"

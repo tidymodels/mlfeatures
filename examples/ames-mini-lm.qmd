@@ -10,7 +10,7 @@ The book's first recipe: the R formula's implicit preprocessing made explicit an
 ```
 PARITY NOTES:
  - step_log(Gr_Liv_Area, base = 10) -> StepLog(s.col("Gr_Liv_Area"), base=10),
-   inside the recipe, so the fitted recipe replays it on new frames. The
+   inside the recipe, so the fitted recipe replays it on new data frames. The
    target is still logged outside the recipe, as in TMwR Ch. 5.
  - StepDummy = step_dummy (k-1 indicators, first level as reference).
  - Seeds don't transfer across languages; stratified 80/20 design matches.

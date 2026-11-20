@@ -11,13 +11,13 @@
 
 The primary design constraint is **scikit-learn compatibility**: the output of `transform()` must be consumable by any sklearn estimator. That means returning a 2D numeric array or a type sklearn accepts at its boundary (pandas DataFrame, numpy array).
 
-Beyond that boundary, users may pass in whatever dataframe type they have. Rather than writing separate code paths for polars, pandas, and future libraries, we use **[narwhals](https://github.com/narwhals-dev/narwhals)** as the internal abstraction layer. Narwhals provides a dataframe-agnostic API that works across polars, pandas, cuDF, Modin, and others, allowing steps to be written once against a stable interface.
+Beyond that boundary, users may pass in whatever dataframe type they have. Rather than writing separate code paths for polars, pandas, and future libraries, we use **[narwhals](https://github.com/narwhals-dev/narwhals)** as the internal abstraction layer. Narwhals provides a dataframe-agnostic API that works across polars, pandas, cuDF, Modin, and others, allowing steps to be written once against a stable interface. In practice mlfeatures tests and annotates (`DataFrame`) only **pandas and polars**; the other backends narwhals supports are a possibility the design leaves open, not a tested guarantee.
 
 **Decision (v0.1): narwhals is the full internal representation.** Steps are written once against the narwhals API; narwhals dispatches to the user's native backend (pandas in → pandas out, polars in → polars out). We do **not** commit to polars internally, and steps do **not** carry per-backend code paths. Consequences:
 
-- A step that needs an operation narwhals does not expose may drop to the native frame via `nw.to_native(...)`, but every such escape is treated as a defect to upstream into narwhals, not a license to branch on backend. The prototype step set [#18] is the conformance workload that validates narwhals is thick enough — categoricals (`step_unknown`), row ops (`step_filter`), and sparse output (`step_dummy`) are the riskiest probes.
+- A step that needs an operation narwhals does not expose may drop to the native data frame via `nw.to_native(...)`, but every such escape is treated as a defect to upstream into narwhals, not a license to branch on backend. The prototype step set [#18] is the conformance workload that validates narwhals is thick enough — categoricals (`step_unknown`), row ops (`step_filter`), and sparse output (`step_dummy`) are the riskiest probes.
 - The sklearn boundary contract is fixed regardless: `transform()` returns something sklearn can consume (numpy array or pandas DataFrame), converting out of the native type at that one boundary.
-- If narwhals proves too thin during #18, the fallback is polars as a concrete internal frame type — but that reopens this decision explicitly rather than being assumed.
+- If narwhals proves too thin during #18, the fallback is polars as a concrete internal data frame type — but that reopens this decision explicitly rather than being assumed.
 
 Additional requirements:
 
@@ -55,10 +55,10 @@ Sparse output format: `scipy.sparse`, mirroring `sparsevctrs` in R.
 
 ## Sklearn adapter
 
-A trained `Recipe` exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
+`RecipeTransformer` wraps an untrained `Recipe` and exposes `fit`, `transform`, `fit_transform` so it can drop into `sklearn.pipeline.Pipeline` as a single transformer:
 
 ```python
-from mlfeatures.compat import RecipeTransformer
+from mlfeatures import RecipeTransformer
 
 pipe = Pipeline([
     ("recipe", RecipeTransformer(rec)),
@@ -68,6 +68,8 @@ pipe.fit(X_train, y_train)
 ```
 
 This is the bridge to the existing Python ML ecosystem. The adapter wraps the `fit` / `transform` lifecycle; it does not re-implement it.
+
+sklearn keeps `X` and `y` apart, while a recipe identifies the target by its `"target"` role. The adapter joins `y` onto `X` under the recipe's target column name at fit time and drops the target column from `transform()` output, so it returns features only. It rejects `y` when the recipe has no target role, recipes with more than one target column, and any fitted step that reads the target column (sklearn's `transform()` never receives `y`; transform the target outside the pipeline, e.g. with `TransformedTargetRegressor`). After `fit` it sets `fitted_`, `feature_names_in_`, `n_features_in_` and caches the output names for `get_feature_names_out()` and `set_output`.
 
 ### Tuning
 

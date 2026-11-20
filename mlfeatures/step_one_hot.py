@@ -56,7 +56,7 @@ def fit_one_hot(selected: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     Raises
     ------
     ValueError
-        If the frame has zero rows, or if any column has fewer than two unique
+        If the data frame has zero rows, or if any column has fewer than two unique
         non-null levels.
     """
     # Empty selections never reach here: the recipe detects a zero-column
@@ -64,7 +64,7 @@ def fit_one_hot(selected: nw.DataFrame[Any]) -> dict[str, list[Any]]:
     # not called. See ``Recipe.fit`` / ``Step._empty_selection``.
     if selected.shape[0] == 0:
         raise ValueError(
-            "cannot fit one-hot encoding on a zero-row frame; no levels can be learned"
+            "cannot fit one-hot encoding on a zero-row data frame; no levels can be learned"
         )
     result: dict[str, list[Any]] = {}
     for col in selected.columns:
@@ -100,7 +100,7 @@ class StepOneHot(Step):
         mlfeatures selector such as ``Selectors.nominal_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.string()``, ``polars.selectors.string()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Only discrete
         columns (string, categorical, enum, boolean, and integer) are
         meaningful here.

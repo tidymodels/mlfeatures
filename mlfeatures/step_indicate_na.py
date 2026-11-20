@@ -86,7 +86,7 @@ def fit_indicate_na(selected: Frame) -> IndicateNaFit:
     ----------
     selected
         Internal `Frame` (narwhals) holding the columns to build indicators
-        for. Native frames are wrapped via `mlfeatures._frame.from_native()` at the
+        for. Native data frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
 
     Returns
@@ -182,7 +182,7 @@ class StepIndicateNa(Step):
         mlfeatures selector such as ``Selectors.features()`` (see `Selectors` for
         the full set), or a narwhals or polars selector
         (``narwhals.selectors.numeric()``, ``polars.selectors.numeric()``).
-        Selectors are resolved against the frame's schema when the recipe is
+        Selectors are resolved against the data frame's schema when the recipe is
         fitted, so the same selector works on any backend. Any dtype is
         accepted.
     keep_original_cols

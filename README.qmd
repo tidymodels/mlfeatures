@@ -37,7 +37,7 @@ A few features need an optional package. Install the matching extra, for example
 | `yaml` | `to_yaml()` and `from_yaml()` |
 | `scipy` | `StepOrderNorm`, `StepSplineNatural`, and `StepSplineMonotone` |
 | `holidays` | `StepHoliday`, when flagging named holidays |
-| `pyarrow` | Date columns in pandas frames |
+| `pyarrow` | Date columns in pandas data frames |
 
 ## Lifecycle
 

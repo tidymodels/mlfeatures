@@ -139,7 +139,7 @@ def fit_datetime_features(
     ----------
     selected
         Internal `Frame` (narwhals) holding the Datetime columns to expand.
-        Native frames are wrapped via `mlfeatures._frame.from_native()` at the
+        Native data frames are wrapped via `mlfeatures._frame.from_native()` at the
         recipe boundary.
     features
         Calendar parts to compute; every entry must be a key of the supported
@@ -234,7 +234,7 @@ class StepDatetimeFeatures(Step):
         mlfeatures selector such as ``Selectors.datetime_features()`` (see
         `Selectors` for the full set), or a narwhals or polars selector
         (``narwhals.selectors.by_dtype(narwhals.Datetime)``). Selectors are
-        resolved against the frame's schema when the recipe is fitted, so the
+        resolved against the data frame's schema when the recipe is fitted, so the
         same selector works on any backend. Only Datetime columns are
         meaningful here.
     features
