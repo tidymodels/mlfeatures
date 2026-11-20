@@ -249,15 +249,29 @@ class Roles:
     #: roles has no entry.
     _roles: dict[str, set[str]]
 
+    #: Whether ``add()`` and ``remove()`` raise. Set on the read-only view a
+    #: recipe hands out; ``copy()`` always returns a mutable instance.
+    _frozen: bool
+
     def __init__(self, mapping: dict[str, set[str]] | None = None):
         self._roles = {}
+        self._frozen = False
         if mapping is not None:
             for column, roles in mapping.items():
                 for role in roles:
                     self.add(column, role)
 
+    def _check_mutable(self) -> None:
+        if self._frozen:
+            raise TypeError(
+                "these roles are a read-only copy of the recipe's roles; "
+                "use set_roles() or the role operations on the recipe, "
+                "or copy() for a mutable copy"
+            )
+
     def add(self, column: str, role: str) -> None:
         """Assign ``role`` to ``column``, rejecting incompatible combinations."""
+        self._check_mutable()
         # Validate before touching ``_roles`` so a rejected add cannot register
         # the column at all. Today the check can only fire for a column that is
         # already present, but registering first would leave an empty role set
@@ -273,6 +287,7 @@ class Roles:
 
     def remove(self, column: str, role: str) -> None:
         """Remove ``role`` from ``column``. No-op if the column or role is absent."""
+        self._check_mutable()
         if column in self._roles:
             self._roles[column].discard(role)
             if not self._roles[column]:
@@ -294,9 +309,14 @@ class Roles:
         """Every column carrying at least one role, in insertion order."""
         return list(self._roles)
 
-    def copy(self) -> "Roles":
-        """A deep copy safe to mutate independently."""
-        return Roles({col: set(roles) for col, roles in self._roles.items()})
+    def copy(self, *, read_only: bool = False) -> "Roles":
+        """A deep copy, safe to mutate independently.
+
+        With ``read_only=True`` the copy's ``add()`` and ``remove()`` raise.
+        """
+        new = Roles({col: set(roles) for col, roles in self._roles.items()})
+        new._frozen = read_only
+        return new
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Roles):

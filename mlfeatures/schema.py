@@ -80,11 +80,16 @@ class Schema:
         The training data frame's column dtypes, as a narwhals schema: an ordered
         name→dtype mapping.
     roles
-        Role assignments captured at fit.
+        Role assignments of the input columns, as the data entered the recipe
+        (after any role operation written before the first step). Role
+        operations written after a step are not reflected here.
     transform_required
         Per-column flag: ``True`` if the column must be present in new data at
-        ``transform()`` time. Computed once at fit from role requirements and
-        any ``update_role_requirements`` overrides.
+        ``transform()`` time. Computed at fit from role requirements and any
+        ``update_role_requirements`` overrides. Read this rather than deriving
+        the requirement from ``roles``: a role operation written after a step
+        can change a column's requirement without changing the roles recorded
+        here.
 
     Examples
     --------
