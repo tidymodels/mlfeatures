@@ -1,0 +1,10 @@
+# serializer version: 1
+# name: TestProvenanceInOperations.test_leading_operation_cannot_select_a_later_step
+  "add_role(has_source('dummy'), role='grp') failed; no step with id 'dummy' before this one; this is the recipe's first step"
+# ---
+# name: TestRecipeTransformerTargets.test_selector_that_removes_the_target_has_a_clear_error
+  "y was provided but the recipe declares no 'target' role; a role operation removed it from the column 'y' was attached to"
+# ---
+# name: TestRolesProperty.test_mutating_raises_without_leading_operations
+  "these roles are a read-only copy of the recipe's roles; use set_roles() or the role operations on the recipe, or copy() for a mutable copy"
+# ---

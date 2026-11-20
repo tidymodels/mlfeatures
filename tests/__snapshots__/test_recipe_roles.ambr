@@ -1,4 +1,49 @@
 # serializer version: 1
+# name: TestLateRoleOpsAndRequirements.test_target_turned_into_a_feature_and_read_stays_required
+  "missing required column(s) at transform time: 'y'"
+# ---
+# name: TestPositionalRoleErrors.test_incompatible_role_message
+  "add_role('x1', role='target') failed; column 'x1' cannot hold incompatible roles: feature, target"
+# ---
+# name: TestPositionalRoleErrors.test_selector_matching_some_without_role_raises
+  "remove_role(starts_with('x'), role='group') needs column(s) ['x2'] to carry role 'group'"
+# ---
+# name: TestPositionalRoleErrors.test_update_old_role_missing
+  "update_role('x1', new_role='id', old_role='group') needs column(s) ['x1'] to carry role 'group'"
+# ---
+# name: TestPositionalRoleSelectors.test_removed_column_cannot_be_targeted_later
+  "add_role('g', role='group') failed; the following columns were not found: ['g']; did you mean one of these columns: ['y', 'x1', 'x2', 'g_b']?"
+# ---
+# name: TestPositionalRoleSelectors.test_unknown_column_after_step_raises_at_fit
+  "add_role('nope', role='group') failed; the following columns were not found: ['nope']; did you mean one of these columns: ['y', 'x1', 'x2', 'g']?"
+# ---
+# name: TestPositionalRoleSelectors.test_unknown_column_raises_eagerly
+  "column 'nope' is not in the prototype data"
+# ---
+# name: TestPositionalRoles.test_late_role_change_keeps_consumed_column_required
+  "missing required column(s) at transform time: 'x1'"
+# ---
+# name: TestPositionalRoles.test_missing_role_raises
+  "remove_role('x1', role='group') needs column(s) ['x1'] to carry role 'group'"
+# ---
+# name: TestPositionalRoles.test_repr_interleaves
+  '''
+  Recipe (untrained)
+    Inputs: 3 columns (1 target)
+    Steps:
+      step_normalize(['x1'])  [untrained]
+      add_role('x2', role='group')
+      update_role('x1', new_role='id', old_role='feature')
+      step_normalize(['x2'])  [untrained]
+      remove_role('x2', role='group')
+  '''
+# ---
+# name: TestRoleOpArguments.test_old_role_is_named_when_invalid
+  "'old_role' must be a non-empty string; got ''"
+# ---
+# name: TestRoleOpArguments.test_update_role_names_its_own_parameter
+  "'new_role' must be a non-empty string; got ''"
+# ---
 # name: TestRoles.test_incompatible_combo_rejected
   "column 'a' cannot hold incompatible roles: feature, target"
 # ---
@@ -9,6 +54,22 @@
     Steps:
       <none>
   '''
+# ---
+# name: TestSetRolesKeepsWrittenOrder.test_an_empty_role_name_is_rejected_either_way
+  "'role' must be a non-empty string; got ''"
+# ---
+# name: TestSetRolesKeepsWrittenOrder.test_repr_shows_the_call_that_was_written
+  '''
+  Recipe (untrained)
+    Inputs: 3 columns (1 case_weights, 2 groups, 1 target)
+    Steps:
+      add_role('x2', role='group')
+      set_roles(case_weights=['x1'])
+      set_roles(group=['x1', 'x2'])
+  '''
+# ---
+# name: TestSetRolesKeepsWrittenOrder.test_unknown_column_is_rejected_eagerly
+  "column 'nope' is not in the prototype data"
 # ---
 # name: TestSetRolesValidation.test_constructor_spelling_of_feature_rejected
   "set_roles() takes 'feature', not 'features'; the plural spelling is the Recipe() constructor's"
