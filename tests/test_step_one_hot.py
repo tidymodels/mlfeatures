@@ -312,8 +312,8 @@ class TestStepOneHotInfrastructure:
     def test_custom_id(self) -> None:
         assert StepOneHot(columns=["x"], id="my_ohe").id == "my_ohe"
 
-    def test_output_role_defaults_to_inheriting(self) -> None:
-        assert StepOneHot(columns=["x"]).output_role is None
+    def test_output_role_defaults_to_feature(self) -> None:
+        assert StepOneHot(columns=["x"]).output_role == "feature"
 
     def test_role_sets_output_role(self) -> None:
         assert StepOneHot(columns=["x"], role="group").output_role == "group"
@@ -392,12 +392,12 @@ class TestStepOneHotCategoricalEnum:
 
 
 # ---------------------------------------------------------------------------
-# Role propagation (ONE_TO_MANY): generated columns inherit the source role
+# Role assignment (ONE_TO_MANY): generated columns get the step's role
 # ---------------------------------------------------------------------------
 
 
 class TestStepOneHotRoles:
-    def test_role_overrides_inherited_roles(self) -> None:
+    def test_role_overrides_default_role(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepOneHot(columns=["x"], role="group").fit(df, _schema())
         roles = Roles({"x": {"feature"}})
@@ -405,13 +405,21 @@ class TestStepOneHotRoles:
         for col in ("x_a", "x_b", "x_c"):
             assert roles.of(col) == {"group"}
 
-    def test_generated_columns_inherit_source_role(self) -> None:
+    def test_generated_columns_get_feature_role_by_default(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepOneHot(columns=["x"]).fit(df, _schema())
+        roles = Roles({"x": {"target"}})
+        step.update_roles(roles)
+        for col in ("x_a", "x_b", "x_c"):
+            assert roles.of(col) == {"feature"}
+
+    def test_role_none_gives_generated_columns_no_role(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepOneHot(columns=["x"], role=None).fit(df, _schema())
         roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
         for col in ("x_a", "x_b", "x_c"):
-            assert "feature" in roles.of(col)
+            assert roles.of(col) == set()
 
     def test_source_role_retained_when_keep_original_cols(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
