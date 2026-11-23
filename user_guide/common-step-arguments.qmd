@@ -30,7 +30,7 @@ base = Recipe(data=df, target="price", features=["sqft", "beds", "city"])
 
 ## Passing them: required positional, optional by keyword
 
-Every step follows the same calling convention. Its required argument or arguments (`columns` for most steps, `target` as well for `StepClassDistance`, `mutations` for `StepMutate`, `predicate` for `StepFilter`) are positional; everything optional, `id` included, is keyword-only. So a threshold or a degree is always named at the call site:
+Every step follows the same calling convention. Its required argument or arguments (`columns` for most steps, `target` as well for `StepClassDistance` and `StepPls`, `lat` and `lon` for `StepGeoDistance`, `mutations` for `StepMutate`, `predicate` for `StepFilter`) are positional; everything optional, `id` included, is keyword-only. The one exception is a required argument with no natural position, such as the reference point of `StepGeoDistance` (`ref_lat`, `ref_lon`), which is required but keyword-only. So a threshold or a degree is always named at the call site:
 
 ```{python}
 from mlfeatures import StepDropCorr
@@ -106,15 +106,21 @@ fitted.lineage.summary()
 fitted.lineage.ancestors("PC1")
 ```
 
-What the live lineage does lose is the dropped columns' **roles**. A dropped source column is no longer a feature, because it is no longer a column, so a later `s.numeric_features()` in the same recipe will not pick it up. When `keep_original_cols=True`, the sources survive with their roles intact and later selectors do see them.
+Pass `include_removed=True` to list the archived columns too, along with which step dropped each:
+
+```{python}
+fitted.lineage.summary(include_removed=True)
+```
+
+Selectors, though, no longer see the dropped columns. A dropped source column is not a feature any more, because it is no longer a column, so a later `s.numeric_features()` in the same recipe will not pick it up (the archived record keeps the roles the column had, for provenance only). When `keep_original_cols=True`, the sources survive with their roles intact and later selectors do see them.
 
 ### Name collisions
 
-A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the data frame for the new ones to clash with. The recipe checks the names *before* the step runs and raises if any of them is already taken, so the failure is the same on every backend rather than a backend-specific error (polars) or a silently dropped column (pandas).
+A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the data frame for the new ones to clash with. The recipe checks the names while fitting, against the column lineage, and raises a `ValueError` naming the step and the clashing columns if any of them is already taken, so the failure is the same on every backend.
 
 ## `role`
 
-A role is what a column *is for*: `"target"` for the column being predicted, `"feature"` for a column used as model input, `"case_weights"`, or any custom role you register. Roles are how selectors like `s.numeric_features()` know what to select, and how a fitted recipe knows which columns to require at transform time. See `Roles`.
+A role is what a column *is for*: `"target"` for the column being predicted, `"feature"` for a column used as model input, `"case_weights"`, or any custom role, which is just a string you choose (no registration step). Roles are how selectors like `s.numeric_features()` know what to select, and how a fitted recipe knows which columns to require at transform time. See `Roles`.
 
 Steps that produce new columns take `role`, which assigns a role to those columns. The default is `"feature"`, because a step's whole purpose is normally to produce model input, and a newly created column with no role would be invisible to every role-based selector downstream:
 
@@ -142,7 +148,7 @@ The id exists because a step needs a name that does not change when you edit the
 
 - **Column provenance.** Each column the DAG knows about records the id of the step that produced it, which is the `source` column in `Lineage.summary()` above (`pca`, not "step 1"). `Lineage.columns_from_source` looks columns up by that id.
 - **Selectors.** `Selectors.has_source` and `Selectors.has_ancestor` select columns by which step produced them, letting a later step operate on exactly one earlier step's output.
-- **Errors.** When a step fails, the raised `StepError` names the id, so a failure deep in a long pipeline says which step broke.
+- **Errors.** When a step fails, the raised error names the id (a `StepError` for a failure inside the step, a `TypeError` naming the step for a column of an unsupported dtype), so a failure deep in a long pipeline says which step broke.
 
 Here a normalize step is pointed at the dummy step's output, by id, without naming any of the columns that step will generate:
 
@@ -180,4 +186,4 @@ fitted = recipe.fit(df)
 
 ## Naming the columns a step generates
 
-Steps that create columns have to name them, and the argument that controls those names is not yet uniform: `StepPca` and `StepClassDistance` take a `prefix`, while `StepDummy` and `StepOneHot` take a `name_fn`. Each step's reference page documents its own. This page will cover naming control once the convention is settled.
+Steps that create columns have to name them, and the argument that controls those names is not uniform. `StepPca`, `StepPls` and `StepClassDistance` take a `prefix`, `StepDummy` and `StepOneHot` take a `name_fn`, `StepInteract` takes a `sep`, and `StepGeoDistance` and `StepIntercept` take a `name`. Each step's reference page documents its own.

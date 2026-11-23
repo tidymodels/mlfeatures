@@ -3,48 +3,38 @@ title: "With scikit-learn pipelines"
 toc: true
 ---
 
-A `mlfeatures` recipe handles feature engineering; the model that consumes those
-features lives downstream in [scikit-learn](https://scikit-learn.org/). The
-`RecipeTransformer` adapter bridges the two: it wraps a recipe so it behaves
-like any other scikit-learn transformer and drops straight into a
-`sklearn.pipeline.Pipeline`.
+A `mlfeatures` recipe handles feature engineering; the model that consumes those features lives downstream in [scikit-learn](https://scikit-learn.org/). The `RecipeTransformer` adapter bridges the two: it wraps a recipe so it behaves like any other scikit-learn transformer and drops straight into a `sklearn.pipeline.Pipeline`.
 
 ## The adapter
 
-`RecipeTransformer` wraps an *unfitted* recipe. It exposes the familiar
-scikit-learn `fit` / `transform` / `fit_transform` methods, so the recipe's
-`specify → fit → transform` lifecycle is driven by the pipeline rather than by
-hand.
+`RecipeTransformer` wraps an *unfitted* recipe. It exposes the familiar scikit-learn `fit` / `transform` / `fit_transform` methods, so the recipe's `specify → fit → transform` lifecycle is driven by the pipeline rather than by hand.
 
 ```{python}
 from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
 
 X, y = load_breast_cancer(return_X_y=True, as_frame=True)
-X.iloc[:5, :3]
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+X_train.iloc[:5, :3]
 ```
 
-scikit-learn keeps the features `X` and the target `y` apart, while `mlfeatures`
-identifies the target by its **role**. Build the recipe with the target role
-assigned; the adapter re-joins `y` onto `X` under that name at fit time and
-strips it back out of the transformed output, so `transform` returns the feature
-matrix only.
+scikit-learn keeps the features `X` and the target `y` apart, while `mlfeatures` identifies the target by its **role**. Build the recipe with the target role assigned; the adapter re-joins `y` onto `X` under that name at fit time and strips it back out of the transformed output, so `transform` returns the feature matrix only.
 
 ```{python}
 from mlfeatures import Recipe, StepNormalize
+from mlfeatures import Selectors as s
 
 features = list(X.columns)
 
 recipe = (
     Recipe(data=X.assign(target=y), target="target", features=features)
-    .add(StepNormalize(features))
+    .add(StepNormalize(s.numeric_features()))
 )
 ```
 
 ## Inside a `Pipeline`
 
-Wrap the recipe in `RecipeTransformer` and place it ahead of an estimator. The
-pipeline's `fit` flows `X`/`y` through the recipe, then fits the model on the
-engineered features:
+Wrap the recipe in `RecipeTransformer` and place it ahead of an estimator. The pipeline's `fit` flows `X`/`y` through the recipe, then fits the model on the engineered features:
 
 ```{python}
 from sklearn.linear_model import LogisticRegression
@@ -58,51 +48,78 @@ pipe = Pipeline(
         ("model", LogisticRegression(max_iter=1000)),
     ]
 )
-pipe.fit(X, y)
-pipe.score(X, y)
+pipe.fit(X_train, y_train)
+pipe.score(X_test, y_test)
 ```
 
-Displaying the fitted pipeline renders scikit-learn's diagram. The recipe shows
-up as a labelled `RecipeTransformer (trained)` block that expands to the recipe
-and its steps:
+The statistics the recipe estimated (here the means and standard deviations) come from the training data only, and the test data is transformed with them.
+
+Displaying the fitted pipeline renders scikit-learn's diagram. The recipe shows up as a labelled `RecipeTransformer (trained)` block that expands to the recipe and its steps:
 
 ```{python}
 pipe
 ```
 
+## The target
+
+The target needs a little care, because scikit-learn's `transform(X)` never receives `y`. The adapter handles the common cases for you and raises a `ValueError` for the ones it cannot support:
+
+- Passing `y` to a recipe with no `"target"` role raises, since there is nowhere to put it. Assign the role with `set_roles(target=...)`.
+- A recipe with more than one target column raises, since scikit-learn passes a single `y`.
+- A step that applies to the target column as one of its input columns raises at fit time, because that step could not run when `transform(X)` is called without the target. Transform the target outside the pipeline instead, for example with `sklearn.compose.TransformedTargetRegressor`.
+
+Steps that use the target only while fitting are fine, because they need `y` at fit time and nothing at transform time. `StepPls` and `StepClassDistance` are the two examples: they learn from the target, and the columns they produce are computed from the features alone.
+
+```{python}
+from mlfeatures import StepPls
+
+pls_recipe = (
+    Recipe(data=X.assign(target=y), target="target", features=features)
+    .add(StepPls(s.numeric_features(), target="target", num_comp=2))
+)
+pls_pipe = Pipeline(
+    [
+        ("recipe", RecipeTransformer(pls_recipe)),
+        ("model", LogisticRegression(max_iter=1000)),
+    ]
+)
+pls_pipe.fit(X_train, y_train)
+pls_pipe.score(X_test, y_test)
+```
+
+A recipe that needs no target works without `y`: call `fit(X)` and `X` is used as given.
+
+```{python}
+RecipeTransformer(Recipe(data=X, features=features).add(StepNormalize(s.numeric_features()))).fit_transform(X).iloc[:5, :3]
+```
+
 ## Cross-validation and tuning
 
-Because the adapter stores the recipe verbatim, it clones cleanly, so it works
-inside `GridSearchCV` and any other tool that re-fits across folds:
+Because the adapter stores the recipe verbatim, it clones cleanly, so it works inside `GridSearchCV` and any other tool that re-fits across folds:
 
 ```{python}
 from sklearn.model_selection import GridSearchCV
 
 search = GridSearchCV(pipe, {"model__C": [0.1, 1.0]}, cv=3)
-search.fit(X, y)
+search.fit(X_train, y_train)
 search.best_params_
 ```
 
 ### Tuning step hyperparameters
 
-Step hyperparameters are reachable through scikit-learn's nested parameter
-names, so a grid can vary a step's argument directly. Steps are addressed by
-their `id`, never by position, giving keys of the form
-`<pipeline step>__recipe__<step id>__<parameter>`. A step's `id` and `columns`
-are not tunable.
+Step hyperparameters are reachable through scikit-learn's nested parameter names, so a grid can vary a step's argument directly. Steps are addressed by their `id`, never by position, giving keys of the form `<pipeline step>__recipe__<step id>__<parameter>`. A step's `id` and `columns` are not tunable.
 
 ```{python}
-from mlfeatures import Selectors as s
 from mlfeatures import StepDropCorr
 
-recipe = (
+tuned_recipe = (
     Recipe(data=X.assign(target=y), target="target", features=features)
     .add(StepDropCorr(s.numeric_features(), threshold=0.9))
     .add(StepNormalize(s.numeric_features()))
 )
-pipe = Pipeline(
+tuned_pipe = Pipeline(
     [
-        ("prep", RecipeTransformer(recipe)),
+        ("prep", RecipeTransformer(tuned_recipe)),
         ("model", LogisticRegression(max_iter=1000)),
     ]
 )
@@ -111,23 +128,21 @@ pipe = Pipeline(
 The parameters each step exposes are listed by `get_params`:
 
 ```{python}
-{k: v for k, v in pipe.get_params().items() if k.startswith("prep__recipe__")}
+{k: v for k, v in tuned_pipe.get_params().items() if k.startswith("prep__recipe__")}
 ```
 
 ```{python}
 grid = {"prep__recipe__corr__threshold": [0.8, 0.95]}
-search = GridSearchCV(pipe, grid, cv=3)
-search.fit(X, y)
+search = GridSearchCV(tuned_pipe, grid, cv=3)
+search.fit(X_train, y_train)
 search.best_params_
 ```
 
 ## Feature names and `set_output`
 
-`RecipeTransformer` implements `get_feature_names_out`, so it composes inside a
-`ColumnTransformer` and supports the `set_output` API for choosing the container
-type returned by `transform`:
+`RecipeTransformer` implements `get_feature_names_out`, so it composes inside a `ColumnTransformer` and supports the `set_output` API for choosing the container type returned by `transform` (`"pandas"` or `"polars"`):
 
 ```{python}
-rt = RecipeTransformer(recipe).set_output(transform="pandas")
-rt.fit(X, y).transform(X).iloc[:5, :3]
+rt = RecipeTransformer(tuned_recipe).set_output(transform="pandas")
+rt.fit(X_train, y_train).transform(X_test).iloc[:5, :3]
 ```
