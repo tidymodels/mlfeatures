@@ -264,17 +264,15 @@ def dummy_update_roles(
     keep_original_cols: bool,
     output_role: str | None = None,
 ) -> None:
-    """Assign roles to each source column's indicators, shared by `StepDummy` / `StepOneHot`.
+    """Assign ``output_role`` to each source column's indicators, shared by `StepDummy` / `StepOneHot`.
 
-    The indicators inherit the source column's roles, unless ``output_role`` is
-    given, in which case they get that role alone.
+    With ``output_role=None`` the indicators get no role.
     """
     for source_col, lvls in levels.items():
         source_roles = roles.of(source_col)
-        indicator_roles = {output_role} if output_role is not None else source_roles
-        for role in indicator_roles:
+        if output_role is not None:
             for lvl in lvls:
-                roles.add(col_name_fn(source_col, str(lvl)), role)
+                roles.add(col_name_fn(source_col, str(lvl)), output_role)
         if not keep_original_cols:
             for role in list(source_roles):
                 roles.remove(source_col, role)
@@ -316,7 +314,7 @@ class StepDummy(Step):
         instead of being dropped. Default ``False``.
     role
         Role assigned to the indicator columns (see `Roles`). Default
-        ``None``, which gives each indicator the roles of its source column.
+        ``"feature"``.
     id
         Stable step identifier. Defaults to ``"dummy"``; a second step of
         this type in the same recipe becomes ``"dummy_2"``, and passing an
@@ -381,7 +379,7 @@ class StepDummy(Step):
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
-        role: str | None = None,
+        role: str | None = "feature",
         id: str | None = None,
     ) -> None:
         self.columns = columns

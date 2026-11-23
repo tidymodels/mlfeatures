@@ -117,7 +117,7 @@ class MlfNamespace:
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
-        role: str | None = None,
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """Treatment (drop-one) dummy encoding. See `StepDummy`."""
         return self.apply(
@@ -135,7 +135,7 @@ class MlfNamespace:
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
-        role: str | None = None,
+        role: str | None = "feature",
     ) -> pl.DataFrame:
         """One-hot encoding. See `StepOneHot`."""
         return self.apply(

@@ -112,7 +112,7 @@ class StepOneHot(Step):
         instead of being dropped. Default ``False``.
     role
         Role assigned to the indicator columns (see `Roles`). Default
-        ``None``, which gives each indicator the roles of its source column.
+        ``"feature"``.
     id
         Stable step identifier. Defaults to ``"one_hot"``; a second step of
         this type in the same recipe becomes ``"one_hot_2"``, and passing an
@@ -176,7 +176,7 @@ class StepOneHot(Step):
         *,
         name_fn: Callable[[str, str], str] | None = None,
         keep_original_cols: bool = False,
-        role: str | None = None,
+        role: str | None = "feature",
         id: str | None = None,
     ) -> None:
         self.columns = columns
