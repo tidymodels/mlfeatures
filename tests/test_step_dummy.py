@@ -417,8 +417,8 @@ class TestStepDummyInfrastructure:
     def test_custom_id(self) -> None:
         assert StepDummy(columns=["x"], id="my_step").id == "my_step"
 
-    def test_output_role_defaults_to_inheriting(self) -> None:
-        assert StepDummy(columns=["x"]).output_role is None
+    def test_output_role_defaults_to_feature(self) -> None:
+        assert StepDummy(columns=["x"]).output_role == "feature"
 
     def test_role_sets_output_role(self) -> None:
         assert StepDummy(columns=["x"], role="group").output_role == "group"
@@ -531,18 +531,26 @@ class TestStepDummyCategoricalEnum:
 
 
 # ---------------------------------------------------------------------------
-# Role propagation (ONE_TO_MANY): generated columns inherit the source role
+# Role assignment (ONE_TO_MANY): generated columns get the step's role
 # ---------------------------------------------------------------------------
 
 
 class TestStepDummyRoles:
-    def test_generated_columns_inherit_source_role(self) -> None:
+    def test_generated_columns_get_feature_role_by_default(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepDummy(columns=["x"]).fit(df, _schema())
+        roles = Roles({"x": {"target"}})
+        step.update_roles(roles)
+        assert roles.of("x_b") == {"feature"}
+        assert roles.of("x_c") == {"feature"}
+
+    def test_role_none_gives_generated_columns_no_role(self) -> None:
+        df = _pd(("x", ["a", "b", "c"]))
+        step = StepDummy(columns=["x"], role=None).fit(df, _schema())
         roles = Roles({"x": {"feature"}})
         step.update_roles(roles)
-        assert "feature" in roles.of("x_b")
-        assert "feature" in roles.of("x_c")
+        assert roles.of("x_b") == set()
+        assert roles.of("x_c") == set()
 
     def test_source_role_retained_when_keep_original_cols(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
@@ -558,7 +566,7 @@ class TestStepDummyRoles:
         step.update_roles(roles)
         assert roles.of("x") == set()
 
-    def test_role_overrides_inherited_roles(self) -> None:
+    def test_role_overrides_default_role(self) -> None:
         df = _pd(("x", ["a", "b", "c"]))
         step = StepDummy(columns=["x"], role="group").fit(df, _schema())
         roles = Roles({"x": {"feature"}})
