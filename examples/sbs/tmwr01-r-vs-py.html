@@ -47,9 +47,9 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code>. R: rmse 0.0764 / rsq 0.824 · Python ran: 0.0825 / 0.771. Same recipe, different split rows (seeds can't transfer). Identical metrics on pandas and polars backends.</p>
+R: rmse 0.0764 / rsq 0.824 · Python ran: 0.0825 / 0.771. Same recipe, different split rows (seeds can't transfer).</p>
 <div class="cols">
-<div class="pane r"><h2>example.R: tidymodels (run)</h2>
+<div class="pane r"><h2>R: tidymodels</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="cm">#</span>
@@ -61,10 +61,8 @@ tidymodels_prefer()
 
 
 
-
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Four features; log10 the target BEFORE the recipe.</span>
-<span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -110,7 +108,7 @@ lm_fit &lt;- fit(lm_wflow, ames_train)
 
 
 <span class="bn"># Proof + holdout metrics --------------------------------------------------</span>
-<span class="cm"># Bake/transform the test set; score once.</span>
+<span class="cm"># Transform the test set; score once.</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -124,13 +122,14 @@ predict(lm_fit, ames_test) %&gt;%
   reg_metrics(truth = Sale_Price, estimate = .pred)
 <span class="cm"># run result: rmse 0.0764, rsq 0.824 (log10 units)</span>
 
+
+
 </pre></div>
-<div class="pane py"><h2>example.py: mlfeatures + sklearn (run)</h2>
+<div class="pane py"><h2>Python: mlfeatures + sklearn</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="df"># DIFF: tidymodels bundles everything; Python assembles polars + sklearn + mlfeatures.</span>
 
-import numpy as np
 import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
@@ -140,12 +139,11 @@ from mlfeatures import Selectors as s
 
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Four features; log10 the target BEFORE the recipe.</span>
-<span class="df"># DIFF: ames exported once from R (no PyPI package) -&gt; data/ames.csv;</span>
-<span class="df"># polars needs null_values=&#x27;NA&#x27;: R&#x27;s NA strings aren&#x27;t auto-parsed.</span>
+<span class="df"># DIFF: ames ships in mlfeatures.data (exported from modeldata::ames).</span>
 <span class="df"># DIFF: only the target is logged here; Gr_Liv_Area is logged inside the</span>
-<span class="df"># recipe by StepLog, so the fitted recipe replays it on new frames.</span>
+<span class="df"># recipe by StepLog, so the fitted recipe replays it on new data frames.</span>
 
-ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
+from mlfeatures.data import ames
 ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Year_Built&quot;,
                     &quot;Bldg_Type&quot;, &quot;Sale_Price&quot;])
 ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10))
@@ -162,7 +160,7 @@ ames_train, ames_test = train_test_split(
 
 <span class="bn"># Recipe -------------------------------------------------------------------</span>
 <span class="cm"># The book&#x27;s first recipe: the formula&#x27;s implicit preprocessing made explicit.</span>
-<span class="df"># DIFF: StepLog = step_log; the fitted recipe replays it on new frames.</span>
+<span class="df"># DIFF: StepLog = step_log; the fitted recipe replays it on new data frames.</span>
 <span class="df"># DIFF: StepDummy = step_dummy (k-1 indicators, reference level dropped).</span>
 
 simple_ames = (
@@ -186,11 +184,13 @@ y_train = ames_train[&quot;Sale_Price&quot;]
 lm_wflow.fit(X_train, y_train)
 
 <span class="bn"># Proof + holdout metrics --------------------------------------------------</span>
-<span class="cm"># Bake/transform the test set; score once.</span>
-<span class="df"># DIFF: metric_set(rmse, rsq) -&gt; polars expressions. Fun finding: y stays a</span>
-<span class="df"># polars Series through ALL of sklearn (fit, CV, predict, metrics): the one</span>
-<span class="df"># thing that broke was np.mean() on a polars Series (numpy passes axis=).</span>
+<span class="cm"># Transform the test set; score once.</span>
+<span class="df"># DIFF: metric_set(rmse, rsq) -&gt; polars expressions. y stays a polars Series</span>
+<span class="df"># through all of sklearn (fit, CV, predict, metrics); the one thing to avoid</span>
+<span class="df"># is np.mean() on a polars Series (numpy passes axis=).</span>
 
+X_test = ames_test.drop(&quot;Sale_Price&quot;)
+y_test = ames_test[&quot;Sale_Price&quot;]
 simple_ames.fit(ames_train).transform(ames_test).head()
 
 pred = lm_wflow.predict(X_test)

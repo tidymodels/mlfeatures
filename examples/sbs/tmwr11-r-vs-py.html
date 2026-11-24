@@ -47,9 +47,9 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code>. R: test rmse 0.0730 (best CV 0.0773) · Python ran: test 0.0771 / rsq 0.800.</p>
+R: test rmse 0.0730 (best CV 0.0773) · Python ran: test 0.0771 / rsq 0.800.</p>
 <div class="cols">
-<div class="pane r"><h2>example.R: tidymodels (run)</h2>
+<div class="pane r"><h2>R: tidymodels</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="cm">#</span>
@@ -57,7 +57,6 @@ Lightly condensed from <code>candidates/</code>. R: test rmse 0.0730 (best CV 0.
 
 library(tidymodels)
 tidymodels_prefer()
-
 
 
 
@@ -147,7 +146,7 @@ best_xgb  &lt;- select_best(xgboost_tune, metric = &quot;rmse&quot;)
 final_res &lt;- xgboost_workflow %&gt;%
   finalize_workflow(best_xgb) %&gt;%
   last_fit(ames_split)
-collect_metrics(final_res)  # run result: test rmse 0.0773 (log10)
+collect_metrics(final_res)  # run result: test rmse 0.0730 (log10)
 
 <span class="bn"># Proof the recipe stands alone --------------------------------------------</span>
 <span class="cm"># Transform new data with no model attached.</span>
@@ -159,13 +158,12 @@ final_res %&gt;%
   bake(new_data = ames_test) %&gt;%
   head()
 </pre></div>
-<div class="pane py"><h2>example.py: mlfeatures + sklearn (run)</h2>
+<div class="pane py"><h2>Python: mlfeatures + sklearn</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="df"># DIFF: tidymodels is one meta-package; Python assembles polars + sklearn</span>
 <span class="df"># + xgboost + mlfeatures (xgboost&#x27;s polars path needs pyarrow).</span>
 
-import numpy as np
 import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.pipeline import Pipeline
@@ -176,11 +174,11 @@ from mlfeatures import Selectors as s
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Ames housing; log10 the target BEFORE the recipe (target transforms</span>
 <span class="cm"># don&#x27;t belong inside it: they fail at predict time).</span>
-<span class="df"># DIFF: no ames on PyPI, exported once from R: modeldata::ames -&gt; data/ames.csv.</span>
-<span class="df"># DIFF: the CSV drops R&#x27;s factor dtypes; plain strings are fine, because</span>
+<span class="df"># DIFF: ames ships in mlfeatures.data (exported from modeldata::ames).</span>
+<span class="df"># DIFF: the bundled copy holds plain strings, not factors; fine, because</span>
 <span class="df"># nominal_features() matches them (categorical_features() would not).</span>
 
-ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
+from mlfeatures.data import ames
 ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Year_Built&quot;,
                     &quot;Bldg_Type&quot;, &quot;Latitude&quot;, &quot;Longitude&quot;, &quot;Sale_Price&quot;])
 ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10))
@@ -232,7 +230,7 @@ pipe = Pipeline([
 <span class="df"># DIFF: GridSearchCV is three tidymodels verbs in one object:</span>
 <span class="df"># tune_grid (search) + select_best (pick) + refit on full train (refit=True).</span>
 <span class="df"># DIFF: sklearn separates X from y; RecipeTransformer re-joins y as the</span>
-<span class="df"># target internally, so the recipe still sees one frame.</span>
+<span class="df"># target internally, so the recipe still sees one data frame.</span>
 
 cv = KFold(n_splits=5, shuffle=True, random_state=1001)
 

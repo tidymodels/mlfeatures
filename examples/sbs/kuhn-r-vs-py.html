@@ -47,9 +47,9 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code>. R: roc_auc 0.844 / acc 0.806 · Python ran: 0.830 / 0.794. The whole recipe ported 1:1, step_other included.</p>
+R: roc_auc 0.844 / acc 0.806 · Python ran: 0.830 / 0.794. The whole recipe ported 1:1, step_other included.</p>
 <div class="cols">
-<div class="pane r"><h2>example.R: tidymodels (run)</h2>
+<div class="pane r"><h2>R: tidymodels</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 
@@ -66,10 +66,8 @@ library(tidymodels)
 
 
 <span class="bn"># Data + split -------------------------------------------------------------</span>
-<span class="cm"># credit_data: 4,454 x 14 with NAs in several features, the imputation</span>
-<span class="cm"># example no polished resource provides.</span>
-<span class="cm">#</span>
-<span class="cm">#</span>
+<span class="cm"># credit_data: 4,454 x 14 with NAs in several features, which makes it</span>
+<span class="cm"># the imputation example.</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
 <span class="cm">#</span>
@@ -121,6 +119,9 @@ credit_res &lt;- tune_grid(credit_wflow, resamples = credit_folds,
                         grid = penalty_grid,
                         metrics = metric_set(roc_auc))
 
+
+
+
 <span class="bn"># Finalize + proof + metrics -----------------------------------------------</span>
 <span class="cm"># Refit the best penalty; transform the training head; score the test set.</span>
 
@@ -132,8 +133,10 @@ final_res &lt;- credit_wflow %&gt;%
 prep(credit_rec, training = credit_train) %&gt;%
   bake(new_data = NULL) %&gt;% head()
 collect_metrics(final_res)  # run: roc_auc 0.844, accuracy 0.806
+
+
 </pre></div>
-<div class="pane py"><h2>example.py: mlfeatures + sklearn (run)</h2>
+<div class="pane py"><h2>Python: mlfeatures + sklearn</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 
@@ -145,20 +148,18 @@ from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
                                      train_test_split)
 from sklearn.pipeline import Pipeline
 from mlfeatures import (Recipe, RecipeTransformer, StepDropZeroVariance,
-                   StepDummy, StepImputeMedian, StepImputeMode,
-                   StepNormalize, StepOther)
+                        StepDummy, StepImputeMedian, StepImputeMode,
+                        StepNormalize, StepOther)
 from mlfeatures import Selectors as s
 
 <span class="bn"># Data + split -------------------------------------------------------------</span>
-<span class="cm"># credit_data: 4,454 x 14 with NAs in several features, the imputation</span>
-<span class="cm"># example no polished resource provides.</span>
-<span class="df"># DIFF: exported from R -&gt; data/credit.csv. null_values=&#x27;NA&#x27; is load-bearing</span>
-<span class="df"># here: the dataset&#x27;s whole point is its NAs, and polars would read them</span>
-<span class="df"># as the string &#x27;NA&#x27; (pandas auto-parses them).</span>
+<span class="cm"># credit_data: 4,454 x 14 with NAs in several features, which makes it</span>
+<span class="cm"># the imputation example.</span>
+<span class="df"># DIFF: credit ships in mlfeatures.data (exported from modeldata::credit_data).</span>
 <span class="df"># DIFF: sklearn wants a numeric target; Status maps to bad=1. R scores the</span>
 <span class="df"># first factor level (&quot;bad&quot;): same event, made explicit here.</span>
 
-credit = pl.read_csv(&quot;data/credit.csv&quot;, null_values=&quot;NA&quot;)
+from mlfeatures.data import credit
 credit = credit.with_columns(
     (pl.col(&quot;Status&quot;) == &quot;bad&quot;).cast(pl.Int8).alias(&quot;Status&quot;))
 credit_train, credit_test = train_test_split(
@@ -188,14 +189,17 @@ credit_rec = (
 <span class="df"># DIFF: sklearn 1.8+ speaks glmnet: l1_ratio IS mixture (1.0 = lasso).</span>
 <span class="df"># DIFF: the glmnet mapping is C = 1/(n*lambda), NOT 1/lambda; glmnet</span>
 <span class="df"># minimizes MEAN loss + lambda*penalty, sklearn C*TOTAL loss + penalty.</span>
-<span class="df"># A first draft used 1/lambda; the giveaway was best-C pinning to the</span>
-<span class="df"># grid edge. Worth a doc callout: easy to get subtly wrong.</span>
+<span class="df"># Using 1/lambda is an easy mistake; the giveaway is the best C pinning to</span>
+<span class="df"># the edge of the grid.</span>
 
 pipe = Pipeline([
     (&quot;recipe&quot;, RecipeTransformer(credit_rec)),
     (&quot;model&quot;, LogisticRegression(l1_ratio=1.0, solver=&quot;liblinear&quot;,
                                  max_iter=5000)),
 ])
+
+X_train = credit_train.drop(&quot;Status&quot;)
+y_train = credit_train[&quot;Status&quot;]
 
 lambdas = np.logspace(-5, -1, 20)
 param_grid = {&quot;model__C&quot;: 1 / (credit_train.height * lambdas)}
@@ -212,6 +216,8 @@ search.fit(X_train, y_train)
 fitted = credit_rec.fit(credit_train)
 fitted.transform(credit_train).head()
 
+X_test = credit_test.drop(&quot;Status&quot;)
+y_test = credit_test[&quot;Status&quot;]
 prob = search.predict_proba(X_test)[:, 1]
 print(roc_auc_score(y_test, prob),
       accuracy_score(y_test, search.predict(X_test)))

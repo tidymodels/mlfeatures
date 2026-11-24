@@ -47,16 +47,15 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code>. R: CV rmse 0.0791 · Python ran: CV 0.0780, test rmse 0.0792 / rsq 0.789. The full recipe runs; StepOther pools unseen fold-levels, so every CV fold scores.</p>
+R: CV rmse 0.0791 · Python ran: CV 0.0780, test rmse 0.0792 / rsq 0.789. The full recipe runs; StepOther pools unseen fold-levels, so every CV fold scores.</p>
 <div class="cols">
-<div class="pane r"><h2>example.R: tidymodels (run)</h2>
+<div class="pane r"><h2>R: tidymodels</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="cm">#</span>
 
 library(tidymodels)
 tidymodels_prefer()
-
 
 
 
@@ -97,6 +96,19 @@ ames_rec &lt;-
 
 
 
+<span class="bn"># Model + workflow ---------------------------------------------------------</span>
+<span class="cm"># Bind the recipe to a linear model.</span>
+<span class="cm">#</span>
+<span class="cm">#</span>
+
+lm_model &lt;- linear_reg() %&gt;% set_engine(&quot;lm&quot;)
+
+lm_wflow &lt;- workflow() %&gt;%
+  add_model(lm_model) %&gt;%
+  add_recipe(ames_rec)
+
+
+
 <span class="bn"># Resampled performance ----------------------------------------------------</span>
 <span class="cm"># 5-fold CV estimate of the whole pipeline (recipe re-fit per fold).</span>
 <span class="cm">#</span>
@@ -121,13 +133,14 @@ extract_recipe(lm_fit, estimated = TRUE) %&gt;%
 predict(lm_fit, ames_test) %&gt;%
   bind_cols(ames_test %&gt;% select(Sale_Price)) %&gt;%
   reg_metrics(truth = Sale_Price, estimate = .pred)
+
+
 </pre></div>
-<div class="pane py"><h2>example.py: mlfeatures + sklearn (run)</h2>
+<div class="pane py"><h2>Python: mlfeatures + sklearn</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the modeling stack.</span>
 <span class="df"># DIFF: adds cross-validation imports; otherwise as TMWR-01.</span>
 
-import numpy as np
 import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
@@ -139,7 +152,7 @@ from mlfeatures import Selectors as s
 <span class="bn"># Data + target transform --------------------------------------------------</span>
 <span class="cm"># Six features now (adds Latitude/Longitude); log10 the target pre-split.</span>
 
-ames = pl.read_csv(&quot;data/ames.csv&quot;, null_values=&quot;NA&quot;)
+from mlfeatures.data import ames
 ames = ames.select([&quot;Neighborhood&quot;, &quot;Gr_Liv_Area&quot;, &quot;Year_Built&quot;, &quot;Bldg_Type&quot;,
                     &quot;Latitude&quot;, &quot;Longitude&quot;, &quot;Sale_Price&quot;])
 ames = ames.with_columns(pl.col(&quot;Sale_Price&quot;).log(base=10))
@@ -170,6 +183,19 @@ ames_rec = (
                            deg_free=20))
 )
 
+<span class="bn"># Model + workflow ---------------------------------------------------------</span>
+<span class="cm"># Bind the recipe to a linear model.</span>
+<span class="df"># DIFF: Pipeline + RecipeTransformer = workflow(); the X/y split is sklearn</span>
+<span class="df"># idiom: RecipeTransformer re-joins y as the target internally.</span>
+
+lm_wflow = Pipeline([
+    (&quot;recipe&quot;, RecipeTransformer(ames_rec)),
+    (&quot;model&quot;, LinearRegression()),
+])
+
+X_train = ames_train.drop(&quot;Sale_Price&quot;)
+y_train = ames_train[&quot;Sale_Price&quot;]
+
 <span class="bn"># Resampled performance ----------------------------------------------------</span>
 <span class="cm"># 5-fold CV estimate of the whole pipeline (recipe re-fit per fold).</span>
 <span class="df"># DIFF: fit_resamples -&gt; cross_val_score over the Pipeline; both re-estimate</span>
@@ -188,6 +214,8 @@ print(cv_rmse.mean())
 
 lm_wflow.fit(X_train, y_train)
 
+X_test = ames_test.drop(&quot;Sale_Price&quot;)
+y_test = ames_test[&quot;Sale_Price&quot;]
 ames_rec.fit(ames_train).transform(ames_test).head()
 
 pred = lm_wflow.predict(X_test)
