@@ -1,9 +1,0 @@
----
-title: "3. Wrangle: transforms"
----
-
-Position 3, opening stage 2 (wrangle): transform individual numeric columns to
-tame skew or stabilize variance (log, Yeo-Johnson, and friends). No mlfeatures step
-fills this position yet; log and Yeo-Johnson steps are planned.
-
-*Stub: content to come.*

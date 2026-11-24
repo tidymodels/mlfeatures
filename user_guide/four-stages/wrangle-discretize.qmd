@@ -1,9 +1,0 @@
----
-title: "4. Wrangle: discretize"
----
-
-Position 4 in stage 2 (wrangle): cut a continuous column into bins. It is
-in the canon for completeness; R recipes itself hedges it ("if you have no
-other choice"), and no mlfeatures step fills it.
-
-*Stub: content to come.*

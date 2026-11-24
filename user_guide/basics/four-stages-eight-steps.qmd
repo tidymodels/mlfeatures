@@ -13,14 +13,14 @@ This page discusses the "Order the steps" box in the pre-processing workflow dia
 
 | Stage | Position | mlfeatures steps |
 |---|---|---|
-| 1. Handle missing values | [1. Missing: impute](../four-stages/missing-impute.qmd) | `StepImputeMean`, `StepImputeMedian`, `StepImputeMode`, `StepIndicateNa` |
-| | [2. Missing: category levels](../four-stages/missing-category-levels.qmd) | `StepUnknown`, `StepOther` |
-| 2. Wrangle | [3. Wrangle: transforms](../four-stages/wrangle-transforms.qmd) | `StepLog`, `StepOrderNorm`, `StepDateFeatures`, `StepDatetimeFeatures` |
-| | [4. Wrangle: discretize](../four-stages/wrangle-discretize.qmd) | *none; rarely advisable* |
-| | [5. Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd) | `StepDummy`, `StepOneHot`, `StepHoliday` |
-| 3. Model prep | [6. Model prep: interactions](../four-stages/model-prep-interactions.qmd) | `StepInteract`, `StepPolynomial`, `StepSplineNatural`, `StepSplineMonotone` |
-| | [7. Model prep: normalize](../four-stages/model-prep-normalize.qmd) | `StepNormalize`, `StepRange` |
-| 4. Multivariate transforms | [8. Multivariate transforms](../four-stages/multivariate-transforms.qmd) | `StepPca`, `StepPls`, `StepClassDistance` |
+| 1. Handle missing values | 1. Missing: impute | `StepImputeMean`, `StepImputeMedian`, `StepImputeMode`, `StepIndicateNa` |
+| | 2. Missing: category levels | `StepUnknown`, `StepOther` |
+| 2. Wrangle | 3. Wrangle: transforms | `StepLog`, `StepOrderNorm`, `StepDateFeatures`, `StepDatetimeFeatures` |
+| | 4. Wrangle: discretize | *none; rarely advisable* |
+| | 5. Wrangle: dummy variables | `StepDummy`, `StepOneHot`, `StepHoliday` |
+| 3. Model prep | 6. Model prep: interactions | `StepInteract`, `StepPolynomial`, `StepSplineNatural`, `StepSplineMonotone` |
+| | 7. Model prep: normalize | `StepNormalize`, `StepRange` |
+| 4. Multivariate transforms | 8. Multivariate transforms | `StepPca`, `StepPls`, `StepClassDistance` |
 
 Each stage exists so the next one works: handle missing first (impute the numeric gaps and give missing categorical levels an explicit value), because every later step wants complete columns, and the guard levels must exist before the dummy step freezes its vocabulary; wrangle everything into numbers next; model prep after, so interactions can cross indicator columns with numerics and normalize catches the freshly created columns; multivariate transforms last, because they want the finished, scaled matrix.
 

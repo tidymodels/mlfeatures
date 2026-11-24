@@ -15,14 +15,14 @@ that the two cut across each other rather than nesting.
 
 | Position | Numeric | Categorical | Datetime | Missing data | Text | Dim. reduction |
 |---|---|---|---|---|---|---|
-| [1. Missing: impute](../four-stages/missing-impute.qmd) | | | | `step_impute_mean` `step_impute_median` `step_impute_mode` | | |
-| [2. Missing: category levels](../four-stages/missing-category-levels.qmd) | | `step_unknown` *`step_other`* *`step_novel`* | | `step_unknown` | | |
-| [3. Wrangle: transforms](../four-stages/wrangle-transforms.qmd) | *`step_log`* *`step_order_norm`* | | *`step_date_features`* *`step_datetime_features`* | | | |
-| [4. Wrangle: discretize](../four-stages/wrangle-discretize.qmd) | none | | | | | |
-| [5. Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd) | | `step_dummy` `step_one_hot` | *`step_holiday`* | | | |
-| [6. Model prep: interactions](../four-stages/model-prep-interactions.qmd) | `step_polynomial` *`step_interact`* | | | | | |
-| [7. Model prep: normalize](../four-stages/model-prep-normalize.qmd) | `step_normalize` *`step_range`* | | | | | |
-| [8. Multivariate transforms](../four-stages/multivariate-transforms.qmd) | | | | | | `step_pca` `step_class_distance` *`step_pls`* |
+| 1. Missing: impute | | | | `step_impute_mean` `step_impute_median` `step_impute_mode` | | |
+| 2. Missing: category levels | | `step_unknown` *`step_other`* *`step_novel`* | | `step_unknown` | | |
+| 3. Wrangle: transforms | *`step_log`* *`step_order_norm`* | | *`step_date_features`* *`step_datetime_features`* | | | |
+| 4. Wrangle: discretize | none | | | | | |
+| 5. Wrangle: dummy variables | | `step_dummy` `step_one_hot` | *`step_holiday`* | | | |
+| 6. Model prep: interactions | `step_polynomial` *`step_interact`* | | | | | |
+| 7. Model prep: normalize | `step_normalize` *`step_range`* | | | | | |
+| 8. Multivariate transforms | | | | | | `step_pca` `step_class_distance` *`step_pls`* |
 
 Reading the empty space is as useful as reading the cells:
 
