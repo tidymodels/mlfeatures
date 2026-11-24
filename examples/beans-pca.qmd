@@ -28,6 +28,9 @@ export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
+
+The bean measurements are strongly skewed and highly correlated. The base recipe drops constant columns, maps each numeric column to a normal shape with `StepOrderNorm`, and standardizes. The PCA recipe adds `StepPca` on top to extract four components. The data is split three ways so the validation set can be used to judge the extraction without touching the test set.
+
 ```{python}
 import polars as pl
 from sklearn.model_selection import train_test_split
@@ -65,6 +68,9 @@ bean_rec = (
 pca_rec = bean_rec.add(StepPca(s.numeric_features(), num_comp=4))
 ```
 ## Fit
+
+Both recipes are fit on the training set only. The validation set is then transformed with what was learned there.
+
 ```{python}
 # fit() ~ prep(); transform() ~ bake(): the chapter doubles as the book's
 # prep/bake tutorial, and this file doubles as mlfeatures's fit/transform one.
@@ -74,6 +80,9 @@ bean_val_processed = fitted.transform(bean_validation)
 pca_fitted = pca_rec.fit(bean_train)
 ```
 ## Report
+
+First the preprocessed validation data, then its principal component scores, ready to plot and color by class. The last table is the percent of variance each component explains; the first two carry most of it, which is why a two-dimensional plot of the beans separates the classes so well.
+
 ```{python}
 print("--- transformed validation head (zv -> orderNorm -> normalize) ---")
 print(bean_val_processed.head())

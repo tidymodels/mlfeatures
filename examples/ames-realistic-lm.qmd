@@ -31,6 +31,9 @@ export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
+
+This recipe adds three steps to the mini version, each answering a problem the data has. `StepOther` pools rare neighborhoods (and any level unseen at fit time) into "other" so dummy columns stay stable. `StepInteract` lets the effect of living area differ by building type. `StepSplineNatural` lets latitude and longitude act non-linearly, which is how a linear model captures neighborhood-scale geography.
+
 ```{python}
 #| warning: false
 import numpy as np
@@ -77,6 +80,9 @@ lm_wflow = Pipeline([
 ])
 ```
 ## Fit
+
+Because every step lives inside the recipe, cross-validation re-estimates the whole chain on each fold, so nothing leaks from the held-out fold into the preprocessing.
+
 ```{python}
 #| warning: false
 X_train = ames_train.drop("Sale_Price")
@@ -94,6 +100,9 @@ lm_wflow.fit(X_train, y_train)
 fitted = ames_rec.fit(ames_train)
 ```
 ## Report
+
+The transformed head is much wider than the mini example's: dummy columns, interaction terms, and the spline basis for each coordinate. Compare the holdout rmse with the mini recipe to see what the extra steps bought.
+
 ```{python}
 print("\n--- transformed test head ---")
 print(fitted.transform(ames_test).head())
