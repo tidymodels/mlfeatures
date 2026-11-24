@@ -3,7 +3,7 @@ title: "With scikit-learn pipelines"
 toc: true
 ---
 
-A `mlfeatures` recipe handles feature engineering; the model that consumes those features lives downstream in [scikit-learn](https://scikit-learn.org/). The `RecipeTransformer` adapter bridges the two: it wraps a recipe so it behaves like any other scikit-learn transformer and drops straight into a `sklearn.pipeline.Pipeline`.
+A `mlfeatures` recipe handles data preprocessing and feature engineering; the model that consumes those features often lives downstream in [scikit-learn](https://scikit-learn.org/). The `RecipeTransformer` adapter bridges the two: it wraps a recipe so it behaves like any other scikit-learn transformer and drops straight into a `sklearn.pipeline.Pipeline`.
 
 ## The adapter
 
@@ -24,10 +24,8 @@ scikit-learn keeps the features `X` and the target `y` apart, while `mlfeatures`
 from mlfeatures import Recipe, StepNormalize
 from mlfeatures import Selectors as s
 
-features = list(X_train.columns)
-
 recipe = (
-    Recipe(data=X_train.assign(target=y_train), target="target", features=features)
+    Recipe(data=X_train.assign(target=y_train), target="target")
     .add(StepNormalize(s.numeric_features()))
 )
 ```
@@ -64,7 +62,7 @@ pipe
 
 The target needs a little care, because scikit-learn's `transform(X)` never receives `y`. The adapter handles the common cases for you and raises a `ValueError` for the ones it cannot support:
 
-- Passing `y` to a recipe with no `"target"` role raises, since there is nowhere to put it. Assign the role with `set_roles(target=...)`.
+- Passing `y` to a recipe with no `"target"` role raises, since there is no column to join it onto. Name the column with `Recipe(target=...)`, or assign the role with `set_roles(target=...)` before the first step (a role assignment written after a step cannot define the target). If the recipe needs no target, call `fit(X)` without `y` instead.
 - A recipe with more than one target column raises, since scikit-learn passes a single `y`.
 - A step that applies to the target column as one of its input columns raises at fit time, because that step could not run when `transform(X)` is called without the target. Transform the target outside the pipeline instead, for example with `sklearn.compose.TransformedTargetRegressor`.
 
@@ -74,7 +72,7 @@ Steps that use the target only while fitting are fine, because they need `y` at 
 from mlfeatures import StepPls
 
 pls_recipe = (
-    Recipe(data=X_train.assign(target=y_train), target="target", features=features)
+    Recipe(data=X_train.assign(target=y_train), target="target")
     .add(StepPls(s.numeric_features(), target="target", num_comp=2))
 )
 pls_pipe = Pipeline(
@@ -91,7 +89,7 @@ A recipe that needs no target works without `y`: call `fit(X)` and `X` is used a
 
 ```{python}
 unsupervised_recipe = (
-    Recipe(data=X_train, features=features)
+    Recipe(data=X_train)
     .add(StepNormalize(s.numeric_features()))
 )
 transformer = RecipeTransformer(unsupervised_recipe)
@@ -122,13 +120,13 @@ search.best_params_
 
 ### Tuning step hyperparameters
 
-Step hyperparameters are reachable through scikit-learn's nested parameter names, so a grid can vary a step's argument directly. Steps are addressed by their `id`, never by position, giving keys of the form `<pipeline step>__recipe__<step id>__<parameter>`. A step's `id` and `columns` are not tunable.
+Step hyperparameters are reachable through scikit-learn's nested parameter names, so a grid can vary a step's argument directly. Steps are addressed by their `id`, never by position, giving keys of the form `<pipeline step>__recipe__<step id>__<parameter>`: the name you gave the `RecipeTransformer` in the pipeline, the `recipe` it wraps, the step, and the step's parameter. Each step has a default `id` (`StepDropCorr` uses `"corr"`) that you can replace with the step's `id=` argument. A step's `id` and `columns` are not tunable.
 
 ```{python}
 from mlfeatures import StepDropCorr
 
 tuned_recipe = (
-    Recipe(data=X_train.assign(target=y_train), target="target", features=features)
+    Recipe(data=X_train.assign(target=y_train), target="target")
     .add(StepDropCorr(s.numeric_features(), threshold=0.9))
     .add(StepNormalize(s.numeric_features()))
 )
@@ -140,10 +138,10 @@ tuned_pipe = Pipeline(
 )
 ```
 
-The parameters each step exposes are listed by `get_params`:
+The tunable keys are listed by `get_params`. Here `prep` is the pipeline step, `corr` is the `StepDropCorr` step's `id`, and `threshold` and `method` are its parameters:
 
 ```{python}
-{k: v for k, v in tuned_pipe.get_params().items() if k.startswith("prep__recipe__")}
+[k for k in tuned_pipe.get_params() if k.startswith("prep__recipe__")]
 ```
 
 ```{python}
