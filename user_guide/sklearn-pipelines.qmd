@@ -24,10 +24,10 @@ scikit-learn keeps the features `X` and the target `y` apart, while `mlfeatures`
 from mlfeatures import Recipe, StepNormalize
 from mlfeatures import Selectors as s
 
-features = list(X.columns)
+features = list(X_train.columns)
 
 recipe = (
-    Recipe(data=X.assign(target=y), target="target", features=features)
+    Recipe(data=X_train.assign(target=y_train), target="target", features=features)
     .add(StepNormalize(s.numeric_features()))
 )
 ```
@@ -74,7 +74,7 @@ Steps that use the target only while fitting are fine, because they need `y` at 
 from mlfeatures import StepPls
 
 pls_recipe = (
-    Recipe(data=X.assign(target=y), target="target", features=features)
+    Recipe(data=X_train.assign(target=y_train), target="target", features=features)
     .add(StepPls(s.numeric_features(), target="target", num_comp=2))
 )
 pls_pipe = Pipeline(
@@ -90,7 +90,22 @@ pls_pipe.score(X_test, y_test)
 A recipe that needs no target works without `y`: call `fit(X)` and `X` is used as given.
 
 ```{python}
-RecipeTransformer(Recipe(data=X, features=features).add(StepNormalize(s.numeric_features()))).fit_transform(X).iloc[:5, :3]
+unsupervised_recipe = (
+    Recipe(data=X_train, features=features)
+    .add(StepNormalize(s.numeric_features()))
+)
+transformer = RecipeTransformer(unsupervised_recipe)
+```
+
+Fit on the training data, then apply the stored statistics to the held-out data:
+
+```{python}
+transformer.fit(X_train)
+```
+
+```{python}
+result = transformer.transform(X_test)
+result
 ```
 
 ## Cross-validation and tuning
@@ -113,7 +128,7 @@ Step hyperparameters are reachable through scikit-learn's nested parameter names
 from mlfeatures import StepDropCorr
 
 tuned_recipe = (
-    Recipe(data=X.assign(target=y), target="target", features=features)
+    Recipe(data=X_train.assign(target=y_train), target="target", features=features)
     .add(StepDropCorr(s.numeric_features(), threshold=0.9))
     .add(StepNormalize(s.numeric_features()))
 )

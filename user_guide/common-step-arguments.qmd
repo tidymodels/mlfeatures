@@ -116,7 +116,7 @@ Selectors, though, no longer see the dropped columns. A dropped source column is
 
 ### Name collisions
 
-A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the data frame for the new ones to clash with. The recipe checks the names while fitting, against the column lineage, and raises a `ValueError` naming the step and the clashing columns if any of them is already taken, so the failure is the same on every backend.
+A step's produced column names must not collide with columns that already exist. This matters mainly with `keep_original_cols=True`, since keeping the sources leaves more names in the data frame for the new ones to clash with. The recipe checks the names while fitting, before the step runs, against the column lineage, and raises a `ValueError` naming the step and the clashing columns if any of them is already taken, so the failure is the same on every backend.
 
 ## `role`
 

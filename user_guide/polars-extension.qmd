@@ -22,7 +22,7 @@ orders = pl.DataFrame(
 orders.mlf.step_dummy(cs.string())
 ```
 
-Notice that `.step_dummy()` returned a new DataFrame with a column for each level of `city` except the first (`LA`), which is the reference level that all-zero indicators stand for. Use `step_one_hot` to get a column for every level.
+Notice that `.step_dummy()` returned a new DataFrame with a column for each level of `city` except one, which is the reference level that all-zero indicators stand for. Use `step_one_hot` to get a column for every level.
 
 In the following sections we'll show some of the more useful steps to use directly on a polars DataFrame.
 
