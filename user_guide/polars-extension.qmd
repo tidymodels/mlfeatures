@@ -28,9 +28,9 @@ In the following sections we'll show some of the more useful steps to use direct
 
 ## Fit and apply happen together
 
-Every `df.mlf.step_*()` call builds the step, fits it on the data frame, transforms that same data frame, and returns the result. The fitted step is discarded, so nothing the step estimated (a median, the levels of a column, PCA loadings) can be reused on other data. Calling the accessor again on a test set re-estimates everything from the test set, which is train/serve skew.
+Every `df.mlf.step_*()` call builds the step, fits it on the data frame, transforms that same data frame, and returns the result. This makes the accessor a quick way to do a transformation once, whether you are trying a step out or cleaning up a data frame you will not transform again.
 
-The accessor is for trying a step out and for one-off transforms. Whenever the same transform has to be applied to data you have not seen yet, build a `Recipe` and fit it once.
+The fitted step is discarded, so nothing it estimated (a median, the levels of a column, PCA loadings) can be reused on other data. Calling the accessor again on a test set re-estimates everything from the test set, which leaks information and gives you different values than the training data got. When the same transform has to be applied to new data, build a `Recipe` and fit it once.
 
 ## Handle missing values: `step_impute_median`
 
