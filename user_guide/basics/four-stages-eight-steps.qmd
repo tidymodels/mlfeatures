@@ -5,9 +5,7 @@ format:
     mermaid-format: svg
 ---
 
-This page discusses the "Order the steps" box in the pre-processing workflow diagram below.
-Essentially, there are 8 positioning steps you can take to order your sequence of Step calls.
-Each position has its own page (e.g. "Missing: impute").
+This page discusses the "Order the steps" box in the pre-processing workflow diagram below. Essentially, there are 8 positioning steps you can take to order your sequence of Step calls. Each position has its own page (e.g. "Missing: impute").
 
 {{< include ../_includes/workflow-diagram.qmd >}}
 
@@ -15,32 +13,20 @@ Each position has its own page (e.g. "Missing: impute").
 
 | Stage | Position | mlfeatures steps |
 |---|---|---|
-| 1. Handle missing values | [1. Missing: impute](../four-stages/missing-impute.qmd) | `StepImputeMean`, `StepImputeMedian`, `StepImputeMode`, `StepIndicateNa` |
-| | [2. Missing: category levels](../four-stages/missing-category-levels.qmd) | `StepUnknown`, `StepOther` |
-| 2. Wrangle | [3. Wrangle: transforms](../four-stages/wrangle-transforms.qmd) | `StepLog`, `StepOrderNorm`, `StepDateFeatures`, `StepDatetimeFeatures` |
-| | [4. Wrangle: discretize](../four-stages/wrangle-discretize.qmd) | *none; rarely advisable* |
-| | [5. Wrangle: dummy variables](../four-stages/wrangle-dummy-variables.qmd) | `StepDummy`, `StepOneHot`, `StepHoliday` |
-| 3. Model prep | [6. Model prep: interactions](../four-stages/model-prep-interactions.qmd) | `StepInteract`, `StepPolynomial`, `StepSplineNatural`, `StepSplineMonotone` |
-| | [7. Model prep: normalize](../four-stages/model-prep-normalize.qmd) | `StepNormalize`, `StepRange` |
-| 4. Multivariate transforms | [8. Multivariate transforms](../four-stages/multivariate-transforms.qmd) | `StepPca`, `StepPls`, `StepClassDistance` |
+| 1. Handle missing values | 1. Missing: impute | `StepImputeMean`, `StepImputeMedian`, `StepImputeMode`, `StepIndicateNa` |
+| | 2. Missing: category levels | `StepUnknown`, `StepOther` |
+| 2. Wrangle | 3. Wrangle: transforms | `StepLog`, `StepOrderNorm`, `StepDateFeatures`, `StepDatetimeFeatures` |
+| | 4. Wrangle: discretize | *none; rarely advisable* |
+| | 5. Wrangle: dummy variables | `StepDummy`, `StepOneHot`, `StepHoliday` |
+| 3. Model prep | 6. Model prep: interactions | `StepInteract`, `StepPolynomial`, `StepSplineNatural`, `StepSplineMonotone` |
+| | 7. Model prep: normalize | `StepNormalize`, `StepRange` |
+| 4. Multivariate transforms | 8. Multivariate transforms | `StepPca`, `StepPls`, `StepClassDistance` |
 
-Each stage exists so the next one works: handle missing first (impute the
-numeric gaps and give missing categorical levels an explicit value), because
-every later step wants complete columns, and the guard levels must exist
-before the dummy step freezes its vocabulary; wrangle everything into numbers
-next; model prep after, so interactions can cross indicator columns with
-numerics
-and normalize catches the freshly created columns; multivariate transforms
-last, because they want the finished, scaled matrix.
+Each stage exists so the next one works: handle missing first (impute the numeric gaps and give missing categorical levels an explicit value), because every later step wants complete columns, and the guard levels must exist before the dummy step freezes its vocabulary; wrangle everything into numbers next; model prep after, so interactions can cross indicator columns with numerics and normalize catches the freshly created columns; multivariate transforms last, because they want the finished, scaled matrix.
 
 ## Example: eight steps in action
 
-One recipe on the credit data can fill most of the positions. The first
-stages handle missing values and turn everything into numbers, and their
-order matters because each step decides what the next one sees: impute
-first so nothing downstream meets a null, then give missing and rare levels
-a name *before* the dummy step, so its vocabulary includes `"unknown"` and
-`"infrequent"` and new data cannot introduce a level it has no column for.
+One recipe on the credit data can fill most of the positions. The first stages handle missing values and turn everything into numbers, and their order matters because each step decides what the next one sees: impute first so nothing downstream meets a null, then give missing and rare levels a name *before* the dummy step, so its vocabulary already contains the pooled level and new data cannot introduce a level it has no column for. `StepUnknown` names the missing values `"unknown"`; here they are rare enough that `StepOther` then pools them into `"infrequent"` with the other small levels.
 
 ```{python}
 from sklearn.model_selection import train_test_split
@@ -73,12 +59,7 @@ wrangled = (
 wrangled.fit(credit_train)
 ```
 
-The dummy step's resolved columns include `Job_infrequent`, the pooled
-level; `Home`'s few missing and rare values were pooled the same way, into
-the level its indicators are measured against. Model prep and the
-multivariate transform continue from there. Normalize sits after the interaction step so the new product column
-is scaled with the rest, and before PCA, which weights columns by their
-variance and would otherwise be dominated by the largest-valued ones.
+The dummy step's resolved columns include `Job_infrequent`, the pooled level; `Home`'s few missing and rare values were pooled the same way, into the level its indicators are measured against. Model prep and the multivariate transform continue from there. Normalize sits after the interaction step so the new product column is scaled with the rest, and before PCA, which weights columns by their variance and would otherwise be dominated by the largest-valued ones.
 
 ```{python}
 recipe = (
@@ -97,13 +78,8 @@ fitted.transform(credit_validation).head()
 
 ## Filtering-related steps
 
-The ordering is deliberately silent on the filter steps (`StepDropZeroVariance`,
-`StepDropNearZeroVariance`, `StepDropCorr`): [dropping columns](dropping-columns.qmd) is not a stage. In
-practice filters run as two passes: after stage 1, to drop dead or redundant
-raw columns before effort is spent encoding and scaling them, and again after
-the dummy step, where a rare level can produce an all-zero indicator column.
+The ordering is deliberately silent on the filter steps (`StepDropZeroVariance`, `StepDropNearZeroVariance`, `StepDropCorr`): [dropping columns](dropping-columns.qmd) is not a stage. In practice filters run as two passes: after stage 1, to drop dead or redundant raw columns before effort is spent encoding and scaling them, and again after the dummy step, where a rare level can produce an all-zero indicator column.
 
-## Alternative perspective: step families
+## Alternative perspective: feature type
 
-While the eight steps focus on the order that steps tend to be put in, this guide also contains a section called Step Families that organizes steps largely by feature type (e.g. Datetime features).
-This is often useful when you already know what step you want, or want to browse steps that return similar types of results.
+While the eight steps focus on the order that steps tend to be put in, the [crosswalk](../extra/crosswalk.qmd) cross-references them with the kind of column each step works on (e.g. datetime features). This is often useful when you already know what step you want, or want to browse steps that return similar types of results.

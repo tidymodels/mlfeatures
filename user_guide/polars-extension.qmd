@@ -3,9 +3,7 @@ title: "With polars extension (.mlf)"
 toc: true
 ---
 
-`mlfeatures` ships an opt-in [polars](https://docs.pola.rs/) accessor for fitting
-and applying steps in one expression, without building a `Recipe`. Importing
-`mlfeatures.polars` to register the `mlf` accessor on polars DataFrames:
+`mlfeatures` ships an opt-in [polars](https://docs.pola.rs/) accessor for fitting and applying steps in one expression, without writing out a `Recipe`. Importing `mlfeatures.polars` registers the `mlf` accessor on polars DataFrames. The accessor is polars-only: for pandas data frames, use a `Recipe`.
 
 ```{python}
 import polars as pl
@@ -24,14 +22,19 @@ orders = pl.DataFrame(
 orders.mlf.step_dummy(cs.string())
 ```
 
-Notice that `.step_dummy()` returned a new DataFrame with a column for each level in the `city` column.
-In the following sections we'll show some of the more useful steps to use directly on a Polars DataFrame.
+Notice that `.step_dummy()` returned a new DataFrame with a column for each level of `city` except one, which is the reference level that all-zero indicators stand for. Use `step_one_hot` to get a column for every level.
 
+In the following sections we'll show some of the more useful steps to use directly on a polars DataFrame.
+
+## Fit and apply happen together
+
+Every `df.mlf.step_*()` call builds the step, fits it on the data frame, transforms that same data frame, and returns the result. This makes the accessor a quick way to do a transformation once, whether you are trying a step out or cleaning up a data frame you will not transform again.
+
+The fitted step is discarded, so nothing it estimated (a median, the levels of a column, PCA loadings) can be reused on other data. Calling the accessor again on a test set re-estimates everything from the test set, which leaks information and gives you different values than the training data got. When the same transform has to be applied to new data, build a `Recipe` and fit it once.
 
 ## Handle missing values: `step_impute_median`
 
-`step_impute_median` fills nulls with the column's median (`step_impute_mean`
-and `step_impute_mode` are the other flavors):
+`step_impute_median` fills nulls with the column's median (`step_impute_mean` and `step_impute_mode` are the other flavors):
 
 ```{python}
 filled = orders.mlf.step_impute_median(cs.by_name("price"))
@@ -40,13 +43,26 @@ filled
 
 ## Multivariate feature engineering: `step_pca`
 
-`step_pca` replaces numeric columns with their projection onto principal
-components (here on the imputed frame, since PCA needs complete data):
+`step_pca` replaces numeric columns with their projection onto principal components (here on the imputed data frame, since PCA needs complete data):
 
 ```{python}
 (
     orders
     .mlf.step_impute_median(cs.by_name("price"))
     .mlf.step_pca(cs.numeric(), num_comp=2)
+)
+```
+
+## Chaining and other steps
+
+The accessor is available on every result, so calls chain, as above. `df.mlf.apply()` takes any step objects, which reaches steps that have no `step_*` wrapper and custom steps. Each step is fitted in order on the data frame the previous one produced:
+
+```{python}
+from mlfeatures import Selectors as s
+from mlfeatures import StepImputeMedian, StepNormalize
+
+orders.mlf.apply(
+    StepImputeMedian(s.numeric_features()),
+    StepNormalize(s.numeric_features()),
 )
 ```

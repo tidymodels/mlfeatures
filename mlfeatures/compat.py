@@ -92,12 +92,14 @@ class RecipeTransformer(BaseEstimator, TransformerMixin):
     onto ``X`` under the recipe's target column name, and ``transform()``
     returns the feature columns only, with the target column removed. Passing
     ``y`` to a recipe with no ``"target"`` role raises a ``ValueError``, as does
-    a recipe with more than 1 target column. A step that reads the target
-    column also raises a ``ValueError`` at fit time, because sklearn's
-    ``transform()`` never receives ``y``; transform the target outside the
-    pipeline instead (for example with
-    ``sklearn.compose.TransformedTargetRegressor``). With no ``y`` (an
-    unsupervised recipe), ``X`` is used as given.
+    a recipe with more than 1 target column. A step that applies to the
+    target column as one of its input columns (for example
+    ``StepNormalize(["target"])``) also raises a ``ValueError`` at fit time,
+    because sklearn's ``transform()`` never receives ``y``; transform the
+    target outside the pipeline instead (for example with
+    ``sklearn.compose.TransformedTargetRegressor``). A step that uses the
+    target only at fit time, such as ``StepPls`` or ``StepClassDistance``, is
+    fine. With no ``y`` (an unsupervised recipe), ``X`` is used as given.
 
     Parameters
     ----------

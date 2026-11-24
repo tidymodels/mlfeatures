@@ -2,10 +2,7 @@
 title: "Fit and transform"
 ---
 
-Fitting a recipe estimates everything its steps need from the training data
-and hands back a separate `FittedRecipe`. That object is what you keep: it
-transforms training, validation, and production data the same way, and it
-can be serialized to do so anywhere.
+Fitting a recipe estimates everything its steps need from the training data and hands back a separate `FittedRecipe`. That object is what you keep: it transforms training, validation, and production data the same way, and it can be serialized to do so anywhere.
 
 ::: {.callout-note collapse="true" title="Key points"}
 * `fit()` estimates what each step needs and stores it on the fitted steps
@@ -33,11 +30,7 @@ credit_train, credit_validation = train_test_split(
 
 ## Fitting returns a new FittedRecipe
 
-`recipe.fit(training_data)` returns a `FittedRecipe` and leaves the recipe
-itself untouched, so one specification can be fitted to different frames.
-Fitting is also when selectors are resolved: each step lists the concrete
-columns it matched, and it holds the estimates it made (here the medians,
-then the means and standard deviations).
+`recipe.fit(training_data)` returns a `FittedRecipe` and leaves the recipe itself untouched, so one specification can be fitted to different data frames. Fitting is also when selectors are resolved: each step lists the concrete columns it matched, and it holds the estimates it made (here the medians, then the means and standard deviations).
 
 ```{python}
 recipe = (
@@ -57,10 +50,7 @@ recipe
 
 ## Row filters run only at fit
 
-A row filter such as `StepFilter` drops rows when the recipe is fitted and
-none when it transforms, because dropping rows from data being scored would
-silently lose predictions. Use it to choose which training rows the other
-steps learn from, not to filter new data.
+A row filter such as `StepFilter` drops rows when the recipe is fitted and none when it transforms, because dropping rows from data being scored would silently lose predictions. Use it to choose which training rows the other steps learn from, not to filter new data.
 
 ```{python}
 recipe = (
@@ -72,15 +62,11 @@ fitted = recipe.fit(credit_train)
 fitted.transform(credit_validation).filter(pl.col("Income").is_null()).head()
 ```
 
-The means were estimated without the null-income rows, but the validation
-rows with a null income all come back.
+The means were estimated without the null-income rows, but the validation rows with a null income all come back.
 
 ## Transform training, validation, and production data
 
-`fitted.transform(frame)` applies the stored estimates to any data frame with the
-same columns. Training data, a validation split, and rows arriving in
-production all get the training medians and means, which is what makes
-their transformed values comparable.
+`fitted.transform(data)` applies the stored estimates to any data frame that has the training features, with the training dtypes (the target is not needed). Training data, a validation split, and rows arriving in production all get the training medians and means, which is what makes their transformed values comparable.
 
 ```{python}
 fitted.transform(credit_validation).head()
@@ -88,23 +74,13 @@ fitted.transform(credit_validation).head()
 
 ## Serialize to transform anywhere
 
-`to_json(fitted)` writes the fitted recipe, estimates included, and
-`from_json()` restores it, so the transform can run in another process or on
-another machine without the training data. `to_yaml()` and `from_yaml()` do
-the same in YAML.
+`to_json(fitted)` writes the fitted recipe, estimates included, and `from_json()` restores it, so the transform can run in another process or on another machine without the training data. `to_yaml()` and `from_yaml()` do the same in YAML.
 
 ```{python}
 restored = from_json(to_json(fitted))
 restored.transform(credit_validation).head()
 ```
 
-A saved recipe is data, and loading it never runs code the file picks: the
-loaders accept only classes from mlfeatures and from packages that register
-steps under the `mlfeatures.steps` entry-point group, and raise `ValueError`
-for any other name. A step of your own that is not registered, such as one
-defined in a notebook, loads when you name it with
-`from_json(text, trusted=[MyStep])`. Saving warns when a recipe contains a
-class the loaders would refuse by default.
+A saved recipe is data, and loading it never runs code the file picks: the loaders accept only classes from mlfeatures and from packages that register steps under the `mlfeatures.steps` entry-point group, and raise `ValueError` for any other name. A step of your own that is not registered, such as one defined in a notebook, loads when you name it with `from_json(text, trusted=[MyStep])`. Saving warns when a recipe contains a class the loaders would refuse by default.
 
-See [Serializing recipes](../extra/serializing-recipes.qmd) for the file
-format and for `minimize()`, which strips fit-only artifacts before saving.
+See [Serializing recipes](../extra/serializing-recipes.qmd) for the file format and for `minimize()`, which strips fit-only artifacts before saving.

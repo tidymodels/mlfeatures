@@ -69,8 +69,14 @@ pipe.fit(X_train, y_train)
 
 This is the bridge to the existing Python ML ecosystem. The adapter wraps the `fit` / `transform` lifecycle; it does not re-implement it.
 
-sklearn keeps `X` and `y` apart, while a recipe identifies the target by its `"target"` role. The adapter joins `y` onto `X` under the recipe's target column name at fit time and drops the target column from `transform()` output, so it returns features only. It rejects `y` when the recipe has no target role, recipes with more than one target column, and any fitted step that reads the target column (sklearn's `transform()` never receives `y`; transform the target outside the pipeline, e.g. with `TransformedTargetRegressor`). After `fit` it sets `fitted_`, `feature_names_in_`, `n_features_in_` and caches the output names for `get_feature_names_out()` and `set_output`.
+sklearn keeps `X` and `y` apart, while a recipe identifies the target by its `"target"` role. The adapter joins `y` onto `X` under the recipe's target column name at fit time and drops the target column from `transform()` output, so it returns features only. It rejects `y` when the recipe has no target role, recipes with more than one target column, and any fitted step that applies to the target column as one of its input columns (sklearn's `transform()` never receives `y`; transform the target outside the pipeline, e.g. with `TransformedTargetRegressor`). Steps that use the target only at fit time, such as `StepPls` and `StepClassDistance`, are allowed. After `fit` it sets `fitted_`, `feature_names_in_`, `n_features_in_` and caches the output names for `get_feature_names_out()` and `set_output`.
 
 ### Tuning
 
 Step hyperparameters are exposed through sklearn's nested-parameter convention, keyed on step `id` (never position): `get_params(deep=True)` returns `recipe__<step id>__<parameter>`, and `set_params` accepts the same keys, so `GridSearchCV` can tune `recipe__corr__threshold` directly. `Recipe` and `Step` each implement `get_params` / `set_params`; both are immutable, so `set_params` returns a new object, and `RecipeTransformer.set_params` rebinds `self.recipe` to it. A step's `id` and `columns` are not tunable. `Recipe.__sklearn_clone__` makes `sklearn.base.clone` copy the recipe rather than rebuild it from its parameters.
+
+---
+
+## Polars accessor
+
+`import mlfeatures.polars` registers a `mlf` namespace on polars data frames (opt-in: the core never imports it, and it is polars-only). `df.mlf.step_*(...)` builds the step, fits it on `df`, transforms `df`, and returns a fresh polars data frame; `df.mlf.apply(*steps)` does the same for any step instances, so steps without a wrapper and custom steps are reachable. Nothing is kept: the fitted state is discarded, so a second call on new data re-estimates from that data (train/serve skew). Use a `Recipe` whenever the same transform must be applied to data not yet seen. Every public step has a matching wrapper, enforced by `TestWrapperStepParity`.

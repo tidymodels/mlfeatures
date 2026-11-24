@@ -1,9 +1,0 @@
----
-title: "6. Model prep: interactions"
----
-
-Position 6, opening stage 3 (model prep): create new features by crossing
-existing ones: possible now that the dummy step has made everything numeric.
-Filled today by `StepPolynomial`; a dedicated interaction step is planned.
-
-*Stub: content to come.*

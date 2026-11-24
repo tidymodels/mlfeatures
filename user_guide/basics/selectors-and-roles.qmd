@@ -2,30 +2,20 @@
 title: "Selectors and roles"
 ---
 
-Recipe steps operate on columns of data, which are specified using Polars selectors.
-While Polars selectors can specify pieces like all numeric columns (`cs.numeric()`),
-they can't target modelling pieces like all "feature" columns.
-mlfeatures enables this by adding Roles, modelling specific labels for columns and selectors to target them.
+Recipe steps operate on columns of data, which are chosen with selectors. mlfeatures selectors cover the same ground as Polars selectors, such as all numeric columns (`s.numeric()`), and a step also accepts a Polars selector (`cs.numeric()`) as is. Polars selectors can't target modelling pieces like all "feature" columns, though. mlfeatures enables this by adding roles, modelling-specific tags for columns, and selectors to target them.
 
 ::: {.callout-note collapse="true" title="Key points"}
-- A step accepts a column name, a list of names, a polars or narwhals
-  selector, or a mlfeatures selector from `Selectors`, imported as `s`.
-- mlfeatures selectors choose by name, type, role, or the step that produced a
-  column, and compose with `&`, `|`, `~`, and `-`.
-- `Recipe(..., target="col")` gives a column the `target` role, which keeps it
-  out of feature selectors like `s.numeric_features()`.
-- `Recipe.summary()` lists every column with its dtype, roles, and the step
-  that produced it.
-- Every non-target column is a feature by default; `features=` names them
-  explicitly, and `case_weights` columns are never features.
+- A step accepts a column name, a list of names, a polars or narwhals selector, or a mlfeatures selector from `Selectors`, imported as `s`.
+- mlfeatures selectors choose by name, type, role, or the step that produced a column, and compose with `&`, `|`, `~`, and `-`.
+- `Recipe(..., target="col")` gives a column the `target` role, which keeps it out of feature selectors like `s.numeric_features()`.
+- `Recipe.summary()` lists every column with its dtype, roles, and the step that produced it.
+- Every non-target column is a feature by default; `features=` names them explicitly, and `case_weights` columns are never features.
 - `set_roles()` attaches custom roles, and `s.has_role()` selects by them.
 :::
 
 ## Setup
 
-The examples use two datasets from `mlfeatures.data`: the credit data, whose
-target is a string, and a small Ames housing subset, whose target is
-numeric.
+The examples use two datasets from `mlfeatures.data`: the credit data, whose target is a string, and a small Ames housing subset, whose target is numeric.
 
 ```{python}
 import polars as pl
@@ -38,10 +28,7 @@ from mlfeatures.data import ames_mini, credit
 
 ## Selector basics
 
-Pass a polars selector, or a mlfeatures selector from `s`, wherever a step takes
-columns. mlfeatures selectors cover the same name and type checks
-(`s.numeric()`, `s.starts_with()`, `s.col()`) and compose with set
-operators, so "every numeric column except `Price`" is one expression.
+Pass a polars selector, or a mlfeatures selector from `s`. mlfeatures selectors cover the same name and type checks (`s.numeric()`, `s.starts_with()`, `s.col()`) and compose with set operators, so "every numeric column except `Price`" is one expression.
 
 ```{python}
 recipe = (
@@ -53,18 +40,11 @@ fitted = recipe.fit(credit)
 fitted
 ```
 
-A selector is resolved when the recipe is fitted, against the columns that
-exist at that point in the pipeline. That is why the fitted recipe lists
-concrete names, why the same selector works on any backend, and why a later
-step can pick up columns an earlier step created. The full set is on the
-`Selectors` reference page.
+A selector is resolved when the recipe is fitted, against the columns that exist at that point in the pipeline. That is why the fitted recipe lists concrete names, why the same selector works on any backend, and why a later step can pick up columns an earlier step created. The full set is on the `Selectors` reference page.
 
 ## Roles: features and targets
 
-Use `Recipe(..., target="col")` to give a column the `target` role, which
-excludes it from the mlfeatures feature selectors such as `s.numeric_features()`.
-A polars selector like `cs.numeric()` knows nothing about roles, so it
-includes the target:
+Use `Recipe(..., target="col")` to give a column the `target` role, which excludes it from the mlfeatures feature selectors such as `s.numeric_features()`. A polars selector like `cs.numeric()` knows nothing about roles, so it includes the target. That is rarely what you want: a step that works on the target makes it required when the fitted recipe transforms new data, and a column with no target (as at prediction time) then fails the transform.
 
 ```{python}
 recipe = (
@@ -76,17 +56,11 @@ fitted = recipe.fit(ames_mini)
 fitted
 ```
 
-`s.numeric_features()` is simply `s.numeric()` restricted to the `feature`
-role. The `_features` variants exist for each type (`s.nominal_features()`,
-`s.date_features()`, and so on), and `s.features()` and `s.targets()` select
-by role alone.
+`s.numeric_features()` is simply `s.numeric()` restricted to the `feature` role. The `_features` variants exist for each type (`s.nominal_features()`, `s.date_features()`, and so on), and `s.features()` and `s.targets()` select by role alone.
 
 ## Roles: specifying features
 
-Every column that is not the target is a feature by default, so a feature
-selector sees all of them. Pass `features=` to name the features yourself:
-the other columns then carry no role, so selectors ignore them, and
-`transform()` passes them through unchanged.
+Every column that is not the target is a feature by default, so a feature selector sees all of them. Pass `features=` to name the features yourself: the other columns then carry no role, so selectors ignore them, and `transform()` passes them through unchanged.
 
 ```{python}
 recipe = Recipe(
@@ -98,16 +72,11 @@ fitted = recipe.fit(ames_mini)
 fitted
 ```
 
-The default is applied when the recipe is fitted, which is why an untrained
-recipe with only a target reports just that target. One standard role is
-never a feature: a column declared `case_weights=` holds per-sample weights
-and is left out of every feature selector.
+The default is applied when the recipe is fitted, which is why an untrained recipe with only a target reports just that target. One standard role is never a feature: a column declared `case_weights=` holds per-sample weights and is left out of every feature selector.
 
 ## Displaying role information
 
-`Recipe.summary()` lists one row per column with its dtype, its roles, and
-the step that produced it, so after a dummy step the indicator columns show
-up as features whose source is `dummy`:
+`Recipe.summary()` lists one row per column with its dtype, its roles, and the step that produced it, so after a dummy step the indicator columns show up as features whose source is `dummy`:
 
 ```{python}
 recipe = (
@@ -121,10 +90,7 @@ fitted.summary()
 
 ## Custom roles
 
-`set_roles(name=[...])` attaches any custom role, a column can carry several
-roles at once, and `s.has_role()` selects by one. Tagging `Latitude` and
-`Longitude` as `geo` keeps them out of normalization while they stay
-features:
+`set_roles(name=[...])` attaches any custom role, a column can carry several roles at once, and `s.has_role()` selects by one. Tagging `Latitude` and `Longitude` as `geo` keeps them out of normalization while they stay features:
 
 ```{python}
 recipe = (
@@ -138,13 +104,7 @@ fitted.summary().filter(pl.col("roles").str.contains("geo"))
 
 ## Changing roles part way through
 
-`set_roles()` labels the columns that arrive with the data, and it does so
-whatever its position in the recipe. To change a role at a point in the
-pipeline, use `add_role()`, `update_role()` or `remove_role()`. Each takes
-effect where it is written: the steps after it see the new role, the steps
-before it do not, and it can reach columns that earlier steps created.
-Here the dummy indicators get an `indicator` role, which the normalization
-that follows leaves out by selecting features without it:
+`set_roles()` labels the columns that arrive with the data, and it does so whatever its position in the recipe. To change a role at a point in the pipeline, use `add_role()`, `update_role()` or `remove_role()`. Each takes effect where it is written: the steps after it see the new role, the steps before it do not, and it can reach columns that earlier steps created. Here the dummy indicators get an `indicator` role, which the normalization that follows leaves out by selecting features without it:
 
 ```{python}
 recipe = (
@@ -157,7 +117,4 @@ fitted = recipe.fit(ames_mini)
 fitted.summary().filter(pl.col("roles").str.contains("indicator"))
 ```
 
-`update_role(columns, new_role=..., old_role=...)` swaps one role for another,
-or replaces all of a column's roles when `old_role` is left out, and
-`remove_role(columns, role=...)` takes a role away. Like a step's `columns`,
-the first argument can be a name, a list of names, or a selector.
+`update_role(columns, new_role=..., old_role=...)` swaps one role for another, or replaces all of a column's roles when `old_role` is left out, and `remove_role(columns, role=...)` takes a role away. Like a step's `columns`, the first argument can be a name, a list of names, or a selector.

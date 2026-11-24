@@ -1,9 +1,0 @@
----
-title: "1. Missing: impute"
----
-
-Position 1 of the eight, opening stage 1 (handle missing values): fill in
-missing values first, so every later step sees complete columns. Filled today
-by `StepImputeMean`, `StepImputeMedian`, and `StepImputeMode`.
-
-*Stub: content to come.*

@@ -2,20 +2,13 @@
 title: "Ensure robust to new data"
 ---
 
-A fitted recipe is a model of the training data, applied to data it has
-never seen. Some of the failure modes that come with that are handled for
-you, and two are yours to prevent: missing values and category levels the
-training data lacked.
+A fitted recipe is a model of the training data, applied to data it has never seen. Some of the failure modes that come with that are handled for you, and two are yours to prevent: missing values and category levels the training data lacked.
 
 ::: {.callout-note collapse="true" title="Key points"}
-* Discuss how training data is used to fit a pre-processing models that transform test data.
-* Common failure modes when transforming test data.
-* Things Recipes does for you
-  - Apply normalization fit from training to test
-  - Data leakage in general
-* Things you should do w/ Recipes:
-  - Missing values (impute)
-  - Rare / Missing category levels
+* Everything a recipe estimates comes from the data passed to `fit()`; `transform()` only applies those estimates, so new data never leaks into them.
+* `transform()` checks new data against the training schema: a missing feature column or a changed dtype raises before any step runs.
+* Steps do not fill missing values; impute numeric gaps and give missing categorical values a level (`StepUnknown`) before anything else.
+* A level the dummy step never saw gives null indicators and a warning; `StepOther` pools rare and unseen levels into one level instead.
 :::
 
 ## Setup
@@ -36,11 +29,7 @@ ames_train, ames_validation = train_test_split(ames_mini, train_size=0.8, random
 
 ## Training data fits, new data is transformed
 
-Everything a recipe estimates comes from the data frame passed to `fit()`, and
-`transform()` reuses those estimates on every other frame. That is the
-guard against data leakage: the validation set never influences the
-statistics that transform it. After normalizing with the training means, the
-validation mean is close to zero but not exactly zero.
+Everything a recipe estimates comes from the data frame passed to `fit()`, and `transform()` reuses those estimates on every other data frame. That is the guard against data leakage: the validation set never influences the statistics that transform it. After normalizing with the training means, the validation mean is close to zero but not exactly zero.
 
 ```{python}
 recipe = (
@@ -52,16 +41,15 @@ fitted = recipe.fit(credit_train)
 fitted.transform(credit_validation).select(pl.col("Income").mean())
 ```
 
-The same holds for every step: the medians used to fill gaps, the levels a
-dummy step expands, and the axes a PCA step projects onto are all fixed at
-fit time.
+The same holds for every step: the medians used to fill gaps, the levels a dummy step expands, and the axes a PCA step projects onto are all fixed at fit time.
+
+## New data is checked against the training schema
+
+Before any step runs, `transform()` compares the new data frame with the schema captured at fit time. A feature column that is missing raises a `ValueError` naming it, and so does a column whose dtype differs from the training dtype (`Int64` does not match `Float64`), so cast new data to the training dtypes first. The target is not needed to transform, and extra columns are ignored, which is why a model can score data that has no target column. The one exception is a target that a step operates on: normalizing it makes it required at transform time too.
 
 ## Missing values: impute first
 
-Steps do not fill missing values for you. A normalize step passes nulls
-through, a dummy step turns a null level into a row of null indicators, and
-most models refuse either. Put `StepImputeMedian` (or `StepImputeMean`) and
-`StepUnknown` before anything else so the later steps see complete columns.
+Steps do not fill missing values for you. A normalize step passes nulls through, a dummy step turns a null level into a row of null indicators, and most models refuse either. Put `StepImputeMedian` (or `StepImputeMean`) and `StepUnknown` before anything else so the later steps see complete columns.
 
 Without them, the transformed validation set still carries the gaps:
 
@@ -75,8 +63,7 @@ fitted = recipe.fit(credit_train)
 fitted.transform(credit_validation).null_count()
 ```
 
-With imputation first, and `StepUnknown` giving missing categoricals their
-own `"unknown"` level, nothing is left for a model to trip on:
+With imputation first, and `StepUnknown` giving missing categoricals their own `"unknown"` level, nothing is left for a model to trip on:
 
 ```{python}
 recipe = (
@@ -92,12 +79,7 @@ fitted.transform(credit_validation).null_count()
 
 ## Rare and unseen category levels
 
-A dummy step learns its levels at fit time, so a level that first appears in
-new data gets a row of all-zero indicators, silently. `StepOther(columns,
-threshold=...)` prevents that: it pools levels rarer than the threshold into
-one `"other"` level when fitted, and sends any level it has never seen to
-the same place when transforming. In this split, `"Stone"` exterior appears
-only in the validation rows:
+A dummy step learns its levels at fit time, so a level that first appears in new data gets null in every indicator column, with a warning. `StepOther(columns, threshold=...)` prevents that: it pools levels rarer than the threshold into one `"other"` level when fitted, and sends any level it has never seen to the same place when transforming. In this split, `"Stone"` exterior appears only in the validation rows:
 
 ```{python}
 recipe = (
@@ -110,6 +92,4 @@ stone = ames_validation.filter(pl.col("Exterior_1st") == "Stone")
 fitted.transform(stone).select(pl.col("^Exterior_1st_.*$"))
 ```
 
-Both rows land in `Exterior_1st_other`, a column the model has seen, rather
-than in no column at all. Rare levels pooled at fit time also stop a dummy
-step from producing near-empty indicator columns for them.
+Both rows land in `Exterior_1st_other`, a column the model has seen, rather than getting nulls in every indicator. Rare levels pooled at fit time also stop a dummy step from producing near-empty indicator columns for them.
