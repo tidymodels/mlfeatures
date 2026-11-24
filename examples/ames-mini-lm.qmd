@@ -20,6 +20,9 @@ export these datasets from R's modeldata at first run.*
 :::
 
 ## Specify
+
+Predict the log10 sale price of a house from its neighborhood, living area, year built, and building type. The recipe has two steps: log the living area so its skewed distribution is closer to linear in the target, then dummy-encode the nominal features, since a linear model cannot read strings. The recipe is wrapped in a scikit-learn `Pipeline` so the model and its preprocessing travel together.
+
 ```{python}
 import numpy as np
 import polars as pl
@@ -60,6 +63,9 @@ lm_wflow = Pipeline([
 ])
 ```
 ## Fit
+
+Fitting the pipeline estimates the recipe on the training data and trains the model on the transformed result. Fitting the recipe alone gives a trained recipe we can inspect.
+
 ```{python}
 X_train = ames_train.drop("Sale_Price")
 y_train = ames_train["Sale_Price"]
@@ -67,6 +73,9 @@ lm_wflow.fit(X_train, y_train)            # the sklearn pipeline
 fitted = simple_ames.fit(ames_train)      # the recipe alone
 ```
 ## Report
+
+The transformed test data shows the log applied to `Gr_Liv_Area` and the dummy columns replacing the nominal ones. The holdout metrics are computed on log10 units, so an rmse of about 0.08 corresponds to a typical error of roughly 20% in dollars.
+
 ```{python}
 print("--- transformed test head ---")
 print(fitted.transform(ames_test).head())
