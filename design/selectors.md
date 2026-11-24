@@ -79,10 +79,10 @@ This was impossible in R `recipes` because provenance was not tracked [tidymodel
 
 ### Direct vs. ancestral provenance — `has_source` vs `has_ancestor`
 
-The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. a dummy column that was subsequently passed through `StepNormalize`. Both are useful, and mlfeatures exposes them as **two separate selectors** (the decision for issue #20's "Q3"):
+The lineage DAG distinguishes between a column whose **immediate** parent is a given step, and a column that has that step **anywhere in its ancestry** — e.g. an interaction column built from dummy columns. Both are useful, and mlfeatures exposes them as **two separate selectors** (the decision for issue #20's "Q3"):
 
-- **`has_source(...)` — direct:** "give me the columns that `StepDummy` just produced" — the raw dummies before any further transformation. Resolves via `Lineage.columns_from_source`.
-- **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — dummies even after they've been normalized, scaled, or otherwise transformed. Resolves by walking `Lineage.ancestors`.
+- **`has_source(...)` — direct:** "give me the columns that `StepDummy` produced". Resolves via `Lineage.columns_from_source`. A step that rewrites its columns in place (`ONE_TO_ONE`, such as `StepNormalize`) creates no columns, so it does not become their source: dummies that were normalized afterwards still match `has_source(step_type=StepDummy)`, and `has_source(step_type=StepNormalize)` matches nothing.
+- **`has_ancestor(...)` — ancestral:** "give me all columns that trace back to `StepDummy` at any point" — the dummies themselves plus columns later steps derived from them, such as an interaction column. Resolves by walking `Lineage.ancestors`. The two selectors therefore differ only when a later step creates new columns from the step's output.
 
 Both accept either a step id (positional) or a step class (`step_type=`). Unlike the dtype and role selectors, neither is a silent no-op when nothing matches: an id or type that names no step earlier in the recipe raises `ValueError` (issue #220). The empty-selection-is-identity rule is right for a selector whose match set depends on the data (a data frame with no numeric features), but a step id or type either names a step in the recipe or it is a typo, and that is knowable from the recipe alone. The special id `"original"` is always valid: it names the input columns that survive to that point. Separate functions were chosen over a `direct=`/`depth=` flag because the two intents read clearly at the call site and map one-to-one onto the two distinct DAG queries.
 
