@@ -61,13 +61,13 @@ authors:
 # --------------------------
 # Credit the organization that funds or holds copyright for this package.
 # Displays in sidebar and footer. Homepage and ROR provide links.
-# funding:
-#   name: "Posit Software, PBC"
-#   roles:
-#     - Copyright holder
-#     - funder
-#   homepage: https://posit.co
-#   ror: https://ror.org/03wc8by49
+funding:
+  name: Posit Software, PBC
+  roles:
+    - Copyright holder
+    - funder
+  homepage: https://posit.co
+  ror: https://ror.org/03wc8by49
 
 # API Reference Structure
 # -----------------------
