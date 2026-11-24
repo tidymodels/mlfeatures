@@ -101,9 +101,7 @@ class Schema:
     from mlfeatures import Selectors as s
 
     df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "y": [0, 1, 0]})
-    rec = Recipe(target="y", features="x").add(
-        StepNormalize(s.numeric_features())
-    )
+    rec = Recipe(target="y").add(StepNormalize(s.numeric_features()))
     rec = rec.fit(df)
     rec.schema.dtypes.names()
     ```
