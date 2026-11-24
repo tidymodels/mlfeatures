@@ -1,18 +1,17 @@
 ---
-title: "Families and the eight steps"
+title: "Feature types and the eight steps"
 format:
   html:
     page-layout: full
 ---
 
-[Step families](../families/numeric-features.qmd) and the
+Feature type and the
 [eight positions](../basics/four-stages-eight-steps.qmd) are two groupings of
-the same steps: a family says what kind of column a step works on, a position
-says when it runs. Crossing them shows where each step lives, and that the
-two cut across each other rather than nesting.
+the same steps: a feature type says what kind of column a step works on, a
+position says when it runs. Crossing them shows where each step lives, and
+that the two cut across each other rather than nesting.
 
-*Italicized* steps are planned or not yet in this build; see the family pages
-for the tracking issues.
+*Italicized* steps are planned or not yet in this build.
 
 | Position | Numeric | Categorical | Datetime | Missing data | Text | Dim. reduction |
 |---|---|---|---|---|---|---|
@@ -27,7 +26,7 @@ for the tracking issues.
 
 Reading the empty space is as useful as reading the cells:
 
-- **[Text features](../families/text-features.qmd) has no entries at all**: that family
+- **Text features has no entries at all**: that feature type
   is handled at the recipe's boundary today, not by steps.
 - **Position 4 (discretize) is empty by design**: no step fills it, and R
   recipes itself discourages it.

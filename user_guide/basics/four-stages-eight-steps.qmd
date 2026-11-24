@@ -80,6 +80,6 @@ fitted.transform(credit_validation).head()
 
 The ordering is deliberately silent on the filter steps (`StepDropZeroVariance`, `StepDropNearZeroVariance`, `StepDropCorr`): [dropping columns](dropping-columns.qmd) is not a stage. In practice filters run as two passes: after stage 1, to drop dead or redundant raw columns before effort is spent encoding and scaling them, and again after the dummy step, where a rare level can produce an all-zero indicator column.
 
-## Alternative perspective: step families
+## Alternative perspective: feature type
 
-While the eight steps focus on the order that steps tend to be put in, this guide also contains a section called Step Families that organizes steps largely by feature type (e.g. Datetime features). This is often useful when you already know what step you want, or want to browse steps that return similar types of results.
+While the eight steps focus on the order that steps tend to be put in, the [crosswalk](../extra/crosswalk.qmd) cross-references them with the kind of column each step works on (e.g. datetime features). This is often useful when you already know what step you want, or want to browse steps that return similar types of results.

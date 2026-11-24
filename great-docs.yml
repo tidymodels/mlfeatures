@@ -341,14 +341,6 @@ user_guide:
       - four-stages/model-prep-interactions.qmd
       - four-stages/model-prep-normalize.qmd
       - four-stages/multivariate-transforms.qmd
-  - section: Step families
-    contents:
-      - families/numeric-features.qmd
-      - families/categorical-features.qmd
-      - families/datetime-features.qmd
-      - families/missing-data.qmd
-      - families/text-features.qmd
-      - families/dimensionality-reduction.qmd
   - section: Extra
     contents:
       - extra/crosswalk.qmd
