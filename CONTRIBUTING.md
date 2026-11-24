@@ -53,4 +53,4 @@ uv run great-docs preview  # serve at localhost:3000
 uv run --group docs quarto render README.qmd
 ```
 
-CI builds the site on every push and pull request. Pushes to `main` deploy it to Netlify; GitHub Pages publishing is switched off while the repo is private.
+CI builds the site on every push and pull request. Pushes to `main` deploy it to GitHub Pages. Pull requests build the site without deploying it, and the built site is attached to the run as the `docs-html` artifact.
