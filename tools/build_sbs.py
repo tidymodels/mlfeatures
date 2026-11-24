@@ -8,9 +8,8 @@ editing the SPECS below and commit both:
 
 Content lives in the SPECS list below: one spec per example, as sections of
 (title, shared_desc_lines, py_diff_lines, r_code, py_code). The code panes are
-hand-curated condensations of the research scripts (the R panes carry verbatim
-R code and run results that mlfeatures CI cannot reproduce: R runs happened in the
-shoez-research repo). The script does the mechanics: shared lines appear
+hand-curated condensations (the R panes carry verbatim R code and run results
+that mlfeatures CI cannot reproduce, because CI does not run R). The script does the mechanics: shared lines appear
 verbatim in both panes; py diff lines get a bare "#" placeholder in R; code
 blocks are end-padded to equal length, so both panes stay line-matched (an
 assertion enforces it). Lives in tools/ (not examples/) so the docs build never picks it up as a
@@ -113,7 +112,7 @@ ul.idx { line-height:1.9; }
 """
 
 # =============================================================================
-# Specs. Codes are lightly condensed from candidates/<id>/example.{R,py}.
+# Specs.
 # =============================================================================
 
 SPECS = [
@@ -122,7 +121,7 @@ SPECS = [
         slug="tmwr01",
         id="TMWR-01",
         title="ames-mini + lm",
-        status="R: rmse 0.0764 / rsq 0.824 · Python ran: 0.0825 / 0.771. Same recipe, different split rows (seeds can't transfer). Identical metrics on pandas and polars backends.",
+        status="R: rmse 0.0764 / rsq 0.824 · Python ran: 0.0825 / 0.771. Same recipe, different split rows (seeds can't transfer).",
         sections=[
             (
                 "Setup",
@@ -132,8 +131,7 @@ SPECS = [
                 ],
                 """library(tidymodels)
 tidymodels_prefer()""",
-                """import numpy as np
-import polars as pl
+                """import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -144,16 +142,15 @@ from mlfeatures import Selectors as s""",
                 "Data + target transform",
                 ["Four features; log10 the target BEFORE the recipe."],
                 [
-                    "DIFF: ames exported once from R (no PyPI package) -> data/ames.csv;",
-                    "polars needs null_values='NA': R's NA strings aren't auto-parsed.",
+                    "DIFF: ames ships in mlfeatures.data (exported from modeldata::ames).",
                     "DIFF: only the target is logged here; Gr_Liv_Area is logged inside the",
-                    "recipe by StepLog, so the fitted recipe replays it on new frames.",
+                    "recipe by StepLog, so the fitted recipe replays it on new data frames.",
                 ],
                 """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))
 
 # (Gr_Liv_Area is logged INSIDE the recipe, below)""",
-                """ames = pl.read_csv("data/ames.csv", null_values="NA")
+                """from mlfeatures.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built",
                     "Bldg_Type", "Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))""",
@@ -180,7 +177,7 @@ ames_train, ames_test = train_test_split(
                     "The book's first recipe: the formula's implicit preprocessing made explicit."
                 ],
                 [
-                    "DIFF: StepLog = step_log; the fitted recipe replays it on new frames.",
+                    "DIFF: StepLog = step_log; the fitted recipe replays it on new data frames.",
                     "DIFF: StepDummy = step_dummy (k-1 indicators, reference level dropped).",
                 ],
                 """simple_ames <-
@@ -219,11 +216,11 @@ lm_wflow.fit(X_train, y_train)""",
             ),
             (
                 "Proof + holdout metrics",
-                ["Bake/transform the test set; score once."],
+                ["Transform the test set; score once."],
                 [
-                    "DIFF: metric_set(rmse, rsq) -> polars expressions. Fun finding: y stays a",
-                    "polars Series through ALL of sklearn (fit, CV, predict, metrics): the one",
-                    "thing that broke was np.mean() on a polars Series (numpy passes axis=).",
+                    "DIFF: metric_set(rmse, rsq) -> polars expressions. y stays a polars Series",
+                    "through all of sklearn (fit, CV, predict, metrics); the one thing to avoid",
+                    "is np.mean() on a polars Series (numpy passes axis=).",
                 ],
                 """extract_recipe(lm_fit, estimated = TRUE) %>%
   bake(new_data = ames_test) %>%
@@ -233,7 +230,9 @@ predict(lm_fit, ames_test) %>%
   bind_cols(ames_test %>% select(Sale_Price)) %>%
   reg_metrics(truth = Sale_Price, estimate = .pred)
 # run result: rmse 0.0764, rsq 0.824 (log10 units)""",
-                """simple_ames.fit(ames_train).transform(ames_test).head()
+                """X_test = ames_test.drop("Sale_Price")
+y_test = ames_test["Sale_Price"]
+simple_ames.fit(ames_train).transform(ames_test).head()
 
 pred = lm_wflow.predict(X_test)
 rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
@@ -258,8 +257,7 @@ rsq  = float(pl.DataFrame({"y": y_test, "pred": pred})
                 ["DIFF: adds cross-validation imports; otherwise as TMWR-01."],
                 """library(tidymodels)
 tidymodels_prefer()""",
-                """import numpy as np
-import polars as pl
+                """import polars as pl
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
@@ -275,7 +273,7 @@ from mlfeatures import Selectors as s""",
                 [],
                 """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))""",
-                """ames = pl.read_csv("data/ames.csv", null_values="NA")
+                """from mlfeatures.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built", "Bldg_Type",
                     "Latitude", "Longitude", "Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))""",
@@ -324,6 +322,26 @@ ames_train, ames_test = train_test_split(
 )""",
             ),
             (
+                "Model + workflow",
+                ["Bind the recipe to a linear model."],
+                [
+                    "DIFF: Pipeline + RecipeTransformer = workflow(); the X/y split is sklearn",
+                    "idiom: RecipeTransformer re-joins y as the target internally.",
+                ],
+                """lm_model <- linear_reg() %>% set_engine("lm")
+
+lm_wflow <- workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(ames_rec)""",
+                """lm_wflow = Pipeline([
+    ("recipe", RecipeTransformer(ames_rec)),
+    ("model", LinearRegression()),
+])
+
+X_train = ames_train.drop("Sale_Price")
+y_train = ames_train["Sale_Price"]""",
+            ),
+            (
                 "Resampled performance",
                 ["5-fold CV estimate of the whole pipeline (recipe re-fit per fold)."],
                 [
@@ -358,6 +376,8 @@ predict(lm_fit, ames_test) %>%
   reg_metrics(truth = Sale_Price, estimate = .pred)""",
                 """lm_wflow.fit(X_train, y_train)
 
+X_test = ames_test.drop("Sale_Price")
+y_test = ames_test["Sale_Price"]
 ames_rec.fit(ames_train).transform(ames_test).head()
 
 pred = lm_wflow.predict(X_test)
@@ -383,8 +403,7 @@ rsq  = float(pl.DataFrame({"y": y_test, "pred": pred})
                 ],
                 """library(tidymodels)
 tidymodels_prefer()""",
-                """import numpy as np
-import polars as pl
+                """import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
@@ -398,15 +417,15 @@ from mlfeatures import Selectors as s""",
                     "don't belong inside it: they fail at predict time).",
                 ],
                 [
-                    "DIFF: no ames on PyPI, exported once from R: modeldata::ames -> data/ames.csv.",
-                    "DIFF: the CSV drops R's factor dtypes; plain strings are fine, because",
+                    "DIFF: ames ships in mlfeatures.data (exported from modeldata::ames).",
+                    "DIFF: the bundled copy holds plain strings, not factors; fine, because",
                     "nominal_features() matches them (categorical_features() would not).",
                 ],
                 """data(ames, package = "modeldata")
 ames <- ames %>% mutate(Sale_Price = log10(Sale_Price))
 
 # (predictors declared in the recipe formula, below)""",
-                """ames = pl.read_csv("data/ames.csv", null_values="NA")
+                """from mlfeatures.data import ames
 ames = ames.select(["Neighborhood", "Gr_Liv_Area", "Year_Built",
                     "Bldg_Type", "Latitude", "Longitude", "Sale_Price"])
 ames = ames.with_columns(pl.col("Sale_Price").log(base=10))""",
@@ -482,7 +501,7 @@ xgboost_workflow <-
                     "DIFF: GridSearchCV is three tidymodels verbs in one object:",
                     "tune_grid (search) + select_best (pick) + refit on full train (refit=True).",
                     "DIFF: sklearn separates X from y; RecipeTransformer re-joins y as the",
-                    "target internally, so the recipe still sees one frame.",
+                    "target internally, so the recipe still sees one data frame.",
                 ],
                 """set.seed(1001)
 ames_folds <- vfold_cv(ames_train, v = 5)
@@ -524,7 +543,7 @@ search.fit(X_train, y_train)""",
 final_res <- xgboost_workflow %>%
   finalize_workflow(best_xgb) %>%
   last_fit(ames_split)
-collect_metrics(final_res)  # run result: test rmse 0.0773 (log10)""",
+collect_metrics(final_res)  # run result: test rmse 0.0730 (log10)""",
                 """X_test = ames_test.drop("Sale_Price")
 y_test = ames_test["Sale_Price"]
 pred  = search.predict(X_test)
@@ -554,7 +573,7 @@ fitted.lineage.columns_from_source("one_hot")[:8]""",
         slug="tmwr14",
         id="TMWR-14",
         title="concrete + KNN",
-        status="R: test rmse 8.57 · Python ran: 7.94. Ports 1:1 and ran clean; the dual-ecosystem candidate, confirmed.",
+        status="R: test rmse 8.57 · Python ran: 7.94. Ports 1:1 and runs clean.",
         sections=[
             (
                 "Setup",
@@ -562,8 +581,7 @@ fitted.lineage.columns_from_source("one_hot")[:8]""",
                 [],
                 """library(tidymodels)
 tidymodels_prefer()""",
-                """import numpy as np
-import polars as pl
+                """import polars as pl
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
@@ -577,9 +595,9 @@ from mlfeatures import Selectors as s""",
                     "in both train and test. Data-layer work, pre-recipe, in both languages.",
                 ],
                 [
-                    "DIFF: dplyr group_by/summarize -> polars group_by/agg. Two polars gotchas:",
-                    "infer_schema_length (int-looking early rows lock Int64, then floats fail)",
-                    "and group_by's unordered output: the sort restores determinism.",
+                    "DIFF: concrete ships in mlfeatures.data (exported from modeldata::concrete).",
+                    "DIFF: dplyr group_by/summarize -> polars group_by/agg. group_by's output is",
+                    "unordered, so the sort restores determinism.",
                 ],
                 """data(concrete, package = "modeldata")
 
@@ -587,8 +605,7 @@ concrete <- concrete %>%
   group_by(across(-compressive_strength)) %>%
   summarize(compressive_strength = mean(compressive_strength),
             .groups = "drop")   # 1,030 rows -> 992""",
-                """concrete = pl.read_csv("data/concrete.csv",
-                       infer_schema_length=None)
+                """from mlfeatures.data import concrete
 ingredients = [c for c in concrete.columns
                if c != "compressive_strength"]
 concrete = (concrete.group_by(ingredients)
@@ -615,8 +632,7 @@ concrete_train, concrete_test = train_test_split(
                     'One step. "KNN ... require predictors that have been centered and scaled."'
                 ],
                 [
-                    "DIFF: none; StepNormalize ports step_normalize exactly. This candidate",
-                    "runs in mlfeatures today.",
+                    "DIFF: none; StepNormalize ports step_normalize exactly.",
                     "DIFF (variant only): the poly/interact response surface is",
                     "StepPolynomial + StepInteract (every pair of the selected columns).",
                 ],
@@ -655,6 +671,9 @@ knn_wflow <- workflow() %>%
   add_recipe(normalized_rec) %>%
   add_model(knn_spec)
 
+set.seed(1502)
+concrete_folds <- vfold_cv(concrete_train, v = 5)
+
 set.seed(1503)
 knn_tune <- tune_grid(knn_wflow, resamples = concrete_folds,
                       grid = 6)
@@ -670,6 +689,9 @@ param_grid = {
     "model__p": [1, 2],
 }
 cv = KFold(n_splits=5, shuffle=True, random_state=1502)
+
+X_train = concrete_train.drop("compressive_strength")
+y_train = concrete_train["compressive_strength"]
 search = GridSearchCV(pipe, param_grid, cv=cv,
                       scoring="neg_root_mean_squared_error", refit=True)
 search.fit(X_train, y_train)""",
@@ -685,11 +707,13 @@ final_res <- knn_wflow %>%
 
 final_res %>% extract_recipe(estimated = TRUE) %>%
   bake(new_data = concrete_test) %>% head()
-collect_metrics(final_res)   # run: CV rmse ~ 9.47 MPa""",
+collect_metrics(final_res)   # run: test rmse 8.57 MPa""",
                 """# refit already happened (refit=True)
 fitted = normalized_rec.fit(concrete_train)
 fitted.transform(concrete_test).head()
 
+X_test = concrete_test.drop("compressive_strength")
+y_test = concrete_test["compressive_strength"]
 pred = search.predict(X_test)
 rmse = float(((y_test - pred) ** 2).mean() ** 0.5)
 print(rmse)                  # ran: 7.94 (R test: 8.57; distance weights won)""",
@@ -706,7 +730,10 @@ print(rmse)                  # ran: 7.94 (R test: 8.57; distance weights won)"""
             (
                 "Setup",
                 ["Load the stack. No estimator anywhere: the recipe is the product."],
-                ["DIFF: sklearn appears only for the split helper, not for a model."],
+                [
+                    "DIFF: sklearn appears only for the split helper, not for a model.",
+                    "DIFF: beans ships in mlfeatures.data.",
+                ],
                 """library(tidymodels)
 tidymodels_prefer()
 library(beans)
@@ -715,7 +742,8 @@ library(bestNormalize)""",
 from sklearn.model_selection import train_test_split
 from mlfeatures import (Recipe, StepDropZeroVariance, StepNormalize,
                         StepOrderNorm, StepPca)
-from mlfeatures import Selectors as s""",
+from mlfeatures import Selectors as s
+from mlfeatures.data import beans""",
             ),
             (
                 "3-way split",
@@ -825,20 +853,18 @@ from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
                                      train_test_split)
 from sklearn.pipeline import Pipeline
 from mlfeatures import (Recipe, RecipeTransformer, StepDropZeroVariance,
-                   StepDummy, StepImputeMedian, StepImputeMode,
-                   StepNormalize, StepOther)
+                        StepDummy, StepImputeMedian, StepImputeMode,
+                        StepNormalize, StepOther)
 from mlfeatures import Selectors as s""",
             ),
             (
                 "Data + split",
                 [
-                    "credit_data: 4,454 x 14 with NAs in several features, the imputation",
-                    "example no polished resource provides.",
+                    "credit_data: 4,454 x 14 with NAs in several features, which makes it",
+                    "the imputation example.",
                 ],
                 [
-                    "DIFF: exported from R -> data/credit.csv. null_values='NA' is load-bearing",
-                    "here: the dataset's whole point is its NAs, and polars would read them",
-                    "as the string 'NA' (pandas auto-parses them).",
+                    "DIFF: credit ships in mlfeatures.data (exported from modeldata::credit_data).",
                     "DIFF: sklearn wants a numeric target; Status maps to bad=1. R scores the",
                     'first factor level ("bad"): same event, made explicit here.',
                 ],
@@ -848,7 +874,7 @@ set.seed(55)
 credit_split <- initial_split(credit_data, strata = Status)
 credit_train <- training(credit_split)
 credit_test  <- testing(credit_split)""",
-                """credit = pl.read_csv("data/credit.csv", null_values="NA")
+                """from mlfeatures.data import credit
 credit = credit.with_columns(
     (pl.col("Status") == "bad").cast(pl.Int8).alias("Status"))
 credit_train, credit_test = train_test_split(
@@ -891,8 +917,8 @@ credit_train, credit_test = train_test_split(
                     "DIFF: sklearn 1.8+ speaks glmnet: l1_ratio IS mixture (1.0 = lasso).",
                     "DIFF: the glmnet mapping is C = 1/(n*lambda), NOT 1/lambda; glmnet",
                     "minimizes MEAN loss + lambda*penalty, sklearn C*TOTAL loss + penalty.",
-                    "A first draft used 1/lambda; the giveaway was best-C pinning to the",
-                    "grid edge. Worth a doc callout: easy to get subtly wrong.",
+                    "Using 1/lambda is an easy mistake; the giveaway is the best C pinning to",
+                    "the edge of the grid.",
                 ],
                 """glmnet_spec <-
   logistic_reg(penalty = tune(), mixture = 1) %>%
@@ -912,6 +938,9 @@ credit_res <- tune_grid(credit_wflow, resamples = credit_folds,
     ("model", LogisticRegression(l1_ratio=1.0, solver="liblinear",
                                  max_iter=5000)),
 ])
+
+X_train = credit_train.drop("Status")
+y_train = credit_train["Status"]
 
 lambdas = np.logspace(-5, -1, 20)
 param_grid = {"model__C": 1 / (credit_train.height * lambdas)}
@@ -939,6 +968,8 @@ collect_metrics(final_res)  # run: roc_auc 0.844, accuracy 0.806""",
 fitted = credit_rec.fit(credit_train)
 fitted.transform(credit_train).head()
 
+X_test = credit_test.drop("Status")
+y_test = credit_test["Status"]
 prob = search.predict_proba(X_test)[:, 1]
 print(roc_auc_score(y_test, prob),
       accuracy_score(y_test, search.predict(X_test)))
@@ -974,11 +1005,11 @@ for sp in SPECS:
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code>. {sp["status"]}</p>
+{sp["status"]}</p>
 <div class="cols">
-<div class="pane r"><h2>example.R: tidymodels (run)</h2>
+<div class="pane r"><h2>R: tidymodels</h2>
 <pre>{render(r_lines)}</pre></div>
-<div class="pane py"><h2>example.py: mlfeatures + sklearn (run)</h2>
+<div class="pane py"><h2>Python: mlfeatures + sklearn</h2>
 <pre>{render(py_lines)}</pre></div>
 </div>
 </div>
@@ -992,15 +1023,15 @@ index = f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>R vs Python side-by-sides: proposed six</title>
+<title>R vs Python side-by-sides</title>
 <style>{CSS}</style>
 </head>
 <body>
 <div class="wrap">
-<h1>R vs Python, line-matched: the proposed six</h1>
-<p class="lede">One page per proposed example: the R script (run) and its mlfeatures/sklearn
-port (draft) side by side, sections aligned, differences as in-script comments.
-Generated by <code>build-sbs.py</code>.</p>
+<h1>R vs Python, line-matched</h1>
+<p class="lede">One page per example: the tidymodels R script and its mlfeatures/sklearn
+port side by side, sections aligned, differences as in-script comments.
+Generated by <code>tools/build_sbs.py</code>.</p>
 <ul class="idx">
 {"".join(f'<li><a href="{sp["slug"]}-r-vs-py.html">{sp["id"]} · {sp["title"]}</a> · {sp["status"]}</li>' for sp in SPECS)}
 </ul>

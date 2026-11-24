@@ -10,12 +10,12 @@ a line-matched [R ↔ Python side-by-side](sbs/sbs-index.html){target="_blank"}.
 
 | Example | Model | Missing | Wrangle | Model prep | Multivar |
 |---|---|---|---|---|---|
-| [Ames mini](ames-mini-lm.qmd) · [R↔Py](sbs/tmwr01-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 8](https://www.tmwr.org/recipes)</small> | lm | none | log, dummy | none | none | |
-| [Ames realistic](ames-realistic-lm.qmd) · [R↔Py](sbs/tmwr03-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 8](https://www.tmwr.org/recipes)</small> | lm | none | log, other, dummy | interact, ns | none | |
-| [Ames xgboost](ames-xgboost.qmd) · [R↔Py](sbs/tmwr11-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 13](https://www.tmwr.org/grid-search)</small> | xgboost | none | novel\*, one-hot, zv† | none | none | |
-| [Concrete KNN](concrete-knn.qmd) · [R↔Py](sbs/tmwr14-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 15](https://www.tmwr.org/workflow-sets)</small> | KNN | none | none | normalize | none | |
-| [Beans PCA](beans-pca.qmd) · [R↔Py](sbs/tmwr16-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 16](https://www.tmwr.org/dimensionality)</small> | none | none | zv†, orderNorm | normalize | PCA | |
-| [Credit glmnet](credit-glmnet.qmd) · [R↔Py](sbs/kuhn-r-vs-py.html){target="_blank"}<br/><small>from [recipes vignette](https://recipes.tidymodels.org/articles/recipes.html)</small> | glmnet | impute ×2 | other, dummy, zv† | normalize | none | |
+| [Ames mini](ames-mini-lm.qmd) · [R↔Py](sbs/tmwr01-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 8](https://www.tmwr.org/recipes)</small> | lm | none | log, dummy | none | none |
+| [Ames realistic](ames-realistic-lm.qmd) · [R↔Py](sbs/tmwr03-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 8](https://www.tmwr.org/recipes)</small> | lm | none | log, other, dummy | interact, ns | none |
+| [Ames xgboost](ames-xgboost.qmd) · [R↔Py](sbs/tmwr11-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 13](https://www.tmwr.org/grid-search)</small> | xgboost | none | novel\*, one-hot, zv† | none | none |
+| [Concrete KNN](concrete-knn.qmd) · [R↔Py](sbs/tmwr14-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 15](https://www.tmwr.org/workflow-sets)</small> | KNN | none | none | normalize | none |
+| [Beans PCA](beans-pca.qmd) · [R↔Py](sbs/tmwr16-r-vs-py.html){target="_blank"}<br/><small>from [TMwR ch. 16](https://www.tmwr.org/dimensionality)</small> | none | none | zv†, orderNorm | normalize | PCA |
+| [Credit glmnet](credit-glmnet.qmd) · [R↔Py](sbs/kuhn-r-vs-py.html){target="_blank"}<br/><small>from [recipes vignette](https://recipes.tidymodels.org/articles/recipes.html)</small> | glmnet | impute ×2 | other, dummy, zv† | normalize | none |
 
 \* not yet built in mlfeatures; the report runs the buildable subset, and the
 side-by-side marks the gap in red where it occurs.

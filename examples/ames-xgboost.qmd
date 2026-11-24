@@ -15,7 +15,7 @@ for workflow() + tune_grid(), via mlfeatures's RecipeTransformer bridge.
 
 PARITY NOTES (differences from example.R that are structural, not bugs):
  - GAP (the reason this example was chosen): R's step_novel() has no mlfeatures
-   analog yet: StepNovel is designed-but-unbuilt, and StepUnknown fills only
+   analog yet: StepNovel is planned but not built, and StepUnknown fills only
    *nulls*, not unseen levels. This port simply omits the guard; mlfeatures's
    StepOneHot/StepDummy warn and emit nulls for unseen levels at transform
    time instead of encoding a "new" bucket. When StepNovel lands, add

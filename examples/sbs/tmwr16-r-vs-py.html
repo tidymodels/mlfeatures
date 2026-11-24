@@ -47,17 +47,19 @@ ul.idx { line-height:1.9; }
 <p class="lede">Identical section banners and shared descriptions in both scripts;
 <span style="color:var(--accent)">ochre DIFF comments</span> (Python side only, R holds a blank <code>#</code>)
 explain what changes; <span style="color:var(--gap)">red = mlfeatures gap</span>.
-Lightly condensed from <code>candidates/</code>. Both ran. StepOrderNorm and StepPca run inside the recipe; PC1-4 variance = 59.44/24.42/6.95/5.44% (R: 59.4/24.4/…).</p>
+Both ran. StepOrderNorm and StepPca run inside the recipe; PC1-4 variance = 59.44/24.42/6.95/5.44% (R: 59.4/24.4/…).</p>
 <div class="cols">
-<div class="pane r"><h2>example.R: tidymodels (run)</h2>
+<div class="pane r"><h2>R: tidymodels</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the stack. No estimator anywhere: the recipe is the product.</span>
+<span class="cm">#</span>
 <span class="cm">#</span>
 
 library(tidymodels)
 tidymodels_prefer()
 library(beans)
 library(bestNormalize)
+
 
 
 <span class="bn"># 3-way split --------------------------------------------------------------</span>
@@ -111,16 +113,18 @@ tidy(bean_pca_rec, id = &quot;pca&quot;) %&gt;%
 
 tidy(bean_pca_rec, id = &quot;pca&quot;, type = &quot;variance&quot;)
 </pre></div>
-<div class="pane py"><h2>example.py: mlfeatures + sklearn (run)</h2>
+<div class="pane py"><h2>Python: mlfeatures + sklearn</h2>
 <pre><span class="bn"># Setup --------------------------------------------------------------------</span>
 <span class="cm"># Load the stack. No estimator anywhere: the recipe is the product.</span>
 <span class="df"># DIFF: sklearn appears only for the split helper, not for a model.</span>
+<span class="df"># DIFF: beans ships in mlfeatures.data.</span>
 
 import polars as pl
 from sklearn.model_selection import train_test_split
 from mlfeatures import (Recipe, StepDropZeroVariance, StepNormalize,
                         StepOrderNorm, StepPca)
 from mlfeatures import Selectors as s
+from mlfeatures.data import beans
 
 <span class="bn"># 3-way split --------------------------------------------------------------</span>
 <span class="cm"># 75 / 12.5 / 12.5 train / validation / test, stratified by class:</span>
