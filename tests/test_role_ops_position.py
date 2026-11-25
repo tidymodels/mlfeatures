@@ -402,3 +402,30 @@ def test_random_operations_match_the_model_at_any_position(seed: int) -> None:
     fitted.transform(_polars())
     first = _build(ops, steps_before=0, data=_polars()).fit(_polars())
     assert _as_dict(first.roles) == expected, (seed, ops)
+
+
+class TestStepReadsOptionalColumn:
+    """A step that reads a column keeps it required, whatever its role."""
+
+    @staticmethod
+    def _df() -> pl.DataFrame:
+        return pl.DataFrame({"a": [1.0, 2.0, 3.0], "w": [1.0, 2.0, 4.0]})
+
+    def test_later_role_op_keeps_read_column_required(self) -> None:
+        recipe = (
+            Recipe()
+            .add(StepNormalize("a"))
+            .update_role("w", new_role="case_weights")
+            .add(StepNormalize("w"))
+        )
+        fitted = recipe.fit(self._df())
+        assert fitted.schema is not None
+        assert fitted.schema.transform_required["w"] is True
+        with pytest.raises(Exception, match="w"):
+            fitted.transform(self._df().drop("w"))
+
+    def test_declared_case_weights_read_by_step_stay_required(self) -> None:
+        recipe = Recipe(case_weights="w").add(StepNormalize("w"))
+        fitted = recipe.fit(self._df())
+        assert fitted.schema is not None
+        assert fitted.schema.transform_required["w"] is True
