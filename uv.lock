@@ -2281,7 +2281,7 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=13.0.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0" },
     { name = "pyyaml", marker = "extra == 'yaml'" },
-    { name = "scikit-learn", specifier = ">=1.3" },
+    { name = "scikit-learn", specifier = ">=1.4" },
     { name = "scipy", marker = "extra == 'scipy'", specifier = ">=1.10" },
     { name = "seaborn", marker = "extra == 'examples'", specifier = ">=0.13" },
     { name = "xgboost", marker = "extra == 'examples'", specifier = ">=2.0" },

@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
-import sklearn
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
 from sklearn.exceptions import NotFittedError
@@ -34,12 +33,6 @@ DF = pd.DataFrame(
 )
 X = DF.drop(columns="y")
 Y = DF["y"]
-
-# set_output(transform="polars") arrived in scikit-learn 1.4; the declared floor is 1.3
-needs_polars_output = pytest.mark.skipif(
-    tuple(int(p) for p in sklearn.__version__.split(".")[:2]) < (1, 4),
-    reason="set_output(transform='polars') needs scikit-learn >= 1.4",
-)
 
 
 def _recipe() -> Recipe:
@@ -140,7 +133,6 @@ class TestOutputLayout:
         out = t.transform(X.assign(z=1))
         assert list(out.columns) == ["x1", "x2", "c"]
 
-    @needs_polars_output
     def test_set_output_polars_does_not_mislabel_reordered_input(self) -> None:
         t = RecipeTransformer(_recipe()).set_output(transform="polars").fit(X, Y)
         out = t.transform(X[["c", "x2", "x1"]])
@@ -382,7 +374,6 @@ class TestOptionalColumns:
         t.fit(self.XW, Y)
         assert list(t.transform(X).columns) == ["x1", "x2", "c"]
 
-    @needs_polars_output
     def test_set_output_polars_without_the_column(self) -> None:
         t = RecipeTransformer(self._recipe()).set_output(transform="polars")
         t.fit(self.XW, Y)
