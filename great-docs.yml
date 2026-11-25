@@ -353,6 +353,13 @@ sections:
 # .well-known/ discovery, and sitemaps.
 site_url: "https://tidymodels.github.io/mlfeatures/"
 
+# Site-wide accent color
+accent_color: "#CA225E"
+
+# Custom CSS (light mode link color)
+site:
+  css: site.css
+
 # Site Settings
 # -------------
 # site:

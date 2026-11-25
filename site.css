@@ -1,0 +1,37 @@
+/* Light mode link color; dark mode keeps great-docs' default */
+html:not(.quarto-dark) {
+  --bs-link-color: #CA225E;
+  --bs-link-color-rgb: 202, 34, 94;
+  --bs-link-hover-color: #A11B4B;
+  --bs-link-hover-color-rgb: 161, 27, 75;
+}
+
+html:not(.quarto-dark) a:not(.btn):not(.nav-link):not(.dropdown-item) {
+  color: #CA225E;
+}
+
+html:not(.quarto-dark) a:not(.btn):not(.nav-link):not(.dropdown-item):hover {
+  color: #A11B4B;
+}
+
+/* Dark mode link color */
+html.quarto-dark {
+  --bs-link-color: #CB6585;
+  --bs-link-color-rgb: 203, 101, 133;
+  --bs-link-hover-color: #DB8AA6;
+  --bs-link-hover-color-rgb: 219, 138, 166;
+  --gd-link-color: #CB6585;
+}
+
+html.quarto-dark a:not(.btn):not(.nav-link):not(.dropdown-item) {
+  color: #CB6585;
+}
+
+html.quarto-dark a:not(.btn):not(.nav-link):not(.dropdown-item):hover {
+  color: #DB8AA6;
+}
+
+/* Dark mode inline code: same color as body text, like light mode */
+html body.quarto-dark :not(pre):not(a) > code {
+  color: var(--gd-text-primary);
+}
