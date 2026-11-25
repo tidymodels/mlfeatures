@@ -1353,9 +1353,10 @@ class Recipe:
         # to: only their transform-time requirement can differ from the one
         # derived from the input roles below.
         touched: set[str] = set()
-        # Input columns a step reads at transform, as that step saw their roles.
+        # Input columns a step reads at transform, whatever their role (except
+        # the hardcoded-optional target): a step that reads a column needs it,
+        # even when its role makes it optional.
         needed: set[str] = set()
-        track_requirements = any(op.position > 0 for op in self._role_ops)
 
         def run_role_ops(position: int) -> None:
             ops = [op for op in self._role_ops if op.position == position]
@@ -1438,7 +1439,7 @@ class Recipe:
             except Exception as exc:
                 raise StepError.wrap(step, selected, "fit") from exc
             fitted.trained = True  # set by the recipe, not the step (per contract)
-            if track_requirements and not isinstance(step, RowOp):
+            if not isinstance(step, RowOp):
                 # What the step reads is only known once it has been fitted (a
                 # step without a selector reports it then). A row operation is
                 # skipped at transform, so it reads nothing there.
@@ -1446,8 +1447,7 @@ class Recipe:
                 needed.update(
                     column
                     for column in read
-                    if column in input_names
-                    and column_transform_required(column, live_roles, overrides)
+                    if column in input_names and "target" not in live_roles.of(column)
                 )
             if not isinstance(step, RowOp):
                 # Centralized name-collision guard: reject produced columns that
@@ -1479,13 +1479,15 @@ class Recipe:
         # or a missing column would pass the schema check and then fail inside
         # the step.
         changed = touched & input_names
-        if changed:
+        if changed or needed:
             final_overrides = self._resolve_role_req_overrides(input_frame, live_roles)
             required = dict(schema.transform_required)
             for column in changed:
                 required[column] = column in needed or column_transform_required(
                     column, live_roles, final_overrides
                 )
+            for column in needed:
+                required[column] = True
             schema = replace(schema, transform_required=required)
         return FittedRecipe(
             steps=fitted_steps, roles=live_roles, lineage=lineage, schema=schema
