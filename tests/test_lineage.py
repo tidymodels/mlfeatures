@@ -18,6 +18,7 @@ from syrupy.assertion import SnapshotAssertion
 from mlfeatures import (
     ANY_DTYPE,
     ColSchema,
+    FittedRecipe,
     Mode,
     Recipe,
     Step,
@@ -498,6 +499,14 @@ def test_recipe_summary_without_prototype_raises(
 ) -> None:
     with pytest.raises(ValueError) as excinfo:
         Recipe(steps=[StepDummy(["g"])]).summary()
+    assert str(excinfo.value) == snapshot
+
+
+def test_fitted_recipe_summary_without_lineage_raises(
+    snapshot: SnapshotAssertion,
+) -> None:
+    with pytest.raises(ValueError) as excinfo:
+        FittedRecipe(steps=[]).summary()
     assert str(excinfo.value) == snapshot
 
 

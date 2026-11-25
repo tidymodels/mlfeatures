@@ -5,6 +5,9 @@
 # name: test_check_additions_rejects_within_step_duplicate
   "step 'step' produces duplicate column name(s) ['x']; output column names must be unique"
 # ---
+# name: test_fitted_recipe_summary_without_lineage_raises
+  'summary() needs a lineage; this FittedRecipe was constructed without one'
+# ---
 # name: test_recipe_summary_without_prototype_raises
   'summary() needs prototype data; construct the recipe with Recipe(data=...), or fit it and call FittedRecipe.summary()'
 # ---

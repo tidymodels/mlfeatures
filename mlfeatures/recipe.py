@@ -1897,7 +1897,7 @@ class FittedRecipe:
 
         Raises
         ------
-        RuntimeError
+        ValueError
             If the recipe was constructed without a lineage.
 
         Examples
@@ -1931,5 +1931,8 @@ class FittedRecipe:
         ```
         """
         if self.lineage is None:
-            raise RuntimeError("this FittedRecipe was constructed without a lineage")
+            raise ValueError(
+                "summary() needs a lineage; this FittedRecipe was constructed "
+                "without one"
+            )
         return self.lineage.summary()
