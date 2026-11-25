@@ -505,7 +505,7 @@ class Step(ABC):
         Every hyperparameter and learned statistic already lives as a plain
         instance attribute, so the default encodes ``self.__dict__`` through the
         shared value codec -- no per-step boilerplate. The step class itself is
-        recorded separately (by qualified name) by `mlfeatures.serialization`.
+        recorded separately (by qualified name) by `to_dict`.
         """
         from mlfeatures.serialization import (
             _encode,  # pyright: ignore[reportPrivateUsage]

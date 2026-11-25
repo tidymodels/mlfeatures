@@ -235,7 +235,7 @@ class _NameSelector(FeaturesSelector):
 
     The match rule is stored as a ``kind`` string plus its ``params`` (never a
     closure), so the selector serializes to plain data -- the no-closure
-    guarantee `mlfeatures.serialization` relies on. ``resolve`` rebuilds the
+    guarantee the ``mlfeatures.serialization`` module relies on. ``resolve`` rebuilds the
     predicate from ``kind``/``params`` on the fly.
     """
 
